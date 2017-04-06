@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         id="noopProduct"
+         name="NOOP"
+         point="org.eclipse.core.runtime.products">
+      <product
+            application="org.eclipse.ui.ide.workbench"
+            description="NES Object Oriented Programming IDE"
+            name="NOOP">
+         <property
+               name="appName"
+               value="NOOP">
+         </property>
+         <property
+               name="aboutImage"
+               value="icons/app32.png">
+         </property>
+         <property
+               name="aboutText"
+               value="NES Object Oriented Programming IDE">
+         </property>
+         <property
+               name="startupForegroundColor"
+               value="808080">
+         </property>
+         <property
+               name="windowImages"
+               value="icons/app16.png,icons/app32.png,icons/app48.png,icons/app64.png,icons/app128.png,icons/app256.png">
+         </property>
+         <property
+               name="startupMessageRect"
+               value="7,252,445,20">
+         </property>
+         <property
+               name="startupProgressRect"
+               value="5,275,445,15">
+         </property>
+         <property
+               name="preferenceCustomization"
+               value="plugin_customization.ini">
+         </property>
+      </product>
+   </extension>
+
+</plugin>

@@ -1,0 +1,70 @@
+package com.github.parisoft.noop.util
+
+import com.github.parisoft.noop.NOOPLib
+import com.github.parisoft.noop.nOOP.SJBlock
+import com.github.parisoft.noop.nOOP.SJClass
+import com.github.parisoft.noop.nOOP.SJField
+import com.github.parisoft.noop.nOOP.SJMember
+import com.github.parisoft.noop.nOOP.SJMethod
+import com.github.parisoft.noop.nOOP.SJReturn
+import com.google.inject.Inject
+
+class NOOPUtils {
+	
+	@Inject extension NOOPLib
+
+	def fields(SJClass c) {
+		c.members.filter(SJField)
+	}
+
+	def methods(SJClass c) {
+		c.members.filter(SJMethod)
+	}
+
+	def returnStatement(SJMethod m) {
+		m.body.returnStatement
+	}
+
+	def returnStatement(SJBlock block) {
+		block.statements.filter(SJReturn).head
+	}
+
+	def classHierarchy(SJClass c) {
+		val visited = newLinkedHashSet()
+
+		var current = c.superclass
+		while (current !== null && !visited.contains(current)) {
+			visited.add(current)
+			current = current.superclass
+		}
+
+		val object = c.getNoopObjectClass
+		if (object !== null)
+			visited.add(object)
+
+		visited
+	}
+
+	def classHierarchyMethods(SJClass c) {
+		// reverse the list so that methods in subclasses
+		// will be added later to the map, thus overriding
+		// the one already present in the superclasses
+		// if the methods have the same name
+		c.classHierarchy.toList.reverseView.map[methods].flatten.toMap[name]
+	}
+
+	def classHierarchyMembers(SJClass c) {
+		c.classHierarchy.map[members].flatten
+	}
+
+	def memberAsString(SJMember m) {
+		m.name + if (m instanceof SJMethod)
+			"(" + m.params.map[type.name].join(", ") + ")"
+		else
+			""
+	}
+
+	def memberAsStringWithType(SJMember m) {
+		m.memberAsString + " : " + m.type.name
+	}
+}

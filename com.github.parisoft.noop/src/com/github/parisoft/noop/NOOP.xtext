@@ -1,0 +1,123 @@
+grammar com.github.parisoft.noop.NOOP with org.eclipse.xtext.common.Terminals
+
+import "http://www.eclipse.org/emf/2002/Ecore" as ecore
+generate nOOP "http://www.github.com/parisoft/noop/NOOP"
+
+SJProgram:
+	('package' name=QualifiedName ';')?
+	imports+=SJImport*
+	classes+=SJClass*;
+
+SJImport:
+	'import' importedNamespace=QualifiedNameWithWildcard ';';
+
+QualifiedName:
+	ID ('.' ID)*;
+
+QualifiedNameWithWildcard:
+	QualifiedName '.*'?;
+
+SJClass:
+	'class' name=ID ('extends' superclass=[SJClass|QualifiedName])? '{'
+	members+=SJMember*
+	'}';
+
+SJMember:
+	SJField | SJMethod;
+
+SJField:
+	access=SJAccessLevel? SJTypedDeclaration ';';
+
+SJMethod:
+	access=SJAccessLevel? SJTypedDeclaration
+	'(' (params+=SJParameter (',' params+=SJParameter)*)? ')'
+	body=SJBlock;
+
+enum SJAccessLevel:
+	PRIVATE='private' | PROTECTED='protected' | PUBLIC='public';
+
+SJParameter:
+	SJTypedDeclaration;
+
+SJBlock:
+	{SJBlock} '{' statements+=SJStatement* '}';
+
+SJStatement:
+	SJVariableDeclaration |
+	SJReturn |
+	Expression ';' |
+	SJIfStatement;
+
+SJVariableDeclaration:
+	SJTypedDeclaration '=' expression=Expression ';';
+
+SJReturn:
+	'return' expression=Expression ';';
+
+SJIfStatement:
+	'if' '(' expression=Expression ')' thenBlock=SJIfBlock
+	(=> 'else' elseBlock=SJIfBlock)?;
+
+SJIfBlock returns SJBlock:
+	statements+=SJStatement
+	| SJBlock;
+
+SJSymbol:
+	SJVariableDeclaration | SJParameter;
+
+fragment SJTypedDeclaration *:
+	type=[SJClass|QualifiedName] name=ID;
+
+SJNamedElement:
+	SJClass | SJMember | SJSymbol;
+
+Expression:
+	SJAssignment;
+
+SJAssignment returns Expression:
+	SJSelectionExpression
+	({SJAssignment.left=current} '=' right=Expression)?;
+
+SJSelectionExpression returns Expression:
+	Or ({SJMemberSelection.receiver=current} '.' member=[SJMember]
+	(methodInvocation?='('
+	(args+=Expression (',' args+=Expression)*)? ')')?)*;
+
+Or returns Expression:
+	And ({Or.left=current} "||" right=And)*;
+
+And returns Expression:
+	Equality ({And.left=current} "&&" right=Equality)*;
+
+Equality returns Expression:
+	Comparison ({Equality.left=current} op=("==" | "!=")
+	right=Comparison)*;
+
+Comparison returns Expression:
+	PlusOrMinus ({Comparison.left=current} op=(">=" | "<=" | ">" | "<")
+	right=PlusOrMinus)*;
+
+PlusOrMinus returns Expression:
+	MulOrDiv (({Plus.left=current} '+' | {Minus.left=current} '-')
+	right=MulOrDiv)*;
+
+MulOrDiv returns Expression:
+	Primary (({MulOrDiv.left=current} op=('*' | '/'))
+	right=Primary)*;
+
+Primary returns Expression:
+	{Not} "!" expression=Primary |
+	{Eor} '~' Expression=Primary |
+	{Signal} ("-" | '+') expression=Primary |
+	SJTerminalExpression;
+
+SJTerminalExpression returns Expression:
+	{SJStringConstant} value=STRING |
+	{SJIntConstant} value=INT |
+	{SJBoolConstant} value=('true' | 'false') |
+	{SJThis} 'this' |
+	{SJSuper} 'super' |
+	{SJNull} 'null' |
+	{SJSymbolRef} symbol=[SJSymbol] |
+	{SJNew} 'new' type=[SJClass|QualifiedName] '(' ')' |
+	'(' Expression ')';

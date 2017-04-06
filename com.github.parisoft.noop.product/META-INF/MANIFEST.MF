@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: NOOP Product
+Bundle-SymbolicName: com.github.parisoft.noop.product;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: Parisoft
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Require-Bundle: org.eclipse.equinox.app
+Bundle-ClassPath: .,
+ nooplib/
+Import-Package: noop.lang
+Bundle-ActivationPolicy: lazy
+Export-Package: noop.lang
