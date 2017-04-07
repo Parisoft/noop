@@ -1,0 +1,9 @@
+grammar org.parisoft.noop.Noop with org.eclipse.xtext.common.Terminals
+
+generate noop "http://www.parisoft.org/noop/Noop"
+
+Model:
+	greetings+=Greeting*;
+	
+Greeting:
+	'Hello' name=ID '!';
