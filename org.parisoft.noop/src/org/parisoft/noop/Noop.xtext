@@ -102,17 +102,23 @@ SigNegExpression returns Expression:
 	SigPosExpression | {SigNegExpression} '-' right=SigNegExpression;
 
 SigPosExpression returns Expression:
-	TerminalExpression | {SigPosExpression} '+' right=SigPosExpression;
+	DecExpression | {SigPosExpression} '+' right=SigPosExpression;
+
+DecExpression returns Expression:
+	IncExpression | {DecExpression} '--' right=DecExpression;
+
+IncExpression returns Expression:
+	TerminalExpression | {IncExpression} '++' right=IncExpression;
 
 TerminalExpression returns Expression:
-	'(' Expression ')' |
 	{IntLiteral} value=INT |
 	{BoolLiteral} value=('true' | 'false') |
 	{This} 'this' |
 	{Super} 'super' |
 	{SymbolRef} symbol=[Symbol] |
 	{New} 'new' type=[Class] |
-	{Inject} 'inject' type=[Class];
+	{Inject} 'inject' type=[Class] |
+	'(' Expression ')';
 
 QualifiedName:
 	ID ('.' ID)*;

@@ -136,6 +136,12 @@
     <genClasses ecoreClass="Noop.ecore#//SigPosExpression">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//SigPosExpression/right"/>
     </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//DecExpression">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//DecExpression/right"/>
+    </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//IncExpression">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//IncExpression/right"/>
+    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//IntLiteral">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//IntLiteral/value"/>
     </genClasses>
