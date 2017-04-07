@@ -1,9 +1,126 @@
 grammar org.parisoft.noop.Noop with org.eclipse.xtext.common.Terminals
 
+import "http://www.eclipse.org/emf/2002/Ecore" as ecore
 generate noop "http://www.parisoft.org/noop/Noop"
 
-Model:
-	greetings+=Greeting*;
+Class:
+	name=ID ('extends' (supers+=[Class] (',' supers+=[Class])*))? '{'
+	members+=Member*
+	'}';
+
+Member:
+	Variable | Method;
+
+Variable:
+	name=ID ':' value=Expression;
+
+Parameter returns Variable:
+	type=[Class] name=ID;
+
+Method:
+	name=ID '(' (params+=Parameter (',' params+=Parameter)*)? ')' body=Block;
+
+Block:
+	{Block} '{' statements+=Statement* '}';
+
+Statement:
+	Variable |
+	ReturnStatement |
+	Expression |
+	IfStatement;
+
+ReturnStatement:
+	=> ReturnValueStatement |
+	{ReturnStatement} 'return';
+
+ReturnValueStatement returns ReturnStatement:
+	'return' value=Expression;
+
+IfStatement:
+	name='if' '(' condition=Expression ')' body=Block else=ElseStatement?;
+
+ElseStatement:
+	name='else' (body=Block | if=IfStatement);
+
+Symbol:
+	Variable | Parameter;
+
+Expression:
+	AssignmentExpression;
+
+AssignmentExpression returns Expression:
+	SelectionExpression
+	({AssignmentExpression.left=current} assignment=AssignmentType right=Expression)?;
+
+SelectionExpression returns Expression:
+	OrExpression ({SelectionExpression.receiver=current} '.' member=[Member]
+	=> (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?)*;
+
+OrExpression returns Expression:
+	AndExpression ({OrExpression.left=current} 'or' right=AndExpression)*;
+
+AndExpression returns Expression:
+	EqualityExpression ({AndExpression.left=current} 'and' right=EqualityExpression)*;
+
+EqualityExpression returns Expression:
+	ComparisonExpression (({EqualsExpression.left=current} '=' | {DifferExpression.left=current} '#')
+	right=ComparisonExpression)*;
+
+ComparisonExpression returns Expression:
+	AddOrSubExpression
+	(({GtExpression.left=current} '>' |
+	{GeExpression.left=current} '>=' |
+	{LtExpression.left=current} '<' |
+	{LeExpression.left=current} '<=')
+	right=AddOrSubExpression)*;
+
+AddOrSubExpression returns Expression:
+	MulOrDivExpression (=> ({AddExpression.left=current} '+' | {SubExpression.left=current} '-')
+	right=MulOrDivExpression)*;
+
+MulOrDivExpression returns Expression:
+	BitwiseExpression (({MulExpression.left=current} '*' | {DivExpression.left=current} '/')
+	right=BitwiseExpression)*;
+
+BitwiseExpression returns Expression:
+	EorExpression
+	(({BOrExpression.left=current} '|' |
+	{BAndExpression.left=current} '&' |
+	{LShiftExpression.left=current} '<<' |
+	{RShiftExpression.left=current} '>>')
+	right=EorExpression)*;
+
+EorExpression returns Expression:
+	NotExpression |
+	{EorExpression} '~' right=EorExpression;
+
+NotExpression returns Expression:
+	SigNegExpression |
+	{NotExpression} 'not' right=NotExpression;
+
+SigNegExpression returns Expression:
+	SigPosExpression | {SigNegExpression} '-' right=SigNegExpression;
+
+SigPosExpression returns Expression:
+	TerminalExpression | {SigPosExpression} '+' right=SigPosExpression;
+
+TerminalExpression returns Expression:
+	'(' Expression ')' |
+	{IntLiteral} value=INT |
+	{BoolLiteral} value=('true' | 'false') |
+	{This} 'this' |
+	{Super} 'super' |
+	{SymbolRef} symbol=[Symbol] |
+	{New} 'new' type=[Class] |
+	{Inject} 'inject' type=[Class];
+
+QualifiedName:
+	ID ('.' ID)*;
+
+QualifiedNameWithWildcard:
+	QualifiedName '.*'?;
+
+enum AssignmentType:
+	ASSIGN=':=' | ADD_ASSIGN='+=' | SUB_ASSIGN='-=' | MUL_ASSIGN='*=' | DIV_ASSIGN='/=';
+
 	
-Greeting:
-	'Hello' name=ID '!';

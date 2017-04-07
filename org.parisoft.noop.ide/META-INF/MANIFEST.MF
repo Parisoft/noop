@@ -9,3 +9,6 @@ Require-Bundle: org.parisoft.noop,
  org.eclipse.xtext.ide,
  org.eclipse.xtext.xbase.ide
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Export-Package: org.parisoft.noop.ide.contentassist.antlr,
+ org.parisoft.noop.ide.contentassist.antlr.internal
+
