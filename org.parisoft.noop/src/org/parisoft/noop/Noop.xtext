@@ -52,9 +52,14 @@ AssignmentExpression returns Expression:
 	SelectionExpression
 	({AssignmentExpression.left=current} assignment=AssignmentType right=Expression)?;
 
+//NativeExpression returns Expression:
+//	SelectionExpression ({NativeExpression.receiver=current} '.' ((instanceOf='instanceOf'|cast='as')'('type=[Class]')'))*;
+
 SelectionExpression returns Expression:
-	OrExpression ({SelectionExpression.receiver=current} '.' member=[Member]
-	=> (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?)*;
+	OrExpression ({SelectionExpression.receiver=current} '.' 
+		((member=[Member]	=> (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?)|
+		((instanceOf?='instanceOf'|cast?='as')'('type=[Class]')'))
+		)*;
 
 OrExpression returns Expression:
 	AndExpression ({OrExpression.left=current} 'or' right=AndExpression)*;
