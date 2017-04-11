@@ -22,8 +22,4 @@ class NoopUiModule extends AbstractNoopUiModule {
 		binder.bind(IEObjectHoverProvider).to(NoopHoverProvider)
 	}
 
-	def bindIEObjectHoverProvider() {
-		NoopHoverProvider
-	}
-
 }
