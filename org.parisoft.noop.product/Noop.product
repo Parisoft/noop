@@ -3,7 +3,6 @@
 
 <product name="Noop IDE" uid="Noop IDE" id="org.parisoft.noop.product.noopProduct" application="org.eclipse.ui.ide.workbench" version="1.0.0.qualifier" useFeatures="false" includeLaunchers="true">
 
-
    <configIni use="default">
    </configIni>
 
@@ -20,14 +19,13 @@
       location="org.parisoft.noop.product"
       startupProgressRect="5,275,445,10"
       startupMessageRect="7,252,445,15"
-      startupForegroundColor="808080" />
-   <launcher name="noop-ide">
+      startupForegroundColor="FFFFFF" />
+   <launcher name="NoopIDE">
       <solaris/>
       <win useIco="false">
          <bmp/>
       </win>
    </launcher>
-
 
    <vm>
       <linux include="false">org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8</linux>
@@ -210,6 +208,8 @@
       <plugin id="org.eclipse.ui.ide"/>
       <plugin id="org.eclipse.ui.ide.application"/>
       <plugin id="org.eclipse.ui.intro"/>
+      <plugin id="org.eclipse.ui.intro.quicklinks"/>
+      <plugin id="org.eclipse.ui.intro.universal"/>
       <plugin id="org.eclipse.ui.navigator"/>
       <plugin id="org.eclipse.ui.navigator.resources"/>
       <plugin id="org.eclipse.ui.trace"/>
