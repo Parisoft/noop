@@ -38,9 +38,9 @@ Workflow {
 			newProjectWizardForEclipse = {
 				generate = true
 			}
-			fragment = ui.projectWizard.SimpleProjectWizardFragment2 {
-				generate = true
-			}
+//			fragment = ui.projectWizard.SimpleProjectWizardFragment2 {
+//				generate = true
+//			}
 		}
 	}
 }

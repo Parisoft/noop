@@ -7,8 +7,4 @@ import org.eclipse.xtext.ui.wizard.DefaultProjectInfo;
 
 public class NoopProjectInfo extends DefaultProjectInfo {
 
-    @Override
-    public String getProjectName() {
-        return "Noop Project";
-    }
 }

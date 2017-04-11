@@ -407,4 +407,18 @@
 			type="text">
 		</fileTypes>
 	</extension>
+ <extension
+       point="org.eclipse.ui.newWizards">
+    <category
+          id="org.parisoft.noop.ui.category"
+          name="Noop">
+    </category>
+    <wizard
+          category="org.parisoft.noop.ui.category"
+          class="org.parisoft.noop.ui.NoopExecutableExtensionFactory:org.parisoft.noop.ui.wizard.NoopNewProjectWizard"
+          id="org.parisoft.noop.ui.wizard.NoopNewProjectWizard"
+          name="NOOP Project"
+          project="true">
+    </wizard>
+ </extension>
 </plugin>

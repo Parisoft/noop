@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: org.parisoft.noop
-Bundle-Vendor: My Company
+Bundle-Vendor: Parisoft
 Bundle-Version: 1.0.0.qualifier
 Bundle-SymbolicName: org.parisoft.noop; singleton:=true
 Bundle-ActivationPolicy: lazy
@@ -27,6 +27,6 @@ Export-Package: noop.lang,
  org.parisoft.noop.serializer,
  org.parisoft.noop.services,
  org.parisoft.noop.validation
-Import-Package: org.apache.log4j
-Bundle-ClassPath: nooplib/,
- .
+Import-Package: noop.lang,
+ org.apache.log4j
+Bundle-ClassPath: .

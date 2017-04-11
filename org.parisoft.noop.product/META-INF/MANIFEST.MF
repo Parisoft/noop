@@ -6,5 +6,8 @@ Bundle-Version: 1.0.0.qualifier
 Bundle-Vendor: Parisoft
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Require-Bundle: org.eclipse.equinox.app,
- org.eclipse.ui
+ org.eclipse.ui,
+ org.parisoft.noop;bundle-version="1.0.0",
+ org.parisoft.noop.ide;bundle-version="1.0.0",
+ org.parisoft.noop.ui;bundle-version="1.0.0"
 Import-Package: org.eclipse.ui.splash
