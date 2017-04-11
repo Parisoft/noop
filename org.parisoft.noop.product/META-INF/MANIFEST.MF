@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Product
+Bundle-SymbolicName: org.parisoft.noop.product;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: Parisoft
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Require-Bundle: org.eclipse.equinox.app,
+ org.eclipse.ui
+Import-Package: org.eclipse.ui.splash
