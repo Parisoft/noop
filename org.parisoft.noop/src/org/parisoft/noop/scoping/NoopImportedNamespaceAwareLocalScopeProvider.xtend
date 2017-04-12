@@ -7,6 +7,7 @@ import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.eclipse.xtext.naming.QualifiedName
 import org.eclipse.xtext.scoping.impl.ImportNormalizer
 import org.eclipse.xtext.scoping.impl.ImportedNamespaceAwareLocalScopeProvider
+import org.parisoft.noop.noop.NoopClass
 
 class NoopImportedNamespaceAwareLocalScopeProvider extends ImportedNamespaceAwareLocalScopeProvider {
 	@Inject extension IQualifiedNameProvider
@@ -21,7 +22,7 @@ class NoopImportedNamespaceAwareLocalScopeProvider extends ImportedNamespaceAwar
 
 	override protected List<ImportNormalizer> internalGetImportedNamespaceResolvers(EObject context, boolean ignoreCase) {
 		val resolvers = super.internalGetImportedNamespaceResolvers(context, ignoreCase)
-		if (context instanceof org.parisoft.noop.noop.Class) {
+		if (context instanceof NoopClass) {
 			val fqn = context.fullyQualifiedName
 			// fqn is the package of this program
 			if (fqn !== null) {

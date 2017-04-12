@@ -3,6 +3,7 @@ Object {
     /* Returns true if other has the same content as this object */
     equals(Object other) {
         //native implementation
+        return false
     }
     
 }

@@ -3,23 +3,28 @@
  */
 package org.parisoft.noop.validation
 
+import com.google.inject.Inject
+import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.noop.Member
+import org.parisoft.noop.noop.NoopClass
+
+import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.eclipse.xtext.validation.Check
 
 /**
  * This class contains custom validation rules. 
- *
+ * 
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#validation
  */
 class NoopValidator extends AbstractNoopValidator {
+
+	@Inject extension Members
 	
-//	public static val INVALID_NAME = 'invalidName'
-//
-//	@Check
-//	def checkGreetingStartsWithCapital(Greeting greeting) {
-//		if (!Character.isUpperCase(greeting.name.charAt(0))) {
-//			warning('Name should start with a capital', 
-//					NoopPackage.Literals.GREETING__NAME,
-//					INVALID_NAME)
-//		}
-//	}
-	
+	@Check
+	def inferTypes(NoopClass noopClass) {
+		for (member : noopClass.getAllContentsOfType(Member)) {
+			member.typeOf
+		}
+	}
+
 }

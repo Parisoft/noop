@@ -3,8 +3,8 @@ grammar org.parisoft.noop.Noop with org.eclipse.xtext.common.Terminals
 import "http://www.eclipse.org/emf/2002/Ecore" as ecore
 generate noop "http://www.parisoft.org/noop/Noop"
 
-Class:
-	name=ID ('extends' (supers+=[Class] (',' supers+=[Class])*))? '{'
+NoopClass:
+	name=ID ('extends' superClass=[NoopClass])? '{'
 	members+=Member*
 	'}';
 
@@ -15,7 +15,7 @@ Variable:
 	name=ID ':' value=Expression;
 
 Parameter returns Variable:
-	type=[Class] name=ID;
+	type=[NoopClass] name=ID;
 
 Method:
 	name=ID '(' (params+=Parameter (',' params+=Parameter)*)? ')' body=Block;
@@ -42,9 +42,6 @@ IfStatement:
 ElseStatement:
 	name='else' (body=Block | if=IfStatement);
 
-Symbol:
-	Variable | Parameter;
-
 Expression:
 	AssignmentExpression;
 
@@ -55,7 +52,7 @@ AssignmentExpression returns Expression:
 SelectionExpression returns Expression:
 	OrExpression ({SelectionExpression.receiver=current} '.'
 	((member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?) |
-	((instanceOf?='instanceOf' | cast?='as') '(' type=[Class] ')')))*;
+	((instanceOf?='instanceOf' | cast?='as') '(' type=[NoopClass] ')')))*;
 
 OrExpression returns Expression:
 	AndExpression ({OrExpression.left=current} 'or' right=AndExpression)*;
@@ -112,13 +109,14 @@ IncExpression returns Expression:
 	TerminalExpression | {IncExpression} '++' right=IncExpression;
 
 TerminalExpression returns Expression:
-	{IntLiteral} value=INT |
-	{BoolLiteral} value=('true' | 'false') |
+	{ByteLiteral} value=Byte |
+	{BoolLiteral} value=Bool |
+	{CharLiteral} value=Char |
 	{This} 'this' |
 	{Super} 'super' |
-	{SymbolRef} symbol=[Symbol] |
-	{New} 'new' type=[Class] |
-	{Inject} 'inject' type=[Class] |
+	{VarRef} variable=[Variable] |
+	{New} 'new' type=[NoopClass] ('{' field+=Variable (',' field+=Variable)* '}')? |
+	{Inject} 'inject' type=[NoopClass] |
 	'(' Expression ')';
 
 QualifiedName:
@@ -130,4 +128,20 @@ QualifiedNameWithWildcard:
 enum AssignmentType:
 	ASSIGN=':=' | ADD_ASSIGN='+=' | SUB_ASSIGN='-=' | MUL_ASSIGN='*=' | DIV_ASSIGN='/=';
 
-	
+Byte returns ecore::EIntegerObject:
+	HEX | BIN | INT;
+
+Bool returns ecore::EBooleanObject:
+	'true' | 'false';
+
+Char returns ecore::ECharacterObject:
+	CHA;
+
+terminal CHA returns ecore::EChar:
+	'\'' . '\'';
+
+terminal HEX returns ecore::EInt:
+	'$' ('0'..'9' | 'A'..'F')+;
+
+terminal BIN returns ecore::EInt:
+	'%' ('0' | '1')+;
