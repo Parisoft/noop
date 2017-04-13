@@ -42,7 +42,7 @@ class Classes {
 	}
 
 	def getNoopObjectClass(EObject context) {
-		if (context.fullyQualifiedName == TypeSystem::LIB_OBJECT) {
+		if (context.fullyQualifiedName == TypeSystem::LIB_OBJECT || context.fullyQualifiedName == "Object") {
 			return context as NoopClass;
 		}
 

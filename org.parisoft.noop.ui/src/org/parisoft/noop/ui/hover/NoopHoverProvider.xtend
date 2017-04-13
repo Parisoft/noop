@@ -18,7 +18,7 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 		switch (o) {
 			NoopClass: '''Class <b>«o.fullyQualifiedName»</b>'''
 			Variable: '''«IF o.eContainer instanceof NoopClass»Field«ELSE»Variable«ENDIF» <b>«o.name»</b> of type <b>«o.typeOf.name»</b>. «o.fullyQualifiedName»'''
-			Method: '''Method <b>«o.name»</b> returns <b>«o.typeOf.name»</b>.'''
+			Method: '''Method <b>«o.name»</b> returns <b>«o.typeOf?.name»</b>.'''
 			default:
 				super.getFirstLine(o)
 		}
