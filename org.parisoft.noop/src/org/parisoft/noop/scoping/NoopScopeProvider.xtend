@@ -3,6 +3,19 @@
  */
 package org.parisoft.noop.scoping
 
+import com.google.inject.Inject
+import org.eclipse.emf.ecore.EObject
+import org.eclipse.emf.ecore.EReference
+import org.eclipse.xtext.scoping.IScope
+import org.eclipse.xtext.scoping.Scopes
+import org.parisoft.noop.^extension.Classes
+import org.parisoft.noop.^extension.Expressions
+import org.parisoft.noop.noop.Block
+import org.parisoft.noop.noop.MemberSelection
+import org.parisoft.noop.noop.Method
+import org.parisoft.noop.noop.NoopPackage
+import org.parisoft.noop.noop.Variable
+import org.parisoft.noop.noop.NoopClass
 
 /**
  * This class contains custom scoping description.
@@ -11,5 +24,61 @@ package org.parisoft.noop.scoping
  * on how and when to use it.
  */
 class NoopScopeProvider extends AbstractNoopScopeProvider {
+
+	@Inject extension Expressions
+	@Inject extension Classes
+
+	override getScope(EObject context, EReference reference) {
+		if (reference == NoopPackage.eINSTANCE.varRef_Variable) {
+			return scopeForSymbolRef(context)
+		} else if (context instanceof MemberSelection) {
+			return scopeForMemberSelection(context)
+		}
+
+		return super.getScope(context, reference)
+	}
+
+	def protected IScope scopeForSymbolRef(EObject context) {
+		val container = context.eContainer
+
+		if (container === null) {
+			return IScope.NULLSCOPE
+		}
+
+		return switch (container) {
+			NoopClass:
+				Scopes.scopeFor(container.members.takeWhile[it != context].filter(Variable))
+			Method:
+				Scopes.scopeFor(container.params, scopeForSymbolRef(container))
+			Block:
+				Scopes.scopeFor(container.statements.takeWhile[it != context].filter(Variable), scopeForSymbolRef(container))
+			default:
+				scopeForSymbolRef(container)
+		}
+	}
+
+	def protected IScope scopeForMemberSelection(MemberSelection selection) {
+		val type = selection.receiver.typeOf
+
+		if (type === null) {
+			return IScope.NULLSCOPE
+		}
+
+		val grouped = type.classHierarchy.map[members].flatten.groupBy[it instanceof Method]
+		val inheritedMethods = grouped.get(true) ?: emptyList
+		val inheritedFields = grouped.get(false) ?: emptyList
+
+		if (selection.isMethodInvocation) {
+			return Scopes.scopeFor(
+				type.methods + type.fields,
+				Scopes.scopeFor(inheritedMethods + inheritedFields)
+			)
+		} else {
+			return Scopes.scopeFor(
+				type.fields + type.methods,
+				Scopes.scopeFor(inheritedFields + inheritedMethods)
+			)
+		}
+	}
 
 }

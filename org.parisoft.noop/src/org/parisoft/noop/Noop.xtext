@@ -50,7 +50,7 @@ AssignmentExpression returns Expression:
 	({AssignmentExpression.left=current} assignment=AssignmentType right=Expression)?;
 
 SelectionExpression returns Expression:
-	OrExpression ({SelectionExpression.receiver=current} '.'
+	OrExpression ({MemberSelection.receiver=current} '.'
 	((member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?) |
 	((instanceOf?='instanceOf' | cast?='as') '(' type=[NoopClass] ')')))*;
 

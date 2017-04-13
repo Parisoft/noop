@@ -8,6 +8,8 @@ import org.eclipse.xtext.scoping.IScopeProvider
 import org.eclipse.xtext.scoping.impl.AbstractDeclarativeScopeProvider
 import org.parisoft.noop.scoping.NoopImportedNamespaceAwareLocalScopeProvider
 import com.google.inject.name.Names
+import org.eclipse.xtext.resource.IDefaultResourceDescriptionStrategy
+import org.parisoft.noop.scoping.NoopResourceDescriptionStrategy
 
 /**
  * Use this class to register components to be used at runtime / without the Equinox extension registry.
@@ -17,6 +19,7 @@ class NoopRuntimeModule extends AbstractNoopRuntimeModule {
 	override configureIScopeProviderDelegate(Binder binder) {
 		binder.bind(IScopeProvider).annotatedWith(Names.named(AbstractDeclarativeScopeProvider.NAMED_DELEGATE)).to(
 			NoopImportedNamespaceAwareLocalScopeProvider)
+		binder.bind(IDefaultResourceDescriptionStrategy).to(NoopResourceDescriptionStrategy)
 	}
 
 }

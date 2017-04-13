@@ -8,8 +8,8 @@ import org.eclipse.xtext.resource.impl.ResourceDescriptionsProvider
 import org.parisoft.noop.noop.NoopPackage
 
 class NoopIndex {
-	@Inject ResourceDescriptionsProvider rdp
 
+	@Inject ResourceDescriptionsProvider rdp
 	@Inject IContainer.Manager cm
 
 	def getVisibleEObjectDescriptions(EObject o) {

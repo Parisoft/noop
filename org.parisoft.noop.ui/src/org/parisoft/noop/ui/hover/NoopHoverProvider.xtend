@@ -6,21 +6,22 @@ import org.eclipse.xtext.ui.editor.hover.html.DefaultEObjectHoverProvider
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.Variable
+import org.eclipse.xtext.naming.IQualifiedNameProvider
+import org.parisoft.noop.noop.NoopClass
 
 class NoopHoverProvider extends DefaultEObjectHoverProvider {
 
 	@Inject extension Members
+	@Inject extension IQualifiedNameProvider
 
 	override protected getFirstLine(EObject o) {
-		if(o instanceof Variable) {
-			return '''Field <b>«o.name»</b> of type «o.typeOf.name». TODO: differ filed from variable'''
+		switch (o) {
+			NoopClass: '''Class <b>«o.fullyQualifiedName»</b>'''
+			Variable: '''«IF o.eContainer instanceof NoopClass»Field«ELSE»Variable«ENDIF» <b>«o.name»</b> of type <b>«o.typeOf.name»</b>. «o.fullyQualifiedName»'''
+			Method: '''Method <b>«o.name»</b> returns <b>«o.typeOf.name»</b>.'''
+			default:
+				super.getFirstLine(o)
 		}
-
-		if(o instanceof Method) {
-			return '''Method <b>«o.name»</b> returns «o.typeOf.name».'''
-		}
-
-		super.getFirstLine(o)
 	}
 
 }

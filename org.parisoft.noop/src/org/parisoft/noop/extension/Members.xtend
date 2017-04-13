@@ -1,7 +1,6 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
-import java.util.stream.Collectors
 import org.eclipse.emf.ecore.EObject
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.Method
@@ -10,18 +9,17 @@ import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import static extension org.parisoft.noop.^extension.Classes.*
+import org.parisoft.noop.noop.MemberSelection
 
 public class Members {
 
-	static val memberType = <Member, NoopClass>newHashMap()
+	public static val memberType = <Member, NoopClass>newHashMap()
 
 	@Inject extension Classes
 	@Inject extension Expressions
-	@Inject extension TypeSystem
 
 	def isAccessibleFrom(Member member, EObject context) {
-		val contextClass = context.containingClass
+		val contextClass = if (context instanceof MemberSelection) context.receiver.typeOf else context.containingClass
 		val memberClass = member.containingClass
 
 		contextClass == memberClass || contextClass.isSubclassOf(memberClass)
@@ -35,7 +33,7 @@ public class Members {
 	}
 
 	def typeOf(Variable variable) {
-		memberType.computeIfAbsent(variable, [k|variable.type ?: variable.value.typeOf])
+		memberType.computeIfAbsent(variable, [variable.type ?: variable.value.typeOf])
 	}
 
 	def typeOf(Method method) {
@@ -43,10 +41,10 @@ public class Members {
 			return memberType.get(method)
 		}
 
-		memberType.put(method, TypeSystem::TYPE_UBYTE)
+		memberType.put(method, null)
 
 		val returns = method.body.getAllContentsOfType(ReturnStatement)
-		val type = returns.stream.map([value.typeOf]).distinct.collect(Collectors.toList).merge
+		val type = returns.map[value.typeOf].filterNull.toSet.merge
 
 		memberType.put(method, type)
 
