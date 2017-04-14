@@ -32,7 +32,11 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		if (reference == NoopPackage.eINSTANCE.varRef_Variable) {
 			return scopeForSymbolRef(context)
 		} else if (context instanceof MemberSelection) {
-			return scopeForMemberSelection(context)
+			if (context.isInstanceOf || context.isCast) {
+				return super.getScope(context, reference)
+			} else {
+				return scopeForMemberSelection(context)
+			}
 		}
 
 		return super.getScope(context, reference)
