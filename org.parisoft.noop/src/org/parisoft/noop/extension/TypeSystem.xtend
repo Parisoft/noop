@@ -22,7 +22,7 @@ class TypeSystem {
 	public static val LIB_VOID = LIB_PACKAGE + ".Void"
 
 	public static val MIN_INT = -32768
-	public static val MAX_INT = -32767
+	public static val MAX_INT = 32767
 	public static val MIN_UINT = 0
 	public static val MAX_UINT = 65535
 	public static val MIN_BYTE = -128

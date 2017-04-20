@@ -37,7 +37,7 @@ public class Members {
 	}
 
 	def typeOf(Method method) {
-		if(memberType.containsKey(method)) {
+		if (memberType.containsKey(method)) {
 			return memberType.get(method)
 		}
 

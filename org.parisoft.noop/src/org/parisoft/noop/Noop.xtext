@@ -1,15 +1,14 @@
-grammar org.parisoft.noop.Noop with org.eclipse.xtext.common.Terminals
-
+grammar org.parisoft.noop.Noop hidden(WS, ML_COMMENT, SL_COMMENT) // with org.eclipse.xtext.common.Terminals
 import "http://www.eclipse.org/emf/2002/Ecore" as ecore
 generate noop "http://www.parisoft.org/noop/Noop"
 
 NoopClass:
-	name=ID ('extends' superClass=[NoopClass])? '{'
+	name=ID ('extends' superClass=[NoopClass])? '{' LF*
 	members+=Member*
 	'}';
 
 Member:
-	Variable | Method;
+	(Variable | Method) LF+;
 
 Variable:
 	name=ID ':' value=Expression;
@@ -21,13 +20,13 @@ Method:
 	name=ID '(' (params+=Parameter (',' params+=Parameter)*)? ')' body=Block;
 
 Block:
-	{Block} '{' statements+=Statement* '}';
+	{Block} '{' LF* statements+=Statement* '}';
 
 Statement:
-	Variable |
+	(Variable |
 	ReturnStatement |
 	Expression |
-	IfStatement;
+	IfStatement) LF+;
 
 ReturnStatement:
 	=> ReturnValueStatement |
@@ -46,13 +45,8 @@ Expression:
 	AssignmentExpression;
 
 AssignmentExpression returns Expression:
-	SelectionExpression
+	OrExpression
 	({AssignmentExpression.left=current} assignment=AssignmentType right=Expression)?;
-
-SelectionExpression returns Expression:
-	OrExpression ({MemberSelection.receiver=current} '.'
-	((member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?) |
-	((instanceOf?='instanceOf' | cast?='as') '(' type=[NoopClass] ')')))*;
 
 OrExpression returns Expression:
 	AndExpression ({OrExpression.left=current} 'or' right=AndExpression)*;
@@ -106,7 +100,12 @@ DecExpression returns Expression:
 	IncExpression | {DecExpression} '--' right=DecExpression;
 
 IncExpression returns Expression:
-	TerminalExpression | {IncExpression} '++' right=IncExpression;
+	SelectionExpression | {IncExpression} '++' right=IncExpression;
+
+SelectionExpression returns Expression:
+	TerminalExpression ({MemberSelection.receiver=current} '.'
+	((member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?) |
+	((instanceOf?='instanceOf' | cast?='as') '(' type=[NoopClass] ')')))*;
 
 TerminalExpression returns Expression:
 	{ByteLiteral} value=Byte |
@@ -114,9 +113,9 @@ TerminalExpression returns Expression:
 	{CharLiteral} value=Char |
 	{This} 'this' |
 	{Super} 'super' |
-	{VarRef} variable=[Variable] |
-	{New} 'new' type=[NoopClass] ('{' field+=Variable (',' field+=Variable)* '}')? |
-	{Inject} 'inject' type=[NoopClass] |
+	{NewInstance} 'new' type=[NoopClass] ('{' LF* field+=Variable (',' LF* field+=Variable)* LF* '}')? |
+	{InjectInstance} 'inject' type=[NoopClass] |
+	{MemberRef} member=[Member] => (methodInvacation?='(' (args+=Expression (',' args+=Expression)*)? ')')? |
 	'(' Expression ')';
 
 QualifiedName:
@@ -145,3 +144,28 @@ terminal HEX returns ecore::EInt:
 
 terminal BIN returns ecore::EInt:
 	'%' ('0' | '1')+;
+
+terminal ID:
+	'^'? ('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
+
+terminal INT returns ecore::EInt:
+	('0'..'9')+;
+
+terminal LF:
+	'\r'? '\n';
+
+terminal STRING:
+	'"' ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | '"'))* '"' |
+	"'" ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | "'"))* "'";
+
+terminal ML_COMMENT:
+	'/*'->'*/';
+
+terminal SL_COMMENT:
+	'//' !('\n' | '\r')* ('\r'? '\n')?;
+
+terminal WS:
+	(' ' | '\t')+;
+
+terminal ANY_OTHER:
+	.;

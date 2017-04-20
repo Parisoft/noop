@@ -61,17 +61,6 @@
     <eStructuralFeatures xsi:type="ecore:EReference" name="right" eType="#//Expression"
         containment="true"/>
   </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="MemberSelection" eSuperTypes="#//Expression">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="receiver" eType="#//Expression"
-        containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="member" eType="#//Member"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="methodInvocation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="args" upperBound="-1" eType="#//Expression"
-        containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="instanceOf" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="cast" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
-  </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="OrExpression" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"
         containment="true"/>
@@ -192,6 +181,17 @@
     <eStructuralFeatures xsi:type="ecore:EReference" name="right" eType="#//Expression"
         containment="true"/>
   </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="MemberSelection" eSuperTypes="#//Expression">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="receiver" eType="#//Expression"
+        containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="member" eType="#//Member"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="methodInvocation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="args" upperBound="-1" eType="#//Expression"
+        containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="instanceOf" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="cast" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
+  </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="ByteLiteral" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="value" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EIntegerObject"/>
   </eClassifiers>
@@ -203,15 +203,18 @@
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="This" eSuperTypes="#//Expression"/>
   <eClassifiers xsi:type="ecore:EClass" name="Super" eSuperTypes="#//Expression"/>
-  <eClassifiers xsi:type="ecore:EClass" name="VarRef" eSuperTypes="#//Expression">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="variable" eType="#//Variable"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="New" eSuperTypes="#//Expression">
+  <eClassifiers xsi:type="ecore:EClass" name="NewInstance" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="field" upperBound="-1"
         eType="#//Variable" containment="true"/>
   </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="Inject" eSuperTypes="#//Expression">
+  <eClassifiers xsi:type="ecore:EClass" name="InjectInstance" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="MemberRef" eSuperTypes="#//Expression">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="member" eType="#//Member"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="methodInvacation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="args" upperBound="-1" eType="#//Expression"
+        containment="true"/>
   </eClassifiers>
 </ecore:EPackage>

@@ -50,13 +50,15 @@ class Classes {
 			qualifiedName.toString == TypeSystem::LIB_OBJECT || qualifiedName.toString == "Object"
 		]
 
-		if (desc == null)
+		if (desc === null) {
 			return null
+		}
 
 		var o = desc.EObjectOrProxy
 
-		if (o.eIsProxy)
+		if (o.eIsProxy) {
 			o = context.eResource.resourceSet.getEObject(desc.EObjectURI, true)
+		}
 
 		o as NoopClass
 	}
@@ -74,10 +76,33 @@ class Classes {
 	}
 
 	def fields(NoopClass c) {
-		c.members.filter(Variable).filter[it.type === null]
+		c.members.filter(Variable)
 	}
 
 	def methods(NoopClass c) {
 		c.members.filter(Method)
+	}
+
+	def inheritedFields(NoopClass c) {
+		c.classHierarchy.map[members].flatten.filter(Variable)
+	}
+
+	def inheritedMethods(NoopClass c) {
+		c.classHierarchy.map[members].flatten.filter(Method)
+	}
+
+	def isAssignableFrom(NoopClass c1, NoopClass c2) {
+		if (c1.isNumber && c2.isNumber) {
+//			println('''«c1.name» isAssignableFrom «c2.name»''')
+			return true
+		}
+
+		val is = c2.classHierarchy.exists[it == c1]
+//		println('''«c1.name» isAssignableFrom «c2.name» ? «is» hierarchy=«c2.classHierarchy»''')
+		is
+	}
+
+	def isNumber(NoopClass c) {
+		c == TypeSystem::TYPE_INT || c == TypeSystem::TYPE_BYTE || c == TypeSystem::TYPE_CHAR || c == TypeSystem::TYPE_UINT
 	}
 }

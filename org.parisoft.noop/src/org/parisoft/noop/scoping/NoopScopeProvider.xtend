@@ -4,18 +4,23 @@
 package org.parisoft.noop.scoping
 
 import com.google.inject.Inject
+import java.util.List
+import org.eclipse.emf.common.util.EList
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.emf.ecore.EReference
 import org.eclipse.xtext.scoping.IScope
 import org.eclipse.xtext.scoping.Scopes
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Expressions
+import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.Block
+import org.parisoft.noop.noop.Expression
+import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelection
 import org.parisoft.noop.noop.Method
-import org.parisoft.noop.noop.NoopPackage
-import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.Variable
+import org.parisoft.noop.noop.NoopPackage
 
 /**
  * This class contains custom scoping description.
@@ -27,22 +32,34 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 	@Inject extension Expressions
 	@Inject extension Classes
+	@Inject extension Members
 
-	override getScope(EObject context, EReference reference) {
-		if (reference == NoopPackage.eINSTANCE.varRef_Variable) {
-			return scopeForSymbolRef(context)
-		} else if (context instanceof MemberSelection) {
-			if (context.isInstanceOf || context.isCast) {
-				return super.getScope(context, reference)
-			} else {
-				return scopeForMemberSelection(context)
-			}
+	override getScope(EObject context, EReference eRef) {
+		switch (context) {
+			Block:
+				if (eRef == NoopPackage.eINSTANCE.memberRef_Member) {
+					return scopeForVariableRef(context)
+				}
+			MemberRef:
+				return scopeForMemberRef(context)
+			MemberSelection:
+				if (!context.isInstanceOf && !context.isCast) {
+					return scopeForMemberSelection(context)
+				}
 		}
 
-		return super.getScope(context, reference)
+		return super.getScope(context, eRef)
 	}
 
-	def protected IScope scopeForSymbolRef(EObject context) {
+	def protected IScope scopeForMemberRef(MemberRef memberRef) {
+		if (memberRef.isMethodInvacation) {
+			scopeForMethodInvocation(memberRef, memberRef.args)
+		} else {
+			scopeForVariableRef(memberRef)
+		}
+	}
+
+	def protected IScope scopeForVariableRef(EObject context) {
 		val container = context.eContainer
 
 		if (container === null) {
@@ -50,14 +67,43 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		}
 
 		return switch (container) {
-			NoopClass:
-				Scopes.scopeFor(container.members.takeWhile[it != context].filter(Variable))
+			NoopClass: {
+				val thisMembers = container.members.takeWhile[it != context].filter(Variable) + container.methods;
+				val superMembers = container.inheritedFields + container.inheritedMethods;
+				Scopes.scopeFor(thisMembers, Scopes.scopeFor(superMembers))
+			}
 			Method:
-				Scopes.scopeFor(container.params, scopeForSymbolRef(container))
-			Block:
-				Scopes.scopeFor(container.statements.takeWhile[it != context].filter(Variable), scopeForSymbolRef(container))
+				Scopes.scopeFor(container.params, scopeForVariableRef(container))
+			Block: {
+				val localVars = container.statements.takeWhile[it != context].filter(Variable)
+				Scopes.scopeFor(localVars, scopeForVariableRef(container))
+			}
 			default:
-				scopeForSymbolRef(container)
+				scopeForVariableRef(container)
+		}
+	}
+
+	def protected IScope scopeForMethodInvocation(EObject context, EList<Expression> args) {
+		val container = context.eContainer
+
+		if (container === null) {
+			return IScope.NULLSCOPE
+		}
+
+		return switch (container) {
+			NoopClass: {
+				val thisMembers = container.members.takeWhile[it != context].filter(Variable) + container.methods.filterOverload(args)
+				val superMembers = container.inheritedFields + container.inheritedMethods.filterOverload(args)
+				Scopes.scopeFor(thisMembers, Scopes.scopeFor(superMembers))
+			}
+			Method:
+				Scopes.scopeFor(container.params, scopeForMethodInvocation(container, args))
+			Block: {
+				val localVars = container.statements.takeWhile[it != context].filter(Variable)
+				Scopes.scopeFor(localVars, scopeForMethodInvocation(container, args))
+			}
+			default:
+				scopeForMethodInvocation(container, args)
 		}
 	}
 
@@ -68,21 +114,23 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			return IScope.NULLSCOPE
 		}
 
-		val grouped = type.classHierarchy.map[members].flatten.groupBy[it instanceof Method]
-		val inheritedMethods = grouped.get(true) ?: emptyList
-		val inheritedFields = grouped.get(false) ?: emptyList
-
 		if (selection.isMethodInvocation) {
 			return Scopes.scopeFor(
-				type.methods + type.fields,
-				Scopes.scopeFor(inheritedMethods + inheritedFields)
+				type.methods.filterOverload(selection.args) + type.fields,
+				Scopes.scopeFor(type.inheritedMethods.filterOverload(selection.args) + type.inheritedFields)
 			)
 		} else {
 			return Scopes.scopeFor(
 				type.fields + type.methods,
-				Scopes.scopeFor(inheritedFields + inheritedMethods)
+				Scopes.scopeFor(type.inheritedFields + type.inheritedMethods)
 			)
 		}
+	}
+
+	def filterOverload(Iterable<Method> methods, List<Expression> args) {
+		methods.filter [ method |
+			method.params.size == args.size && args.stream.allMatch[arg|method.params.get(args.indexOf(arg)).typeOf.isAssignableFrom(arg.typeOf)]
+		]
 	}
 
 }
