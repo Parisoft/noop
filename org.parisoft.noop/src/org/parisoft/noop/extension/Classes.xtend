@@ -93,13 +93,10 @@ class Classes {
 
 	def isAssignableFrom(NoopClass c1, NoopClass c2) {
 		if (c1.isNumber && c2.isNumber) {
-//			println('''«c1.name» isAssignableFrom «c2.name»''')
 			return true
 		}
 
-		val is = c2.classHierarchy.exists[it == c1]
-//		println('''«c1.name» isAssignableFrom «c2.name» ? «is» hierarchy=«c2.classHierarchy»''')
-		is
+		c2.classHierarchy.exists[it.fullyQualifiedName == c1.fullyQualifiedName]
 	}
 
 	def isNumber(NoopClass c) {

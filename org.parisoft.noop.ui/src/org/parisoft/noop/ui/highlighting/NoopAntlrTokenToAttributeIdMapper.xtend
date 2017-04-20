@@ -8,7 +8,11 @@ class NoopAntlrTokenToAttributeIdMapper extends DefaultAntlrTokenToAttributeIdMa
 	
 	override protected calculateId(String tokenName, int tokenType) {
 		if (tokenName == "RULE_CHA") {
-			return NoopHighlightingConfiguration.CHAR_ID
+			return NoopHighlightingConfiguration.STRING_ID
+		}
+		
+		if (tokenName == "RULE_HEX" || tokenName == "RULE_BIN") {
+			return NoopHighlightingConfiguration.NUMBER_ID
 		}
 		
 		super.calculateId(tokenName, tokenType)

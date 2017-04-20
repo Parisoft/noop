@@ -162,7 +162,7 @@ terminal ML_COMMENT:
 	'/*'->'*/';
 
 terminal SL_COMMENT:
-	'//' !('\n' | '\r')* ('\r'? '\n')?;
+	'//' !('\n' | '\r')*;
 
 terminal WS:
 	(' ' | '\t')+;
