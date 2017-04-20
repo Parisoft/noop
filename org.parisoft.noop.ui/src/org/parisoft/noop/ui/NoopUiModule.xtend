@@ -9,6 +9,12 @@ import org.eclipse.xtext.ui.editor.contentassist.XtextContentAssistProcessor
 import com.google.inject.name.Names
 import org.parisoft.noop.ui.hover.NoopHoverProvider
 import org.eclipse.xtext.ui.editor.hover.IEObjectHoverProvider
+import org.eclipse.xtext.ui.editor.syntaxcoloring.IHighlightingConfiguration
+import org.parisoft.noop.ui.highlighting.NoopHighlightingConfiguration
+import org.parisoft.noop.ui.highlighting.NoopAntlrTokenToAttributeIdMapper
+import org.eclipse.xtext.ui.editor.syntaxcoloring.AbstractAntlrTokenToAttributeIdMapper
+import org.eclipse.xtext.ide.editor.syntaxcoloring.ISemanticHighlightingCalculator
+import org.parisoft.noop.ui.highlighting.NoopSemanticHighlightingCalculator
 
 /**
  * Use this class to register components to be used within the Eclipse IDE.
@@ -20,6 +26,9 @@ class NoopUiModule extends AbstractNoopUiModule {
 		super.configure(binder)
 		binder.bind(String).annotatedWith(Names.named((XtextContentAssistProcessor.COMPLETION_AUTO_ACTIVATION_CHARS))).toInstance(".,:")
 		binder.bind(IEObjectHoverProvider).to(NoopHoverProvider)
+		binder.bind(IHighlightingConfiguration).to(NoopHighlightingConfiguration)
+		binder.bind(AbstractAntlrTokenToAttributeIdMapper).to(NoopAntlrTokenToAttributeIdMapper)
+		binder.bind(ISemanticHighlightingCalculator).to(NoopSemanticHighlightingCalculator)
 	}
 
 }
