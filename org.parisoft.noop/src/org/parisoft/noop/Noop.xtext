@@ -104,25 +104,26 @@ IncExpression returns Expression:
 
 SelectionExpression returns Expression:
 	TerminalExpression ({MemberSelection.receiver=current} '.'
-	((member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?) |
+	((member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?) indexes+=Index* |
 	((instanceOf?='instanceOf' | cast?='as') '(' type=[NoopClass] ')')))*;
 
 TerminalExpression returns Expression:
 	{ByteLiteral} value=Byte |
 	{BoolLiteral} value=Bool |
 	{CharLiteral} value=Char |
+	{StringLiteral} value=STRING |
+	{ArrayLiteral} '[' (values+=Expression (',' values+=Expression)*)? ']' |
 	{This} 'this' |
 	{Super} 'super' |
 	{NewInstance} 'new' type=[NoopClass] ('{' LF* field+=Variable (',' LF* field+=Variable)* LF* '}')? |
+	{newArray} type=[NoopClass] dimension+=Index+ |
 	{InjectInstance} 'inject' type=[NoopClass] |
-	{MemberRef} member=[Member] => (methodInvacation?='(' (args+=Expression (',' args+=Expression)*)? ')')? |
+	{MemberRef} member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?
+	 /*TODO add indexes */|
 	'(' Expression ')';
 
-QualifiedName:
-	ID ('.' ID)*;
-
-QualifiedNameWithWildcard:
-	QualifiedName '.*'?;
+Index:
+	'[' value=Expression ']';
 
 enum AssignmentType:
 	ASSIGN=':=' | ADD_ASSIGN='+=' | SUB_ASSIGN='-=' | MUL_ASSIGN='*=' | DIV_ASSIGN='/=';
@@ -166,6 +167,3 @@ terminal SL_COMMENT:
 
 terminal WS:
 	(' ' | '\t')+;
-
-terminal ANY_OTHER:
-	.;

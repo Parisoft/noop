@@ -48,6 +48,9 @@
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ElseStatement/if"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//Expression"/>
+    <genClasses ecoreClass="Noop.ecore#//Index">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Index/value"/>
+    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//AssignmentExpression">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//AssignmentExpression/left"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//AssignmentExpression/assignment"/>
@@ -140,6 +143,7 @@
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//MemberSelection/member"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//MemberSelection/methodInvocation"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//MemberSelection/args"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//MemberSelection/indexes"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//MemberSelection/instanceOf"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//MemberSelection/cast"/>
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//MemberSelection/type"/>
@@ -153,18 +157,28 @@
     <genClasses ecoreClass="Noop.ecore#//CharLiteral">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//CharLiteral/value"/>
     </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//StringLiteral">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//StringLiteral/value"/>
+    </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//ArrayLiteral">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ArrayLiteral/values"/>
+    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//This"/>
     <genClasses ecoreClass="Noop.ecore#//Super"/>
     <genClasses ecoreClass="Noop.ecore#//NewInstance">
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//NewInstance/type"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//NewInstance/field"/>
     </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//newArray">
+      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//newArray/type"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//newArray/dimension"/>
+    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//InjectInstance">
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//InjectInstance/type"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//MemberRef">
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//MemberRef/member"/>
-      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//MemberRef/methodInvacation"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//MemberRef/methodInvocation"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//MemberRef/args"/>
     </genClasses>
   </genPackages>
