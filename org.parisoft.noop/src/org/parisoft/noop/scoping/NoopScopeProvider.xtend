@@ -52,7 +52,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	}
 
 	def protected IScope scopeForMemberRef(MemberRef memberRef) {
-		if (memberRef.isMethodInvacation) {
+		if (memberRef.isMethodInvocation) {
 			scopeForMethodInvocation(memberRef, memberRef.args)
 		} else {
 			scopeForVariableRef(memberRef)

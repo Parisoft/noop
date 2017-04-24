@@ -115,11 +115,11 @@ TerminalExpression returns Expression:
 	{ArrayLiteral} '[' (values+=Expression (',' values+=Expression)*)? ']' |
 	{This} 'this' |
 	{Super} 'super' |
-	{NewInstance} 'new' type=[NoopClass] ('{' LF* field+=Variable (',' LF* field+=Variable)* LF* '}')? |
-	{newArray} type=[NoopClass] dimension+=Index+ |
+	{NewInstance} 'new' type=[NoopClass] (('{' LF* field+=Variable (',' LF* field+=Variable)* LF* '}') |
+	dimension+=Index+)? |
 	{InjectInstance} 'inject' type=[NoopClass] |
 	{MemberRef} member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?
-	 /*TODO add indexes */|
+	indexes+=Index* |
 	'(' Expression ')';
 
 Index:

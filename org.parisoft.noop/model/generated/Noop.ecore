@@ -220,9 +220,6 @@
     <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="field" upperBound="-1"
         eType="#//Variable" containment="true"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="newArray" eSuperTypes="#//Expression">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="dimension" upperBound="-1"
         eType="#//Index" containment="true"/>
   </eClassifiers>
@@ -234,5 +231,7 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="methodInvocation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="args" upperBound="-1" eType="#//Expression"
         containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="indexes" upperBound="-1"
+        eType="#//Index" containment="true"/>
   </eClassifiers>
 </ecore:EPackage>
