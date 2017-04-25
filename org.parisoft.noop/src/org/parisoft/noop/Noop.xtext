@@ -138,7 +138,7 @@ Char returns ecore::ECharacterObject:
 	CHA;
 
 terminal CHA returns ecore::EChar:
-	'\'' . '\'';
+	"'" (('\\' .) /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | "'")) "'";
 
 terminal HEX returns ecore::EInt:
 	'$' ('0'..'9' | 'A'..'F')+;
@@ -156,8 +156,7 @@ terminal LF:
 	'\r'? '\n';
 
 terminal STRING:
-	'"' ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | '"'))* '"' |
-	"'" ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | "'"))* "'";
+	'"' ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | '"'))* '"';
 
 terminal ML_COMMENT:
 	'/*'->'*/';

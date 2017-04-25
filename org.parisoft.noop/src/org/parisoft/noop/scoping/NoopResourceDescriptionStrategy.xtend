@@ -19,7 +19,7 @@ class NoopResourceDescriptionStrategy extends DefaultResourceDescriptionStrategy
 		if (eObject instanceof NoopClass) {
 			val fullyQualifiedName = eObject.fullyQualifiedName
 
-			if (fullyQualifiedName != null) {
+			if (fullyQualifiedName !== null) {
 				acceptor.accept(EObjectDescription::create(fullyQualifiedName, eObject))
 			}
 

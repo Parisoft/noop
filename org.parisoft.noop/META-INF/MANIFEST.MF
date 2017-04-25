@@ -15,7 +15,8 @@ Require-Bundle: org.eclipse.xtext,
  org.eclipse.emf.common,
  org.antlr.runtime
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
-Export-Package: noop.lang,
+Export-Package: noop.io,
+ noop.lang,
  org.parisoft.noop,
  org.parisoft.noop.extension,
  org.parisoft.noop.generator,
@@ -28,6 +29,7 @@ Export-Package: noop.lang,
  org.parisoft.noop.serializer,
  org.parisoft.noop.services,
  org.parisoft.noop.validation
-Import-Package: noop.lang,
+Import-Package: noop.io,
+ noop.lang,
  org.apache.log4j
 Bundle-ClassPath: .

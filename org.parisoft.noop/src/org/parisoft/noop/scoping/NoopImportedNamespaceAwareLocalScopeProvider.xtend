@@ -13,11 +13,10 @@ class NoopImportedNamespaceAwareLocalScopeProvider extends ImportedNamespaceAwar
 	@Inject extension IQualifiedNameProvider
 
 	override getImplicitImports(boolean ignoreCase) {
-		newArrayList(new ImportNormalizer(
-			QualifiedName.create("noop", "lang"),
-			true, // wildcard
-			ignoreCase
-		))
+		newArrayList(
+			new ImportNormalizer(QualifiedName.create("noop", "lang"), true, ignoreCase),
+			new ImportNormalizer(QualifiedName.create("noop", "io"), true, ignoreCase)
+		)
 	}
 
 	override protected List<ImportNormalizer> internalGetImportedNamespaceResolvers(EObject context, boolean ignoreCase) {

@@ -1,0 +1,5 @@
+PPU {
+    
+    loadPalette(Char index, Char[] palette) {
+    }
+}

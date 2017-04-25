@@ -40,7 +40,6 @@ class Expressions {
 
 	@Inject extension Classes
 	@Inject extension Members
-	@Inject extension TypeSystem
 
 	def NoopClass typeOf(Expression expression) {
 		if (expression === null) {
@@ -50,14 +49,14 @@ class Expressions {
 		switch (expression) {
 			AssignmentExpression: expression.left.typeOf
 			MemberSelection: expression.typeOf
-			OrExpression: expression.boolType
-			AndExpression: expression.boolType
-			EqualsExpression: expression.boolType
-			DifferExpression: expression.boolType
-			GtExpression: expression.boolType
-			GeExpression: expression.boolType
-			LtExpression: expression.boolType
-			LeExpression: expression.boolType
+			OrExpression: TypeSystem::TYPE_BOOL
+			AndExpression: TypeSystem::TYPE_BOOL
+			EqualsExpression: TypeSystem::TYPE_BOOL
+			DifferExpression: TypeSystem::TYPE_BOOL
+			GtExpression: TypeSystem::TYPE_BOOL
+			GeExpression: TypeSystem::TYPE_BOOL
+			LtExpression: TypeSystem::TYPE_BOOL
+			LeExpression: TypeSystem::TYPE_BOOL
 			AddExpression: TypeSystem::TYPE_INT
 			SubExpression: TypeSystem::TYPE_INT
 			MulExpression: TypeSystem::TYPE_INT
@@ -67,13 +66,13 @@ class Expressions {
 			LShiftExpression: TypeSystem::TYPE_CHAR
 			RShiftExpression: TypeSystem::TYPE_CHAR
 			EorExpression: TypeSystem::TYPE_CHAR
-			NotExpression: expression.boolType
+			NotExpression: TypeSystem::TYPE_BOOL
 			SigNegExpression: TypeSystem::TYPE_INT
 			SigPosExpression: TypeSystem::TYPE_INT
 			DecExpression: TypeSystem::TYPE_INT
 			IncExpression: TypeSystem::TYPE_INT
 			ByteLiteral: expression.typeOf
-			BoolLiteral: expression.boolType
+			BoolLiteral: TypeSystem::TYPE_BOOL
 			CharLiteral: TypeSystem::TYPE_CHAR
 			This: expression.containingClass
 			Super: expression.containingClass.superClassOrObject
@@ -109,7 +108,7 @@ class Expressions {
 
 	def typeOf(MemberSelection selection) {
 		if (selection.isInstanceOf) {
-			return selection.boolType
+			return TypeSystem::TYPE_BOOL
 		}
 
 		if (selection.isCast) {

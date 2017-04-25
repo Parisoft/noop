@@ -1,16 +1,16 @@
 package org.parisoft.noop.^extension
 
+import com.google.inject.Inject
+import java.util.Collection
+import java.util.List
 import org.eclipse.emf.ecore.EObject
+import org.eclipse.xtext.naming.IQualifiedNameProvider
+import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import com.google.inject.Inject
 import org.parisoft.noop.scoping.NoopIndex
-import java.util.List
-import java.util.Collection
-import org.eclipse.xtext.naming.IQualifiedNameProvider
-import org.parisoft.noop.noop.Variable
-import org.parisoft.noop.noop.Method
 
 class Classes {
 
@@ -42,13 +42,11 @@ class Classes {
 	}
 
 	def getNoopObjectClass(EObject context) {
-		if (context.fullyQualifiedName == TypeSystem::LIB_OBJECT || context.fullyQualifiedName == "Object") {
+		if (context instanceof NoopClass && (context as NoopClass).is(TypeSystem::TYPE_OBJECT)) {
 			return context as NoopClass;
 		}
-
-		val desc = context.getVisibleClassesDescriptions.findFirst [
-			qualifiedName.toString == TypeSystem::LIB_OBJECT || qualifiedName.toString == "Object"
-		]
+		
+		val desc = context.getVisibleClassesDescriptions.findFirst[qualifiedName.toString == TypeSystem::LIB_OBJECT]
 
 		if (desc === null) {
 			return null
@@ -96,10 +94,14 @@ class Classes {
 			return true
 		}
 
-		c2.classHierarchy.exists[it.fullyQualifiedName == c1.fullyQualifiedName]
+		c2.classHierarchy.exists[it.is(c1)]
 	}
 
 	def isNumber(NoopClass c) {
-		c == TypeSystem::TYPE_INT || c == TypeSystem::TYPE_BYTE || c == TypeSystem::TYPE_CHAR || c == TypeSystem::TYPE_UINT
+		c.is(TypeSystem::TYPE_INT) || c.is(TypeSystem::TYPE_BYTE) || c.is(TypeSystem::TYPE_CHAR) || c.is(TypeSystem::TYPE_UINT)
+	}
+
+	def is(NoopClass c1, NoopClass c2) {
+		c1.fullyQualifiedName == c2.fullyQualifiedName
 	}
 }
