@@ -8,7 +8,6 @@ import org.parisoft.noop.noop.BAndExpression
 import org.parisoft.noop.noop.BOrExpression
 import org.parisoft.noop.noop.BoolLiteral
 import org.parisoft.noop.noop.ByteLiteral
-import org.parisoft.noop.noop.CharLiteral
 import org.parisoft.noop.noop.DecExpression
 import org.parisoft.noop.noop.DifferExpression
 import org.parisoft.noop.noop.DivExpression
@@ -61,11 +60,11 @@ class Expressions {
 			SubExpression: TypeSystem::TYPE_INT
 			MulExpression: TypeSystem::TYPE_INT
 			DivExpression: TypeSystem::TYPE_INT
-			BOrExpression: TypeSystem::TYPE_CHAR
-			BAndExpression: TypeSystem::TYPE_CHAR
-			LShiftExpression: TypeSystem::TYPE_CHAR
-			RShiftExpression: TypeSystem::TYPE_CHAR
-			EorExpression: TypeSystem::TYPE_CHAR
+			BOrExpression: TypeSystem::TYPE_UBYTE
+			BAndExpression: TypeSystem::TYPE_UBYTE
+			LShiftExpression: TypeSystem::TYPE_UBYTE
+			RShiftExpression: TypeSystem::TYPE_UBYTE
+			EorExpression: TypeSystem::TYPE_UBYTE
 			NotExpression: TypeSystem::TYPE_BOOL
 			SigNegExpression: TypeSystem::TYPE_INT
 			SigPosExpression: TypeSystem::TYPE_INT
@@ -73,7 +72,6 @@ class Expressions {
 			IncExpression: TypeSystem::TYPE_INT
 			ByteLiteral: expression.typeOf
 			BoolLiteral: TypeSystem::TYPE_BOOL
-			CharLiteral: TypeSystem::TYPE_CHAR
 			This: expression.containingClass
 			Super: expression.containingClass.superClassOrObject
 			NewInstance: expression.type
@@ -82,17 +80,17 @@ class Expressions {
 		}
 	}
 
-	def typeOf(ByteLiteral b) {
+	def private typeOf(ByteLiteral b) {
 		if (b.value > TypeSystem::MAX_INT) {
 			return TypeSystem::TYPE_UINT
 		}
 
-		if (b.value > TypeSystem::MAX_CHAR) {
+		if (b.value > TypeSystem::MAX_UBYTE) {
 			return TypeSystem::TYPE_INT
 		}
 
 		if (b.value > TypeSystem::MAX_BYTE) {
-			return TypeSystem::TYPE_CHAR
+			return TypeSystem::TYPE_UBYTE
 		}
 
 		if (b.value < TypeSystem::MIN_BYTE) {
@@ -103,10 +101,10 @@ class Expressions {
 			return TypeSystem::TYPE_BYTE
 		}
 
-		return TypeSystem::TYPE_CHAR
+		return TypeSystem::TYPE_UBYTE
 	}
-
-	def typeOf(MemberSelection selection) {
+	
+	def private typeOf(MemberSelection selection) {
 		if (selection.isInstanceOf) {
 			return TypeSystem::TYPE_BOOL
 		}

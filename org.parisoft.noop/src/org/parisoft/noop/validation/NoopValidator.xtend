@@ -22,7 +22,7 @@ class NoopValidator extends AbstractNoopValidator {
 	
 	@Check
 	def inferTypes(NoopClass noopClass) {
-		Members::memberType.clear
+		Members::typeCache.clear
 		
 		for (member : noopClass.getAllContentsOfType(Member)) {
 			member.typeOf

@@ -98,7 +98,7 @@ class Classes {
 	}
 
 	def isNumber(NoopClass c) {
-		c.is(TypeSystem::TYPE_INT) || c.is(TypeSystem::TYPE_BYTE) || c.is(TypeSystem::TYPE_CHAR) || c.is(TypeSystem::TYPE_UINT)
+		c.is(TypeSystem::TYPE_INT) || c.is(TypeSystem::TYPE_BYTE) || c.is(TypeSystem::TYPE_UBYTE) || c.is(TypeSystem::TYPE_UINT)
 	}
 
 	def is(NoopClass c1, NoopClass c2) {

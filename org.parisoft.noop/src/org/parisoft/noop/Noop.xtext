@@ -109,15 +109,13 @@ SelectionExpression returns Expression:
 
 TerminalExpression returns Expression:
 	{ByteLiteral} value=Byte |
-	{BoolLiteral} value=Bool |
-	{CharLiteral} value=Char |
+	{BoolLiteral} value=BOOL |
 	{StringLiteral} value=STRING |
 	{ArrayLiteral} '[' (values+=Expression (',' values+=Expression)*)? ']' |
 	{This} 'this' |
 	{Super} 'super' |
-	{NewInstance} 'new' type=[NoopClass] (('{' LF* field+=Variable (',' LF* field+=Variable)* LF* '}') |
-	dimension+=Index+)? |
-	{InjectInstance} 'inject' type=[NoopClass] |
+	{NewInstance} 'new' '(' type=[NoopClass] dimension+=Index* ')' |
+	{InjectInstance} 'inject' '(' type=[NoopClass] ')' |
 	{MemberRef} member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?
 	indexes+=Index* |
 	'(' Expression ')';
@@ -129,22 +127,19 @@ enum AssignmentType:
 	ASSIGN=':=' | ADD_ASSIGN='+=' | SUB_ASSIGN='-=' | MUL_ASSIGN='*=' | DIV_ASSIGN='/=';
 
 Byte returns ecore::EIntegerObject:
-	HEX | BIN | INT;
-
-Bool returns ecore::EBooleanObject:
-	'true' | 'false';
-
-Char returns ecore::ECharacterObject:
-	CHA;
+	HEX | BIN | CHA | INT;
 
 terminal CHA returns ecore::EChar:
-	"'" (('\\' .) /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | "'")) "'";
+	"'" (('\\' .) | !('\\' | "'")) "'";
 
 terminal HEX returns ecore::EInt:
 	'$' ('0'..'9' | 'A'..'F')+;
 
 terminal BIN returns ecore::EInt:
 	'%' ('0' | '1')+;
+
+terminal BOOL returns ecore::EBoolean:
+	'true' | 'false';
 
 terminal ID:
 	'^'? ('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
@@ -156,7 +151,7 @@ terminal LF:
 	'\r'? '\n';
 
 terminal STRING:
-	'"' ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | '"'))* '"';
+	'"' ('\\' . | !('\\' | '"'))* '"';
 
 terminal ML_COMMENT:
 	'/*'->'*/';

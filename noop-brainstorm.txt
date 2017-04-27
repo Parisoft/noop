@@ -62,7 +62,7 @@ Field structure
 		some : new SquareBall // invalid, cannot be the same type
 	}
 
-5. A field value can have the value overriden, but with the same type, dimension and length
+5. Deprecated! A field value can have the value overriden, but with the same type, dimension and length
 	Ex.:
 
 	Noop:
@@ -75,6 +75,7 @@ Field structure
 		qty : false //invalid: super.qty is of type UByte not Bool
 		list : Player[5][3] // invalid: super.list length is 3 not 5, also super.list dimension is 1 not 2
 	}
+5. A field cannot have this value overriden
 
 Field assignment
 ----------------
@@ -171,7 +172,38 @@ Field injection
 	ball1 = ball3 //evaluates to true, since both ball1 and ball3 points to the same instance 
 
 
-Method Overload
+Field inclusions
+----------------
+1. An included field is the bytes from an external file
+2. Included fields cannot be overriden (just like any field)
+3. An included field acts as a static field (a field from the class, not the instance)
+4. An included field cannt be reassigned
+5. Inclusions cannot be used on variables, only fields
+6. The type of a included field is Byte[] with length same as file size
+Ex.:
+
+Pong extends Game {
+	
+	sprites : include "pong.chr" // assuming pong.chr size is 8Kb, sprites type is Byte[8192]
+}
+
+Location annotation
+-------------------
+1. A field or method can be annotaded with a location to determine where it will be stored
+2. Field annotations: @PrgROM(bank:?), @ChrROM(bank:?), @VRAM, @SRAM
+3. Method annotations: @PrgROM(bank:?)
+4. Whenever a filed or method is accessed, an automatic bankswitch is performed. Its is acquired by a code writen at compile time according to the configured mapper
+5. Annotated methods can be overriden (the bankswitch is writen on the super method, where the redirection occurs; see Method Override (3))
+
+Ex.:
+
+Pong extends Game {
+	
+	@ChrROM
+	sprites : include "pong.chr"
+}
+
+Method Override
 ---------------
 1. Label each class as an ID in ZP (max of 256)
 	Ex.:
@@ -208,7 +240,7 @@ Method Overload
 	LDA #222 ; initialize other fields of instance
 	STA ball+1 // or STA a+Ball.x , where Ball.x is a label for field x offset is class Ball
 
-3. All overloaded methods redirect the invocation to the right implementations unless the flag 'supercall' is set to true
+3. All overriden methods redirect the invocation to the right implementations unless the flag 'supercall' is set to true
 	Ex.:
 	
 	Noop:
@@ -254,7 +286,7 @@ Cast
 
 Super call
 ----------
-1. The method is redirected to the super method with the flag 'supercall' sets to true (see 'Method Overload')
+1. The method is redirected to the super method with the flag 'supercall' sets to true (see 'Method Override')
 2. At compile level, the ASM is writen as:
 	Pseudo:
 	AClass extends Other {
@@ -333,7 +365,7 @@ Comparison
 2. Comparing a = b is same as a.equals(b)
 3. Comparing a # b is same as 'not a.equals(b)'
 4. The equals method algorithm is as folows:
-	4.1 First, it redirects to the right implementation (see 'Method Overload')
+	4.1 First, it redirects to the right implementation (see 'Method Override')
 	4.2 Each byte is compared, returning false on first difference, or true if none differ 
 4. The equals method is writen for each class in compile time, unless it's overriden:
 	Ex.:
@@ -345,7 +377,7 @@ Comparison
 
 	ASM:
 	Ball.equals:
-		... ; redirect if needed (see 'Method Overload')
+		... ; redirect if needed (see 'Method Override')
 		LDA #00 ; assume not equals
 		LDY #00 ; points Y to the 1st byte (class type) 
 	Ball.equals.loop:
