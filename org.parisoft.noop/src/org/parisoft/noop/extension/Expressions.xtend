@@ -39,6 +39,7 @@ class Expressions {
 
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension TypeSystem
 
 	def NoopClass typeOf(Expression expression) {
 		if (expression === null) {
@@ -90,7 +91,7 @@ class Expressions {
 		}
 
 		if (b.value > TypeSystem::MAX_BYTE) {
-			return TypeSystem::TYPE_UBYTE
+			return b.UByteType//TypeSystem::TYPE_UBYTE
 		}
 
 		if (b.value < TypeSystem::MIN_BYTE) {

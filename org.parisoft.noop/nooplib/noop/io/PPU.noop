@@ -1,5 +1,8 @@
 PPU {
     
-    loadPalette(Char index, Char[] palette) {
+    loadPalettes(UByte index, UByte[] palette) {
+    }
+    
+    waitVBlank() {
     }
 }

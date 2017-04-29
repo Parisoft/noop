@@ -15,6 +15,7 @@ import org.parisoft.noop.scoping.NoopIndex
 class Classes {
 
 	@Inject extension NoopIndex
+	@Inject extension TypeSystem
 	@Inject extension IQualifiedNameProvider
 
 	def classHierarchy(NoopClass c) {
@@ -42,23 +43,24 @@ class Classes {
 	}
 
 	def getNoopObjectClass(EObject context) {
-		if (context instanceof NoopClass && (context as NoopClass).is(TypeSystem::TYPE_OBJECT)) {
-			return context as NoopClass;
-		}
-		
-		val desc = context.getVisibleClassesDescriptions.findFirst[qualifiedName.toString == TypeSystem::LIB_OBJECT]
-
-		if (desc === null) {
-			return null
-		}
-
-		var o = desc.EObjectOrProxy
-
-		if (o.eIsProxy) {
-			o = context.eResource.resourceSet.getEObject(desc.EObjectURI, true)
-		}
-
-		o as NoopClass
+		context.objectType
+//		if (context instanceof NoopClass && (context as NoopClass).is(TypeSystem::TYPE_OBJECT)) {
+//			return context as NoopClass;
+//		}
+//		
+//		val desc = context.getVisibleClassesDescriptions.findFirst[qualifiedName.toString == TypeSystem::LIB_OBJECT]
+//
+//		if (desc === null) {
+//			return null
+//		}
+//
+//		var o = desc.EObjectOrProxy
+//
+//		if (o.eIsProxy) {
+//			o = context.eResource.resourceSet.getEObject(desc.EObjectURI, true)
+//		}
+//
+//		o as NoopClass
 	}
 
 	def merge(Collection<NoopClass> classes) {
