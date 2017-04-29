@@ -17,7 +17,7 @@ class NoopHighlightingConfiguration extends DefaultHighlightingConfiguration {
 
 	def classTextStyle() {
 		val style = new TextStyle
-		style.color = new RGB(135, 135, 135)
+		style.color = new RGB(0, 0, 0)
 		style.style = SWT.BOLD
 		 
 		return style

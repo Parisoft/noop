@@ -10,14 +10,17 @@ NoopClass:
 Member:
 	(Variable | Method) LF+;
 
+Storage:
+	type=StorageType ('[' bank=Expression ']')?;
+
 Variable:
-	name=ID ':' value=Expression;
+	name=ID storage=Storage? ':' value=Expression;
 
 Parameter returns Variable:
 	type=[NoopClass] name=ID;
 
 Method:
-	name=ID '(' (params+=Parameter (',' params+=Parameter)*)? ')' body=Block;
+	name=ID '(' (params+=Parameter (',' params+=Parameter)*)? ')' storage=Storage? body=Block;
 
 Block:
 	{Block} '{' LF* statements+=Statement* '}';
@@ -116,6 +119,7 @@ TerminalExpression returns Expression:
 	{Super} 'super' |
 	{NewInstance} 'new' '(' type=[NoopClass] dimension+=Index* ')' |
 	{InjectInstance} 'inject' '(' type=[NoopClass] ')' |
+	{IncludeFile} 'include' '(' filename=STRING ')' |
 	{MemberRef} member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?
 	indexes+=Index* |
 	'(' Expression ')';
@@ -125,6 +129,9 @@ Index:
 
 enum AssignmentType:
 	ASSIGN=':=' | ADD_ASSIGN='+=' | SUB_ASSIGN='-=' | MUL_ASSIGN='*=' | DIV_ASSIGN='/=';
+
+enum StorageType:
+	AT_PRGROM='@PRG-ROM' | AT_CHRROM='@CHR-ROM';
 
 Byte returns ecore::EIntegerObject:
 	HEX | BIN | CHA | INT;
@@ -142,7 +149,10 @@ terminal BOOL returns ecore::EBoolean:
 	'true' | 'false';
 
 terminal ID:
-	'^'? ('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
+	('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
+
+terminal TAG_ID:
+	'@' ('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
 
 terminal INT returns ecore::EInt:
 	('0'..'9')+;

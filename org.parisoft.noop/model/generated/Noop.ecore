@@ -9,6 +9,13 @@
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Member">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="storage" eType="#//Storage"
+        containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Storage">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="type" eType="#//StorageType"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="bank" eType="#//Expression"
+        containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Variable" eSuperTypes="#//Member #//Statement">
     <eStructuralFeatures xsi:type="ecore:EReference" name="value" eType="#//Expression"
@@ -57,6 +64,10 @@
     <eLiterals name="SUB_ASSIGN" value="2" literal="-="/>
     <eLiterals name="MUL_ASSIGN" value="3" literal="*="/>
     <eLiterals name="DIV_ASSIGN" value="4" literal="/="/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="StorageType">
+    <eLiterals name="AT_PRGROM" literal="@PRG-ROM"/>
+    <eLiterals name="AT_CHRROM" value="1" literal="@CHR-ROM"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="AssignmentExpression" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"
@@ -220,6 +231,9 @@
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="InjectInstance" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="IncludeFile" eSuperTypes="#//Expression">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="filename" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="MemberRef" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="member" eType="#//Member"/>
