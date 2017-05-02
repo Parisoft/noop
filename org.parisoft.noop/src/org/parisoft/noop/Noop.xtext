@@ -164,7 +164,7 @@ terminal STRING:
 	'"' ('\\' . | !('\\' | '"'))* '"';
 
 terminal ML_COMMENT:
-	'/*'->'*/' ('\r'? '\n')*;
+	'/*'->('*/' ('\r'? '\n')*);
 
 terminal SL_COMMENT:
 	'//' !('\n' | '\r')*;

@@ -11,6 +11,7 @@ import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.exception.NonConstantMemberException
 
 public class Members {
 
@@ -24,6 +25,10 @@ public class Members {
 		val memberClass = member.containingClass
 
 		contextClass == memberClass || contextClass.isSubclassOf(memberClass)
+	}
+	
+	def isConstant(Variable variable) {
+		variable.name.chars.allMatch[it == '_' || Character::isUpperCase(it)]
 	}
 
 	def typeOf(Member member) {
@@ -46,17 +51,27 @@ public class Members {
 	}
 
 	def typeOf(Method method) {
-		if (org.parisoft.noop.^extension.Members.typeCache.containsKey(method)) {
-			return org.parisoft.noop.^extension.Members.typeCache.get(method)
+		if (typeCache.containsKey(method)) {
+			return typeCache.get(method)
 		}
 
-		org.parisoft.noop.^extension.Members.typeCache.put(method, null)
+		typeCache.put(method, null)
 
 		val returns = method.body.getAllContentsOfType(ReturnStatement)
 		val type = returns.map[value.typeOf].filterNull.toSet.merge
 
-		org.parisoft.noop.^extension.Members.typeCache.put(method, type)
+		typeCache.put(method, type)
 
 		return type
+	}
+	
+	def valueOf(Member member) {
+		if (member instanceof Variable) {
+			if (member.isConstant) {
+				return member.value.valueOf
+			}
+		}
+		
+		throw new NonConstantMemberException
 	}
 }
