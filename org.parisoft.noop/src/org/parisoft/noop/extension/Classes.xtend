@@ -10,11 +10,9 @@ import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.scoping.NoopIndex
 
 class Classes {
 
-	@Inject extension NoopIndex
 	@Inject extension TypeSystem
 	@Inject extension IQualifiedNameProvider
 
@@ -39,28 +37,7 @@ class Classes {
 	}
 
 	def getSuperClassOrObject(NoopClass c) {
-		c.superClass ?: getNoopObjectClass(c)
-	}
-
-	def getNoopObjectClass(EObject context) {
-		context.objectType
-//		if (context instanceof NoopClass && (context as NoopClass).is(TypeSystem::TYPE_OBJECT)) {
-//			return context as NoopClass;
-//		}
-//		
-//		val desc = context.getVisibleClassesDescriptions.findFirst[qualifiedName.toString == TypeSystem::LIB_OBJECT]
-//
-//		if (desc === null) {
-//			return null
-//		}
-//
-//		var o = desc.EObjectOrProxy
-//
-//		if (o.eIsProxy) {
-//			o = context.eResource.resourceSet.getEObject(desc.EObjectURI, true)
-//		}
-//
-//		o as NoopClass
+		c.superClass ?: c.toObjectClass
 	}
 
 	def merge(Collection<NoopClass> classes) {
@@ -96,14 +73,16 @@ class Classes {
 			return true
 		}
 
-		c2.classHierarchy.exists[it.is(c1)]
+		val className = c1.fullyQualifiedName
+
+		return c2.classHierarchy.exists[it.fullyQualifiedName == className]
 	}
 
 	def isNumber(NoopClass c) {
-		c.is(TypeSystem::TYPE_INT) || c.is(TypeSystem::TYPE_BYTE) || c.is(TypeSystem::TYPE_UBYTE) || c.is(TypeSystem::TYPE_UINT)
+		val className = c.fullyQualifiedName
+
+		return className == c.toIntClass.fullyQualifiedName || className == c.toByteClass.fullyQualifiedName ||
+			className == c.toUByteClass.fullyQualifiedName || className == c.toUIntClass.fullyQualifiedName
 	}
 
-	def is(NoopClass c1, NoopClass c2) {
-		c1.fullyQualifiedName == c2.fullyQualifiedName
-	}
 }

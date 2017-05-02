@@ -18,8 +18,8 @@ class TypeSystem {
 	public static val TYPE_BYTE = NoopFactory::eINSTANCE.createNoopClass => [name = 'Byte' superClass = TYPE_INT]
 	public static val TYPE_UBYTE = NoopFactory::eINSTANCE.createNoopClass => [name = 'UByte' superClass = TYPE_INT]
 	public static val TYPE_BOOL = NoopFactory::eINSTANCE.createNoopClass => [name = 'Bool' superClass = TYPE_OBJECT]
-
-//	public static val LIB_PACKAGE = "noop.lang"
+	
+	public static val LIB_PACKAGE = "noop.lang"
 	public static val LIB_OBJECT = "Object" // LIB_PACKAGE + ".Object"
 	public static val LIB_INT = "Int" // LIB_PACKAGE + ".Int"
 	public static val LIB_UINT = "UInt" // LIB_PACKAGE + ".UInt"
@@ -39,41 +39,41 @@ class TypeSystem {
 	@Inject extension IQualifiedNameProvider
 	@Inject extension NoopIndex
 
-	def getObjectType(EObject context) {
-		getType(context, LIB_OBJECT)
+	def toObjectClass(EObject context) {
+		toClassOrDefault(context, LIB_OBJECT, TYPE_OBJECT)
 	}
 
-	def getIntType(EObject context) {
-		getType(context, LIB_INT)
+	def toIntClass(EObject context) {
+		toClassOrDefault(context, LIB_INT, TYPE_INT)
 	}
 
-	def getUIntType(EObject context) {
-		getType(context, LIB_UINT)
+	def toUIntClass(EObject context) {
+		toClassOrDefault(context, LIB_UINT, TYPE_UINT)
 	}
 
-	def getByteType(EObject context) {
-		getType(context, LIB_BYTE)
+	def toByteClass(EObject context) {
+		toClassOrDefault(context, LIB_BYTE, TYPE_BYTE)
 	}
 
-	def getUByteType(EObject context) {
-		getType(context, LIB_UBYTE)
+	def toUByteClass(EObject context) {
+		toClassOrDefault(context, LIB_UBYTE, TYPE_UBYTE)
 	}
 
-	def getBoolType(EObject context) {
-		getType(context, LIB_BOOL)
+	def toBoolClass(EObject context) {
+		toClassOrDefault(context, LIB_BOOL, TYPE_BOOL)
 	}
 
-	def getVoidType(EObject context) {
-		getType(context, LIB_VOID)
+	def toVoidClass(EObject context) {
+		toClassOrDefault(context, LIB_VOID, TYPE_VOID)
 	}
 
-	def getType(EObject context, String type) {
+	def toClassOrDefault(EObject context, String type, NoopClass ^default) {
 		typeCache.computeIfAbsent(type, [
-			if (context.fullyQualifiedName == type) {
+			if (context.fullyQualifiedName == type && context instanceof NoopClass) {
 				return context as NoopClass;
 			}
 
-			val desc = TYPE_VOID.getVisibleClassesDescriptions.findFirst[qualifiedName.toString == type]
+			val desc = context.getVisibleClassesDescriptions.findFirst[qualifiedName.toString == type]
 
 			if (desc === null) {
 				return null
@@ -82,10 +82,10 @@ class TypeSystem {
 			var o = desc.EObjectOrProxy
 
 			if (o.eIsProxy) {
-				o = TYPE_VOID.eResource.resourceSet.getEObject(desc.EObjectURI, true)
+				o = context.eResource.resourceSet.getEObject(desc.EObjectURI, true)
 			}
 
 			o as NoopClass
-		])
+		]) ?: ^default
 	}
 }

@@ -23,5 +23,16 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 				super.getFirstLine(o)
 		}
 	}
+	
+	override protected getDocumentation(EObject o) {
+		val doc = super.getDocumentation(o)
+		var index = -1
+		
+		if (doc !== null && (index = doc.indexOf('*/')) !== -1) {
+			return doc.substring(0, index)
+		}
+		
+		return doc
+	}
 
 }

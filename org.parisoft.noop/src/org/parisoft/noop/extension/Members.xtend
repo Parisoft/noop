@@ -34,7 +34,7 @@ public class Members {
 	}
 
 	def typeOf(Variable variable) {
-		org.parisoft.noop.^extension.Members.typeCache.computeIfAbsent(variable, [
+		typeCache.computeIfAbsent(variable, [
 			if (variable.type !== null) {
 				variable.type
 			} else if (variable.value instanceof MemberRef && (variable.value as MemberRef).member === variable) {

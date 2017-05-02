@@ -131,7 +131,7 @@ enum AssignmentType:
 	ASSIGN=':=' | ADD_ASSIGN='+=' | SUB_ASSIGN='-=' | MUL_ASSIGN='*=' | DIV_ASSIGN='/=';
 
 enum StorageType:
-	AT_PRGROM='@PRG-ROM' | AT_CHRROM='@CHR-ROM';
+	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM';
 
 Byte returns ecore::EIntegerObject:
 	HEX | BIN | CHA | INT;
@@ -164,7 +164,7 @@ terminal STRING:
 	'"' ('\\' . | !('\\' | '"'))* '"';
 
 terminal ML_COMMENT:
-	'/*'->'*/';
+	'/*'->'*/' ('\r'? '\n')*;
 
 terminal SL_COMMENT:
 	'//' !('\n' | '\r')*;

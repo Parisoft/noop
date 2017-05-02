@@ -15,6 +15,10 @@ class NoopAntlrTokenToAttributeIdMapper extends DefaultAntlrTokenToAttributeIdMa
 			return NoopHighlightingConfiguration.NUMBER_ID
 		}
 		
+		if (tokenName == "RULE_BOOL") {
+			return NoopHighlightingConfiguration.KEYWORD_ID
+		}
+		
 		if (tokenName == "RULE_TAG_ID" || tokenName == "'@PRG-ROM'" || tokenName == "'@CHR-ROM'") {
 			return NoopHighlightingConfiguration.TAG_ID
 		}

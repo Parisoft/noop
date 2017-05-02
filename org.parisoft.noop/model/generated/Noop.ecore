@@ -66,8 +66,8 @@
     <eLiterals name="DIV_ASSIGN" value="4" literal="/="/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EEnum" name="StorageType">
-    <eLiterals name="AT_PRGROM" literal="@PRG-ROM"/>
-    <eLiterals name="AT_CHRROM" value="1" literal="@CHR-ROM"/>
+    <eLiterals name="PRGROM" literal="@PRG-ROM"/>
+    <eLiterals name="CHRROM" value="1" literal="@CHR-ROM"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="AssignmentExpression" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"

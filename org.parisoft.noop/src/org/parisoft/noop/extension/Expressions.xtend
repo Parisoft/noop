@@ -49,30 +49,30 @@ class Expressions {
 		switch (expression) {
 			AssignmentExpression: expression.left.typeOf
 			MemberSelection: expression.typeOf
-			OrExpression: TypeSystem::TYPE_BOOL
-			AndExpression: TypeSystem::TYPE_BOOL
-			EqualsExpression: TypeSystem::TYPE_BOOL
-			DifferExpression: TypeSystem::TYPE_BOOL
-			GtExpression: TypeSystem::TYPE_BOOL
-			GeExpression: TypeSystem::TYPE_BOOL
-			LtExpression: TypeSystem::TYPE_BOOL
-			LeExpression: TypeSystem::TYPE_BOOL
-			AddExpression: TypeSystem::TYPE_INT
-			SubExpression: TypeSystem::TYPE_INT
-			MulExpression: TypeSystem::TYPE_INT
-			DivExpression: TypeSystem::TYPE_INT
-			BOrExpression: TypeSystem::TYPE_UBYTE
-			BAndExpression: TypeSystem::TYPE_UBYTE
-			LShiftExpression: TypeSystem::TYPE_UBYTE
-			RShiftExpression: TypeSystem::TYPE_UBYTE
-			EorExpression: TypeSystem::TYPE_UBYTE
-			NotExpression: TypeSystem::TYPE_BOOL
-			SigNegExpression: TypeSystem::TYPE_INT
-			SigPosExpression: TypeSystem::TYPE_INT
-			DecExpression: TypeSystem::TYPE_INT
-			IncExpression: TypeSystem::TYPE_INT
+			OrExpression: expression.toBoolClass
+			AndExpression: expression.toBoolClass
+			EqualsExpression: expression.toBoolClass
+			DifferExpression: expression.toBoolClass
+			GtExpression: expression.toBoolClass
+			GeExpression: expression.toBoolClass
+			LtExpression: expression.toBoolClass
+			LeExpression: expression.toBoolClass
+			AddExpression: expression.toIntClass
+			SubExpression: expression.toIntClass
+			MulExpression: expression.toIntClass
+			DivExpression: expression.toIntClass
+			BOrExpression: expression.toUByteClass
+			BAndExpression: expression.toUByteClass
+			LShiftExpression: expression.toUByteClass
+			RShiftExpression: expression.toUByteClass
+			EorExpression: expression.toUByteClass
+			NotExpression: expression.toBoolClass
+			SigNegExpression: expression.toIntClass
+			SigPosExpression: expression.toIntClass
+			DecExpression: expression.toIntClass
+			IncExpression: expression.toIntClass
 			ByteLiteral: expression.typeOf
-			BoolLiteral: TypeSystem::TYPE_BOOL
+			BoolLiteral: expression.toBoolClass
 			This: expression.containingClass
 			Super: expression.containingClass.superClassOrObject
 			NewInstance: expression.type
@@ -83,31 +83,31 @@ class Expressions {
 
 	def private typeOf(ByteLiteral b) {
 		if (b.value > TypeSystem::MAX_INT) {
-			return TypeSystem::TYPE_UINT
+			return b.toUIntClass
 		}
 
 		if (b.value > TypeSystem::MAX_UBYTE) {
-			return TypeSystem::TYPE_INT
+			return b.toIntClass
 		}
 
 		if (b.value > TypeSystem::MAX_BYTE) {
-			return b.UByteType//TypeSystem::TYPE_UBYTE
+			return b.toUByteClass
 		}
 
 		if (b.value < TypeSystem::MIN_BYTE) {
-			return TypeSystem::TYPE_INT
+			return b.toIntClass
 		}
 
 		if (b.value < 0) {
-			return TypeSystem::TYPE_BYTE
+			return b.toByteClass
 		}
 
-		return TypeSystem::TYPE_UBYTE
+		return b.toUByteClass
 	}
 	
 	def private typeOf(MemberSelection selection) {
 		if (selection.isInstanceOf) {
-			return TypeSystem::TYPE_BOOL
+			return selection.toBoolClass
 		}
 
 		if (selection.isCast) {

@@ -14,8 +14,8 @@
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/DIV_ASSIGN"/>
     </genEnums>
     <genEnums typeSafeEnumCompatible="false" ecoreEnum="Noop.ecore#//StorageType">
-      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/AT_PRGROM"/>
-      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/AT_CHRROM"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/PRGROM"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/CHRROM"/>
     </genEnums>
     <genClasses ecoreClass="Noop.ecore#//NoopClass">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//NoopClass/name"/>
