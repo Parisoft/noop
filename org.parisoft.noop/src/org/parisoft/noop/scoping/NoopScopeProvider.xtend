@@ -21,6 +21,8 @@ import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.noop.NoopPackage
+import org.parisoft.noop.noop.Constructor
+import org.parisoft.noop.noop.NewInstance
 
 /**
  * This class contains custom scoping description.
@@ -39,6 +41,13 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			Block:
 				if (eRef == NoopPackage.eINSTANCE.memberRef_Member) {
 					return scopeForVariableRef(context)
+				}
+			Constructor:
+				if (eRef == NoopPackage.eINSTANCE.constructorField_Name) {
+					val container = (context.eContainer as NewInstance).type
+					val thisFields = container.members.takeWhile[it != context].filter(Variable)
+					val superFields = container.inheritedFields
+					return Scopes.scopeFor(thisFields, Scopes.scopeFor(superFields))
 				}
 			MemberRef:
 				return scopeForMemberRef(context)
@@ -68,8 +77,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 		return switch (container) {
 			NoopClass: {
-				val thisMembers = container.members.takeWhile[it != context].filter(Variable) + container.methods;
-				val superMembers = container.inheritedFields + container.inheritedMethods;
+				val thisMembers = container.members.takeWhile[it != context].filter(Variable) + container.methods
+				val superMembers = container.inheritedFields + container.inheritedMethods
 				Scopes.scopeFor(thisMembers, Scopes.scopeFor(superMembers))
 			}
 			Method:

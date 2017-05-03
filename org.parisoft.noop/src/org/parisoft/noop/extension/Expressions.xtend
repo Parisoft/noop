@@ -1,10 +1,13 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
+import java.util.stream.Collectors
 import org.parisoft.noop.exception.InvalidExpressionException
 import org.parisoft.noop.exception.NonConstantExpressionException
+import org.parisoft.noop.exception.NonConstantMemberException
 import org.parisoft.noop.noop.AddExpression
 import org.parisoft.noop.noop.AndExpression
+import org.parisoft.noop.noop.ArrayLiteral
 import org.parisoft.noop.noop.AssignmentExpression
 import org.parisoft.noop.noop.BAndExpression
 import org.parisoft.noop.noop.BOrExpression
@@ -19,7 +22,6 @@ import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.GeExpression
 import org.parisoft.noop.noop.GtExpression
 import org.parisoft.noop.noop.IncExpression
-import org.parisoft.noop.noop.IncludeFile
 import org.parisoft.noop.noop.InjectInstance
 import org.parisoft.noop.noop.LShiftExpression
 import org.parisoft.noop.noop.LeExpression
@@ -38,8 +40,7 @@ import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.SubExpression
 import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.This
-import java.util.stream.Collectors
-import org.parisoft.noop.exception.NonConstantMemberException
+import org.parisoft.noop.noop.IncludeFile
 
 class Expressions {
 
@@ -53,77 +54,119 @@ class Expressions {
 		}
 
 		switch (expression) {
-			AssignmentExpression: expression.left.typeOf
-			MemberSelection: expression.typeOf
-			OrExpression: expression.toBoolClass
-			AndExpression: expression.toBoolClass
-			EqualsExpression: expression.toBoolClass
-			DifferExpression: expression.toBoolClass
-			GtExpression: expression.toBoolClass
-			GeExpression: expression.toBoolClass
-			LtExpression: expression.toBoolClass
-			LeExpression: expression.toBoolClass
-			AddExpression: expression.toIntClass
-			SubExpression: expression.toIntClass
-			MulExpression: expression.toIntClass
-			DivExpression: expression.toIntClass
-			BOrExpression: expression.toUByteClass
-			BAndExpression: expression.toUByteClass
-			LShiftExpression: expression.toUByteClass
-			RShiftExpression: expression.toUByteClass
-			EorExpression: expression.toUByteClass
-			NotExpression: expression.toBoolClass
-			SigNegExpression: expression.toIntClass
-			SigPosExpression: expression.toIntClass
-			DecExpression: expression.toIntClass
-			IncExpression: expression.toIntClass
-			ByteLiteral: expression.typeOf
-			BoolLiteral: expression.toBoolClass
-//			ArrayLiteral: 
-			StringLiteral: expression.toUByteClass
-			This: expression.containingClass
-			Super: expression.containingClass.superClassOrObject
-			NewInstance: expression.type
-			InjectInstance: expression.type
-			IncludeFile: expression.toUByteClass
-			MemberRef: expression.member.typeOf
+			AssignmentExpression:
+				expression.left.typeOf
+			MemberSelection:
+				if (expression.isInstanceOf) {
+					expression.toBoolClass
+				} else if (expression.isCast) {
+					expression.type
+				} else {
+					expression.member.typeOf
+				}
+			OrExpression:
+				expression.toBoolClass
+			AndExpression:
+				expression.toBoolClass
+			EqualsExpression:
+				expression.toBoolClass
+			DifferExpression:
+				expression.toBoolClass
+			GtExpression:
+				expression.toBoolClass
+			GeExpression:
+				expression.toBoolClass
+			LtExpression:
+				expression.toBoolClass
+			LeExpression:
+				expression.toBoolClass
+			AddExpression:
+				expression.typeOfValueOrInt
+			SubExpression:
+				expression.typeOfValueOrInt
+			MulExpression:
+				expression.typeOfValueOrInt
+			DivExpression:
+				expression.typeOfValueOrInt
+			BOrExpression:
+				expression.toUByteClass
+			BAndExpression:
+				expression.toUByteClass
+			LShiftExpression:
+				expression.toUByteClass
+			RShiftExpression:
+				expression.toUByteClass
+			EorExpression:
+				expression.toUByteClass
+			NotExpression:
+				expression.toBoolClass
+			SigNegExpression:
+				expression.typeOfValueOrInt
+			SigPosExpression:
+				expression.typeOfValueOrInt
+			DecExpression:
+				expression.toIntClass
+			IncExpression:
+				expression.toIntClass
+			ByteLiteral:
+				if (expression.value > TypeSystem::MAX_INT) {
+					expression.toUIntClass
+				} else if (expression.value > TypeSystem::MAX_UBYTE) {
+					expression.toIntClass
+				} else if (expression.value > TypeSystem::MAX_BYTE) {
+					expression.toUByteClass
+				} else if (expression.value < TypeSystem::MIN_BYTE) {
+					expression.toIntClass
+				} else if (expression.value < TypeSystem::MIN_UBYTE) {
+					expression.toByteClass
+				} else {
+					expression.toUByteClass
+				}
+			BoolLiteral:
+				expression.toBoolClass
+			ArrayLiteral:
+				if (expression.values.isEmpty) {
+					expression.toObjectClass
+				} else {
+					expression.values.map[it.typeOf].merge
+				}
+			StringLiteral:
+				expression.toUByteClass
+			This:
+				expression.containingClass
+			Super:
+				expression.containingClass.superClassOrObject
+			NewInstance:
+				expression.type
+			InjectInstance:
+				expression.type
+			IncludeFile:
+				expression.toUByteClass
+			MemberRef:
+				expression.member.typeOf
 		}
 	}
 
-	private def typeOf(ByteLiteral b) {
-		if (b.value > TypeSystem::MAX_INT) {
-			return b.toUIntClass
+	private def typeOfValueOrInt(Expression expression) {
+		try {
+			val value = expression.valueOf as Integer
+
+			if (value > TypeSystem::MAX_INT) {
+				expression.toUIntClass
+			} else if (value > TypeSystem::MAX_UBYTE) {
+				expression.toIntClass
+			} else if (value > TypeSystem::MAX_BYTE) {
+				expression.toUByteClass
+			} else if (value < TypeSystem::MIN_BYTE) {
+				expression.toIntClass
+			} else if (value < TypeSystem::MIN_UBYTE) {
+				expression.toByteClass
+			} else {
+				expression.toUByteClass
+			}
+		} catch (Exception e) {
+			expression.toIntClass
 		}
-
-		if (b.value > TypeSystem::MAX_UBYTE) {
-			return b.toIntClass
-		}
-
-		if (b.value > TypeSystem::MAX_BYTE) {
-			return b.toUByteClass
-		}
-
-		if (b.value < TypeSystem::MIN_BYTE) {
-			return b.toIntClass
-		}
-
-		if (b.value < 0) {
-			return b.toByteClass
-		}
-
-		return b.toUByteClass
-	}
-
-	private def typeOf(MemberSelection selection) {
-		if (selection.isInstanceOf) {
-			return selection.toBoolClass
-		}
-
-		if (selection.isCast) {
-			return selection.type
-		}
-
-		return selection.member.typeOf
 	}
 
 	def Object valueOf(Expression expression) {
@@ -135,9 +178,9 @@ class Expressions {
 					if (expression.isInstanceOf) {
 						throw new NonConstantExpressionException(expression)
 					} else if (expression.isCast) {
-						return expression.receiver
+						expression.receiver
 					} else {
-						return expression.member.valueOf
+						expression.member.valueOf
 					}
 				OrExpression:
 					(expression.left.valueOf as Boolean) || (expression.right.valueOf as Boolean)
@@ -183,9 +226,14 @@ class Expressions {
 					expression.value
 				BoolLiteral:
 					expression.value
-//			    ArrayLiteral: 
+				ArrayLiteral:
+					expression.values.map[it.valueOf]
 				StringLiteral:
 					expression.value.chars.boxed.collect(Collectors.toList)
+				NewInstance:
+					expression.type
+				InjectInstance:
+					expression.type
 				MemberRef:
 					expression.member.valueOf
 				default:
@@ -193,8 +241,6 @@ class Expressions {
 //				IncExpression:
 //			    This: 
 //			    Super:
-//			    NewInstance: 
-//			    InjectInstance:
 //			    IncludeFile: 
 					throw new NonConstantExpressionException(expression)
 			}

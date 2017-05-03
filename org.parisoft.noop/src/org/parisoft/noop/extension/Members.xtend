@@ -16,7 +16,8 @@ import org.parisoft.noop.exception.NonConstantMemberException
 public class Members {
 
 	public static val typeCache = <Member, NoopClass>newHashMap()
-
+	static val char DASH_CHAR = '_'
+	
 	@Inject extension Classes
 	@Inject extension Expressions
 
@@ -26,9 +27,9 @@ public class Members {
 
 		contextClass == memberClass || contextClass.isSubclassOf(memberClass)
 	}
-	
+
 	def isConstant(Variable variable) {
-		variable.name.chars.allMatch[it == '_' || Character::isUpperCase(it)]
+		variable.name.chars.allMatch[Character::isUpperCase(it) || Character.isDigit(it) || it === DASH_CHAR]
 	}
 
 	def typeOf(Member member) {
@@ -64,14 +65,14 @@ public class Members {
 
 		return type
 	}
-	
+
 	def valueOf(Member member) {
 		if (member instanceof Variable) {
 			if (member.isConstant) {
 				return member.value.valueOf
 			}
 		}
-		
+
 		throw new NonConstantMemberException
 	}
 }

@@ -54,6 +54,15 @@
         containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Expression" eSuperTypes="#//Statement"/>
+  <eClassifiers xsi:type="ecore:EClass" name="Constructor">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="field" upperBound="-1"
+        eType="#//ConstructorField" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ConstructorField">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="name" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="value" eType="#//Expression"
+        containment="true"/>
+  </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Index">
     <eStructuralFeatures xsi:type="ecore:EReference" name="value" eType="#//Expression"
         containment="true"/>
@@ -226,6 +235,8 @@
   <eClassifiers xsi:type="ecore:EClass" name="Super" eSuperTypes="#//Expression"/>
   <eClassifiers xsi:type="ecore:EClass" name="NewInstance" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="constructor" eType="#//Constructor"
+        containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="dimension" upperBound="-1"
         eType="#//Index" containment="true"/>
   </eClassifiers>

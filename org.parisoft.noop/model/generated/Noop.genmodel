@@ -57,6 +57,13 @@
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ElseStatement/if"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//Expression"/>
+    <genClasses ecoreClass="Noop.ecore#//Constructor">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Constructor/field"/>
+    </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//ConstructorField">
+      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//ConstructorField/name"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ConstructorField/value"/>
+    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//Index">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Index/value"/>
     </genClasses>
@@ -173,6 +180,7 @@
     <genClasses ecoreClass="Noop.ecore#//Super"/>
     <genClasses ecoreClass="Noop.ecore#//NewInstance">
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//NewInstance/type"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//NewInstance/constructor"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//NewInstance/dimension"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//InjectInstance">

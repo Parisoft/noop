@@ -107,7 +107,7 @@ IncExpression returns Expression:
 
 SelectionExpression returns Expression:
 	TerminalExpression ({MemberSelection.receiver=current} '.'
-	((member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?) indexes+=Index* |
+	((member=[Member] (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?) indexes+=Index* |
 	((instanceOf?='instanceOf' | cast?='as') '(' type=[NoopClass] ')')))*;
 
 TerminalExpression returns Expression:
@@ -117,12 +117,17 @@ TerminalExpression returns Expression:
 	{ArrayLiteral} '[' (values+=Expression (',' values+=Expression)*)? ']' |
 	{This} 'this' |
 	{Super} 'super' |
-	{NewInstance} 'new' '(' type=[NoopClass] dimension+=Index* ')' |
-	{InjectInstance} 'inject' '(' type=[NoopClass] ')' |
-	{IncludeFile} 'include' '(' filename=STRING ')' |
-	{MemberRef} member=[Member] => (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?
-	indexes+=Index* |
+	{NewInstance} 'new' type=[NoopClass] (constructor=Constructor | dimension+=Index*) |
+	{InjectInstance} 'inject' type=[NoopClass] |
+	{IncludeFile} 'include' filename=STRING |
+	{MemberRef} member=[Member] (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')? indexes+=Index* |
 	'(' Expression ')';
+
+Constructor:
+	{Constructor} '{' LF* (field+=ConstructorField (',' LF* field+=ConstructorField)* LF*)? '}';
+
+ConstructorField:
+	name=[Variable] ':' value=Expression;
 
 Index:
 	'[' value=Expression ']';
