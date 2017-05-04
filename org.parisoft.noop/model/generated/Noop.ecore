@@ -21,6 +21,8 @@
     <eStructuralFeatures xsi:type="ecore:EReference" name="value" eType="#//Expression"
         containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dimension" unique="false"
+        upperBound="-1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Method" eSuperTypes="#//Member">
     <eStructuralFeatures xsi:type="ecore:EReference" name="params" upperBound="-1"

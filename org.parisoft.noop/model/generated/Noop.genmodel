@@ -33,6 +33,7 @@
     <genClasses ecoreClass="Noop.ecore#//Variable">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Variable/value"/>
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//Variable/type"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//Variable/dimension"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//Method">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Method/params"/>

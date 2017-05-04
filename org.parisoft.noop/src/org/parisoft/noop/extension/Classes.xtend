@@ -82,8 +82,8 @@ class Classes {
 		try {
 			val className = c.fullyQualifiedName
 
-			return className == c.toIntClass.fullyQualifiedName || className == c.toByteClass.fullyQualifiedName ||
-				className == c.toUByteClass.fullyQualifiedName || className == c.toUIntClass.fullyQualifiedName
+			return className == c.toIntClass.fullyQualifiedName || className == c.toSByteClass.fullyQualifiedName ||
+				className == c.toByteClass.fullyQualifiedName || className == c.toUIntClass.fullyQualifiedName
 		} catch (Exception exception) {
 			return false
 		}

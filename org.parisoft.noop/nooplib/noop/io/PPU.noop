@@ -1,6 +1,6 @@
 PPU {
     
-    loadPalettes(UByte index, UByte[] palette) {
+    loadPalettes(Byte index, Byte[] palette) {
     }
     
     waitVBlank() {

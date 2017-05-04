@@ -12,11 +12,11 @@ import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.exception.NonConstantMemberException
+import java.util.WeakHashMap
 
 public class Members {
 
-	public static val typeCache = <Member, NoopClass>newHashMap()
-	static val char DASH_CHAR = '_'
+	static val typeCache = new WeakHashMap<Member, NoopClass>
 	
 	@Inject extension Classes
 	@Inject extension Expressions
@@ -29,7 +29,7 @@ public class Members {
 	}
 
 	def isConstant(Variable variable) {
-		variable.name.chars.allMatch[Character::isUpperCase(it) || Character.isDigit(it) || it === DASH_CHAR]
+		variable.name.startsWith('_')
 	}
 
 	def typeOf(Member member) {

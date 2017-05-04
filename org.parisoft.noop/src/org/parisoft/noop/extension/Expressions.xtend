@@ -110,16 +110,16 @@ class Expressions {
 			ByteLiteral:
 				if (expression.value > TypeSystem::MAX_INT) {
 					expression.toUIntClass
-				} else if (expression.value > TypeSystem::MAX_UBYTE) {
-					expression.toIntClass
 				} else if (expression.value > TypeSystem::MAX_BYTE) {
-					expression.toUByteClass
-				} else if (expression.value < TypeSystem::MIN_BYTE) {
 					expression.toIntClass
-				} else if (expression.value < TypeSystem::MIN_UBYTE) {
+				} else if (expression.value > TypeSystem::MAX_SBYTE) {
 					expression.toByteClass
+				} else if (expression.value < TypeSystem::MIN_SBYTE) {
+					expression.toIntClass
+				} else if (expression.value < TypeSystem::MIN_BYTE) {
+					expression.toSByteClass
 				} else {
-					expression.toUByteClass
+					expression.toByteClass
 				}
 			BoolLiteral:
 				expression.toBoolClass
@@ -130,7 +130,7 @@ class Expressions {
 					expression.values.map[it.typeOf].merge
 				}
 			StringLiteral:
-				expression.toUByteClass
+				expression.toByteClass
 			This:
 				expression.containingClass
 			Super:
@@ -150,16 +150,16 @@ class Expressions {
 
 			if (value > TypeSystem::MAX_INT) {
 				expression.toUIntClass
-			} else if (value > TypeSystem::MAX_UBYTE) {
-				expression.toIntClass
 			} else if (value > TypeSystem::MAX_BYTE) {
-				expression.toUByteClass
-			} else if (value < TypeSystem::MIN_BYTE) {
 				expression.toIntClass
-			} else if (value < TypeSystem::MIN_UBYTE) {
+			} else if (value > TypeSystem::MAX_SBYTE) {
 				expression.toByteClass
+			} else if (value < TypeSystem::MIN_SBYTE) {
+				expression.toIntClass
+			} else if (value < TypeSystem::MIN_BYTE) {
+				expression.toSByteClass
 			} else {
-				expression.toUByteClass
+				expression.toByteClass
 			}
 		} catch (Exception e) {
 			expression.toIntClass

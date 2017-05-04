@@ -17,7 +17,7 @@ Variable:
 	name=ID storage=Storage? ':' value=Expression;
 
 Parameter returns Variable:
-	type=[NoopClass|CID] name=ID;
+	type=[NoopClass|CID] (dimension+='[' ']')* name=ID;
 
 Method:
 	name=ID '(' (params+=Parameter (',' params+=Parameter)*)? ')' storage=Storage? body=Block;
