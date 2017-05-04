@@ -88,5 +88,13 @@ class Classes {
 			return false
 		}
 	}
+	
+	def isBool(NoopClass c) {
+		try {
+			return  c.fullyQualifiedName == c.toBoolClass.fullyQualifiedName
+		} catch (Exception exception) {
+			return false
+		}
+	}
 
 }

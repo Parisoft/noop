@@ -88,15 +88,15 @@ class Expressions {
 			DivExpression:
 				expression.typeOfValueOrInt
 			BOrExpression:
-				expression.toUByteClass
+				expression.typeOfValueOrInt
 			BAndExpression:
-				expression.toUByteClass
+				expression.typeOfValueOrInt
 			LShiftExpression:
-				expression.toUByteClass
+				expression.typeOfValueOrInt
 			RShiftExpression:
-				expression.toUByteClass
+				expression.typeOfValueOrInt
 			EorExpression:
-				expression.toUByteClass
+				expression.typeOfValueOrInt
 			NotExpression:
 				expression.toBoolClass
 			SigNegExpression:
@@ -184,9 +184,21 @@ class Expressions {
 				AndExpression:
 					(expression.left.valueOf as Boolean) && (expression.right.valueOf as Boolean)
 				EqualsExpression:
-					expression.left.valueOf == expression.right.valueOf
+					if (expression.left.typeOf.isNumber) {
+						expression.right.typeOf.isNumber && expression.left.valueOf === expression.right.valueOf
+					} else if (expression.left.typeOf.isBool) {
+						expression.right.typeOf.isBool && expression.left.valueOf === expression.right.valueOf
+					} else {
+						throw new NonConstantExpressionException(expression)
+					}
 				DifferExpression:
-					expression.left.valueOf != expression.right.valueOf
+					if (expression.left.typeOf.isNumber) {
+						!expression.right.typeOf.isNumber || expression.left.valueOf !== expression.right.valueOf
+					} else if (expression.left.typeOf.isBool) {
+						!expression.right.typeOf.isBool || expression.left.valueOf !== expression.right.valueOf
+					} else {
+						throw new NonConstantExpressionException(expression)
+					}
 				GtExpression:
 					(expression.left.valueOf as Integer) > (expression.right.valueOf as Integer)
 				GeExpression:
@@ -228,9 +240,21 @@ class Expressions {
 				StringLiteral:
 					expression.value.chars.boxed.collect(Collectors.toList)
 				NewInstance:
-					expression.type
+					if (expression.type.isNumber) {
+						0
+					} else if (expression.type.isBool) {
+						false
+					} else {
+						expression.type
+					}
 				InjectInstance:
-					expression.type
+					if (expression.type.isNumber) {
+						0
+					} else if (expression.type.isBool) {
+						false
+					} else {
+						expression.type
+					}
 				MemberRef:
 					expression.member.valueOf
 				default:
