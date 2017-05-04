@@ -88,12 +88,22 @@ class Classes {
 			return false
 		}
 	}
-	
+
 	def isBoolean(NoopClass c) {
 		try {
-			return  c.fullyQualifiedName == c.toBoolClass.fullyQualifiedName
+			return c.fullyQualifiedName == c.toBoolClass.fullyQualifiedName
 		} catch (Exception exception) {
 			return false
+		}
+	}
+
+	def defaultValueOf(NoopClass c) {
+		if (c.isNumeric) {
+			0
+		} else if (c.isBoolean) {
+			false
+		} else {
+			c
 		}
 	}
 

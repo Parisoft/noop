@@ -240,21 +240,9 @@ class Expressions {
 				StringLiteral:
 					expression.value.chars.boxed.collect(Collectors.toList)
 				NewInstance:
-					if (expression.type.isNumeric) {
-						0
-					} else if (expression.type.isBoolean) {
-						false
-					} else {
-						expression.type
-					}
+					expression.type.defaultValueOf
 				InjectInstance:
-					if (expression.type.isNumeric) {
-						0
-					} else if (expression.type.isBoolean) {
-						false
-					} else {
-						expression.type
-					}
+					expression.type.defaultValueOf
 				MemberRef:
 					expression.member.valueOf
 				default:
