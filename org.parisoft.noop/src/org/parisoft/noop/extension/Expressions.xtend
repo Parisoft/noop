@@ -40,7 +40,6 @@ import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.SubExpression
 import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.This
-import org.parisoft.noop.noop.IncludeFile
 
 class Expressions {
 
@@ -140,8 +139,6 @@ class Expressions {
 				expression.type
 			InjectInstance:
 				expression.type
-			IncludeFile:
-				expression.toUByteClass
 			MemberRef:
 				expression.member.typeOf
 		}
@@ -241,7 +238,6 @@ class Expressions {
 //				IncExpression:
 //			    This: 
 //			    Super:
-//			    IncludeFile: 
 					throw new NonConstantExpressionException(expression)
 			}
 		} catch (NonConstantMemberException e) {

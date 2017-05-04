@@ -4,7 +4,6 @@ import org.eclipse.swt.SWT
 import org.eclipse.swt.graphics.RGB
 import org.eclipse.xtext.ui.editor.syntaxcoloring.DefaultHighlightingConfiguration
 import org.eclipse.xtext.ui.editor.syntaxcoloring.IHighlightingConfigurationAcceptor
-import org.eclipse.xtext.ui.editor.utils.TextStyle
 
 class NoopHighlightingConfiguration extends DefaultHighlightingConfiguration {
 
@@ -18,7 +17,7 @@ class NoopHighlightingConfiguration extends DefaultHighlightingConfiguration {
 	}
 
 	def classTextStyle() {
-		val textStyle = new TextStyle
+		val textStyle = defaultTextStyle().copy()
 		textStyle.color = new RGB(0, 0, 0)
 		textStyle.style = SWT.BOLD
 

@@ -186,9 +186,6 @@
     <genClasses ecoreClass="Noop.ecore#//InjectInstance">
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//InjectInstance/type"/>
     </genClasses>
-    <genClasses ecoreClass="Noop.ecore#//IncludeFile">
-      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//IncludeFile/filename"/>
-    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//MemberRef">
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//MemberRef/member"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//MemberRef/methodInvocation"/>
