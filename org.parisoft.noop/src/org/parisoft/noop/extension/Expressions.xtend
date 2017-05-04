@@ -184,18 +184,18 @@ class Expressions {
 				AndExpression:
 					(expression.left.valueOf as Boolean) && (expression.right.valueOf as Boolean)
 				EqualsExpression:
-					if (expression.left.typeOf.isNumber) {
-						expression.right.typeOf.isNumber && expression.left.valueOf === expression.right.valueOf
-					} else if (expression.left.typeOf.isBool) {
-						expression.right.typeOf.isBool && expression.left.valueOf === expression.right.valueOf
+					if (expression.left.typeOf.isNumeric) {
+						expression.right.typeOf.isNumeric && expression.left.valueOf === expression.right.valueOf
+					} else if (expression.left.typeOf.isBoolean) {
+						expression.right.typeOf.isBoolean && expression.left.valueOf === expression.right.valueOf
 					} else {
 						throw new NonConstantExpressionException(expression)
 					}
 				DifferExpression:
-					if (expression.left.typeOf.isNumber) {
-						!expression.right.typeOf.isNumber || expression.left.valueOf !== expression.right.valueOf
-					} else if (expression.left.typeOf.isBool) {
-						!expression.right.typeOf.isBool || expression.left.valueOf !== expression.right.valueOf
+					if (expression.left.typeOf.isNumeric) {
+						!expression.right.typeOf.isNumeric || expression.left.valueOf !== expression.right.valueOf
+					} else if (expression.left.typeOf.isBoolean) {
+						!expression.right.typeOf.isBoolean || expression.left.valueOf !== expression.right.valueOf
 					} else {
 						throw new NonConstantExpressionException(expression)
 					}
@@ -240,17 +240,17 @@ class Expressions {
 				StringLiteral:
 					expression.value.chars.boxed.collect(Collectors.toList)
 				NewInstance:
-					if (expression.type.isNumber) {
+					if (expression.type.isNumeric) {
 						0
-					} else if (expression.type.isBool) {
+					} else if (expression.type.isBoolean) {
 						false
 					} else {
 						expression.type
 					}
 				InjectInstance:
-					if (expression.type.isNumber) {
+					if (expression.type.isNumeric) {
 						0
-					} else if (expression.type.isBool) {
+					} else if (expression.type.isBoolean) {
 						false
 					} else {
 						expression.type

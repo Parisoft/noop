@@ -69,7 +69,7 @@ class Classes {
 	}
 
 	def isAssignableFrom(NoopClass c1, NoopClass c2) {
-		if (c1.isNumber && c2.isNumber) {
+		if (c1.isNumeric && c2.isNumeric) {
 			return true
 		}
 
@@ -78,7 +78,7 @@ class Classes {
 		return c2.classHierarchy.exists[it.fullyQualifiedName == className]
 	}
 
-	def isNumber(NoopClass c) {
+	def isNumeric(NoopClass c) {
 		try {
 			val className = c.fullyQualifiedName
 
@@ -89,7 +89,7 @@ class Classes {
 		}
 	}
 	
-	def isBool(NoopClass c) {
+	def isBoolean(NoopClass c) {
 		try {
 			return  c.fullyQualifiedName == c.toBoolClass.fullyQualifiedName
 		} catch (Exception exception) {
