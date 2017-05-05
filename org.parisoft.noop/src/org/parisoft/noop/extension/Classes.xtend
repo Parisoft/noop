@@ -36,7 +36,11 @@ class Classes {
 	}
 
 	def getSuperClassOrObject(NoopClass c) {
-		c.superClass ?: c.toObjectClass
+		if (c.fullyQualifiedName.toString == TypeSystem::LIB_PRIMITIVE || c.fullyQualifiedName.toString == TypeSystem::LIB_VOID) {
+			null
+		} else {
+			c.superClass ?: c.toObjectClass
+		}
 	}
 
 	def merge(Collection<NoopClass> classes) {
@@ -76,10 +80,7 @@ class Classes {
 
 	def isNumeric(NoopClass c) {
 		try {
-			val className = c.fullyQualifiedName
-
-			return className == c.toIntClass.fullyQualifiedName || className == c.toSByteClass.fullyQualifiedName ||
-				className == c.toByteClass.fullyQualifiedName || className == c.toUIntClass.fullyQualifiedName
+			return c.classHierarchy.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_INT]
 		} catch (Exception exception) {
 			return false
 		}
@@ -87,7 +88,7 @@ class Classes {
 
 	def isBoolean(NoopClass c) {
 		try {
-			return c.fullyQualifiedName == c.toBoolClass.fullyQualifiedName
+			return c.fullyQualifiedName == TypeSystem::LIB_BOOL
 		} catch (Exception exception) {
 			return false
 		}
