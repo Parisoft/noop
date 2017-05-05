@@ -1,8 +1,38 @@
 PPU extends Singleton {
     
     loadPalettes(Byte index, Byte[] palette) {
+    	//native
+    }
+    
+    setBgNameTable(Byte index, Byte x, Byte y, Byte[][] nameTable) {
+    	//native
+    }
+
+    setBgAttributeTable(Byte nameTableIndex, Byte[][] attributeTable) {
+    	//native
+    }
+    
+    setPPUControl(PPUControl ppuctrl) {
+    	//native
+    }
+    
+    setPPUControl(Byte ppuctrl) {
+    	//native
+    }
+    
+    setPPUMask(PPUMask ppumask) {
+    	//native
+    }
+    
+    setPPUMask(Byte ppumask) {
+    	//native
+    }
+    
+    setScrolling(Byte x, Byte y) {
+    	//native
     }
     
     waitVBlank() {
+    	//native
     }
 }

@@ -1,0 +1,73 @@
+/* Various flags controlling PPU operation */
+PPUControl {
+	
+	/* Base nametable address <br>
+	   (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00) <br>
+	   <style>
+       table, th, td {
+           border: 1px solid black;
+       }
+       </style>
+	   <table>
+		   <tr>
+		   		<th>$2000</th><th>$2400</th>
+		   </tr>
+		   <tr>
+		   		<th>$2800</th><th>$2C00</th>
+		   </tr>
+	   </table> */
+	nameTableAddress : 0
+	
+	/* VRAM address increment per CPU read/write of PPUDATA <br>
+	  (0: add 1, going across; 1: add 32, going down) */
+	vramIncrement : 0
+	
+	/* Sprite pattern table address for 8x8 sprites <br>
+       (0: $0000; 1: $1000; ignored in 8x16 mode) */
+	sprite8x8PatternTable : 0
+	
+	/* Background pattern table address <br> 
+	   (0: $0000; 1: $1000) *
+	backgroundPatternTable : 1
+	
+	/* Sprite size (0: 8x8; 1: 8x16) */
+	spriteSize : 0
+	
+	/* PPU master/slave select <br>
+       (0: read backdrop from EXT pins; 1: output color on EXT pins)*/
+	mode : 0
+	
+	/* Generate an NMI at the start of the <br>
+       vertical blanking interval (false: off; true: on)<br> 
+       <br>
+       <b>Note:</b> When bit 6 of PPUCTRL is clear (the usual case), the PPU gets the palette index for the background color from the EXT pins. The stock NES grounds these pins, making palette index 0 the background color as expected. A secondary picture generator connected to the EXT pins would be able to replace the background with a different image using colors from the background palette, which could be used e.g. to implement parallax scrolling.
+Setting bit 6 causes the PPU to output the lower four bits of the palette memory index on the EXT pins for each pixel (in addition to normal image drawing) - since only four bits are output, background and sprite pixels can't normally be distinguished this way. As the EXT pins are grounded on an unmodified NES, setting bit 6 is discouraged as it could potentially damage the chip whenever it outputs a non-zero pixel value (due to it effectively shorting Vcc and GND together). Looking at the relevant circuitry in Visual 2C02, it appears that the background palette hack would not be functional for output from the EXT pins; they would always output index 0 for the background color. */
+	enableNMI : true
+	
+	/* 7  bit  0                                                                <br>
+       ---- ----                                                                <br>
+       VPHB SINN                                                                <br>
+       |||| ||||                                                                <br>
+       |||| ||++- Base nametable address                                        <br>
+       |||| ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)                  <br>
+       |||| |+--- VRAM address increment per CPU read/write of PPUDATA          <br>
+       |||| |     (0: add 1, going across; 1: add 32, going down)               <br>
+       |||| +---- Sprite pattern table address for 8x8 sprites                  <br>
+       ||||       (0: $0000; 1: $1000; ignored in 8x16 mode)                    <br>
+       |||+------ Background pattern table address (0: $0000; 1: $1000)         <br>
+       ||+------- Sprite size (0: 8x8; 1: 8x16)                                 <br>
+       |+-------- PPU master/slave select                                       <br>
+       |          (0: read backdrop from EXT pins; 1: output color on EXT pins) <br>
+       +--------- Generate an NMI at the start of the                           <br>
+                  vertical blanking interval (0: off; 1: on)                    <br> */
+	toByte() {
+		return (nameTableAddress 
+				| vramIncrement 
+				| sprite8x8PatternTable 
+				| backgroundPatternTable 
+				| spriteSize 
+				| mode 
+				| enableNMI.as(Byte))
+			.as(Byte)
+	}
+}

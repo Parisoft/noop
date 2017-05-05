@@ -20,6 +20,7 @@ class TypeSystem {
 	public static val LIB_BOOL = "Bool" // LIB_PACKAGE + ".Bool"
 	public static val LIB_VOID = "Void" // LIB_PACKAGE + ".Void"
 	public static val LIB_PRIMITIVE = "Primitive"
+	
 	public static val MIN_INT = -32768
 	public static val MAX_INT = 32767
 	public static val MIN_UINT = 0
@@ -28,6 +29,7 @@ class TypeSystem {
 	public static val MAX_SBYTE = 127
 	public static val MIN_BYTE = 0
 	public static val MAX_BYTE = 255
+	
 	public static val TYPE_VOID = NoopFactory::eINSTANCE.createNoopClass => [name = LIB_VOID]
 	public static val TYPE_OBJECT = NoopFactory::eINSTANCE.createNoopClass => [name = LIB_OBJECT]
 	public static val TYPE_PRIMITIVE = NoopFactory::eINSTANCE.createNoopClass => [name = LIB_PRIMITIVE]

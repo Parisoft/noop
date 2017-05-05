@@ -1,0 +1,13 @@
+NESHeader extends Singleton {
+
+	mapper : 0
+	
+	prgRomPages : 2
+	
+	chrRomPages : 1
+	
+	/* 0: Horizontal (Vertical scrolling) <br>
+	   1: Vertical (Horizontal scrolling) <br>
+	   4096: Four screen <br> */
+	mirroring : 1.as(Int)
+}

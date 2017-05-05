@@ -1,0 +1,47 @@
+/* Controls the rendering of sprites and backgrounds, as well as colour effects. */
+PPUMask {
+	
+	/* Greyscale (false: normal color, true: produce a greyscale display) */
+	greyscale : false
+	
+	/* true: Show background in leftmost 8 pixels of screen, false: Hide */
+	showBackgroundPixelsOnLeftSide : true
+	
+	/* true: Show sprites in leftmost 8 pixels of screen, false: Hide */
+	showSpritesPixelsOnLeftSide : true
+	
+	showBackgroud : true
+	
+	showSprites : true
+	
+	emphasizeRed : false
+	
+	emphasizeGreen : false
+	
+	emphasizeBlue : false
+	
+	/* 7  bit  0
+       ---- ----
+       BGRs bMmG
+       |||| ||||
+       |||| |||+- Greyscale (0: normal color, 1: produce a greyscale display)
+       |||| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+       |||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+       |||| +---- 1: Show background
+       |||+------ 1: Show sprites
+       ||+------- Emphasize red*
+       |+-------- Emphasize green*
+       +--------- Emphasize blue* 
+       * NTSC colors. PAL and Dendy swaps green and red */
+	toByte() {
+		return (greyscale.as(Byte) 
+				| showBackgroundPixelsOnLeftSide.as(Byte) 
+				| showSpritesPixelsOnLeftSide.as(Byte) 
+				| showBackgroud.as(Byte)
+				| showSprites.as(Byte)
+				| emphasizeRed.as(Byte)
+				| emphasizeGreen.as(Byte)
+				| emphasizeBlue.as(Byte))
+			.as(Byte)
+	}
+}

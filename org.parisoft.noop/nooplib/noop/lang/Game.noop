@@ -1,0 +1,8 @@
+Game extends Singleton {
+	
+	main() {
+	}
+	
+	nmi() {
+	}
+}
