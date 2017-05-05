@@ -2,7 +2,6 @@ package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
 import java.util.Collection
-import java.util.List
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.noop.Method
@@ -41,15 +40,12 @@ class Classes {
 	}
 
 	def merge(Collection<NoopClass> classes) {
-		if (classes.isEmpty || classes.contains(TypeSystem::TYPE_VOID)) {
-			return TypeSystem::TYPE_VOID
-		}
+		val hierarchies = classes.map[it.classHierarchy]
 
-		val hierarchies = <List<NoopClass>>newArrayList()
-
-		classes.forEach[hierarchies += it.classHierarchy]
-
-		return hierarchies.reduce[h1, h2|h1.retainAll(h2); h1].head
+		return hierarchies.reduce [ h1, h2 |
+			h1.retainAll(h2)
+			h1
+		].head ?: TypeSystem::TYPE_VOID
 	}
 
 	def fields(NoopClass c) {

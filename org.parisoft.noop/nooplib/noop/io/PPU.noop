@@ -1,4 +1,4 @@
-PPU {
+PPU extends Singleton {
     
     loadPalettes(Byte index, Byte[] palette) {
     }

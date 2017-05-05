@@ -242,9 +242,6 @@
     <eStructuralFeatures xsi:type="ecore:EReference" name="dimension" upperBound="-1"
         eType="#//Index" containment="true"/>
   </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="InjectInstance" eSuperTypes="#//Expression">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
-  </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="MemberRef" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="member" eType="#//Member"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="methodInvocation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>

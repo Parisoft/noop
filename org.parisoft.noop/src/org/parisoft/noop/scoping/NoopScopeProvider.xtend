@@ -45,8 +45,9 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			Constructor:
 				if (eRef == NoopPackage.eINSTANCE.constructorField_Name) {
 					val container = (context.eContainer as NewInstance).type
-					val thisFields = container.members.takeWhile[it != context].filter(Variable)
-					val superFields = container.inheritedFields
+					val thisFields = container.members.takeWhile[it != context].filter(Variable).filter[it.isNonConstant]
+					val superFields = container.inheritedFields.filter[it.isNonConstant]
+
 					return Scopes.scopeFor(thisFields, Scopes.scopeFor(superFields))
 				}
 			MemberRef:
@@ -138,7 +139,10 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 	def filterOverload(Iterable<Method> methods, List<Expression> args) {
 		methods.filter [ method |
-			method.params.size == args.size && args.stream.allMatch[arg|method.params.get(args.indexOf(arg)).typeOf.isAssignableFrom(arg.typeOf)]
+			method.params.size == args.size && args.stream.allMatch [ arg |
+				val param = method.params.get(args.indexOf(arg))
+				param.typeOf.isAssignableFrom(arg.typeOf)
+			]
 		]
 	}
 

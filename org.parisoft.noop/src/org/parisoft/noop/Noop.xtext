@@ -115,7 +115,6 @@ TerminalExpression returns Expression:
 	{This} 'this' |
 	{Super} 'super' |
 	{NewInstance} type=[NoopClass|CID] (constructor=Constructor | dimension+=Index+) |
-	{InjectInstance} '|' type=[NoopClass|CID] '|' |
 	{MemberRef} member=[Member] (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?
 	indexes+=Index* |
 	'(' Expression ')';
@@ -151,7 +150,7 @@ terminal BOOL returns ecore::EBoolean:
 	'true' | 'false';
 
 terminal ID:
-	('a'..'z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
+	('a'..'z' | '_' | '#') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
 
 terminal CID:
 	('A'..'Z') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;

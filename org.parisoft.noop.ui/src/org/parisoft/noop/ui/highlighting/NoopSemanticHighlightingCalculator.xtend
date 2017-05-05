@@ -10,6 +10,7 @@ import org.eclipse.xtext.resource.XtextResource
 import org.eclipse.xtext.util.CancelIndicator
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelection
+import org.parisoft.noop.^extension.Members
 
 @Singleton
 class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalculator {
@@ -26,7 +27,7 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 //						acceptor.addPosition(node.offset, (node.semanticElement as NoopClass).name.length, NoopHighlightingConfiguration.CLASS_ID)
 //					}
 //				}
-				RuleCall: { // dont work for class, but maybe for others...
+				RuleCall: { 
 					var rule = grammarElement.rule
 					val container = grammarElement.eContainer
 
@@ -36,7 +37,7 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 						if (parent !== null && parent.grammarElement instanceof RuleCall) {
 							rule = (parent.grammarElement as RuleCall).rule
 
-							if (rule.name == 'Variable' && node.text.startsWith('_')) {
+							if (rule.name == 'Variable' && node.text.startsWith(Members::CONSTANT_SUFFIX)) {
 								acceptor.addPosition(node.offset, node.length, NoopHighlightingConfiguration.STRING_ID)
 							}
 						}
@@ -47,14 +48,14 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 						val ref = node.semanticElement as MemberRef
 						val name = ref.member?.name ?: ""
 
-						if (name.startsWith('_')) {
+						if (name.startsWith(Members::CONSTANT_SUFFIX)) {
 							acceptor.addPosition(node.offset, node.length, NoopHighlightingConfiguration.STRING_ID)
 						}
 					} else if (node.semanticElement instanceof MemberSelection) {
 						val selection = node.semanticElement as MemberSelection
 						val name = selection.member?.name ?: ""
 
-						if (!selection.isMethodInvocation && name.startsWith('_')) {
+						if (!selection.isMethodInvocation && name.startsWith(Members::CONSTANT_SUFFIX)) {
 							acceptor.addPosition(node.endOffset - name.length, name.length, NoopHighlightingConfiguration.STRING_ID)
 						}
 					}

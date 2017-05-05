@@ -22,7 +22,6 @@ import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.GeExpression
 import org.parisoft.noop.noop.GtExpression
 import org.parisoft.noop.noop.IncExpression
-import org.parisoft.noop.noop.InjectInstance
 import org.parisoft.noop.noop.LShiftExpression
 import org.parisoft.noop.noop.LeExpression
 import org.parisoft.noop.noop.LtExpression
@@ -137,8 +136,6 @@ class Expressions {
 				expression.containingClass.superClassOrObject
 			NewInstance:
 				expression.type
-			InjectInstance:
-				expression.type
 			MemberRef:
 				expression.member.typeOf
 		}
@@ -240,8 +237,6 @@ class Expressions {
 				StringLiteral:
 					expression.value.chars.boxed.collect(Collectors.toList)
 				NewInstance:
-					expression.type.defaultValueOf
-				InjectInstance:
 					expression.type.defaultValueOf
 				MemberRef:
 					expression.member.valueOf

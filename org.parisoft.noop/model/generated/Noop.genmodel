@@ -184,9 +184,6 @@
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//NewInstance/constructor"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//NewInstance/dimension"/>
     </genClasses>
-    <genClasses ecoreClass="Noop.ecore#//InjectInstance">
-      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//InjectInstance/type"/>
-    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//MemberRef">
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//MemberRef/member"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//MemberRef/methodInvocation"/>

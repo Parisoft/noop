@@ -1,25 +1,26 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
+import java.util.concurrent.locks.ReentrantLock
 import org.eclipse.emf.ecore.EObject
+import org.parisoft.noop.exception.NonConstantMemberException
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelection
 import org.parisoft.noop.noop.Method
-import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.exception.NonConstantMemberException
-import java.util.WeakHashMap
 
 public class Members {
 
-	static val typeCache = new WeakHashMap<Member, NoopClass>
-	
+	public static val CONSTANT_SUFFIX = '#'
+
 	@Inject extension Classes
 	@Inject extension Expressions
+
+	val methodTypeLock = new ReentrantLock
 
 	def isAccessibleFrom(Member member, EObject context) {
 		val contextClass = if (context instanceof MemberSelection) context.receiver.typeOf else context.containingClass
@@ -29,7 +30,11 @@ public class Members {
 	}
 
 	def isConstant(Variable variable) {
-		variable.name.startsWith('_')
+		variable.name.startsWith(CONSTANT_SUFFIX)
+	}
+
+	def isNonConstant(Variable variable) {
+		!variable.isConstant
 	}
 
 	def typeOf(Member member) {
@@ -40,30 +45,23 @@ public class Members {
 	}
 
 	def typeOf(Variable variable) {
-		typeCache.computeIfAbsent(variable, [
-			if (variable.type !== null) {
-				variable.type
-			} else if (variable.value instanceof MemberRef && (variable.value as MemberRef).member === variable) {
-				TypeSystem::TYPE_VOID
-			} else {
-				variable.value.typeOf
-			}
-		])
+		if (variable.type !== null) {
+			variable.type
+		} else if (variable.value instanceof MemberRef && (variable.value as MemberRef).member === variable) {
+			TypeSystem::TYPE_VOID
+		} else {
+			variable.value.typeOf
+		}
 	}
 
 	def typeOf(Method method) {
-		if (typeCache.containsKey(method)) {
-			return typeCache.get(method)
+		if (methodTypeLock.tryLock) {
+			try {
+				method.body.getAllContentsOfType(ReturnStatement).map[value.typeOf].filterNull.toSet.merge
+			} finally {
+				methodTypeLock.unlock
+			}
 		}
-
-		typeCache.put(method, null)
-
-		val returns = method.body.getAllContentsOfType(ReturnStatement)
-		val type = returns.map[value.typeOf].filterNull.toSet.merge
-
-		typeCache.put(method, type)
-
-		return type
 	}
 
 	def valueOf(Member member) {
