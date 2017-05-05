@@ -1,5 +1,5 @@
 package org.parisoft.noop.exception
 
-class NonConstantMemberException extends IllegalArgumentException {
+class NonConstantMemberException extends ExpressionException {
 	
 }

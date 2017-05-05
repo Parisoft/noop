@@ -68,14 +68,14 @@ class Classes {
 		c.classHierarchy.map[members].flatten.filter(Method)
 	}
 
-	def isAssignableFrom(NoopClass c1, NoopClass c2) {
+	def isInstanceOf(NoopClass c1, NoopClass c2) {
 		if (c1.isNumeric && c2.isNumeric) {
 			return true
 		}
 
-		val className = c1.fullyQualifiedName
+		val className = c2.fullyQualifiedName
 
-		return c2.classHierarchy.exists[it.fullyQualifiedName == className]
+		return c1.classHierarchy.exists[it.fullyQualifiedName == className]
 	}
 
 	def isNumeric(NoopClass c) {

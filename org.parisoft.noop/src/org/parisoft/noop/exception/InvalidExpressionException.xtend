@@ -2,7 +2,7 @@ package org.parisoft.noop.exception
 
 import org.parisoft.noop.noop.Expression
 
-class InvalidExpressionException extends IllegalArgumentException {
+class InvalidExpressionException extends ExpressionException {
 	
 	val Expression expression
 	

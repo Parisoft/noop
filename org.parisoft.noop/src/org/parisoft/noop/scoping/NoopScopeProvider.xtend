@@ -141,7 +141,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		methods.filter [ method |
 			method.params.size == args.size && args.stream.allMatch [ arg |
 				val param = method.params.get(args.indexOf(arg))
-				param.typeOf.isAssignableFrom(arg.typeOf)
+				arg.typeOf.isInstanceOf(param.typeOf)
 			]
 		]
 	}
