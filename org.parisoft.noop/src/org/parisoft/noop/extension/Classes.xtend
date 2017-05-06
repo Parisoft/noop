@@ -36,7 +36,7 @@ class Classes {
 	}
 
 	def getSuperClassOrObject(NoopClass c) {
-		if (c.fullyQualifiedName.toString == TypeSystem::LIB_PRIMITIVE || c.fullyQualifiedName.toString == TypeSystem::LIB_VOID) {
+		if (c === null || c.fullyQualifiedName?.toString == TypeSystem::LIB_PRIMITIVE || c.fullyQualifiedName?.toString == TypeSystem::LIB_VOID) {
 			null
 		} else {
 			c.superClass ?: c.toObjectClass
@@ -49,7 +49,7 @@ class Classes {
 		return hierarchies.reduce [ h1, h2 |
 			h1.retainAll(h2)
 			h1
-		].head ?: TypeSystem::TYPE_VOID
+		]?.head ?: TypeSystem::TYPE_VOID
 	}
 
 	def fields(NoopClass c) {

@@ -29,7 +29,8 @@ Statement:
 	(Variable |
 	ReturnStatement |
 	Expression |
-	IfStatement) LF+;
+	IfStatement |
+	ForeverStatement) LF+;
 
 ReturnStatement:
 	ReturnValueStatement |
@@ -43,6 +44,9 @@ IfStatement:
 
 ElseStatement:
 	name='else' (body=Block | if=IfStatement);
+
+ForeverStatement:
+	name='forever' body=Block;
 
 Expression:
 	AssignmentExpression;
@@ -111,7 +115,7 @@ TerminalExpression returns Expression:
 	{ByteLiteral} value=Byte |
 	{BoolLiteral} value=BOOL |
 	{StringLiteral} value=STRING |
-	{ArrayLiteral} '[' (values+=Expression (',' values+=Expression)*)? ']' |
+	{ArrayLiteral} '[' LF* (values+=Expression (',' LF* values+=Expression)* LF*)? ']' |
 	{This} 'this' |
 	{Super} 'super' |
 	{NewInstance} type=[NoopClass|CID] (constructor=Constructor | dimension+=Index+) |

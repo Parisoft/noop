@@ -23,6 +23,7 @@ import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.noop.NoopPackage
 import org.parisoft.noop.noop.Constructor
 import org.parisoft.noop.noop.NewInstance
+import org.parisoft.noop.noop.ConstructorField
 
 /**
  * This class contains custom scoping description.
@@ -44,11 +45,11 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 				}
 			Constructor:
 				if (eRef == NoopPackage.eINSTANCE.constructorField_Name) {
-					val container = (context.eContainer as NewInstance).type
-					val thisFields = container.members.takeWhile[it != context].filter(Variable).filter[it.isNonConstant]
-					val superFields = container.inheritedFields.filter[it.isNonConstant]
-
-					return Scopes.scopeFor(thisFields, Scopes.scopeFor(superFields))
+					return scopeForNewInstance(context.eContainer as NewInstance)
+				}
+			ConstructorField:
+				if (eRef == NoopPackage.eINSTANCE.constructorField_Name) {
+					return scopeForNewInstance(context.eContainer.eContainer as NewInstance)
 				}
 			MemberRef:
 				return scopeForMemberRef(context)
@@ -61,7 +62,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		return super.getScope(context, eRef)
 	}
 
-	def protected IScope scopeForMemberRef(MemberRef memberRef) {
+	protected def IScope scopeForMemberRef(MemberRef memberRef) {
 		if (memberRef.isMethodInvocation) {
 			scopeForMethodInvocation(memberRef, memberRef.args)
 		} else {
@@ -69,7 +70,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		}
 	}
 
-	def protected IScope scopeForVariableRef(EObject context) {
+	protected def IScope scopeForVariableRef(EObject context) {
 		val container = context.eContainer
 
 		if (container === null) {
@@ -93,7 +94,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		}
 	}
 
-	def protected IScope scopeForMethodInvocation(EObject context, EList<Expression> args) {
+	protected def IScope scopeForMethodInvocation(EObject context, EList<Expression> args) {
 		val container = context.eContainer
 
 		if (container === null) {
@@ -117,7 +118,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		}
 	}
 
-	def protected IScope scopeForMemberSelection(MemberSelection selection) {
+	protected def IScope scopeForMemberSelection(MemberSelection selection) {
 		val type = selection.receiver.typeOf
 
 		if (type === null) {
@@ -137,7 +138,15 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		}
 	}
 
-	def filterOverload(Iterable<Method> methods, List<Expression> args) {
+	protected def scopeForNewInstance(NewInstance newInstance) {
+		val container = newInstance.type
+		val thisFields = container.members.filter(Variable).filter[it.isNonConstant]
+		val superFields = container.inheritedFields.filter[it.isNonConstant]
+
+		return Scopes.scopeFor(thisFields, Scopes.scopeFor(superFields))
+	}
+
+	private def filterOverload(Iterable<Method> methods, List<Expression> args) {
 		methods.filter [ method |
 			method.params.size == args.size && args.stream.allMatch [ arg |
 				val param = method.params.get(args.indexOf(arg))

@@ -1,7 +1,7 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
-import java.util.concurrent.locks.ReentrantLock
+import java.util.HashSet
 import org.eclipse.emf.ecore.EObject
 import org.parisoft.noop.exception.NonConstantMemberException
 import org.parisoft.noop.noop.Member
@@ -20,7 +20,7 @@ public class Members {
 	@Inject extension Classes
 	@Inject extension Expressions
 
-	val methodTypeLock = new ReentrantLock
+	val running = new HashSet<Member>
 
 	def isAccessibleFrom(Member member, EObject context) {
 		val contextClass = if (context instanceof MemberSelection) context.receiver.typeOf else context.containingClass
@@ -45,32 +45,54 @@ public class Members {
 	}
 
 	def typeOf(Variable variable) {
-		if (variable.type !== null) {
-			variable.type
-		} else if (variable.value instanceof MemberRef && (variable.value as MemberRef).member === variable) {
-			TypeSystem::TYPE_VOID
-		} else {
-			variable.value.typeOf
+		if (running.add(variable)) {
+			try {
+				if (variable.type !== null) {
+					variable.type
+				} else if (variable.value instanceof MemberRef && (variable.value as MemberRef).member === variable) {
+					TypeSystem::TYPE_VOID
+				} else {
+					variable.value.typeOf
+				}
+			} finally {
+				running.remove(variable)
+			}
 		}
 	}
 
 	def typeOf(Method method) {
-		if (methodTypeLock.tryLock) {
+		if (running.add(method)) {
 			try {
 				method.body.getAllContentsOfType(ReturnStatement).map[value.typeOf].filterNull.toSet.merge
 			} finally {
-				methodTypeLock.unlock
+				running.remove(method)
 			}
 		}
 	}
 
 	def valueOf(Member member) {
-		if (member instanceof Variable) {
-			if (member.isConstant) {
-				return member.value.valueOf
+		switch (member) {
+			Variable: member.valueOf
+			Method: member.valueOf
+		}
+	}
+
+	def valueOf(Variable variable) {
+		if (variable.isConstant) {
+			if (running.add(variable)) {
+				try {
+					return variable.value.valueOf
+				} finally {
+					running.remove(variable)
+				}
 			}
+		} else {
+			throw new NonConstantMemberException
 		}
 
+	}
+
+	def valueOf(Method method) {
 		throw new NonConstantMemberException
 	}
 }

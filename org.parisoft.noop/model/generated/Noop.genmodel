@@ -57,6 +57,10 @@
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ElseStatement/body"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ElseStatement/if"/>
     </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//ForeverStatement">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//ForeverStatement/name"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ForeverStatement/body"/>
+    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//Expression"/>
     <genClasses ecoreClass="Noop.ecore#//Constructor">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Constructor/field"/>
