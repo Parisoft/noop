@@ -24,6 +24,7 @@ import org.parisoft.noop.noop.NoopPackage
 import org.parisoft.noop.noop.Constructor
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.ConstructorField
+import org.parisoft.noop.noop.ForStatement
 
 /**
  * This class contains custom scoping description.
@@ -89,6 +90,10 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 				val localVars = container.statements.takeWhile[it != context].filter(Variable)
 				Scopes.scopeFor(localVars, scopeForVariableRef(container))
 			}
+			ForStatement: {
+				val localVars = container.variables.takeWhile[it != context]
+				Scopes.scopeFor(localVars, scopeForVariableRef(container))
+			}
 			default:
 				scopeForVariableRef(container)
 		}
@@ -119,13 +124,14 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	}
 
 	protected def IScope scopeForMemberSelection(MemberSelection selection) {
-		val type = selection.receiver.typeOf
+		val receiver = selection.receiver
+		val type = receiver.typeOf
 
 		if (type === null) {
 			return IScope.NULLSCOPE
-		}
-
-		if (selection.isMethodInvocation) {
+		} else if (receiver instanceof NewInstance && (receiver as NewInstance).constructor === null) {
+			return Scopes.scopeFor(type.fields.filter[it.isConstant], Scopes.scopeFor(type.inheritedFields.filter[it.isConstant]))
+		} else if (selection.isMethodInvocation) {
 			return Scopes.scopeFor(
 				type.methods.filterOverload(selection.args) + type.fields,
 				Scopes.scopeFor(type.inheritedMethods.filterOverload(selection.args) + type.inheritedFields)

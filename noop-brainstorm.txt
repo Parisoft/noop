@@ -391,3 +391,18 @@ Comparison
 	Ball.equals.return:
 		STA ret
 		RTS
+
+Color names
+-----------
+x1 - azure
+x2 - blue
+x3 - purple
+x4 - magenta
+x5 - pink
+x6 - red
+x7 - orange
+x8 - yellow
+x9 - lime
+xA - green
+xB - mint
+xC - cyan

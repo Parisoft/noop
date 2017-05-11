@@ -27,7 +27,7 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 //						acceptor.addPosition(node.offset, (node.semanticElement as NoopClass).name.length, NoopHighlightingConfiguration.CLASS_ID)
 //					}
 //				}
-				RuleCall: { 
+				RuleCall: {
 					var rule = grammarElement.rule
 					val container = grammarElement.eContainer
 

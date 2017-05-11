@@ -30,6 +30,7 @@ Statement:
 	ReturnStatement |
 	Expression |
 	IfStatement |
+	ForStatement |
 	ForeverStatement) LF+;
 
 ReturnStatement:
@@ -44,6 +45,13 @@ IfStatement:
 
 ElseStatement:
 	name='else' (body=Block | if=IfStatement);
+
+ForStatement:
+	name='for' '(' ((variables+=Variable | assignments+=AssignmentExpression) (',' (variables+=Variable |
+	assignments+=AssignmentExpression))*)?
+	';' condition=Expression?
+	';' (expressions+=Expression (',' expressions+=Expression)*)? ')'
+	body=Block;
 
 ForeverStatement:
 	name='forever' body=Block;
@@ -118,7 +126,7 @@ TerminalExpression returns Expression:
 	{ArrayLiteral} '[' LF* (values+=Expression (',' LF* values+=Expression)* LF*)? ']' |
 	{This} 'this' |
 	{Super} 'super' |
-	{NewInstance} type=[NoopClass|CID] (constructor=Constructor | dimension+=Index+) |
+	{NewInstance} type=[NoopClass|CID] (constructor=Constructor | dimension+=Index+)? |
 	{MemberRef} member=[Member] (methodInvocation?='(' (args+=Expression (',' args+=Expression)*)? ')')?
 	indexes+=Index* |
 	'(' Expression ')';

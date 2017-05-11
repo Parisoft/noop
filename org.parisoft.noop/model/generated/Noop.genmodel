@@ -57,6 +57,14 @@
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ElseStatement/body"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ElseStatement/if"/>
     </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//ForStatement">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//ForStatement/name"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ForStatement/variables"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ForStatement/assignments"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ForStatement/condition"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ForStatement/expressions"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ForStatement/body"/>
+    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//ForeverStatement">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//ForeverStatement/name"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ForeverStatement/body"/>

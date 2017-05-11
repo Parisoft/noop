@@ -10,7 +10,7 @@ class NoopAntlrTokenToAttributeIdMapper extends DefaultAntlrTokenToAttributeIdMa
 		if (tokenName == 'RULE_CID') {
 			return NoopHighlightingConfiguration.CLASS_ID
 		}
-		
+
 		if (tokenName == 'RULE_CHA') {
 			return NoopHighlightingConfiguration.STRING_ID
 		}

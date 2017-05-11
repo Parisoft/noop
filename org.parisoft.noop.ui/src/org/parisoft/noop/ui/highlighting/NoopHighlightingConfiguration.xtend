@@ -28,7 +28,8 @@ class NoopHighlightingConfiguration extends DefaultHighlightingConfiguration {
 		val textStyle = defaultTextStyle().copy()
 		textStyle.color = new RGB(125, 125, 125)
 		textStyle.style = SWT.ITALIC
-		
+
 		return textStyle;
 	}
+
 }
