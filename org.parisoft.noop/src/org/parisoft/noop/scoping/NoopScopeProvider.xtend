@@ -63,7 +63,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		return super.getScope(context, eRef)
 	}
 
-	protected def IScope scopeForMemberRef(MemberRef memberRef) {
+	protected def scopeForMemberRef(MemberRef memberRef) {
 		if (memberRef.isMethodInvocation) {
 			scopeForMethodInvocation(memberRef, memberRef.args)
 		} else {
@@ -123,21 +123,24 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		}
 	}
 
-	protected def IScope scopeForMemberSelection(MemberSelection selection) {
+	protected def scopeForMemberSelection(MemberSelection selection) {
 		val receiver = selection.receiver
 		val type = receiver.typeOf
 
 		if (type === null) {
-			return IScope.NULLSCOPE
+			IScope.NULLSCOPE
 		} else if (receiver instanceof NewInstance && (receiver as NewInstance).constructor === null) {
-			return Scopes.scopeFor(type.fields.filter[it.isConstant], Scopes.scopeFor(type.inheritedFields.filter[it.isConstant]))
+			Scopes.scopeFor(
+				type.fields.filter[isConstant],
+				Scopes.scopeFor(type.inheritedFields.filter[isConstant])
+			)
 		} else if (selection.isMethodInvocation) {
-			return Scopes.scopeFor(
+			Scopes.scopeFor(
 				type.methods.filterOverload(selection.args) + type.fields,
 				Scopes.scopeFor(type.inheritedMethods.filterOverload(selection.args) + type.inheritedFields)
 			)
 		} else {
-			return Scopes.scopeFor(
+			Scopes.scopeFor(
 				type.fields + type.methods,
 				Scopes.scopeFor(type.inheritedFields + type.inheritedMethods)
 			)
@@ -146,8 +149,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 	protected def scopeForNewInstance(NewInstance newInstance) {
 		val container = newInstance.type
-		val thisFields = container.members.filter(Variable).filter[it.isNonConstant]
-		val superFields = container.inheritedFields.filter[it.isNonConstant]
+		val thisFields = container.members.filter(Variable).filter[isNonConstant]
+		val superFields = container.inheritedFields.filter[isNonConstant]
 
 		return Scopes.scopeFor(thisFields, Scopes.scopeFor(superFields))
 	}
@@ -155,7 +158,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	private def filterOverload(Iterable<Method> methods, List<Expression> args) {
 		methods.filter [ method |
 			method.params.size == args.size && args.stream.allMatch [ arg |
-				val param = method.params.get(args.indexOf(arg))
+				val index = args.indexOf(arg)
+				val param = method.params.get(index)
 				arg.typeOf.isInstanceOf(param.typeOf)
 			]
 		]

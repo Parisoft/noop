@@ -406,3 +406,36 @@ x9 - lime
 xA - green
 xB - mint
 xC - cyan
+
+Mem Stack
+---------
+
+Pages
+	$0000-$00FD pointers
+	$00FG-$00FF	return pointer
+	$0400-$077B	local values
+	$077C-$0780 return values
+	$0781-$07FF args values
+
+1. $0000-$00FD pointers
+	ZP dedicated for all kind of pointers (global, local and args references)
+2. $00FG-$00FF	return pointer
+	2 bytes (1 pointer) dedicated for methods that return objects and arrays
+3. $0400-$077B	local values
+	3.1. 3 1/2~ pages for data
+	3.2. global data comes first on $0400
+	3.3. local data begins after last byte of global data
+	3.4. at compile time, when a method is invoked, the space for local vars is allocated as follows:
+	3.4.1 the method's size (size of all local variable, excluding constants) is calculated*
+	3.4.2 the size is compared with current page, if greather the page is shifted
+4. $077C-$0780 return values
+	4.1 5 bytes for returned primitives or array metadata
+	4.2 when returning an array:
+	4.2.1 the return pointer points to the head of array
+	4.2.2 the byte at $077C contains the array's element size
+	4.2.3 the byte at $077D contains the array's dimension
+	4.2.4 the bytes at $077E, $077F, $0780 contains the array's dimension length (max 3)
+5. $0781-$07FF args values
+	Half page dedicated for methods arguments, including arrays metadata
+
+* a look-ahead is performed when referencing an object or array returned from a method call; if the returned object or array was instancied locally on callee method, the object's bytes must be moved to the caller and the pointer updated after callee returns; these bytes must be considerated on the method's size calculation
