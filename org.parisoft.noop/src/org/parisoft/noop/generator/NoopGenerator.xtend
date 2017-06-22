@@ -3,10 +3,16 @@
  */
 package org.parisoft.noop.generator
 
+import com.google.inject.Inject
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
+import org.eclipse.xtext.naming.IQualifiedNameProvider
+import org.eclipse.xtext.resource.IResourceDescriptions
+import org.parisoft.noop.^extension.Classes
+import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.NoopPackage
 
 /**
  * Generates code from your model files on save.
@@ -15,12 +21,47 @@ import org.eclipse.xtext.generator.IGeneratorContext
  */
 class NoopGenerator extends AbstractGenerator {
 
+	@Inject extension Classes
+	@Inject extension IQualifiedNameProvider
+	@Inject IResourceDescriptions descriptions
+
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-//		fsa.generateFile('greetings.txt', 'People to greet: ' + 
-//			resource.allContents
-//				.filter(typeof(Greeting))
-//				.map[name]
-//				.join(', '))
-		
+		val asm = resource.compile
+
+		if (asm !== null) {
+			fsa.generateFile('game.asm', asm)
+		}
+	}
+
+	private def compile(Resource resource) {
+		val game = resource.gameClass
+
+		if (game === null) {
+			return null
+		}
+
+		'''«game.fields.map[fullyQualifiedName]»'''
+	}
+
+	private def gameClass(Resource resource) {
+		val games = descriptions.allResourceDescriptions.map [
+			getExportedObjectsByType(NoopPackage::eINSTANCE.noopClass)
+		].flatten.map [
+			var obj = it.EObjectOrProxy
+
+			if (obj.eIsProxy) {
+				obj = resource.resourceSet.getEObject(it.EObjectURI, true)
+			}
+
+			obj as NoopClass
+		].filter [
+			it.name != "Game" && it.classHierarchy.exists[name == "Game"]
+		].toSet
+
+		if (games.size > 1) {
+			throw new IllegalArgumentException("More than 1 game implementation found: " + games.map[name])
+		}
+
+		return games.head
 	}
 }
