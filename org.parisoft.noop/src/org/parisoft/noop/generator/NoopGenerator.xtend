@@ -29,7 +29,7 @@ class NoopGenerator extends AbstractGenerator {
 		val asm = resource.compile
 
 		if (asm !== null) {
-			fsa.generateFile('game.asm', asm)
+			fsa.generateFile(asm.filename, asm.content)
 		}
 	}
 
@@ -40,7 +40,10 @@ class NoopGenerator extends AbstractGenerator {
 			return null
 		}
 
-		'''«game.fields.map[fullyQualifiedName]»'''
+		val filename = game.name + '.asm'
+		val content = '''«game.fields.map[fullyQualifiedName]»'''
+		
+		new ASM(filename, content)
 	}
 
 	private def gameClass(Resource resource) {

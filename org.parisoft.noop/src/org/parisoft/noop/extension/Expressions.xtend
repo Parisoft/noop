@@ -1,6 +1,7 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
+import java.util.Collections
 import java.util.stream.Collectors
 import org.parisoft.noop.exception.InvalidExpressionException
 import org.parisoft.noop.exception.NonConstantExpressionException
@@ -44,6 +45,7 @@ class Expressions {
 
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension Values
 	@Inject extension TypeSystem
 
 	def NoopClass typeOf(Expression expression) {
@@ -251,6 +253,25 @@ class Expressions {
 			throw new NonConstantExpressionException(expression)
 		} catch (ClassCastException e) {
 			throw new InvalidExpressionException(expression)
+		}
+	}
+
+	def dimensionOf(Expression expression) {
+		switch (expression) {
+			ArrayLiteral:
+				expression.valueOf.dimensionOf
+			MemberSelection:
+				if (expression.isInstanceOf || expression.isCast) {
+					Collections.emptyList
+				} else {
+					expression.member.dimensionOf.subListFrom(expression.indexes.size)
+				}
+			MemberRef:
+				expression.member.dimensionOf.subListFrom(expression.indexes.size)
+			NewInstance:
+				expression.dimension.map[value.valueOf as Integer]
+			default:
+				Collections.emptyList
 		}
 	}
 

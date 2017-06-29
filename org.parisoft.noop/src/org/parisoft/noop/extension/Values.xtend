@@ -1,5 +1,8 @@
 package org.parisoft.noop.^extension
 
+import java.util.List
+import java.util.Collections
+
 class Values {
 
 	def parseInt(String string) {
@@ -26,5 +29,27 @@ class Values {
 		}
 
 		return value;
+	}
+	
+	def <T> subListFrom(List<T> list, int index) {
+		list.subList(index, list.size)
+	}
+	
+	def List<Integer> dimensionOf(List<?> list) {
+		if (list.isEmpty) {
+			Collections.emptyList
+		} else {
+			val dimension = newArrayList(list.size)
+			dimension.addAll(list.head.dimensionOf)
+			dimension
+		}
+	}
+	
+	def dimensionOf(Object object) {
+		if (object instanceof List<?>) {
+			object.dimensionOf
+		} else {
+			Collections.emptyList
+		}
 	}
 }

@@ -1,6 +1,7 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
+import java.util.AbstractMap.SimpleEntry
 import java.util.Collection
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
@@ -12,6 +13,9 @@ import static extension org.eclipse.xtext.EcoreUtil2.*
 
 class Classes {
 
+	static val int SIZE_OF_CLASS_TYPE = 1;
+
+	@Inject extension Members
 	@Inject extension TypeSystem
 	@Inject extension IQualifiedNameProvider
 
@@ -88,7 +92,7 @@ class Classes {
 
 	def isBoolean(NoopClass c) {
 		try {
-			return c.fullyQualifiedName == TypeSystem::LIB_BOOL
+			return c.fullyQualifiedName.toString == TypeSystem::LIB_BOOL
 		} catch (Exception exception) {
 			return false
 		}
@@ -101,6 +105,32 @@ class Classes {
 			false
 		} else {
 			c
+		}
+	}
+
+	def sizeOf(NoopClass c) {
+		switch (c.fullyQualifiedName.toString) {
+			case TypeSystem::LIB_BYTE:
+				1
+			case TypeSystem::LIB_SBYTE:
+				1
+			case TypeSystem::LIB_BOOL:
+				1
+			case TypeSystem::LIB_INT:
+				2
+			case TypeSystem::LIB_UINT:
+				2
+			default: {
+				c.fields.map [
+					new SimpleEntry(it, it.sizeOf)
+				].filter [
+					it.key.nonConstant || it.value > 2
+				].map [
+					it.value
+				].reduce [ v1, v2 |
+					v1 + v2
+				] ?: 0 + SIZE_OF_CLASS_TYPE
+			}
 		}
 	}
 

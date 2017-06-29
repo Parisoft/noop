@@ -12,6 +12,8 @@ import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import java.util.Collections
+import java.util.List
 
 public class Members {
 
@@ -89,10 +91,24 @@ public class Members {
 		} else {
 			throw new NonConstantMemberException
 		}
-
 	}
 
 	def valueOf(Method method) {
 		throw new NonConstantMemberException
+	}
+
+	def List<Integer> dimensionOf(Member member) {
+		switch (member) {
+			Variable:
+				member.value.dimensionOf
+			Method:
+				Collections.<Integer>emptyList // methods cannot return arrays?
+		}
+	}
+
+	def sizeOf(Member member) {
+		member.dimensionOf.reduce [ d1, d2 |
+			d1 * d2
+		] ?: 1 * member.typeOf.sizeOf
 	}
 }
