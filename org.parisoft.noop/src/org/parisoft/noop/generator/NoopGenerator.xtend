@@ -58,7 +58,7 @@ class NoopGenerator extends AbstractGenerator {
 
 			obj as NoopClass
 		].filter [
-			it.name != "Game" && it.classHierarchy.exists[name == "Game"]
+			it.isGame
 		].toSet
 
 		if (games.size > 1) {

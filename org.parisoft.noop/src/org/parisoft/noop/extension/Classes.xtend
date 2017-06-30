@@ -1,7 +1,6 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
-import java.util.AbstractMap.SimpleEntry
 import java.util.Collection
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
@@ -50,7 +49,7 @@ class Classes {
 	def merge(Collection<NoopClass> classes) {
 		val hierarchies = classes.map[it.classHierarchy]
 
-		return hierarchies.reduce [ h1, h2 |
+		hierarchies.reduce [ h1, h2 |
 			h1.retainAll(h2)
 			h1
 		]?.head ?: TypeSystem::TYPE_VOID
@@ -84,17 +83,37 @@ class Classes {
 
 	def isNumeric(NoopClass c) {
 		try {
-			return c.classHierarchy.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_INT]
+			c.classHierarchy.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_INT]
 		} catch (Exception exception) {
-			return false
+			false
 		}
 	}
 
 	def isBoolean(NoopClass c) {
 		try {
-			return c.fullyQualifiedName.toString == TypeSystem::LIB_BOOL
+			c.fullyQualifiedName.toString == TypeSystem::LIB_BOOL
 		} catch (Exception exception) {
-			return false
+			false
+		}
+	}
+
+	def isGame(NoopClass c) {
+		try {
+			c.fullyQualifiedName.toString != TypeSystem::LIB_GAME && c.classHierarchy.exists [
+				it.fullyQualifiedName.toString == TypeSystem::LIB_GAME
+			]
+		} catch (Exception exception) {
+			false
+		}
+	}
+
+	def isSingleton(NoopClass c) {
+		try {
+			c.fullyQualifiedName.toString != TypeSystem::LIB_SINGLETON && c.classHierarchy.exists [
+				it.fullyQualifiedName.toString == TypeSystem::LIB_SINGLETON
+			]
+		} catch (Exception exception) {
+			false
 		}
 	}
 
@@ -108,7 +127,7 @@ class Classes {
 		}
 	}
 
-	def sizeOf(NoopClass c) {
+	def int sizeOf(NoopClass c) {
 		switch (c.fullyQualifiedName.toString) {
 			case TypeSystem::LIB_BYTE:
 				1
@@ -121,13 +140,7 @@ class Classes {
 			case TypeSystem::LIB_UINT:
 				2
 			default: {
-				c.fields.map [
-					new SimpleEntry(it, it.sizeOf)
-				].filter [
-					it.key.nonConstant || it.value > 2
-				].map [
-					it.value
-				].reduce [ v1, v2 |
+				c.fields.filter[nonConstant].map[sizeOf].reduce [ v1, v2 |
 					v1 + v2
 				] ?: 0 + SIZE_OF_CLASS_TYPE
 			}
