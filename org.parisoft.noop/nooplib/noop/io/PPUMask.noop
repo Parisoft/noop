@@ -10,7 +10,7 @@ PPUMask {
 	/* true: Show sprites in leftmost 8 pixels of screen, false: Hide */
 	showSpritesPixelsOnLeftSide : true
 	
-	showBackgroud : true
+	showBackground : true
 	
 	showSprites : true
 	

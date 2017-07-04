@@ -1,10 +1,14 @@
 PPU extends Singleton {
     
-    loadPalettes(Byte index, Byte[][] palettes) {
+    loadBgPalettes(Byte[][] palettes) {
     	//native
     }
     
-    setBgNameTable(Byte index, Byte x, Byte y, Byte[][] nameTable) {
+    loadSpritesPalettes(Byte[][] palettes) {
+    	//native
+    }
+    
+    setBgNameTable(Byte index, Byte row, Byte col, Byte[][] nameTable) {
     	//native
     }
 
