@@ -1,5 +1,10 @@
 PPU extends Singleton {
     
+    #screenWidthPx : 256
+    #screenHeightPx : 240
+    #screenWidthTiles : 32
+    #screenHeightTiles : 30
+    
     loadBgPalettes(Byte[][] palettes) {
     	//native
     }

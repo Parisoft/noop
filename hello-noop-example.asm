@@ -32,9 +32,14 @@
   Hello._header.mirroring = %0001
   Hello._header.prgRomPages = 2
   Hello._header.chrRomPages = 1
-  Hello._midScreenH = 11
+  Hello._midScreenH = 14
   Hello._midScreenV = 14
-  Hello._mainNameTable = 0
+  PPUControl._nameTableDefault = %00000000
+  PPUControl._nameTableTopRight = %00000001
+  PPUControl._nameTableBottomLeft = %00000010
+  PPUControl._nameTableBottomRight = %00000011
+  PPU._screenWidthTiles = 32
+  PPU._screenHeightTiles = 30
 
 ;----------------------------------------------------------------
 ; Variables
@@ -275,7 +280,7 @@ Hello.clearScreen:
   LDX #$00
   STX Hello.clearScreen.for0.row
 -for0compare:
-  CPX #30
+  CPX #PPU._screenHeightTiles
   BEQ +for0end:
 +for0block:
 
@@ -283,10 +288,10 @@ Hello.clearScreen:
   LDX #$00
   STX Hello.clearScreen.for1.col
 -for1compare:
-  CPX #32
+  CPX #PPU._screenWidthTiles
   BEQ +for1end:
 +for1block:
-  LDA #Hello._mainNameTable
+  LDA #PPUControl._nameTableDefault
   STA PPU.setBgNameTableTile.index
   LDA Hello.clearScreen.for0.row
   STA PPU.setBgNameTableTile.row
@@ -338,27 +343,26 @@ PPU.setBgNameTableTile:
 
   LDA $2002
 
++if0:
   LDX PPU.setBgNameTableTile.index
-  CPX #$01
-  BEQ +load2nd:
-  CPX #$02
-  BEQ +load3rd:
-  CPX #$03
-  BEQ +load4th:
-
-+load1st:
+  CPX #PPUControl._nameTableDefault
+  BNE +elseif0:
   LDA #$20
-  JMP +set:
-+load2nd:
+  JMP +endif0:
++elseif0:
+  CPX #PPUControl._nameTableTopRight
+  BNE +elseif1:
   LDA #$24
-  JMP +set:
-+load3rd:
+  JMP +endif0:
++elseif1:
+  CPX #PPUControl._nameTableBottomLeft
+  BNE +else0:
   LDA #$28
-  JMP +set:
-+load4th:
+  JMP +endif0:
++else0:
   LDA #$2C
++endif0:
 
-+set:
   CLC
   ADC PPU.setBgNameTableTile.i+1
   STA $2006
@@ -394,28 +398,30 @@ PPU.setBgNameTable:
   ADC #$00
   STA PPU.setBgNameTable.addr+1
 
-  CLC
++if0:
   LDX PPU.setBgNameTable.index
-  CPX #$01
-  BEQ +load2nd:
-  CPX #$02
-  BEQ +load3rd:
-  CPX #$03
-  BEQ +load4th:
-
-+load1st:
+  CPX #PPUControl._nameTableDefault
+  BNE +elseif0:
+  CLC
   ADC #$20
-  JMP +set:
-+load2nd:
+  JMP +endif0:
++elseif0:
+  CPX #PPUControl._nameTableTopRight
+  BNE +elseif1:
+  CLC
   ADC #$24
-  JMP +set:
-+load3rd:
+  JMP +endif0:
++elseif1:
+  CPX #PPUControl._nameTableBottomLeft
+  BNE +else0:
+  CLC
   ADC #$28
-  JMP +set:
-+load4th:
+  JMP +endif0:
++else0:
+  CLC
   ADC #$2C
++endif0:
 
-+set:
   STA PPU.setBgNameTable.addr+1
   LDA $2002
 
@@ -441,15 +447,6 @@ PPU.setBgNameTable:
   LDA (PPU.setBgNameTable.nameTable), Y
   STA $2007
 +for1increment:
-  CLC
-  LDA PPU.setBgNameTable.addr+0
-  ADC #$01
-  STA PPU.setBgNameTable.addr+0
-  BCC ++for1increment:
-  LDA PPU.setBgNameTable.addr+1
-  ADC #$00
-  STA PPU.setBgNameTable.addr+1
-++for1increment:
   INC PPU.setBgNameTable.j
   LDX PPU.setBgNameTable.j
   JMP -for1compare:
@@ -459,20 +456,20 @@ PPU.setBgNameTable:
   CLC
   LDA PPU.setBgNameTable.nameTable+0
   ADC PPU.setBgNameTable.nameTable.len1
-  STX PPU.setBgNameTable.nameTable+0
+  STA PPU.setBgNameTable.nameTable+0
   BCC ++for0increment:
   LDA PPU.setBgNameTable.nameTable+1
   ADC #$00
-  STX PPU.setBgNameTable.nameTable+1
+  STA PPU.setBgNameTable.nameTable+1
 ++for0increment:
   CLC
   LDA PPU.setBgNameTable.addr+0
-  ADC PPU.setBgNameTable.nameTable.len1
-  STX PPU.setBgNameTable.addr+0
+  ADC #PPU._screenWidthTiles
+  STA PPU.setBgNameTable.addr+0
   BCC +++for0increment:
   LDA PPU.setBgNameTable.addr+1
   ADC #$00
-  STX PPU.setBgNameTable.addr+1
+  STA PPU.setBgNameTable.addr+1
 +++for0increment:
   INC PPU.setBgNameTable.i
   LDX PPU.setBgNameTable.i
@@ -636,20 +633,19 @@ Hello.main:
   STA Hello.main.tmpByte0+3
   LDA #$6F ;o
   STA Hello.main.tmpByte0+4
-  LDA #$20 ; 
-  STA Hello.main.tmpByte0+5
+  
   LDA #$4E ;N
+  STA Hello.main.tmpByte0+5
+  LDA #$4F ;O
   STA Hello.main.tmpByte0+6
   LDA #$4F ;O
   STA Hello.main.tmpByte0+7
-  LDA #$4F ;O
-  STA Hello.main.tmpByte0+8
   LDA #$50 ;P
-  STA Hello.main.tmpByte0+9
+  STA Hello.main.tmpByte0+8
   LDA #$21 ;!
-  STA Hello.main.tmpByte0+10
+  STA Hello.main.tmpByte0+9
 
-  LDA #Hello._mainNameTable
+  LDA #PPUControl._nameTableDefault
   STA PPU.setBgNameTable.index
   LDA #Hello._midScreenV
   STA PPU.setBgNameTable.row
@@ -659,9 +655,9 @@ Hello.main:
   STA PPU.setBgNameTable.nameTable+0
   LDA #>Hello.main.tmpByte0
   STA PPU.setBgNameTable.nameTable+1
-  LDA #$01
+  LDA #$02
   STA PPU.setBgNameTable.nameTable.len0
-  LDA #$0B
+  LDA #$05
   STA PPU.setBgNameTable.nameTable.len1
 
   JSR PPU.setBgNameTable

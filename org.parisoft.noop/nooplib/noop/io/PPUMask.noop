@@ -1,24 +1,48 @@
 /* Controls the rendering of sprites and backgrounds, as well as colour effects. */
 PPUMask {
 	
+	#greyscaleOff : %00000000
+	#greyscaleOn : %00000001
+	
+	#showBackgroundPixelsOnLeftSideOff : %00000000
+	#showBackgroundPixelsOnLeftSideOn : %00000010 
+	
+	#showSpritesPixelsOnLeftSideOff : %00000000
+	#showSpritesPixelsOnLeftSideOn : %00000100
+	
+	#showBackgroundOff : %00000000
+	#showBackgroundOn : %00001000
+	
+	#showSpritesOff : %00000000
+	#showSpritesOn : %00010000
+	
+	#emphasizeRedOff : %00000000
+	#emphasizeRedOn : %00100000
+	
+	#emphasizeGreenOff : %00000000
+	#emphasizeGreenOn : %01000000
+	
+	#emphasizeBlueOff : %00000000
+	#emphasizeBlueOn : %10000000
+	
 	/* Greyscale (false: normal color, true: produce a greyscale display) */
-	greyscale : false
+	greyscale : #greyscaleOff
 	
 	/* true: Show background in leftmost 8 pixels of screen, false: Hide */
-	showBackgroundPixelsOnLeftSide : true
+	showBackgroundPixelsOnLeftSide : #showBackgroundPixelsOnLeftSideOn
 	
 	/* true: Show sprites in leftmost 8 pixels of screen, false: Hide */
-	showSpritesPixelsOnLeftSide : true
+	showSpritesPixelsOnLeftSide : #showSpritesPixelsOnLeftSideOn
 	
-	showBackground : true
+	showBackground : #showBackgroundOn
 	
-	showSprites : true
+	showSprites : #showSpritesOn
 	
-	emphasizeRed : false
+	emphasizeRed : #emphasizeRedOff
 	
-	emphasizeGreen : false
+	emphasizeGreen : #emphasizeGreenOff
 	
-	emphasizeBlue : false
+	emphasizeBlue : #emphasizeBlueOff
 	
 	/* 7  bit  0
        ---- ----
@@ -34,14 +58,6 @@ PPUMask {
        +--------- Emphasize blue* 
        * NTSC colors. PAL and Dendy swaps green and red */
 	toByte() {
-		return (greyscale.as(Byte) 
-				| showBackgroundPixelsOnLeftSide.as(Byte) 
-				| showSpritesPixelsOnLeftSide.as(Byte) 
-				| showBackgroud.as(Byte)
-				| showSprites.as(Byte)
-				| emphasizeRed.as(Byte)
-				| emphasizeGreen.as(Byte)
-				| emphasizeBlue.as(Byte))
-			.as(Byte)
+		return (greyscale | showBackgroundPixelsOnLeftSide | showSpritesPixelsOnLeftSide | showBackground | showSprites | emphasizeRed | emphasizeGreen | emphasizeBlue).as(Byte)
 	}
 }
