@@ -1,10 +1,12 @@
 package org.parisoft.noop.generator
 
 import com.google.inject.Inject
+import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.noop.Method
 
 class MethodCompiler {
-
+	
+	@Inject extension Classes
 	@Inject extension StatementCompiler
 
 	def MemChunk prepare(Method method, MetaData data) {
@@ -38,6 +40,14 @@ class MethodCompiler {
 			mem.lastVarAddr = data.varCounter
 			data.varCounter = mem.firstVarAddr
 		}
+
+		val implementingClass = method.containingClass
+		
+		if (implementingClass.isSingleton) {
+			data.singletons.add(implementingClass)
+		}
+
+		data.classes.add(implementingClass)
 
 		return mem
 	}

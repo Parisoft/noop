@@ -32,9 +32,9 @@ public class Members {
 	}
 
 	def isParameter(Variable variable) {
-		containingClass(variable) instanceof Method
+		variable.eContainer instanceof Method
 	}
-	
+
 	def isNonParameter(Variable variable) {
 		!variable.isParameter
 	}

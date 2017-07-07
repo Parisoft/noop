@@ -51,7 +51,11 @@ class MemChunk {
 	}
 
 	def isPointer() {
-		firstPtrAddr === null
+		firstPtrAddr !== null && lastPtrAddr !== null
+	}
+	
+	def isVariable() {
+		firstVarAddr !== null && lastVarAddr !== null
 	}
 
 	def ptrSize() {
