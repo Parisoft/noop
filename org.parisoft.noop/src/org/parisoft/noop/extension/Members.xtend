@@ -31,12 +31,28 @@ public class Members {
 		contextClass == memberClass || contextClass.isSubclassOf(memberClass)
 	}
 
+	def isParameter(Variable variable) {
+		containingClass(variable) instanceof Method
+	}
+	
+	def isNonParameter(Variable variable) {
+		!variable.isParameter
+	}
+
 	def isConstant(Variable variable) {
 		variable.name.startsWith(CONSTANT_SUFFIX)
 	}
 
 	def isNonConstant(Variable variable) {
 		!variable.isConstant
+	}
+
+	def isROM(Variable variable) {
+		variable.storage !== null
+	}
+
+	def isNonROM(Variable variable) {
+		!variable.isROM
 	}
 
 	def typeOf(Member member) {
@@ -80,16 +96,12 @@ public class Members {
 	}
 
 	def valueOf(Variable variable) {
-		if (variable.isConstant) {
-			if (running.add(variable)) {
-				try {
-					return variable.value.valueOf
-				} finally {
-					running.remove(variable)
-				}
+		if (running.add(variable)) {
+			try {
+				return variable.value.valueOf
+			} finally {
+				running.remove(variable)
 			}
-		} else {
-			throw new NonConstantMemberException
 		}
 	}
 
@@ -100,15 +112,19 @@ public class Members {
 	def List<Integer> dimensionOf(Member member) {
 		switch (member) {
 			Variable:
-				member.value.dimensionOf
+				if (member.isParameter) {
+					member.dimension.map[1]
+				} else {
+					member.value.dimensionOf
+				}
 			Method:
 				Collections.<Integer>emptyList // methods cannot return arrays?
 		}
 	}
 
 	def sizeOf(Member member) {
-		member.dimensionOf.reduce [ d1, d2 |
+		member.typeOf.sizeOf * (member.dimensionOf.reduce [ d1, d2 |
 			d1 * d2
-		] ?: 1 * member.typeOf.sizeOf
+		] ?: 1)
 	}
 }

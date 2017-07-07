@@ -40,6 +40,7 @@ import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.SubExpression
 import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.This
+import org.parisoft.noop.generator.NoopInstance
 
 class Expressions {
 
@@ -174,7 +175,7 @@ class Expressions {
 					if (expression.isInstanceOf) {
 						throw new NonConstantExpressionException(expression)
 					} else if (expression.isCast) {
-						expression.receiver
+						expression.receiver.valueOf
 					} else {
 						expression.member.valueOf
 					}
@@ -239,7 +240,11 @@ class Expressions {
 				StringLiteral:
 					expression.value.chars.boxed.collect(Collectors.toList)
 				NewInstance:
-					expression.type.defaultValueOf
+					if (expression.constructor !== null) {
+						new NoopInstance(expression.type.name, expression.type.inheritedFields, expression.constructor)
+					} else {
+						expression.type.defaultValueOf
+					}
 				MemberRef:
 					expression.member.valueOf
 				default:

@@ -9,6 +9,7 @@ import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.NoopInstance
 
 class Classes {
 
@@ -97,6 +98,18 @@ class Classes {
 		}
 	}
 
+	def isPrimitive(NoopClass c) {
+		try {
+			c.classHierarchy.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_PRIMITIVE]
+		} catch (Exception exception) {
+			false
+		}
+	}
+
+	def isNonPrimitive(NoopClass c) {
+		!c.isPrimitive
+	}
+
 	def isGame(NoopClass c) {
 		try {
 			c.fullyQualifiedName.toString != TypeSystem::LIB_GAME && c.classHierarchy.exists [
@@ -105,6 +118,24 @@ class Classes {
 		} catch (Exception exception) {
 			false
 		}
+	}
+
+	def isNonGame(NoopClass c) {
+		!c.isGame
+	}
+
+	def isNESHeader(NoopClass c) {
+		try {
+			c.classHierarchy.exists [
+				it.fullyQualifiedName.toString == TypeSystem::LIB_NES_HEADER
+			]
+		} catch (Exception exception) {
+			false
+		}
+	}
+
+	def isNonNESHeader(NoopClass c) {
+		!c.isNESHeader
 	}
 
 	def isSingleton(NoopClass c) {
@@ -117,13 +148,17 @@ class Classes {
 		}
 	}
 
+	def isNonSingleton(NoopClass c) {
+		!c.isSingleton
+	}
+
 	def defaultValueOf(NoopClass c) {
 		if (c.isNumeric) {
 			0
 		} else if (c.isBoolean) {
 			false
 		} else {
-			c
+			new NoopInstance(c.name, c.inheritedFields)
 		}
 	}
 
@@ -140,9 +175,9 @@ class Classes {
 			case TypeSystem::LIB_UINT:
 				2
 			default: {
-				c.fields.filter[nonConstant].map[sizeOf].reduce [ v1, v2 |
-					v1 + v2
-				] ?: 0 + SIZE_OF_CLASS_TYPE
+				SIZE_OF_CLASS_TYPE + (c.inheritedFields.filter[nonConstant].map[sizeOf].reduce [ s1, s2 |
+					s1 + s2
+				] ?: 0)
 			}
 		}
 	}

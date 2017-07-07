@@ -6,6 +6,10 @@
   PPUControl.class = 2
   PPUMask.class = 3
   
+  ;Hello field offset
+  Hello.ppuctrl = 1
+  Hello.ppumask = 2
+
   ; PPUControl field offset
   PPUControl.nameTableAddress = 1
   PPUControl.vramIncrement = 2
@@ -42,6 +46,12 @@
   PPU._screenHeightTiles = 30
 
 ;----------------------------------------------------------------
+; Singletons
+;----------------------------------------------------------------
+  _hello = $0400 ; sizeof = 3
+  _ppu = $0403
+
+;----------------------------------------------------------------
 ; Variables
 ;----------------------------------------------------------------
   PPUControl.toByte.receiver = $0000
@@ -50,41 +60,37 @@
   PPU.loadSpritesPalettes.palletes = $0000
   PPU.setBgNameTable.nameTable = $0000
 
-  Hello._ppu = $0400
-  Hello.ppuctrl = $0401
-  Hello.ppumask = $0402
-
-  Hello.main.tmpPPUControl0 = $0403
-  Hello.main.tmpPPUMask0 = $0403
-  Hello.main.tmpByte0 = $0403 ; 11 bytes
-  Hello.clearScreen.for0.row = $0403
-  Hello.clearScreen.for1.col = $0404
+  Hello.main.tmpPPUControl0 = $0404
+  Hello.main.tmpPPUMask0 = $0404
+  Hello.main.tmpByte0 = $0404 ; 11 bytes
+  Hello.clearScreen.for0.row = $0404
+  Hello.clearScreen.for1.col = $0405
   
-  PPU.setPPUControl.ppuctrl = $0403
-  PPU.setPPUMask.ppumask = $0403
-  PPU.setScrolling.x = $0403
-  PPU.setScrolling.y = $0404
+  PPU.setPPUControl.ppuctrl = $0404
+  PPU.setPPUMask.ppumask = $0404
+  PPU.setScrolling.x = $0404
+  PPU.setScrolling.y = $0405
 
-  PPU.setBgNameTable.index = $040E ; comes with Hello.main.tmpByte0
-  PPU.setBgNameTable.row = $040F
-  PPU.setBgNameTable.col = $0410
-  PPU.setBgNameTable.nameTable.len0 = $0411
-  PPU.setBgNameTable.nameTable.len1 = $0412
-  PPU.setBgNameTable.addr = $0413 ; 2 bytes
-  PPU.setBgNameTable.i = $0415
-  PPU.setBgNameTable.j = $0416
+  PPU.setBgNameTable.index = $040F ; comes with Hello.main.tmpByte0
+  PPU.setBgNameTable.row = $0410
+  PPU.setBgNameTable.col = $0411
+  PPU.setBgNameTable.nameTable.len0 = $0412
+  PPU.setBgNameTable.nameTable.len1 = $0413
+  PPU.setBgNameTable.addr = $0414 ; 2 bytes
+  PPU.setBgNameTable.i = $0416
+  PPU.setBgNameTable.j = $0417
   
-  PPU.setBgNameTableTile.index = $0405 ; comes with Hello.clearScreen.for1.col
-  PPU.setBgNameTableTile.row = $0406
-  PPU.setBgNameTableTile.col = $0407
-  PPU.setBgNameTableTile.tile = $0408
-  PPU.setBgNameTableTile.i = $0409 ; 2 bytes
+  PPU.setBgNameTableTile.index = $0406 ; comes with Hello.clearScreen.for1.col
+  PPU.setBgNameTableTile.row = $0407
+  PPU.setBgNameTableTile.col = $0408
+  PPU.setBgNameTableTile.tile = $0409
+  PPU.setBgNameTableTile.i = $040A ; 2 bytes
 
-  PPUControl.toByte.tmpByte0 = $040B ; comes with Hello.main.tmpPPUControl0
-  PPUControl.toByte.return = $040C
+  PPUControl.toByte.tmpByte0 = $040C ; comes with Hello.main.tmpPPUControl0
+  PPUControl.toByte.return = $040D
 
-  PPUMask.toByte.tmpByte0 = $040C ; ; comes with Hello.main.tmpPPUMask0
-  PPUMask.toByte.return = $040D
+  PPUMask.toByte.tmpByte0 = $040D ; ; comes with Hello.main.tmpPPUMask0
+  PPUMask.toByte.return = $040E
 
 ;----------------------------------------------------------------
 ; iNES Header
@@ -498,11 +504,13 @@ PPU.setScrolling:
   RTS
 
 Hello.refreshPPU:
-  LDA Hello.ppuctrl
+  LDX #Hello.ppuctrl
+  LDA _hello, X
   STA PPU.setPPUControl.ppuctrl
   JSR PPU.setPPUControl
 
-  LDA Hello.ppumask
+  LDX #Hello.ppumask
+  LDA _hello, X
   STA PPU.setPPUMask.ppumask
   JSR PPU.setPPUMask
 
@@ -575,7 +583,8 @@ Hello.main:
   JSR PPUControl.toByte
   ; 3) assign the return vale to ppuctrl
   LDA PPUControl.toByte.return
-  STA Hello.ppuctrl
+  LDX #Hello.ppuctrl
+  STA _hello, X
 
   ; code for "ppumask : PPUMask{}.toByte"
   ; 1) instantiate PPUMask
@@ -614,7 +623,8 @@ Hello.main:
   JSR PPUMask.toByte
   ; 3) assign the return vale to ppumask
   LDA PPUMask.toByte.return
-  STA Hello.ppumask
+  LDX #Hello.ppumask
+  STA _hello, X
 
   JSR PPU.waitVBlank      ; Second wait for vblank, PPU is ready after this
   ;;;;;;;;;; Initial setup Finish

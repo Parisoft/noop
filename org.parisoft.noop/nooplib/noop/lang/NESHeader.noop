@@ -7,8 +7,8 @@ NESHeader extends Singleton {
 	#MMC3 : 4
 	#MMC5 : 5
 	
-	#HORIZONTAL : 0.as(Int)
-	#VERTICAL : 1.as(Int)
+	#HORIZONTAL : 0
+	#VERTICAL : 1
 	#FOUR_SCREEN : %1000
 
 	mapper : #NROM
@@ -19,6 +19,6 @@ NESHeader extends Singleton {
 	
 	/* 0: Horizontal (Vertical scrolling) <br>
 	   1: Vertical (Horizontal scrolling) <br>
-	   4096: Four screen <br> */
+	   8: Four screen <br> */
 	mirroring : #VERTICAL
 }
