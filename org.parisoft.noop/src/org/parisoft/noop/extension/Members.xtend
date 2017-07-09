@@ -54,6 +54,10 @@ public class Members {
 	def isNonROM(Variable variable) {
 		!variable.isROM
 	}
+	
+	def isMain(Method method) {
+		method.containingClass.isGame && method.name == 'main' && method.params.isEmpty
+	}
 
 	def typeOf(Member member) {
 		switch (member) {

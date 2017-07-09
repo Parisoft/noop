@@ -112,7 +112,7 @@ class Classes {
 
 	def isGame(NoopClass c) {
 		try {
-			c.fullyQualifiedName.toString != TypeSystem::LIB_GAME && c.classHierarchy.exists [
+			c.classHierarchy.exists [
 				it.fullyQualifiedName.toString == TypeSystem::LIB_GAME
 			]
 		} catch (Exception exception) {
@@ -164,6 +164,8 @@ class Classes {
 
 	def int sizeOf(NoopClass c) {
 		switch (c.fullyQualifiedName.toString) {
+			case TypeSystem::LIB_VOID:
+				0
 			case TypeSystem::LIB_BYTE:
 				1
 			case TypeSystem::LIB_SBYTE:

@@ -13,6 +13,7 @@ import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopPackage
+import org.parisoft.noop.^extension.TypeSystem
 
 /**
  * Generates code from your model files on save.
@@ -46,7 +47,7 @@ class NoopGenerator extends AbstractGenerator {
 		val main = game.inheritedMethods.findFirst[name == "main" && params.isEmpty]
 		val metadata = new MetaData(header)
 		
-		main.prepare(metadata)
+		main.alloc(metadata)
 		val content = metadata.compile
 
 
@@ -65,7 +66,7 @@ class NoopGenerator extends AbstractGenerator {
 
 			obj as NoopClass
 		].filter [
-			it.isGame
+			it.isGame && it.name != TypeSystem::LIB_GAME
 		].toSet
 
 		if (games.size > 1) {

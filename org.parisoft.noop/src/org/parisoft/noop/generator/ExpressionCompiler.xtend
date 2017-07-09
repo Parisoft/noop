@@ -1,14 +1,17 @@
 package org.parisoft.noop.generator
 
 import com.google.inject.Inject
+import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.AddExpression
 import org.parisoft.noop.noop.AndExpression
+import org.parisoft.noop.noop.ArrayLiteral
 import org.parisoft.noop.noop.AssignmentExpression
 import org.parisoft.noop.noop.BAndExpression
 import org.parisoft.noop.noop.BOrExpression
+import org.parisoft.noop.noop.BoolLiteral
 import org.parisoft.noop.noop.ByteLiteral
 import org.parisoft.noop.noop.DecExpression
 import org.parisoft.noop.noop.DifferExpression
@@ -26,145 +29,144 @@ import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelection
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.MulExpression
+import org.parisoft.noop.noop.NewInstance
+import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.NotExpression
 import org.parisoft.noop.noop.OrExpression
 import org.parisoft.noop.noop.RShiftExpression
 import org.parisoft.noop.noop.SigNegExpression
 import org.parisoft.noop.noop.SigPosExpression
-import org.parisoft.noop.noop.SubExpression
-import org.parisoft.noop.noop.BoolLiteral
 import org.parisoft.noop.noop.StringLiteral
-import org.parisoft.noop.noop.ArrayLiteral
-import org.parisoft.noop.noop.NewInstance
+import org.parisoft.noop.noop.SubExpression
 import org.parisoft.noop.noop.Variable
+
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.Statement
 
 class ExpressionCompiler {
 
 	@Inject extension Members
 	@Inject extension Classes
 	@Inject extension Expressions
+	@Inject extension IQualifiedNameProvider
 	@Inject extension MethodCompiler
 
-	def void prepare(Expression expression, MetaData data) {
+	def void alloc(Expression expression, MetaData data) {
 		switch (expression) {
 			AssignmentExpression: {
-				expression.right.prepare(data)
+				expression.right.alloc(data)
 			}
 			OrExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			AndExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			EqualsExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			DifferExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			GtExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			GeExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			LtExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			LeExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			AddExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			SubExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			MulExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			DivExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			BOrExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			BAndExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			LShiftExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			RShiftExpression: {
-				expression.left.prepare(data)
-				expression.right.prepare(data)
+				expression.left.alloc(data)
+				expression.right.alloc(data)
 			}
 			EorExpression: {
-				expression.right.prepare(data)
+				expression.right.alloc(data)
 			}
 			NotExpression: {
-				expression.right.prepare(data)
+				expression.right.alloc(data)
 			}
 			SigNegExpression: {
-				expression.right.prepare(data)
+				expression.right.alloc(data)
 			}
 			SigPosExpression: {
-				expression.right.prepare(data)
+				expression.right.alloc(data)
 			}
 			DecExpression: {
-				expression.right.prepare(data)
+				expression.right.alloc(data)
 			}
 			IncExpression: {
-				expression.right.prepare(data)
+				expression.right.alloc(data)
 			}
 			MemberSelection: {
-				val ptrCounter = data.ptrCounter
-				val varCounter = data.varCounter
+				val prevPtrCounter = data.ptrCounter.get
+				val prevVarCounter = data.varCounter.get
+				val method = expression.getContainerOfType(Method)
 				val member = expression.member
+				val receiver = expression.receiver
 
-				expression.receiver.prepareTemp(data)
-
-				if (expression.isMethodInvocation) {
-					(member as Method).prepare(data)
-					expression.args.forEach[prepareTemp(data)]
-				} else if (expression.isInstanceOf || expression.isCast) {
-					data.classes.add(expression.type)
-				} else if (member instanceof Variable) {
-					if (member.isConstant && member.typeOf.isPrimitive) {
-						data.constants.add(member)
-					} else if (member.typeOf.isSingleton) {
-						data.singletons.add(member.typeOf)
-					}
+				if (receiver instanceof ByteLiteral || receiver instanceof BoolLiteral || receiver instanceof StringLiteral ||
+					receiver instanceof ArrayLiteral || receiver instanceof NewInstance) {
+					data.variables.get(method).put(NoopFactory::eINSTANCE.createVariable => [
+						name = method.fullyQualifiedName.toString + '.tmp' + data.tmpCounter.andIncrement
+					], data.chunkForVar(receiver.sizeOf))
+				} else {
+					receiver.alloc(data)
 				}
 
-				data.ptrCounter = ptrCounter
-				data.varCounter = varCounter
-			}
-			MemberRef: {
-				val ptrCounter = data.ptrCounter
-				val varCounter = data.varCounter
-				val member = expression.member
-
 				if (expression.isMethodInvocation) {
-					(member as Method).prepare(data)
-					expression.args.forEach[prepareTemp(data)]
+					(member as Method).alloc(data)
+					expression.args.reject[
+						it instanceof ArrayLiteral || it instanceof NewInstance
+					].forEach[alloc(data)]
+					expression.args.filter [
+						it instanceof ArrayLiteral || it instanceof NewInstance
+					].forEach [ arg |
+						data.variables.get(method).put(NoopFactory::eINSTANCE.createVariable => [
+							name = method.fullyQualifiedName.toString + '.tmp' + data.tmpCounter.andIncrement
+						], data.chunkForVar(arg.sizeOf))
+					]
+				} else if (expression.isInstanceOf || expression.isCast) {
+					data.classes.add(expression.type)
 				} else if (member instanceof Variable) {
 					if (member.isConstant && member.nonROM && member.typeOf.isPrimitive) {
 						data.constants.add(member)
@@ -173,35 +175,39 @@ class ExpressionCompiler {
 					}
 				}
 
-				data.ptrCounter = ptrCounter
-				data.varCounter = varCounter
+				data.ptrCounter.set(prevPtrCounter)
+				data.varCounter.set(prevVarCounter)
+			}
+			MemberRef: {
+				val prevPtrCounter = data.ptrCounter.get
+				val prevVarCounter = data.varCounter.get
+				val method = expression.getContainerOfType(Method)
+				val member = expression.member
+
+				if (expression.isMethodInvocation) {
+					(member as Method).alloc(data)
+					expression.args.reject[
+						it instanceof ArrayLiteral || it instanceof NewInstance
+					].forEach[alloc(data)]
+					expression.args.filter [
+						it instanceof ArrayLiteral || it instanceof NewInstance
+					].forEach [ arg |
+						data.variables.get(method).put(NoopFactory::eINSTANCE.createVariable => [
+							name = method.fullyQualifiedName.toString + '.tmp' + data.tmpCounter.andIncrement
+						], data.chunkForVar(arg.sizeOf))
+					]
+				} else if (member instanceof Variable) {
+					if (member.isConstant && member.nonROM && member.typeOf.isPrimitive) {
+						data.constants.add(member)
+					} else if (member.typeOf.isSingleton) {
+						data.singletons.add(member.typeOf)
+					}
+				}
+
+				data.ptrCounter.set(prevPtrCounter)
+				data.varCounter.set(prevVarCounter)
 			}
 		}
-	}
-
-	private def prepareTemp(Expression expression, MetaData data) {
-		switch (expression) {
-			ByteLiteral:
-				expression.allocTemp(data)
-			BoolLiteral:
-				expression.allocTemp(data)
-			StringLiteral:
-				expression.allocTemp(data)
-			ArrayLiteral:
-				expression.allocTemp(data)
-			NewInstance:
-				expression.allocTemp(data)
-			default:
-				expression.prepare(data)
-		}
-	}
-
-	private def allocTemp(Expression expression, MetaData data) {
-		val size = expression.typeOf.sizeOf * (expression.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1)
-		val mem = new MemChunk(data.varCounter, size)
-		val container = expression.getContainerOfType(Statement)
-		data.temps.put(container, mem)
-		data.varCounter = mem.lastVarAddr
 	}
 
 }

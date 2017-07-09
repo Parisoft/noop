@@ -279,5 +279,9 @@ class Expressions {
 				Collections.emptyList
 		}
 	}
+	
+	def sizeOf(Expression expression) {
+		expression.typeOf.sizeOf
+	}
 
 }

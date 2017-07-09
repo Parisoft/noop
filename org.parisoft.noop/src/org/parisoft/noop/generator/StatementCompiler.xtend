@@ -1,27 +1,35 @@
 package org.parisoft.noop.generator
 
 import com.google.inject.Inject
+import java.util.concurrent.atomic.AtomicInteger
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Members
-import org.parisoft.noop.noop.Expression
-import org.parisoft.noop.noop.Statement
-import org.parisoft.noop.noop.Variable
-import org.parisoft.noop.noop.ReturnStatement
-import org.parisoft.noop.noop.IfStatement
 import org.parisoft.noop.noop.ElseStatement
+import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.ForStatement
 import org.parisoft.noop.noop.ForeverStatement
+import org.parisoft.noop.noop.IfStatement
+import org.parisoft.noop.noop.Method
+import org.parisoft.noop.noop.NoopFactory
+import org.parisoft.noop.noop.ReturnStatement
+import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.StorageType
+import org.parisoft.noop.noop.Variable
+
+import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.eclipse.xtext.naming.IQualifiedNameProvider
 
 class StatementCompiler {
 
 	@Inject extension Members
 	@Inject extension Classes
 	@Inject extension Collections
+	@Inject extension IQualifiedNameProvider
+
 	@Inject ExpressionCompiler exprCompiler
 
-	def void prepare(Statement statement, MetaData data) {
+	def void alloc(Statement statement, MetaData data) {
 		switch (statement) {
 			Variable:
 				if (statement.isROM && statement.storage.type == StorageType.PRGROM) {
@@ -34,83 +42,98 @@ class StatementCompiler {
 					data.classes.add(statement.typeOf)
 					data.singletons.add(statement.typeOf)
 				} else {
-					val mem = if (statement.isNonParameter) {
-							new MemChunk(data.varCounter, statement.sizeOf)
-						} else if (statement.dimensionOf.isNotEmpty) {
-							new MemChunk(data.ptrCounter, data.varCounter, statement.dimensionOf.size)
-						} else if (statement.typeOf.isPrimitive) {
-							new MemChunk(data.varCounter, statement.sizeOf)
-						} else {
-							new MemChunk(data.ptrCounter)
+					val method = statement.getContainerOfType(Method)
+
+					if (statement.isNonParameter) {
+						try {
+						data.variables.get(method).put(statement, data.chunkForVar(statement.sizeOf))
+						} catch (Exception exception) {
+							
 						}
+					} else if (statement.dimensionOf.isNotEmpty) {
+						val i = new AtomicInteger(0)
 
-					if (mem.lastPtrAddr !== null) {
-						data.ptrCounter = mem.lastPtrAddr + 1
+						statement.dimensionOf.map [
+							NoopFactory::eINSTANCE.createVariable => [
+								name = statement.fullyQualifiedName.toString + ".len" + i.andIncrement
+							]
+						].forEach [
+							data.variables.get(method).put(it, data.chunkForVar(1))
+						]
+
+						data.pointers.get(method).put(statement, data.chunkForPointer)
+					} else if (statement.typeOf.isPrimitive) {
+						data.variables.get(method).put(statement, data.chunkForVar(statement.sizeOf))
+					} else {
+						data.pointers.get(method).put(statement, data.chunkForPointer)
 					}
 
-					if (mem.lastVarAddr !== null) {
-						data.varCounter = mem.lastVarAddr + 1
-					}
-
-					statement.value?.prepare(data)
+					statement.value?.alloc(data)
 
 					data.classes.add(statement.typeOf)
-					data.variables.put(statement, mem)
 				}
 			IfStatement: {
-				val ptrCounter = data.ptrCounter
-				val varCounter = data.varCounter
+				val prevPtrCounter = data.ptrCounter.get
+				val prevVarCounter = data.varCounter.get
 
-				statement.condition.prepare(data)
-				statement.body.statements.forEach[prepare(data)]
+				statement.condition.alloc(data)
+				statement.body.statements.forEach[alloc(data)]
 
-				data.ptrCounter = ptrCounter
-				data.varCounter = varCounter
+				data.ptrCounter.set(prevPtrCounter)
+				data.varCounter.set(prevVarCounter)
 
-				statement.^else?.prepare(data)
+				statement.^else?.alloc(data)
 			}
 			ForStatement: {
-				val ptrCounter = data.ptrCounter
-				val varCounter = data.varCounter
+				val prevPtrCounter = data.ptrCounter.get
+				val prevVarCounter = data.varCounter.get
 
-				statement.variables.forEach[prepare(data)]
-				statement.assignments.forEach[prepare(data)]
-				statement.condition?.prepare(data)
-				statement.expressions.forEach[prepare(data)]
-				statement.body.statements.forEach[prepare(data)]
+				statement.variables.forEach[alloc(data)]
+				statement.assignments.forEach[alloc(data)]
+				statement.condition?.alloc(data)
+				statement.expressions.forEach[alloc(data)]
+				statement.body.statements.forEach[alloc(data)]
 
-				data.ptrCounter = ptrCounter
-				data.varCounter = varCounter
+				data.ptrCounter.set(prevPtrCounter)
+				data.varCounter.set(prevVarCounter)
 			}
 			ForeverStatement: {
-				val ptrCounter = data.ptrCounter
-				val varCounter = data.varCounter
+				val prevPtrCounter = data.ptrCounter.get
+				val prevVarCounter = data.varCounter.get
 
-				statement.body.statements.forEach[prepare(data)]
+				statement.body.statements.forEach[alloc(data)]
 
-				data.ptrCounter = ptrCounter
-				data.varCounter = varCounter
+				data.ptrCounter.set(prevPtrCounter)
+				data.varCounter.set(prevVarCounter)
 			}
 			ReturnStatement:
-				statement.value?.prepare(data)
+				if (statement.value !== null) {
+					val method = statement.getContainerOfType(Method)
+					val returnVar = NoopFactory::eINSTANCE.createVariable => [
+						name = method.fullyQualifiedName.toString + '.return'
+					]
+
+					data.variables.get(method).put(returnVar, data.chunkForVar(method.sizeOf))
+				}
 			Expression:
-				statement.prepare(data)
+				statement.alloc(data)
 		}
 	}
 
-	def prepare(ElseStatement statement, MetaData data) {
-		val ptrCounter = data.ptrCounter
-		val varCounter = data.varCounter
+	def alloc(ElseStatement statement, MetaData data) {
+		val prevPtrCounter = data.ptrCounter.get
+		val prevVarCounter = data.varCounter.get
 
-		statement.body.statements.forEach[prepare(data)]
+		statement.body.statements.forEach[alloc(data)]
 
-		data.ptrCounter = ptrCounter
-		data.varCounter = varCounter
+		data.ptrCounter.set(prevPtrCounter)
+		data.varCounter.set(prevVarCounter)
 
-		statement.^if?.prepare(data)
+		statement.^if?.alloc(data)
 	}
 
-	def prepare(Expression expression, MetaData data) {
-		exprCompiler.prepare(expression, data)
+	def alloc(Expression expression, MetaData data) {
+		exprCompiler.alloc(expression, data)
 	}
+
 }

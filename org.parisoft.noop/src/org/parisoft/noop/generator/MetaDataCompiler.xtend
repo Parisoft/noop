@@ -1,7 +1,6 @@
 package org.parisoft.noop.generator
 
 import com.google.inject.Inject
-import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Members
@@ -36,32 +35,23 @@ class MetaDataCompiler {
 		;----------------------------------------------------------------
 		; Singletons
 		;----------------------------------------------------------------
-		«val addr = new AtomicInteger(0x0400)»
 		«FOR singleton : data.singletons»
-			_«singleton.name.toLowerCase» = «addr.getAndAdd(singleton.sizeOf).toHexString(4)»
+			_«singleton.name.toLowerCase» = «data.varCounter.getAndAdd(singleton.sizeOf).toHexString(4)»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
 		; Variables
 		;----------------------------------------------------------------
-		«FOR entry : data.variables.entrySet.filter[value.isPointer].sortBy[value.firstPtrAddr + key.fullyQualifiedName.toString]»
-			«entry.key.fullyQualifiedName» = «entry.value.firstPtrAddr.toHexString(4)»
+		«FOR method : data.pointers.entrySet»
+			«FOR entry : method.value.entrySet.sortBy[value.low]»
+				«entry.key.fullyQualifiedName» = «entry.value.low.toHexString(4)»
+			«ENDFOR»
 		«ENDFOR»
 		
-		«FOR entry : data.variables.entrySet.filter[value.isVariable].sortBy[value.firstVarAddr + key.fullyQualifiedName.toString]»
-			«IF entry.value.isPointer»
-				«var iCount = 0»
-				«FOR i : entry.key.dimensionOf»
-					«entry.key.fullyQualifiedName».len«iCount++» = «entry.value.firstVarAddr.toHexString(4)» ; FIXME
-				«ENDFOR»
-			«ELSE»
-				«entry.key.fullyQualifiedName» = «entry.value.firstVarAddr.toHexString(4)»
-			«ENDIF»
-		«ENDFOR»
-		
-		«var tmpCount = 0»
-		«FOR entry : data.temps.entrySet.sortBy[value.firstVarAddr]»
-			«entry.key».tmp«tmpCount++» = «entry.value.firstVarAddr.toHexString(4)»
+		«FOR method : data.variables.entrySet»
+			«FOR entry : method.value.entrySet.sortBy[value.low]»
+				«entry.key.fullyQualifiedName» = «entry.value.low.toHexString(4)»
+			«ENDFOR»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
