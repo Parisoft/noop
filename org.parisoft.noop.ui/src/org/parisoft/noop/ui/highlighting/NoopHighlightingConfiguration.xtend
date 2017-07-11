@@ -9,27 +9,34 @@ class NoopHighlightingConfiguration extends DefaultHighlightingConfiguration {
 
 	public static val CLASS_ID = 'classId'
 	public static val TAG_ID = 'tagId'
+	public static val ASM_ID = 'asmId'
 
 	override configure(IHighlightingConfigurationAcceptor acceptor) {
 		super.configure(acceptor)
 		acceptor.acceptDefaultHighlighting(CLASS_ID, 'Classes and Types', classTextStyle)
 		acceptor.acceptDefaultHighlighting(TAG_ID, 'Tags', tagTextStyle)
+		acceptor.acceptDefaultHighlighting(ASM_ID, 'ASM native code', asmTextStyle)
 	}
 
 	def classTextStyle() {
-		val textStyle = defaultTextStyle().copy()
-		textStyle.color = new RGB(0, 0, 0)
-		textStyle.style = SWT.BOLD
-
-		return textStyle
+		defaultTextStyle.copy => [
+			color = new RGB(0, 0, 0)
+			style = SWT.BOLD
+		]
 	}
 
 	def tagTextStyle() {
-		val textStyle = defaultTextStyle().copy()
-		textStyle.color = new RGB(125, 125, 125)
-		textStyle.style = SWT.ITALIC
+		defaultTextStyle.copy => [
+			color = new RGB(125, 125, 125)
+			style = SWT.ITALIC
+		]
+	}
 
-		return textStyle;
+	def asmTextStyle() {
+		defaultTextStyle.copy => [
+			color = new RGB(255, 255, 255)
+			backgroundColor = new RGB(77, 77, 77)
+		]
 	}
 
 }

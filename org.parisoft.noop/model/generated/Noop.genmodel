@@ -44,6 +44,7 @@
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//Statement"/>
     <genClasses ecoreClass="Noop.ecore#//ReturnStatement">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//ReturnStatement/name"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ReturnStatement/value"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//IfStatement">
@@ -68,6 +69,10 @@
     <genClasses ecoreClass="Noop.ecore#//ForeverStatement">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//ForeverStatement/name"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ForeverStatement/body"/>
+    </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//AsmStatement">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//AsmStatement/codes"/>
+      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//AsmStatement/vars"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//Expression"/>
     <genClasses ecoreClass="Noop.ecore#//Constructor">

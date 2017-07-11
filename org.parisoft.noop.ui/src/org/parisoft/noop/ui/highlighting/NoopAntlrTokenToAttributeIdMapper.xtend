@@ -27,6 +27,10 @@ class NoopAntlrTokenToAttributeIdMapper extends DefaultAntlrTokenToAttributeIdMa
 			return NoopHighlightingConfiguration.TAG_ID
 		}
 
+		if (tokenName == 'RULE_ASM_TO_ASM' || tokenName == 'RULE_ASM_TO_VAR' || tokenName == 'RULE_VAR_TO_ASM' || tokenName == 'RULE_VAR_TO_VAR') {
+			return NoopHighlightingConfiguration.ASM_ID
+		}
+
 		super.calculateId(tokenName, tokenType)
 	}
 

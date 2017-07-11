@@ -39,7 +39,7 @@ class NoopGenerator extends AbstractGenerator {
 	private def compile(Resource resource) {
 		val game = resource.gameClass
 
-		if (game === null) {
+		if (game === null||true) {
 			return null
 		}
 

@@ -54,6 +54,8 @@
 ;----------------------------------------------------------------
 ; Variables
 ;----------------------------------------------------------------
+  PPUControl.PPUControl.receiver = $0000
+  PPUMask.PPUMask.receiver = $0000
   PPUControl.toByte.receiver = $0000
   PPUMask.toByte.receiver = $0000
   PPU.loadBgPalettes.palletes = $0000
@@ -519,6 +521,109 @@ Hello.refreshPPU:
   STA PPU.setScrolling.y
   JMP PPU.setScrolling
 
+PPU.PPU:
+  LDA #PPU.class
+  STA _ppu
+  RTS
+
+PPUControl.PPUControl:
+  LDA #PPUControl.class
+  STA (PPUControl.PPUControl.receiver)
+  LDA #$00
+  LDY #PPUControl.nameTableAddress
+  STA (PPUControl.PPUControl.receiver), Y
+  LDA #$00
+  LDY #PPUControl.vramIncrement
+  STA (PPUControl.PPUControl.receiver), Y
+  LDA #$00
+  LDY #PPUControl.sprite8x8PatternTable
+  STA (PPUControl.PPUControl.receiver), Y
+  LDA #%00010000
+  LDY #PPUControl.backgroundPatternTable
+  STA (PPUControl.PPUControl.receiver), Y
+  LDA #$00
+  LDY #PPUControl.spriteSize
+  STA (PPUControl.PPUControl.receiver), Y
+  LDA #$00
+  LDY #PPUControl.mode
+  STA (PPUControl.PPUControl.receiver), Y
+  LDA #%10000000
+  LDY #PPUControl.enableNMI
+  STA (PPUControl.PPUControl.receiver), Y
+  RTS
+
+PPUMask.PPUMask:
+  LDA #PPUMask.class
+  STA (PPUMask.PPUMask.receiver)
+  LDA #%00000000 ;greyscale = false
+  LDY #PPUMask.greyscale
+  STA (PPUMask.PPUMask.receiver), Y
+  LDA #%00000010 ;showBackgroundPixelsOnLeftSide = true
+  LDY #PPUMask.showBackgroundPixelsOnLeftSide
+  STA (PPUMask.PPUMask.receiver), Y
+  LDA #%00000100 ;showSpritesPixelsOnLeftSide = true
+  LDY #PPUMask.showSpritesPixelsOnLeftSide
+  STA (PPUMask.PPUMask.receiver), Y
+  LDA #%00001000 ;showBackground = true
+  LDY #PPUMask.showBackground
+  STA (PPUMask.PPUMask.receiver), Y
+  LDA #%00010000 ;showSprites = true
+  LDY #PPUMask.showSprites
+  STA (PPUMask.PPUMask.receiver), Y
+  LDA #%00000000 ;emphasizeRed = false
+  LDY #PPUMask.emphasizeRed
+  STA (PPUMask.PPUMask.receiver), Y
+  LDA #%00000000 ;emphasizeGreen = false
+  LDY #PPUMask.emphasizeGreen
+  STA (PPUMask.PPUMask.receiver), Y
+  LDA #%00000000 ;emphasizeBlue = false
+  LDY #PPUMask.emphasizeBlue
+  STA (PPUMask.PPUMask.receiver), Y
+  RTS
+
+Hello.Hello:
+  LDA #Hello.class
+  STA _hello
+  ; code for "ppuctrl : PPUControl{}.toByte"
+  ; 1) instantiate PPUControl
+  LDA #<Hello.main.tmpPPUControl0
+  STA PPUControl.PPUControl.receiver+0
+  LDA #>Hello.main.tmpPPUControl0
+  STA PPUControl.PPUControl.receiver+1 
+  JSR PPUControl.PPUControl
+  ; 2) call toByte()
+  LDA #<Hello.main.tmpPPUControl0
+  STA PPUControl.toByte.receiver+0
+  LDA #>Hello.main.tmpPPUControl0
+  STA PPUControl.toByte.receiver+1
+  JSR PPUControl.toByte
+  ; 3) assign the return vale to ppuctrl
+  LDA PPUControl.toByte.return
+  LDX #Hello.ppuctrl
+  STA _hello, X
+
+  ; code for "ppumask : PPUMask{}.toByte"
+  ; 1) instantiate PPUMask
+  LDA #<Hello.main.tmpPPUMask0
+  STA PPUMask.PPUMask.receiver+0
+  LDA #>Hello.main.tmpPPUMask0
+  STA PPUMask.PPUMask.receiver+1
+  JSR PPUMask.PPUMask
+  ; 2) call toByte()
+  LDA #<Hello.main.tmpPPUMask0
+  STA PPUMask.toByte.receiver+0
+  LDA #>Hello.main.tmpPPUMask0
+  STA PPUMask.toByte.receiver+1
+  JSR PPUMask.toByte
+  ; 3) assign the return vale to ppumask
+  LDA PPUMask.toByte.return
+  LDX #Hello.ppumask
+  STA _hello, X
+
+  ;code for "#ppu : PPU{}"
+  JSR PPU.PPU ; no receiver cause its singleton
+  RTS
+
 Hello.main:
   ;;;;;;;;;; Initial setup start
   SEI          ; disable IRQs
@@ -548,83 +653,7 @@ Hello.main:
   INX
   BNE -clrMem:
 
-+iniMem:
-  ; code for "ppuctrl : PPUControl{}.toByte"
-  ; 1) instantiate PPUControl
-  LDA #PPUControl.class
-  LDX #$00
-  STA Hello.main.tmpPPUControl0, X
-  LDA #$00
-  LDX #PPUControl.nameTableAddress
-  STA Hello.main.tmpPPUControl0, X
-  LDA #$00
-  LDX #PPUControl.vramIncrement
-  STA Hello.main.tmpPPUControl0, X
-  LDA #$00
-  LDX #PPUControl.sprite8x8PatternTable
-  STA Hello.main.tmpPPUControl0, X
-  LDA #%00010000
-  LDX #PPUControl.backgroundPatternTable
-  STA Hello.main.tmpPPUControl0, X
-  LDA #$00
-  LDX #PPUControl.spriteSize
-  STA Hello.main.tmpPPUControl0, X
-  LDA #$00
-  LDX #PPUControl.mode
-  STA Hello.main.tmpPPUControl0, X
-  LDA #%10000000
-  LDX #PPUControl.enableNMI
-  STA Hello.main.tmpPPUControl0, X
-  ; 2) call toByte()
-  LDA #<Hello.main.tmpPPUControl0
-  STA PPUControl.toByte.receiver+0
-  LDA #>Hello.main.tmpPPUControl0
-  STA PPUControl.toByte.receiver+1
-  JSR PPUControl.toByte
-  ; 3) assign the return vale to ppuctrl
-  LDA PPUControl.toByte.return
-  LDX #Hello.ppuctrl
-  STA _hello, X
-
-  ; code for "ppumask : PPUMask{}.toByte"
-  ; 1) instantiate PPUMask
-  LDA #PPUMask.class
-  LDX #$00
-  STA Hello.main.tmpPPUMask0, X
-  LDA #%00000000 ;greyscale = false
-  LDX #PPUMask.greyscale
-  STA Hello.main.tmpPPUMask0, X
-  LDA #%00000010 ;showBackgroundPixelsOnLeftSide = true
-  LDX #PPUMask.showBackgroundPixelsOnLeftSide
-  STA Hello.main.tmpPPUMask0, X
-  LDA #%00000100 ;showSpritesPixelsOnLeftSide = true
-  LDX #PPUMask.showSpritesPixelsOnLeftSide
-  STA Hello.main.tmpPPUMask0, X
-  LDA #%00001000 ;showBackground = true
-  LDX #PPUMask.showBackground
-  STA Hello.main.tmpPPUMask0, X
-  LDA #%00010000 ;showSprites = true
-  LDX #PPUMask.showSprites
-  STA Hello.main.tmpPPUMask0, X
-  LDA #%00000000 ;emphasizeRed = false
-  LDX #PPUMask.emphasizeRed
-  STA Hello.main.tmpPPUMask0, X
-  LDA #%00000000 ;emphasizeGreen = false
-  LDX #PPUMask.emphasizeGreen
-  STA Hello.main.tmpPPUMask0, X
-  LDA #%00000000 ;emphasizeBlue = false
-  LDX #PPUMask.emphasizeBlue
-  STA Hello.main.tmpPPUMask0, X
-  ; 2) call toByte()
-  LDA #<Hello.main.tmpPPUMask0
-  STA PPUMask.toByte.receiver+0
-  LDA #>Hello.main.tmpPPUMask0
-  STA PPUMask.toByte.receiver+1
-  JSR PPUMask.toByte
-  ; 3) assign the return vale to ppumask
-  LDA PPUMask.toByte.return
-  LDX #Hello.ppumask
-  STA _hello, X
+  JSR Hello.Hello
 
   JSR PPU.waitVBlank      ; Second wait for vblank, PPU is ready after this
   ;;;;;;;;;; Initial setup Finish

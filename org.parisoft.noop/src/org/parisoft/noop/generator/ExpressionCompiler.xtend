@@ -155,9 +155,11 @@ class ExpressionCompiler {
 
 				if (expression.isMethodInvocation) {
 					(member as Method).alloc(data)
+					
 					expression.args.reject[
 						it instanceof ArrayLiteral || it instanceof NewInstance
 					].forEach[alloc(data)]
+					
 					expression.args.filter [
 						it instanceof ArrayLiteral || it instanceof NewInstance
 					].forEach [ arg |
@@ -186,9 +188,11 @@ class ExpressionCompiler {
 
 				if (expression.isMethodInvocation) {
 					(member as Method).alloc(data)
+					
 					expression.args.reject[
 						it instanceof ArrayLiteral || it instanceof NewInstance
 					].forEach[alloc(data)]
+					
 					expression.args.filter [
 						it instanceof ArrayLiteral || it instanceof NewInstance
 					].forEach [ arg |

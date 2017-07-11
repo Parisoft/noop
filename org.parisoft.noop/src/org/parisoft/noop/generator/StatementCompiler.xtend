@@ -45,11 +45,7 @@ class StatementCompiler {
 					val method = statement.getContainerOfType(Method)
 
 					if (statement.isNonParameter) {
-						try {
 						data.variables.get(method).put(statement, data.chunkForVar(statement.sizeOf))
-						} catch (Exception exception) {
-							
-						}
 					} else if (statement.dimensionOf.isNotEmpty) {
 						val i = new AtomicInteger(0)
 

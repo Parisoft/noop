@@ -31,14 +31,15 @@ Statement:
 	Expression |
 	IfStatement |
 	ForStatement |
-	ForeverStatement) LF+;
+	ForeverStatement |
+	AsmStatement) LF+;
 
 ReturnStatement:
 	ReturnValueStatement |
-	{ReturnStatement} 'return';
+	{ReturnStatement} name='return';
 
 ReturnValueStatement returns ReturnStatement:
-	'return' value=Expression;
+	name='return' value=Expression;
 
 IfStatement:
 	name='if' '(' condition=Expression ')' body=Block else=ElseStatement?;
@@ -55,6 +56,21 @@ ForStatement:
 
 ForeverStatement:
 	name='forever' body=Block;
+
+AsmStatement:
+	codes+=ASM_TO_ASM | (codes+=ASM_TO_VAR vars+=[Variable] (codes+=VAR_TO_VAR vars+=[Variable])* codes+=VAR_TO_ASM);
+
+terminal ASM_TO_VAR:
+	'!' !('!' | '?')* '?';
+
+terminal VAR_TO_VAR:
+	'?' !('!' | '?')* '?';
+
+terminal VAR_TO_ASM:
+	'?' !('!' | '?')* '!';
+
+terminal ASM_TO_ASM:
+	'!' !('!' | '?')* '!';
 
 Expression:
 	AssignmentExpression;
