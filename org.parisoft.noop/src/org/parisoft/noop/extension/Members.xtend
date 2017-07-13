@@ -2,8 +2,12 @@ package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
 import java.util.HashSet
+import java.util.List
 import org.eclipse.emf.ecore.EObject
+import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
+import org.parisoft.noop.generator.MemChunk
+import org.parisoft.noop.generator.MetaData
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelection
@@ -12,8 +16,6 @@ import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import java.util.Collections
-import java.util.List
 
 public class Members {
 
@@ -21,8 +23,10 @@ public class Members {
 
 	@Inject extension Classes
 	@Inject extension Expressions
+	@Inject extension IQualifiedNameProvider
 
 	val running = new HashSet<Member>
+	val allocating = new HashSet<Member>
 
 	def isAccessibleFrom(Member member, EObject context) {
 		val contextClass = if (context instanceof MemberSelection) context.receiver.typeOf else context.containingClass
@@ -54,9 +58,13 @@ public class Members {
 	def isNonROM(Variable variable) {
 		!variable.isROM
 	}
-	
+
 	def isMain(Method method) {
 		method.containingClass.isGame && method.name == 'main' && method.params.isEmpty
+	}
+
+	def isNmi(Method method) {
+		method.containingClass.isGame && method.name == 'nmi' && method.params.isEmpty
 	}
 
 	def typeOf(Member member) {
@@ -122,7 +130,7 @@ public class Members {
 					member.value.dimensionOf
 				}
 			Method:
-				Collections.<Integer>emptyList // methods cannot return arrays?
+				java.util.Collections.<Integer>emptyList // methods cannot return arrays?
 		}
 	}
 
@@ -131,4 +139,46 @@ public class Members {
 			d1 * d2
 		] ?: 1)
 	}
+
+	def asmName(Method method) {
+		method.fullyQualifiedName + '@' + Integer.toHexString(method.hashCode)
+	}
+
+	def alloc(Method method, MetaData data) {
+		if (allocating.add(method)) {
+			try {
+				val snapshot = data.snapshot
+				val methodName = method.asmName
+				val allChunks = method.params.map[alloc(data)].flatten + method.body.statements.map[alloc(data)].flatten
+				val innerChunks = allChunks.filter[variable.startsWith(methodName)].sort
+				val outerChunks = allChunks.reject[variable.startsWith(methodName)].sort
+
+				innerChunks.filter[isZP].disjoint(outerChunks.filter[isZP])
+				innerChunks.reject[isZP].disjoint(outerChunks.reject[isZP])
+
+				data.restoreTo(snapshot)
+
+				return innerChunks
+			} finally {
+				allocating.remove(method)
+			}
+		} else {
+			emptyList
+		}
+	}
+
+	private def void disjoint(Iterable<MemChunk> innerChunks, Iterable<MemChunk> outerChunks) {
+		for (outerChunk : outerChunks) {
+			var delta = 0
+
+			for (innerChunk : innerChunks) {
+				if (delta != 0) {
+					innerChunk.shiftTo(delta)
+				} else if (innerChunk.overlap(outerChunk)) {
+					delta = innerChunk.shiftTo(outerChunk)
+				}
+			}
+		}
+	}
+
 }

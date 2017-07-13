@@ -236,7 +236,6 @@
     <eStructuralFeatures xsi:type="ecore:EReference" name="receiver" eType="#//Expression"
         containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="member" eType="#//Member"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="methodInvocation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="args" upperBound="-1" eType="#//Expression"
         containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="indexes" upperBound="-1"
@@ -269,7 +268,6 @@
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="MemberRef" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="member" eType="#//Member"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="methodInvocation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="args" upperBound="-1" eType="#//Expression"
         containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="indexes" upperBound="-1"

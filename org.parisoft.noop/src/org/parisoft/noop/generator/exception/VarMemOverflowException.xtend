@@ -1,4 +1,4 @@
-package org.parisoft.noop.generator
+package org.parisoft.noop.generator.exception
 
 class VarMemOverflowException extends Exception {
 	

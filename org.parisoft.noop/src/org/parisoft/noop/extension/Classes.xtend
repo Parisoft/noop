@@ -4,12 +4,13 @@ import com.google.inject.Inject
 import java.util.Collection
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
+import org.parisoft.noop.generator.MetaData
+import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.NoopInstance
 
 class Classes {
 
@@ -162,6 +163,11 @@ class Classes {
 		}
 	}
 
+	def emptyConstructorName(NoopClass c) {
+		c.name + '.'
+		c.name
+	}
+
 	def int sizeOf(NoopClass c) {
 		switch (c.fullyQualifiedName.toString) {
 			case TypeSystem::LIB_VOID:
@@ -180,6 +186,19 @@ class Classes {
 				SIZE_OF_CLASS_TYPE + (c.inheritedFields.filter[nonConstant].map[sizeOf].reduce [ s1, s2 |
 					s1 + s2
 				] ?: 0)
+			}
+		}
+	}
+
+	def void alloc(NoopClass noopClass, MetaData data) {
+		if (data.classes.add(noopClass)) {
+			if (noopClass.isSingleton) {
+				data.singletons.add(noopClass)
+
+				if (noopClass.isGame) {
+					noopClass.inheritedMethods.findFirst[main].alloc(data)
+					noopClass.inheritedMethods.findFirst[nmi].alloc(data)
+				}
 			}
 		}
 	}

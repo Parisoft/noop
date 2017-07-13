@@ -1,5 +1,6 @@
 package org.parisoft.noop.ui.highlighting
 
+import com.google.inject.Inject
 import com.google.inject.Singleton
 import org.eclipse.xtext.Action
 import org.eclipse.xtext.Assignment
@@ -8,12 +9,15 @@ import org.eclipse.xtext.ide.editor.syntaxcoloring.IHighlightedPositionAcceptor
 import org.eclipse.xtext.ide.editor.syntaxcoloring.ISemanticHighlightingCalculator
 import org.eclipse.xtext.resource.XtextResource
 import org.eclipse.xtext.util.CancelIndicator
+import org.parisoft.noop.^extension.Expressions
+import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelection
-import org.parisoft.noop.^extension.Members
 
 @Singleton
 class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalculator {
+
+	@Inject extension Expressions
 
 	override provideHighlightingFor(XtextResource resource, IHighlightedPositionAcceptor acceptor, CancelIndicator cancelIndicator) {
 		val root = resource.getParseResult().getRootNode()

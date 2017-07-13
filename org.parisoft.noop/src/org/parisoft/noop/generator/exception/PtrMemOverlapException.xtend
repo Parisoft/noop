@@ -1,6 +1,7 @@
-package org.parisoft.noop.generator
+package org.parisoft.noop.generator.exception
 
 import org.eclipse.xtend.lib.annotations.Accessors
+import org.parisoft.noop.generator.MemChunk
 
 class PtrMemOverlapException extends Exception {
 	
