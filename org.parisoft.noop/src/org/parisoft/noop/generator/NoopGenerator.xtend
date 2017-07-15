@@ -105,20 +105,12 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		; Variables
 		;----------------------------------------------------------------
-		«FOR method : data.pointers.entrySet»
-			«FOR entry : method.value.entrySet.sortBy[value.low]»
-				«entry.key.fullyQualifiedName» = «entry.value.low.toHexString(4)»
-			«ENDFOR»
+		«FOR chunk : data.pointers.values.flatten.sort»
+			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
 		
-		«FOR method : data.variables.entrySet»
-			«FOR entry : method.value.entrySet.sortBy[value.low]»
-				«entry.key.fullyQualifiedName» = «entry.value.low.toHexString(4)»
-			«ENDFOR»
-		«ENDFOR»
-		
-		«FOR temp : data.temps.entrySet»
-			«temp.key» = «temp.value.low.toHexString(4)»
+		«FOR chunk : data.variables.values.flatten.sort»
+			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
@@ -152,6 +144,6 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def fieldValue(Variable variable, String fieldname) {
-		(variable.valueOf as NoopInstance).fields.findFirst[name == fieldname]?.valueOf
+		(variable.valueOf as NoopInstance).fields.findFirst[it.name == fieldname]?.valueOf
 	}
 }

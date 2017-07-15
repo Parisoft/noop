@@ -4,18 +4,18 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
+import java.util.List
 
 class MetaData {
 
 	@Accessors var Variable header
-	@Accessors val classes = <NoopClass>newHashSet()
-	@Accessors val singletons = <NoopClass>newHashSet()
-	@Accessors val constants = <Variable>newHashSet()
-	@Accessors val prgRoms = <Variable>newHashSet()
-	@Accessors val chrRoms = <Variable>newHashSet()
-	@Accessors val variables = <String, MemChunk>newHashMap()
-	@Accessors val pointers = <String, MemChunk>newHashMap()
-	@Accessors val temps = <String, MemChunk>newHashMap()
+	@Accessors val classes = <NoopClass>newHashSet
+	@Accessors val singletons = <NoopClass>newHashSet
+	@Accessors val constants = <Variable>newHashSet
+	@Accessors val prgRoms = <Variable>newHashSet
+	@Accessors val chrRoms = <Variable>newHashSet
+	@Accessors val variables = <String, List<MemChunk>>newHashMap
+	@Accessors val pointers = <String, List<MemChunk>>newHashMap
 
 	@Accessors val ptrCounter = new AtomicInteger(0x0000)
 	@Accessors val varCounter = new AtomicInteger(0x0400)

@@ -6,7 +6,6 @@ import java.util.List
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
-import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.generator.MetaData
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberRef
@@ -130,7 +129,7 @@ public class Members {
 					member.value.dimensionOf
 				}
 			Method:
-				java.util.Collections.<Integer>emptyList // methods cannot return arrays?
+				<Integer>emptyList // methods cannot return arrays?
 		}
 	}
 
@@ -138,6 +137,14 @@ public class Members {
 		member.typeOf.sizeOf * (member.dimensionOf.reduce [ d1, d2 |
 			d1 * d2
 		] ?: 1)
+	}
+
+	def asmName(Variable variable, String containerName) {
+		if (variable.getContainerOfType(Method) !== null) {
+			containerName + variable.fullyQualifiedName.toString.substring(containerName.indexOf('@')) + '@' + Integer.toHexString(variable.hashCode)
+		} else {
+			containerName + '.' + variable.name + '@' + Integer.toHexString(variable.hashCode)
+		}
 	}
 
 	def asmName(Method method) {
@@ -149,35 +156,43 @@ public class Members {
 			try {
 				val snapshot = data.snapshot
 				val methodName = method.asmName
-				val allChunks = method.params.map[alloc(data)].flatten + method.body.statements.map[alloc(data)].flatten
-				val innerChunks = allChunks.filter[variable.startsWith(methodName)].sort
-				val outerChunks = allChunks.reject[variable.startsWith(methodName)].sort
 
-				innerChunks.filter[isZP].disjoint(outerChunks.filter[isZP])
-				innerChunks.reject[isZP].disjoint(outerChunks.reject[isZP])
+				data.container = methodName
+
+				val receiver = if (method.containingClass.isNonSingleton) {
+						data.pointers.computeIfAbsent(methodName + '.receiver', [newArrayList(data.chunkForPointer(it))])
+					} else {
+						emptyList
+					}
+
+				val chunks = receiver + (method.params.map[alloc(data)] + method.body.statements.map[alloc(data)]).flatten.toList
+
+				chunks.forEach [ chunk, index |
+					if (chunk.variable.startsWith(methodName)) {
+						chunks.drop(index).reject [
+							it.variable.startsWith(methodName)
+						].forEach [ outer |
+							if (chunk.overlap(outer)) {
+								val delta = chunk.deltaFrom(outer)
+
+								chunks.drop(index).filter [
+									it.variable.startsWith(methodName)
+								].forEach [ inner |
+									inner.shiftTo(delta)
+								]
+							}
+						]
+					}
+				]
 
 				data.restoreTo(snapshot)
 
-				return innerChunks
+				return chunks
 			} finally {
 				allocating.remove(method)
 			}
 		} else {
-			emptyList
-		}
-	}
-
-	private def void disjoint(Iterable<MemChunk> innerChunks, Iterable<MemChunk> outerChunks) {
-		for (outerChunk : outerChunks) {
-			var delta = 0
-
-			for (innerChunk : innerChunks) {
-				if (delta != 0) {
-					innerChunk.shiftTo(delta)
-				} else if (innerChunk.overlap(outerChunk)) {
-					delta = innerChunk.shiftTo(outerChunk)
-				}
-			}
+			newArrayList
 		}
 	}
 

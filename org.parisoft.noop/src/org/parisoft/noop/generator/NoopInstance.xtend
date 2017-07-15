@@ -20,7 +20,7 @@ class NoopInstance {
 		this.fields = fields.map[copy] ?: emptyList
 
 		this.fields.forEach [ field |
-			field.value = constructor?.field.findFirst[it.name == field.name]?.value ?: field.value
+			field.value = constructor?.fields.findFirst[variable == field]?.value ?: field.value
 		]
 	}
 

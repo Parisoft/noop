@@ -17,6 +17,7 @@ class Classes {
 	static val int SIZE_OF_CLASS_TYPE = 1;
 
 	@Inject extension Members
+	@Inject extension Expressions
 	@Inject extension TypeSystem
 	@Inject extension IQualifiedNameProvider
 
@@ -163,11 +164,6 @@ class Classes {
 		}
 	}
 
-	def emptyConstructorName(NoopClass c) {
-		c.name + '.'
-		c.name
-	}
-
 	def int sizeOf(NoopClass c) {
 		switch (c.fullyQualifiedName.toString) {
 			case TypeSystem::LIB_VOID:
@@ -196,6 +192,7 @@ class Classes {
 				data.singletons.add(noopClass)
 
 				if (noopClass.isGame) {
+					noopClass.inheritedFields.findFirst[typeOf.NESHeader]?.alloc(data)
 					noopClass.inheritedMethods.findFirst[main].alloc(data)
 					noopClass.inheritedMethods.findFirst[nmi].alloc(data)
 				}

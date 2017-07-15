@@ -148,10 +148,10 @@ TerminalExpression returns Expression:
 	'(' Expression ')';
 
 Constructor:
-	{Constructor} '{' LF* (field+=ConstructorField (',' LF* field+=ConstructorField)* LF*)? '}';
+	{Constructor} '{' LF* (fields+=ConstructorField (',' LF* fields+=ConstructorField)* LF*)? '}';
 
 ConstructorField:
-	name=[Variable] ':' value=Expression;
+	variable=[Variable] ':' value=Expression;
 
 Index:
 	'[' value=Expression ']';

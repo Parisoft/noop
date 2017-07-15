@@ -45,11 +45,11 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 					return scopeForVariableRef(context)
 				}
 			Constructor:
-				if (eRef == NoopPackage.eINSTANCE.constructorField_Name) {
+				if (eRef == NoopPackage.eINSTANCE.constructorField_Variable) {
 					return scopeForNewInstance(context.eContainer as NewInstance)
 				}
 			ConstructorField:
-				if (eRef == NoopPackage.eINSTANCE.constructorField_Name) {
+				if (eRef == NoopPackage.eINSTANCE.constructorField_Variable) {
 					return scopeForNewInstance(context.eContainer.eContainer as NewInstance)
 				}
 			MemberRef:

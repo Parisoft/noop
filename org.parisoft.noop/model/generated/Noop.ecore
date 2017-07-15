@@ -82,11 +82,11 @@
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Expression" eSuperTypes="#//Statement"/>
   <eClassifiers xsi:type="ecore:EClass" name="Constructor">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="field" upperBound="-1"
+    <eStructuralFeatures xsi:type="ecore:EReference" name="fields" upperBound="-1"
         eType="#//ConstructorField" containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="ConstructorField">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="name" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="variable" eType="#//Variable"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="value" eType="#//Expression"
         containment="true"/>
   </eClassifiers>

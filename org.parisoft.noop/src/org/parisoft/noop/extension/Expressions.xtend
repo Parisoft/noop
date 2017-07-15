@@ -1,16 +1,19 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.List
 import java.util.stream.Collectors
+import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.InvalidExpressionException
 import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.exception.NonConstantMemberException
+import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.generator.MetaData
 import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.AddExpression
 import org.parisoft.noop.noop.AndExpression
 import org.parisoft.noop.noop.ArrayLiteral
+import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.AssignmentExpression
 import org.parisoft.noop.noop.BAndExpression
 import org.parisoft.noop.noop.BOrExpression
@@ -38,7 +41,6 @@ import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.MulExpression
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
-import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.NotExpression
 import org.parisoft.noop.noop.OrExpression
 import org.parisoft.noop.noop.RShiftExpression
@@ -53,13 +55,8 @@ import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
 
+import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.eclipse.xtext.naming.IQualifiedNameProvider
-import org.parisoft.noop.noop.AsmStatement
-import org.parisoft.noop.noop.Constructor
-import org.parisoft.noop.generator.MemChunk
-import java.util.List
-import java.util.Collection
 
 class Expressions {
 
@@ -84,6 +81,42 @@ class Expressions {
 		} catch (Error e) {
 			false
 		}
+	}
+
+	def isVoid(ReturnStatement ^return) {
+		^return === null || ^return.value === null || ^return.method.typeOf.name == TypeSystem.LIB_VOID
+	}
+
+	def isNonVoid(ReturnStatement ^return) {
+		!^return.isVoid
+	}
+
+	def isVariableDefinitionOrAssignment(Expression expression) {
+		expression.eContainer instanceof Variable || expression.eContainer instanceof AssignmentExpression
+	}
+
+	def getMethod(ReturnStatement ^return) {
+		^return.getContainerOfType(Method)
+	}
+
+	def asmName(ReturnStatement ^return) {
+		^return.getContainerOfType(Method).fullyQualifiedName.toString + '.return'
+	}
+
+	def asmName(ArrayLiteral array, String containerName) {
+		containerName + '.' + array.typeOf.name.toFirstLower + 'Array@' + Integer.toHexString(array.hashCode)
+	}
+
+	def asmArrayName(NewInstance instance, String containerName) {
+		containerName + '.new' + instance.typeOf.name + 'Array@' + Integer.toHexString(instance.hashCode)
+	}
+
+	def asmVarName(NewInstance instance, String containerName) {
+		containerName + '.new' + instance.typeOf.name + '@' + Integer.toHexString(instance.hashCode)
+	}
+
+	def asmConstructorName(NewInstance instance) {
+		instance.type.name + instance.type.name + Integer.toHexString(instance.constructor?.fields.map[variable].join.hashCode) ?: ''
 	}
 
 	def NoopClass typeOf(Expression expression) {
@@ -304,7 +337,7 @@ class Expressions {
 				expression.valueOf.dimensionOf
 			MemberSelection:
 				if (expression.isInstanceOf || expression.isCast) {
-					java.util.Collections.emptyList
+					emptyList
 				} else {
 					expression.member.dimensionOf.subListFrom(expression.indexes.size)
 				}
@@ -313,7 +346,7 @@ class Expressions {
 			NewInstance:
 				expression.dimension.map[value.valueOf as Integer]
 			default:
-				java.util.Collections.emptyList
+				emptyList
 		}
 	}
 
@@ -321,300 +354,261 @@ class Expressions {
 		expression.typeOf.sizeOf
 	}
 
-	def methodName(Constructor constructor) {
-		val type = constructor.getContainerOfType(NewInstance).type
-		type.name + '.' + type.name + '_' + constructor.field.map[name].join('_')
+	def fullSizeOf(ArrayLiteral array) {
+		array.sizeOf * (array.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1)
 	}
 
-	def Collection<MemChunk> alloc(Expression expression, MetaData data) {
+	def fullSizeOf(NewInstance instance) {
+		instance.sizeOf * (instance.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1)
+	}
+
+	def List<MemChunk> alloc(Expression expression, MetaData data) {
 		switch (expression) {
-			AssignmentExpression: {
+			AssignmentExpression:
 				expression.right.alloc(data)
-			}
-			OrExpression: {
-				expression.left.alloc(data)
+			OrExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			AndExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			EqualsExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			DifferExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			GtExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			GeExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			LtExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			LeExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			AddExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			SubExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			MulExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			DivExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			BOrExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			BAndExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			LShiftExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			RShiftExpression:
+				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			EorExpression:
 				expression.right.alloc(data)
-			}
-			AndExpression: {
-				expression.left.alloc(data)
+			NotExpression:
 				expression.right.alloc(data)
-			}
-			EqualsExpression: {
-				expression.left.alloc(data)
+			SigNegExpression:
 				expression.right.alloc(data)
-			}
-			DifferExpression: {
-				expression.left.alloc(data)
+			SigPosExpression:
 				expression.right.alloc(data)
-			}
-			GtExpression: {
-				expression.left.alloc(data)
+			DecExpression:
 				expression.right.alloc(data)
-			}
-			GeExpression: {
-				expression.left.alloc(data)
+			IncExpression:
 				expression.right.alloc(data)
-			}
-			LtExpression: {
-				expression.left.alloc(data)
-				expression.right.alloc(data)
-			}
-			LeExpression: {
-				expression.left.alloc(data)
-				expression.right.alloc(data)
-			}
-			AddExpression: {
-				expression.left.alloc(data)
-				expression.right.alloc(data)
-			}
-			SubExpression: {
-				expression.left.alloc(data)
-				expression.right.alloc(data)
-			}
-			MulExpression: {
-				expression.left.alloc(data)
-				expression.right.alloc(data)
-			}
-			DivExpression: {
-				expression.left.alloc(data)
-				expression.right.alloc(data)
-			}
-			BOrExpression: {
-				expression.left.alloc(data)
-				expression.right.alloc(data)
-			}
-			BAndExpression: {
-				expression.left.alloc(data)
-				expression.right.alloc(data)
-			}
-			LShiftExpression: {
-				expression.left.alloc(data)
-				expression.right.alloc(data)
-			}
-			RShiftExpression: {
-				expression.left.alloc(data)
-				expression.right.alloc(data)
-			}
-			EorExpression: {
-				expression.right.alloc(data)
-			}
-			NotExpression: {
-				expression.right.alloc(data)
-			}
-			SigNegExpression: {
-				expression.right.alloc(data)
-			}
-			SigPosExpression: {
-				expression.right.alloc(data)
-			}
-			DecExpression: {
-				expression.right.alloc(data)
-			}
-			IncExpression: {
-				expression.right.alloc(data)
-			}
-			NewInstance: {
-				val prevPtrCounter = data.ptrCounter.get
-				val prevVarCounter = data.varCounter.get
-
-				expression.type.alloc(data)
-
-				if (expression.type.nonSingleton && expression.constructor !== null && expression.constructor.field.isNotEmpty) {
-					data.temps.put(expression.constructor.methodName + '.receiver', data.chunkForPointer)
+			ArrayLiteral:
+				if (expression.isVariableDefinitionOrAssignment) {
+					newArrayList
+				} else {
+					data.variables.computeIfAbsent(expression.asmName(data.container), [ name |
+						newArrayList(data.chunkForVar(name, expression.fullSizeOf))
+					])
 				}
+			NewInstance:
+				if (expression.isVariableDefinitionOrAssignment) {
+					newArrayList
+				} else if (expression.dimension.isNotEmpty) {
+					data.variables.computeIfAbsent(expression.asmArrayName(data.container), [ name |
+						newArrayList(data.chunkForVar(name, expression.fullSizeOf))
+					])
+				} else {
+					var allChunks = newArrayList 
+					
+					allChunks += data.variables.computeIfAbsent(expression.asmVarName(data.container), [ name |
+						newArrayList(data.chunkForVar(name, expression.sizeOf))
+					])
 
-				data.ptrCounter.set(prevPtrCounter)
-				data.varCounter.set(prevVarCounter)
-			}
-			MemberSelection: {
-				val member = expression.member
+					val constructorName = expression.asmConstructorName
+					val constructorArgs = expression.constructor?.fields ?: emptyList
+					val snapshot = data.snapshot
 
-				if (member instanceof Variable) {
-					if (member.isConstant && member.nonROM && member.typeOf.isPrimitive) {
-						return
+					snapshot.container = constructorName
+
+					if (expression.type.isNonSingleton) {
+						allChunks += data.pointers.computeIfAbsent(constructorName + '.receiver', [newArrayList(data.chunkForPointer(it))])
 					}
-				}
 
-				val prevPtrCounter = data.ptrCounter.get
-				val prevVarCounter = data.varCounter.get
-				val method = expression.getContainerOfType(Method)
-				val receiver = expression.receiver
+					allChunks += expression.type.inheritedFields.map [ field |
+						val arg = constructorArgs.findFirst[variable  == field]
 
-				receiver.alloc(data)
-
-				if (receiver instanceof ByteLiteral || receiver instanceof BoolLiteral || receiver instanceof StringLiteral ||
-					receiver instanceof ArrayLiteral || receiver instanceof NewInstance) {
-					if (method !== null) {
-						data.temps.put(method.fullyQualifiedName.toString + '.' + receiver, data.chunkForVar(receiver.sizeOf))
-					} else {
-						val constructor = expression.getContainerOfType(Constructor)
-
-						if (constructor !== null) {
-							data.temps.put(constructor.methodName + '.' + receiver, data.chunkForVar(receiver.sizeOf))
+						if (arg !== null) {
+							val copy = field.copy
+							copy.value = arg.value
+							copy.alloc(data)
 						} else {
-							data.temps.put(expression.containingClass.emptyConstructorName + '.' + receiver, data.chunkForVar(receiver.sizeOf))
+							field.alloc(data)
 						}
-					}
+					].flatten
+
+					val innerChunks = allChunks.filter[variable.startsWith(constructorName)].sort
+					val outerChunks = allChunks.reject[variable.startsWith(constructorName)].sort
+
+					innerChunks.filter[isZP].disjoint(outerChunks.filter[isZP])
+					innerChunks.reject[isZP].disjoint(outerChunks.reject[isZP])
+
+					data.restoreTo(snapshot)
+
+					allChunks
 				}
+			MemberSelection:
+				if (expression.isInstanceOf || expression.isCast) {
+					val snapshot = data.snapshot
+					val chunks = expression.receiver.alloc(data)
 
-				if (expression.isMethodInvocation) {
-					(member as Method).alloc(data)
+					data.restoreTo(snapshot)
 
-					expression.args.reject [
-						it instanceof ArrayLiteral || it instanceof NewInstance
-					].forEach[alloc(data)]
+					return chunks
+				} else if (expression.isMethodInvocation) {
+					val snapshot = data.snapshot
+					val chunks = expression.receiver.alloc(data)
+					chunks += expression.args.map[alloc(data)].flatten
+					chunks += (expression.member as Method).alloc(data)
 
-					expression.args.filter [
-						it instanceof ArrayLiteral || it instanceof NewInstance
-					].forEach [ arg |
-						if (method !== null) {
-							data.temps.put(method.fullyQualifiedName.toString + '.' + arg, data.chunkForVar(arg.sizeOf))
-						} else {
-							val constructor = expression.getContainerOfType(Constructor)
+					data.restoreTo(snapshot)
 
-							if (constructor !== null) {
-								data.temps.put(constructor.methodName + '.' + arg, data.chunkForVar(arg.sizeOf))
-							} else {
-								data.temps.put(expression.containingClass.emptyConstructorName + '.' + arg, data.chunkForVar(arg.sizeOf))
-							}
-						}
-					]
+					return chunks.toList
+				} else if ((expression.member as Variable).isConstant && expression.typeOf.isPrimitive) {
+					data.constants += expression.member as Variable
+					return newArrayList
+				} else {
+					return newArrayList
 				}
-
-				data.ptrCounter.set(prevPtrCounter)
-				data.varCounter.set(prevVarCounter)
-			}
 			MemberRef: {
-				val prevPtrCounter = data.ptrCounter.get
-				val prevVarCounter = data.varCounter.get
-				val method = expression.getContainerOfType(Method)
-				val member = expression.member
-
 				if (expression.isMethodInvocation) {
-					(member as Method).alloc(data)
+					val snapshot = data.snapshot
+					val chunks = (expression.member as Method).alloc(data) + expression.args.map[alloc(data)].flatten
 
-					expression.args.reject [
-						it instanceof ArrayLiteral || it instanceof NewInstance
-					].forEach[alloc(data)]
+					data.restoreTo(snapshot)
 
-					expression.args.filter [
-						it instanceof ArrayLiteral || it instanceof NewInstance
-					].forEach [ arg |
-						if (method !== null) {
-							data.temps.put(method.fullyQualifiedName.toString + '.' + arg, data.chunkForVar(arg.sizeOf))
-						} else {
-							val constructor = expression.getContainerOfType(Constructor)
-
-							if (constructor !== null) {
-								data.temps.put(constructor.methodName + '.' + arg, data.chunkForVar(arg.sizeOf))
-							} else {
-								data.temps.put(expression.containingClass.emptyConstructorName + '.' + arg, data.chunkForVar(arg.sizeOf))
-							}
-						}
-					]
+					return chunks.toList
+				} else if ((expression.member as Variable).isConstant && expression.typeOf.isPrimitive) {
+					data.constants += expression.member as Variable
+					return newArrayList
+				} else {
+					return newArrayList
 				}
-
-				data.ptrCounter.set(prevPtrCounter)
-				data.varCounter.set(prevVarCounter)
 			}
+			default:
+				newArrayList
 		}
 	}
 
-	def Collection<MemChunk> alloc(Statement statement, MetaData data) {
+	def List<MemChunk> alloc(Statement statement, MetaData data) {
 		switch (statement) {
 			Variable: {
-				val method = statement.getContainerOfType(Method)
+				val name = statement.asmName(data.container)
+				val ptrChunks = data.pointers.computeIfAbsent(name, [newArrayList])
+				val varChunks = data.variables.computeIfAbsent(name, [newArrayList])
+				val allChunks = ptrChunks + varChunks
 
-				if (statement.isROM && statement.storage.type == StorageType.PRGROM) {
-					data.prgRoms.add(statement)
-				} else if (statement.isROM && statement.storage.type == StorageType.CHRROM) {
-					data.chrRoms.add(statement)
-				} else if (statement.isConstant && statement.typeOf.isPrimitive) {
-					data.constants.add(statement)
-				} else if (statement.typeOf.isSingleton && statement.typeOf.nonNESHeader) {
-					data.singletons.add(statement.typeOf)
-				} else if (method !== null) {
-					if (statement.isNonParameter) {
-						data.variables.get(method).put(statement, data.chunkForVar(statement.sizeOf))
-					} else if (statement.dimensionOf.isNotEmpty) {
-						val i = new AtomicInteger(0)
+				if (allChunks.isEmpty) {
+					if (statement.isParameter) {
+						if (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty) {
+							ptrChunks += data.chunkForPointer(name)
 
-						statement.dimensionOf.map [
-							statement.fullyQualifiedName.toString + ".len" + i.andIncrement
-						].forEach [
-							data.temps.put(method.fullyQualifiedName.toString, data.chunkForVar(1))
-						]
+							for (i : 0 ..< statement.dimensionOf.size) {
+								varChunks += data.chunkForVar(name + '.len' + i, 1)
+							}
 
-						data.pointers.get(method).put(statement, data.chunkForPointer)
-					} else if (statement.typeOf.isPrimitive) {
-						data.variables.get(method).put(statement, data.chunkForVar(statement.sizeOf))
+							statement.type.alloc(data)
+						} else {
+							varChunks += data.chunkForVar(name, statement.sizeOf)
+						}
+					} else if (statement.isROM) {
+						if (statement.storage.type == StorageType.PRGROM) {
+							data.prgRoms += statement
+						} else if (statement.storage.type == StorageType.CHRROM) {
+							data.chrRoms += statement
+						}
+					} else if (statement.isConstant) {
+						val type = statement.typeOf
+
+						if (type.isNESHeader) {
+							data.header = statement
+						} else if (type.isSingleton) {
+							data.singletons += type
+						} else if (type.isPrimitive) {
+							data.constants += statement
+						}
 					} else {
-						data.pointers.get(method).put(statement, data.chunkForPointer)
+						varChunks += data.chunkForVar(name, statement.sizeOf)
+						statement.typeOf.alloc(data)
 					}
 				}
 
-				statement.value?.alloc(data)
+				return (allChunks + statement?.value.alloc(data)).toList
 			}
 			IfStatement: {
-				val prevPtrCounter = data.ptrCounter.get
-				val prevVarCounter = data.varCounter.get
+				val snapshot = data.snapshot
+				val chunks = statement.condition.alloc(data) + statement.body.statements.map[alloc(data)].flatten
 
-				statement.condition.alloc(data)
-				statement.body.statements.forEach[alloc(data)]
-
-				data.ptrCounter.set(prevPtrCounter)
-				data.varCounter.set(prevVarCounter)
-
-				statement.^else?.alloc(data)
+				data.restoreTo(snapshot)
+				return (chunks + statement.^else?.alloc(data)).toList
 			}
 			ForStatement: {
-				val prevPtrCounter = data.ptrCounter.get
-				val prevVarCounter = data.varCounter.get
+				val snapshot = data.snapshot
+				val chunks = statement.variables.map[alloc(data)].flatten.toList
+				chunks += statement.assignments.map[alloc(data)].flatten
+				chunks += statement.condition?.alloc(data)
+				chunks += statement.expressions.map[alloc(data)].flatten
+				chunks += statement.body.statements.map[alloc(data)].flatten
 
-				statement.variables.forEach[alloc(data)]
-				statement.assignments.forEach[alloc(data)]
-				statement.condition?.alloc(data)
-				statement.expressions.forEach[alloc(data)]
-				statement.body.statements.forEach[alloc(data)]
+				data.restoreTo(snapshot)
 
-				data.ptrCounter.set(prevPtrCounter)
-				data.varCounter.set(prevVarCounter)
+				return chunks
 			}
 			ForeverStatement: {
-				val prevPtrCounter = data.ptrCounter.get
-				val prevVarCounter = data.varCounter.get
+				val snapshot = data.snapshot
+				val chunks = statement.body.statements.map[alloc(data)].flatten
 
-				statement.body.statements.forEach[alloc(data)]
+				data.restoreTo(snapshot)
 
-				data.ptrCounter.set(prevPtrCounter)
-				data.varCounter.set(prevVarCounter)
+				return chunks.toList
 			}
 			ReturnStatement:
-				if (statement.value !== null && statement.getContainerOfType(Method).typeOf.name !== TypeSystem::LIB_VOID) {
-					val method = statement.getContainerOfType(Method)
-					val returnVar = NoopFactory::eINSTANCE.createVariable => [
-						name = statement.fullyQualifiedName.toString
-					]
-
-					data.variables.get(method).put(returnVar, data.chunkForVar(method.sizeOf)) // TODO sizeOf must be the max of all possible return types
+				if (statement.isNonVoid) {
+					if (statement.method.typeOf.isPrimitive) {
+						data.variables.compute(statement.asmName, [ name, v |
+							newArrayList(data.chunkForVar(name, statement.method.sizeOf))
+						])
+					} else {
+						data.pointers.compute(statement.asmName, [ name, v |
+							newArrayList(data.chunkForPointer(name))
+						])
+					}
+				} else {
+					newArrayList
 				}
 			Expression:
 				statement.alloc(data)
 			AsmStatement:
-				statement.vars.forEach[alloc(data)]
+				statement.vars.map[alloc(data)].flatten.toList
+			default:
+				newArrayList
 		}
 	}
 
 	def alloc(ElseStatement statement, MetaData data) {
-		val prevPtrCounter = data.ptrCounter.get
-		val prevVarCounter = data.varCounter.get
+		val snapshot = data.snapshot
+		val chunks = statement.body.statements.map[alloc(data)].flatten
 
-		statement.body.statements.forEach[alloc(data)]
+		data.restoreTo(snapshot)
 
-		data.ptrCounter.set(prevPtrCounter)
-		data.varCounter.set(prevVarCounter)
-
-		statement.^if?.alloc(data)
+		return chunks + statement.^if?.alloc(data)
 	}
 
 }
