@@ -15,6 +15,7 @@ import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.NoopFactory
 
 public class Members {
 
@@ -22,6 +23,8 @@ public class Members {
 
 	@Inject extension Classes
 	@Inject extension Expressions
+	@Inject extension Statements
+	@Inject extension Collections
 	@Inject extension IQualifiedNameProvider
 
 	val running = new HashSet<Member>
@@ -148,7 +151,7 @@ public class Members {
 	}
 
 	def asmName(Method method) {
-		method.fullyQualifiedName + '@' + Integer.toHexString(method.hashCode)
+		method.fullyQualifiedName.toString + '@' + Integer.toHexString(method.hashCode)
 	}
 
 	def alloc(Method method, MetaData data) {
@@ -165,25 +168,18 @@ public class Members {
 						emptyList
 					}
 
-				val chunks = receiver + (method.params.map[alloc(data)] + method.body.statements.map[alloc(data)]).flatten.toList
+				val chunks = (receiver + method.params.map[alloc(data)].flatten).toList
 
-				chunks.forEach [ chunk, index |
-					if (chunk.variable.startsWith(methodName)) {
-						chunks.drop(index).reject [
-							it.variable.startsWith(methodName)
-						].forEach [ outer |
-							if (chunk.overlap(outer)) {
-								val delta = chunk.deltaFrom(outer)
+				if (method.isMain) {
+					val constructor = NoopFactory::eINSTANCE.createNewInstance => [
+						type = method.containingClass
+					]
+					
+					chunks += constructor.alloc(data)
+				}
 
-								chunks.drop(index).filter [
-									it.variable.startsWith(methodName)
-								].forEach [ inner |
-									inner.shiftTo(delta)
-								]
-							}
-						]
-					}
-				]
+				chunks += method.body.statements.map[alloc(data)].flatten.toList
+				chunks.disoverlap(methodName)
 
 				data.restoreTo(snapshot)
 
@@ -195,5 +191,5 @@ public class Members {
 			newArrayList
 		}
 	}
-
+	
 }

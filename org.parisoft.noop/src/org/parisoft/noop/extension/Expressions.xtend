@@ -3,7 +3,6 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.List
 import java.util.stream.Collectors
-import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.InvalidExpressionException
 import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.exception.NonConstantMemberException
@@ -13,7 +12,6 @@ import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.AddExpression
 import org.parisoft.noop.noop.AndExpression
 import org.parisoft.noop.noop.ArrayLiteral
-import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.AssignmentExpression
 import org.parisoft.noop.noop.BAndExpression
 import org.parisoft.noop.noop.BOrExpression
@@ -22,15 +20,11 @@ import org.parisoft.noop.noop.ByteLiteral
 import org.parisoft.noop.noop.DecExpression
 import org.parisoft.noop.noop.DifferExpression
 import org.parisoft.noop.noop.DivExpression
-import org.parisoft.noop.noop.ElseStatement
 import org.parisoft.noop.noop.EorExpression
 import org.parisoft.noop.noop.EqualsExpression
 import org.parisoft.noop.noop.Expression
-import org.parisoft.noop.noop.ForStatement
-import org.parisoft.noop.noop.ForeverStatement
 import org.parisoft.noop.noop.GeExpression
 import org.parisoft.noop.noop.GtExpression
-import org.parisoft.noop.noop.IfStatement
 import org.parisoft.noop.noop.IncExpression
 import org.parisoft.noop.noop.LShiftExpression
 import org.parisoft.noop.noop.LeExpression
@@ -44,19 +38,13 @@ import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NotExpression
 import org.parisoft.noop.noop.OrExpression
 import org.parisoft.noop.noop.RShiftExpression
-import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.SigNegExpression
 import org.parisoft.noop.noop.SigPosExpression
-import org.parisoft.noop.noop.Statement
-import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.SubExpression
 import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
-
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
-import static extension org.eclipse.xtext.EcoreUtil2.*
 
 class Expressions {
 
@@ -65,7 +53,6 @@ class Expressions {
 	@Inject extension Values
 	@Inject extension TypeSystem
 	@Inject extension Collections
-	@Inject extension IQualifiedNameProvider
 
 	def isMethodInvocation(MemberSelection selection) {
 		try {
@@ -83,24 +70,9 @@ class Expressions {
 		}
 	}
 
-	def isVoid(ReturnStatement ^return) {
-		^return === null || ^return.value === null || ^return.method.typeOf.name == TypeSystem.LIB_VOID
-	}
-
-	def isNonVoid(ReturnStatement ^return) {
-		!^return.isVoid
-	}
-
-	def isVariableDefinitionOrAssignment(Expression expression) {
-		expression.eContainer instanceof Variable || expression.eContainer instanceof AssignmentExpression
-	}
-
-	def getMethod(ReturnStatement ^return) {
-		^return.getContainerOfType(Method)
-	}
-
-	def asmName(ReturnStatement ^return) {
-		^return.getContainerOfType(Method).fullyQualifiedName.toString + '.return'
+	def isOnMemberSelectionOrReference(Expression expression) {
+		val container = expression.eContainer
+		container !== null && (container instanceof MemberSelection || container instanceof MemberRef)
 	}
 
 	def asmName(ArrayLiteral array, String containerName) {
@@ -116,7 +88,11 @@ class Expressions {
 	}
 
 	def asmConstructorName(NewInstance instance) {
-		instance.type.name + instance.type.name + Integer.toHexString(instance.constructor?.fields.map[variable].join.hashCode) ?: ''
+		instance.type.name + '.' + instance.type.name + if (instance.constructor !== null) {
+			'@' + Integer.toHexString(instance.constructor.fields.map[variable].join.hashCode)
+		} else {
+			''
+		}
 	}
 
 	def NoopClass typeOf(Expression expression) {
@@ -411,204 +387,96 @@ class Expressions {
 			IncExpression:
 				expression.right.alloc(data)
 			ArrayLiteral:
-				if (expression.isVariableDefinitionOrAssignment) {
-					newArrayList
+				if (expression.isOnMemberSelectionOrReference) {
+					data.variables.computeIfAbsent(expression.asmName(data.container), [newArrayList(data.chunkForVar(it, expression.fullSizeOf))])
 				} else {
-					data.variables.computeIfAbsent(expression.asmName(data.container), [ name |
-						newArrayList(data.chunkForVar(name, expression.fullSizeOf))
-					])
-				}
-			NewInstance:
-				if (expression.isVariableDefinitionOrAssignment) {
 					newArrayList
-				} else if (expression.dimension.isNotEmpty) {
-					data.variables.computeIfAbsent(expression.asmArrayName(data.container), [ name |
-						newArrayList(data.chunkForVar(name, expression.fullSizeOf))
-					])
-				} else {
-					var allChunks = newArrayList 
-					
-					allChunks += data.variables.computeIfAbsent(expression.asmVarName(data.container), [ name |
-						newArrayList(data.chunkForVar(name, expression.sizeOf))
-					])
-
-					val constructorName = expression.asmConstructorName
-					val constructorArgs = expression.constructor?.fields ?: emptyList
-					val snapshot = data.snapshot
-
-					snapshot.container = constructorName
-
-					if (expression.type.isNonSingleton) {
-						allChunks += data.pointers.computeIfAbsent(constructorName + '.receiver', [newArrayList(data.chunkForPointer(it))])
-					}
-
-					allChunks += expression.type.inheritedFields.map [ field |
-						val arg = constructorArgs.findFirst[variable  == field]
-
-						if (arg !== null) {
-							val copy = field.copy
-							copy.value = arg.value
-							copy.alloc(data)
-						} else {
-							field.alloc(data)
-						}
-					].flatten
-
-					val innerChunks = allChunks.filter[variable.startsWith(constructorName)].sort
-					val outerChunks = allChunks.reject[variable.startsWith(constructorName)].sort
-
-					innerChunks.filter[isZP].disjoint(outerChunks.filter[isZP])
-					innerChunks.reject[isZP].disjoint(outerChunks.reject[isZP])
-
-					data.restoreTo(snapshot)
-
-					allChunks
 				}
-			MemberSelection:
-				if (expression.isInstanceOf || expression.isCast) {
-					val snapshot = data.snapshot
-					val chunks = expression.receiver.alloc(data)
+			NewInstance: {
+				val chunks = newArrayList
 
-					data.restoreTo(snapshot)
-
+				if (expression.type.isNESHeader || expression.type.isPrimitive) {
 					return chunks
-				} else if (expression.isMethodInvocation) {
-					val snapshot = data.snapshot
-					val chunks = expression.receiver.alloc(data)
-					chunks += expression.args.map[alloc(data)].flatten
-					chunks += (expression.member as Method).alloc(data)
-
-					data.restoreTo(snapshot)
-
-					return chunks.toList
-				} else if ((expression.member as Variable).isConstant && expression.typeOf.isPrimitive) {
-					data.constants += expression.member as Variable
-					return newArrayList
-				} else {
-					return newArrayList
 				}
-			MemberRef: {
-				if (expression.isMethodInvocation) {
-					val snapshot = data.snapshot
-					val chunks = (expression.member as Method).alloc(data) + expression.args.map[alloc(data)].flatten
 
-					data.restoreTo(snapshot)
-
-					return chunks.toList
-				} else if ((expression.member as Variable).isConstant && expression.typeOf.isPrimitive) {
-					data.constants += expression.member as Variable
-					return newArrayList
-				} else {
-					return newArrayList
-				}
-			}
-			default:
-				newArrayList
-		}
-	}
-
-	def List<MemChunk> alloc(Statement statement, MetaData data) {
-		switch (statement) {
-			Variable: {
-				val name = statement.asmName(data.container)
-				val ptrChunks = data.pointers.computeIfAbsent(name, [newArrayList])
-				val varChunks = data.variables.computeIfAbsent(name, [newArrayList])
-				val allChunks = ptrChunks + varChunks
-
-				if (allChunks.isEmpty) {
-					if (statement.isParameter) {
-						if (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty) {
-							ptrChunks += data.chunkForPointer(name)
-
-							for (i : 0 ..< statement.dimensionOf.size) {
-								varChunks += data.chunkForVar(name + '.len' + i, 1)
-							}
-
-							statement.type.alloc(data)
-						} else {
-							varChunks += data.chunkForVar(name, statement.sizeOf)
-						}
-					} else if (statement.isROM) {
-						if (statement.storage.type == StorageType.PRGROM) {
-							data.prgRoms += statement
-						} else if (statement.storage.type == StorageType.CHRROM) {
-							data.chrRoms += statement
-						}
-					} else if (statement.isConstant) {
-						val type = statement.typeOf
-
-						if (type.isNESHeader) {
-							data.header = statement
-						} else if (type.isSingleton) {
-							data.singletons += type
-						} else if (type.isPrimitive) {
-							data.constants += statement
-						}
+				if (expression.isOnMemberSelectionOrReference) {
+					if (expression.dimension.isEmpty) {
+						chunks += data.variables.computeIfAbsent(expression.asmVarName(data.container), [
+							newArrayList(data.chunkForVar(it, expression.sizeOf))
+						])
 					} else {
-						varChunks += data.chunkForVar(name, statement.sizeOf)
-						statement.typeOf.alloc(data)
+						chunks += data.variables.computeIfAbsent(expression.asmArrayName(data.container), [
+							newArrayList(data.chunkForVar(it, expression.fullSizeOf))
+						])
 					}
 				}
 
-				return (allChunks + statement?.value.alloc(data)).toList
-			}
-			IfStatement: {
-				val snapshot = data.snapshot
-				val chunks = statement.condition.alloc(data) + statement.body.statements.map[alloc(data)].flatten
+				if (expression.dimension.isEmpty) {
+					expression.type.alloc(data)
+					
+					val snapshot = data.snapshot
+					val constructorName = expression.asmConstructorName
 
-				data.restoreTo(snapshot)
-				return (chunks + statement.^else?.alloc(data)).toList
-			}
-			ForStatement: {
-				val snapshot = data.snapshot
-				val chunks = statement.variables.map[alloc(data)].flatten.toList
-				chunks += statement.assignments.map[alloc(data)].flatten
-				chunks += statement.condition?.alloc(data)
-				chunks += statement.expressions.map[alloc(data)].flatten
-				chunks += statement.body.statements.map[alloc(data)].flatten
+					data.container = constructorName
 
-				data.restoreTo(snapshot)
+					if (expression.type.nonSingleton) {
+						chunks += data.pointers.computeIfAbsent(constructorName + '.receiver', [newArrayList(data.chunkForPointer(it))])
+					}
+
+					chunks += expression.type.inheritedFields.filter[nonConstant].map[value.alloc(data)].flatten
+					chunks.disoverlap(constructorName)
+
+					data.restoreTo(snapshot)
+
+					if (expression.constructor !== null) {
+						chunks += expression.constructor.fields.map[variable.value.alloc(data)].flatten
+					}
+				}
 
 				return chunks
 			}
-			ForeverStatement: {
-				val snapshot = data.snapshot
-				val chunks = statement.body.statements.map[alloc(data)].flatten
+			MemberSelection: {
+				val chunks = newArrayList
+				
+				if (expression.isInstanceOf || expression.isCast) {
+					val snapshot = data.snapshot
 
-				data.restoreTo(snapshot)
+					chunks += expression.receiver.alloc(data)
 
-				return chunks.toList
-			}
-			ReturnStatement:
-				if (statement.isNonVoid) {
-					if (statement.method.typeOf.isPrimitive) {
-						data.variables.compute(statement.asmName, [ name, v |
-							newArrayList(data.chunkForVar(name, statement.method.sizeOf))
-						])
-					} else {
-						data.pointers.compute(statement.asmName, [ name, v |
-							newArrayList(data.chunkForPointer(name))
-						])
-					}
-				} else {
-					newArrayList
+					data.restoreTo(snapshot)
+				} else if (expression.isMethodInvocation) {
+					val snapshot = data.snapshot
+
+					chunks += (expression.member as Method).alloc(data)
+					chunks += expression.receiver.alloc(data)
+					chunks += expression.args.map[alloc(data)].flatten
+
+					data.restoreTo(snapshot)
+				} else if ((expression.member as Variable).isConstant && expression.typeOf.isPrimitive && expression.dimensionOf.isEmpty) {
+					data.constants += expression.member as Variable
 				}
-			Expression:
-				statement.alloc(data)
-			AsmStatement:
-				statement.vars.map[alloc(data)].flatten.toList
+				
+				return chunks
+			}
+			MemberRef: {
+				val chunks = newArrayList
+				
+				if (expression.isMethodInvocation) {
+					val snapshot = data.snapshot
+					
+					chunks += (expression.member as Method).alloc(data) 
+					chunks += expression.args.map[alloc(data)].flatten
+
+					data.restoreTo(snapshot)
+				} else if ((expression.member as Variable).isConstant && expression.typeOf.isPrimitive && expression.dimensionOf.isEmpty) {
+					data.constants += expression.member as Variable
+				}
+				
+				return chunks
+			}
 			default:
 				newArrayList
 		}
-	}
-
-	def alloc(ElseStatement statement, MetaData data) {
-		val snapshot = data.snapshot
-		val chunks = statement.body.statements.map[alloc(data)].flatten
-
-		data.restoreTo(snapshot)
-
-		return chunks + statement.^if?.alloc(data)
 	}
 
 }

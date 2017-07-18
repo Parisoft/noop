@@ -21,6 +21,11 @@ class MetaData {
 	@Accessors val varCounter = new AtomicInteger(0x0400)
 	@Accessors var String container
 
+	def resetVarCounter() {
+		varCounter.set(0x0400)
+		varCounter.get
+	}
+
 	def chunkForPointer(String variable) {
 		new MemChunk(variable, ptrCounter.getAndAdd(2))
 	}
@@ -44,4 +49,13 @@ class MetaData {
 		varCounter.set(snapshot.varCounter.get)
 		container = snapshot.container
 	}
+
+	override toString() '''
+		MetaData{
+			ptrCounter : «Integer.toHexString(ptrCounter.get)»,
+			varCounter : «Integer.toHexString(varCounter.get)»,
+			container : «container»
+		}
+	'''
+
 }

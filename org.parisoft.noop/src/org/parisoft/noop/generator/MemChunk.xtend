@@ -44,11 +44,9 @@ class MemChunk implements Comparable<MemChunk> {
 		return delta
 	}
 	
-	def shiftTo(int delta) {
+	def void shiftTo(int delta) {
 		this.lo += delta
 		this.hi += delta
-		
-		return delta
 	}
 
 	override compareTo(MemChunk other) {
@@ -65,8 +63,8 @@ class MemChunk implements Comparable<MemChunk> {
 	override toString() '''
 		MemChunk{
 			variable:«variable»,
-			lo:«lo», 
-			hi:«hi»
+			lo:«Integer.toHexString(lo)», 
+			hi:«Integer.toHexString(hi)»
 		}
 	'''
 	

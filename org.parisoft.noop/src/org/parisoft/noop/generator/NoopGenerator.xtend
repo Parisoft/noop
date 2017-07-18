@@ -44,11 +44,7 @@ class NoopGenerator extends AbstractGenerator {
 			return null
 		}
 
-		val metadata = new MetaData()
-
-		game.alloc(metadata)
-
-		val content = metadata.compile
+		val content = game.alloc.compile
 
 		new ASM('''«game.name».asm''', content.toString)
 	}
@@ -98,6 +94,7 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		; Singletons
 		;----------------------------------------------------------------
+		«val varStartAddr = data.resetVarCounter»
 		«FOR singleton : data.singletons»
 			_«singleton.name.toLowerCase» = «data.varCounter.getAndAdd(singleton.sizeOf).toHexString(4)»
 		«ENDFOR»
@@ -109,7 +106,9 @@ class NoopGenerator extends AbstractGenerator {
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
 		
+		«val delta = data.varCounter.get - varStartAddr»
 		«FOR chunk : data.variables.values.flatten.sort»
+			«chunk.shiftTo(delta)»
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
 		

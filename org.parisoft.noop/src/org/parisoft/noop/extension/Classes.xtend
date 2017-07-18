@@ -17,7 +17,7 @@ class Classes {
 	static val int SIZE_OF_CLASS_TYPE = 1;
 
 	@Inject extension Members
-	@Inject extension Expressions
+	@Inject extension Statements
 	@Inject extension TypeSystem
 	@Inject extension IQualifiedNameProvider
 
@@ -50,9 +50,9 @@ class Classes {
 	}
 
 	def merge(Collection<NoopClass> classes) {
-		val hierarchies = classes.map[it.classHierarchy]
-
-		hierarchies.reduce [ h1, h2 |
+		classes.map[
+			it.classHierarchy
+		].reduce [ h1, h2 |
 			h1.retainAll(h2)
 			h1
 		]?.head ?: TypeSystem::TYPE_VOID
@@ -185,14 +185,22 @@ class Classes {
 			}
 		}
 	}
+	
+	def alloc(NoopClass noopClass) {
+		val data = new MetaData
+		noopClass.alloc(data)
+		
+		return data
+	}
 
 	def void alloc(NoopClass noopClass, MetaData data) {
 		if (data.classes.add(noopClass)) {
+			noopClass.inheritedFields.filter[constant].forEach[alloc(data)]
+
 			if (noopClass.isSingleton) {
 				data.singletons.add(noopClass)
 
 				if (noopClass.isGame) {
-					noopClass.inheritedFields.findFirst[typeOf.NESHeader]?.alloc(data)
 					noopClass.inheritedMethods.findFirst[main].alloc(data)
 					noopClass.inheritedMethods.findFirst[nmi].alloc(data)
 				}

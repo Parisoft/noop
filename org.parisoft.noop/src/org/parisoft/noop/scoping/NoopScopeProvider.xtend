@@ -25,6 +25,7 @@ import org.parisoft.noop.noop.Constructor
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.ConstructorField
 import org.parisoft.noop.noop.ForStatement
+import org.parisoft.noop.noop.AsmStatement
 
 /**
  * This class contains custom scoping description.
@@ -42,6 +43,10 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		switch (context) {
 			Block:
 				if (eRef == NoopPackage.eINSTANCE.memberRef_Member) {
+					return scopeForVariableRef(context)
+				}
+			AsmStatement:
+				if (eRef == NoopPackage.eINSTANCE.asmStatement_Vars) {
 					return scopeForVariableRef(context)
 				}
 			Constructor:
@@ -64,7 +69,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	}
 
 	protected def scopeForMemberRef(MemberRef memberRef) {
-		if (memberRef.isMethodInvocation) {
+		if (memberRef.hasArgs) {
 			scopeForMethodInvocation(memberRef, memberRef.args)
 		} else {
 			scopeForVariableRef(memberRef)
@@ -134,7 +139,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 				type.fields.filter[isConstant],
 				Scopes.scopeFor(type.inheritedFields.filter[isConstant])
 			)
-		} else if (selection.isMethodInvocation) {
+		} else if (selection.hasArgs) {
 			Scopes.scopeFor(
 				type.methods.filterOverload(selection.args) + type.fields,
 				Scopes.scopeFor(type.inheritedMethods.filterOverload(selection.args) + type.inheritedFields)
@@ -157,7 +162,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 	private def filterOverload(Iterable<Method> methods, List<Expression> args) {
 		methods.filter [ method |
-			method.params.size == args.size && args.stream.allMatch [ arg |
+			method.params.size == args.size && args.forall[ arg |
 				val index = args.indexOf(arg)
 				val param = method.params.get(index)
 				arg.typeOf.isInstanceOf(param.typeOf)

@@ -9,17 +9,24 @@ class Collections {
 		!collection.isEmpty
 	}
 	
-	def void disjoint(Iterable<MemChunk> innerChunks, Iterable<MemChunk> outerChunks) {
-		for (outerChunk : outerChunks) {
-			var delta = 0
-
-			for (innerChunk : innerChunks) {
-				if (delta != 0) {
-					innerChunk.shiftTo(delta)
-				} else if (innerChunk.overlap(outerChunk)) {
-					delta = innerChunk.shiftTo(outerChunk)
-				}
+	def void disoverlap(Iterable<MemChunk> chunks, String methodName) {
+		chunks.forEach [ chunk, index |
+			if (chunk.variable.startsWith(methodName)) {
+				chunks.drop(index).reject [
+					it.variable.startsWith(methodName)
+				].forEach [ outer |
+					if (chunk.overlap(outer)) {
+						val delta = chunk.deltaFrom(outer)
+		
+						chunks.drop(index).filter [
+							it.variable.startsWith(methodName)
+						].forEach [ inner |
+							inner.shiftTo(delta)
+						]
+					}
+				]
 			}
-		}
+		]
 	}
+	
 }
