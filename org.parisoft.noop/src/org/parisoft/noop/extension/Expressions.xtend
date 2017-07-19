@@ -413,7 +413,7 @@ class Expressions {
 
 				if (expression.dimension.isEmpty) {
 					expression.type.alloc(data)
-					
+
 					val snapshot = data.snapshot
 					val constructorName = expression.asmConstructorName
 
@@ -427,6 +427,7 @@ class Expressions {
 					chunks.disoverlap(constructorName)
 
 					data.restoreTo(snapshot)
+					data.constructors += expression
 
 					if (expression.constructor !== null) {
 						chunks += expression.constructor.fields.map[variable.value.alloc(data)].flatten
@@ -437,7 +438,7 @@ class Expressions {
 			}
 			MemberSelection: {
 				val chunks = newArrayList
-				
+
 				if (expression.isInstanceOf || expression.isCast) {
 					val snapshot = data.snapshot
 
@@ -455,27 +456,41 @@ class Expressions {
 				} else if ((expression.member as Variable).isConstant && expression.typeOf.isPrimitive && expression.dimensionOf.isEmpty) {
 					data.constants += expression.member as Variable
 				}
-				
+
 				return chunks
 			}
 			MemberRef: {
 				val chunks = newArrayList
-				
+
 				if (expression.isMethodInvocation) {
 					val snapshot = data.snapshot
-					
-					chunks += (expression.member as Method).alloc(data) 
+
+					chunks += (expression.member as Method).alloc(data)
 					chunks += expression.args.map[alloc(data)].flatten
 
 					data.restoreTo(snapshot)
 				} else if ((expression.member as Variable).isConstant && expression.typeOf.isPrimitive && expression.dimensionOf.isEmpty) {
 					data.constants += expression.member as Variable
 				}
-				
+
 				return chunks
 			}
 			default:
 				newArrayList
+		}
+	}
+
+	def compile(Expression expression, MetaData data) {
+		switch (expression) {
+			ArrayLiteral: '''
+				.db «(expression.valueOf as List).flatten.join(' ', [(it as Integer).toHexString])»
+			'''
+			NewInstance: '''
+				«expression.asmConstructorName»:
+					RTS
+			'''
+			default:
+				''
 		}
 	}
 

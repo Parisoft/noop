@@ -174,7 +174,7 @@ public class Members {
 					val constructor = NoopFactory::eINSTANCE.createNewInstance => [
 						type = method.containingClass
 					]
-					
+
 					chunks += constructor.alloc(data)
 				}
 
@@ -182,6 +182,7 @@ public class Members {
 				chunks.disoverlap(methodName)
 
 				data.restoreTo(snapshot)
+				data.methods += method
 
 				return chunks
 			} finally {
@@ -191,5 +192,10 @@ public class Members {
 			newArrayList
 		}
 	}
-	
+
+	def compile(Method method, MetaData data) '''
+		«method.asmName»:
+			RTS
+		'''
+
 }

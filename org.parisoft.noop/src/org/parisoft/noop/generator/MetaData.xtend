@@ -5,6 +5,8 @@ import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 import java.util.List
+import org.parisoft.noop.noop.Method
+import org.parisoft.noop.noop.NewInstance
 
 class MetaData {
 
@@ -12,10 +14,12 @@ class MetaData {
 	@Accessors val classes = <NoopClass>newHashSet
 	@Accessors val singletons = <NoopClass>newHashSet
 	@Accessors val constants = <Variable>newHashSet
-	@Accessors val prgRoms = <Variable>newHashSet
-	@Accessors val chrRoms = <Variable>newHashSet
+	@Accessors val prgRoms = <Variable>newLinkedHashSet
+	@Accessors val chrRoms = <Variable>newLinkedHashSet
 	@Accessors val variables = <String, List<MemChunk>>newHashMap
 	@Accessors val pointers = <String, List<MemChunk>>newHashMap
+	@Accessors val methods = <Method>newHashSet
+	@Accessors val constructors = <NewInstance>newHashSet
 
 	@Accessors val ptrCounter = new AtomicInteger(0x0000)
 	@Accessors val varCounter = new AtomicInteger(0x0400)

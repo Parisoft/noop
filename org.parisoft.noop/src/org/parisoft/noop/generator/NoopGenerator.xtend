@@ -11,6 +11,7 @@ import org.eclipse.xtext.generator.IGeneratorContext
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.eclipse.xtext.resource.IResourceDescriptions
 import org.parisoft.noop.^extension.Classes
+import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.noop.NoopClass
@@ -26,6 +27,7 @@ class NoopGenerator extends AbstractGenerator {
 
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension Expressions
 	@Inject extension IQualifiedNameProvider
 	@Inject IResourceDescriptions descriptions
 
@@ -125,7 +127,38 @@ class NoopGenerator extends AbstractGenerator {
 		; PRG-ROM Bank(s)
 		;----------------------------------------------------------------
 			.base $10000 - («(data.header.fieldValue('prgRomPages') as Integer).toHexString» * $4000) 
-				 
+		
+		«FOR rom : data.prgRoms»
+			«rom.fullyQualifiedName»:
+				«rom.value.compile(data)»
+		«ENDFOR»
+		
+		«FOR method : data.methods.sortBy[fullyQualifiedName]»
+			«method.compile(data)»
+			
+		«ENDFOR»
+		«FOR constructor : data.constructors.sortBy[type.name]»
+			«constructor.compile(data)»
+			
+		«ENDFOR»
+		;----------------------------------------------------------------
+		; Interrupt vectors
+		;----------------------------------------------------------------
+			.org $FFFA     
+		
+		 	.dw «data.methods.findFirst[nmi].asmName»
+		 	.dw «data.methods.findFirst[main].asmName»
+		 	.dw 0 ; IRQ
+		
+		;----------------------------------------------------------------
+		; CHR-ROM bank(s)
+		;----------------------------------------------------------------
+		   .base $0000
+		
+		«FOR rom : data.chrRoms»
+			«rom.fullyQualifiedName»:
+				«rom.value.compile(data)»
+		«ENDFOR»
 	'''
 
 	private def toHexString(int value) {
