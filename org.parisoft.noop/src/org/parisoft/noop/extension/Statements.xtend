@@ -18,6 +18,7 @@ import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.eclipse.xtext.naming.IQualifiedNameProvider
+import java.util.concurrent.atomic.AtomicInteger
 
 class Statements {
 
@@ -85,7 +86,7 @@ class Statements {
 						statement.typeOf.alloc(data)
 					}
 				}
-				
+
 				return (allChunks + statement?.value.alloc(data)).filterNull.toList
 			}
 			IfStatement: {
@@ -146,5 +147,22 @@ class Statements {
 		data.restoreTo(snapshot)
 
 		return chunks + statement.^if?.alloc(data)
+	}
+
+	def compile(Statement statement, MetaData data) {
+		switch (statement) {
+			AsmStatement:
+				if (statement.vars.isEmpty) {
+					statement.codes.join('', [substring(1, it.length - 1)])
+				} else {
+					val i = new AtomicInteger(0)
+					
+					statement.codes.reduce [c1, c2|
+						c1.substring(1, c1.length - 1) + statement.vars.get(i.andIncrement).asmName + c2.substring(1, c2.length - 1)
+					]
+				}
+			default:
+				''
+		}
 	}
 }

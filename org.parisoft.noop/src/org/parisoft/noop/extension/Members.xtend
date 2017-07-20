@@ -142,11 +142,19 @@ public class Members {
 		] ?: 1)
 	}
 
-	def asmName(Variable variable, String containerName) {
-		if (variable.getContainerOfType(Method) !== null) {
-			containerName + variable.fullyQualifiedName.toString.substring(containerName.indexOf('@')) + '@' + Integer.toHexString(variable.hashCode)
+	def asmName(Variable variable) {
+		variable.asmName(variable.getContainerOfType(Method)?.asmName)
+	}
+
+	def String asmName(Variable variable, String containerName) {
+		if (variable.typeOf.isSingleton) {
+			'''_«variable.typeOf.name.toLowerCase»'''
+		} else if (variable.isConstant) {
+			variable.fullyQualifiedName.toString
+		} else if (variable.getContainerOfType(Method) !== null) {
+			'''«containerName»«variable.fullyQualifiedName.toString.substring(containerName.indexOf('@'))»@«Integer.toHexString(variable.hashCode)»'''
 		} else {
-			containerName + '.' + variable.name + '@' + Integer.toHexString(variable.hashCode)
+			'''«containerName».«variable.name»@«Integer.toHexString(variable.hashCode)»'''
 		}
 	}
 
@@ -195,7 +203,76 @@ public class Members {
 
 	def compile(Method method, MetaData data) '''
 		«method.asmName»:
+		«IF method.isMain»
+			;;;;;;;;;; Initial setup begin
+				SEI          ; disable IRQs
+				CLD          ; disable decimal mode
+				LDX #$40
+				STX $4017    ; disable APU frame IRQ
+				LDX #$FF
+				TXS          ; Set up stack
+				INX          ; now X = 0
+				STX $2000    ; disable NMI
+				STX $2001    ; disable rendering
+				STX $4010    ; disable DMC IRQs
+			
+			-waitVBlank1:
+				BIT $2002
+				BPL -waitVBlank1
+			
+			-clrMem:
+				LDA #$00
+				STA $0000, X
+				STA $0100, X
+				STA $0300, X
+				STA $0400, X
+				STA $0500, X
+				STA $0600, X
+				STA $0700, X
+				LDA #$FE
+				STA $0200, X
+				INX
+				BNE -clrMem:
+			
+			«val className = method.containingClass.name»
+				JSR «className».«className»
+			
+			-waitVBlank2
+				BIT $2002
+				BPL -waitVBlank2
+			;;;;;;;;;; Initial setup end
+			;;;;;;;;;; Effective code begin
+		«ELSEIF method.isNmi»
+			;;;;;;;;;; NMI initialization begin
+				PHA
+				TXA
+				PHA
+				TYA
+				PHA
+			
+				LDA #$00
+				STA $2003       ; set the low byte (00) of the RAM address
+				LDA #$02
+				STA $4014       ; set the high byte (02) of the RAM address, start the transfer
+			;;;;;;;;;; NMI initialization end
+			;;;;;;;;;; Effective code begin
+		«ENDIF»
+		«FOR statement : method.body.statements»
+			«statement.compile(data)»
+		«ENDFOR»
+		«IF method.isNmi»
+			;;;;;;;;;; Effective code end
+			;;;;;;;;;; NMI finalization begin
+				PLA
+				TAY
+				PLA
+				TAX
+				PLA
+			;;;;;;;;;; NMI finalization end
+			RTI
+		«ELSE»
 			RTS
-		'''
+		«ENDIF»
+	'''
 
 }

@@ -30,11 +30,11 @@ class Values {
 
 		return value;
 	}
-	
+
 	def <T> subListFrom(List<T> list, int index) {
 		list.subList(index, list.size)
 	}
-	
+
 	def List<Integer> dimensionOf(List<?> list) {
 		if (list.isEmpty) {
 			Collections.emptyList
@@ -44,12 +44,24 @@ class Values {
 			dimension
 		}
 	}
-	
+
 	def dimensionOf(Object object) {
 		if (object instanceof List<?>) {
 			object.dimensionOf
 		} else {
-			Collections.emptyList
+			emptyList
 		}
 	}
+
+	def List<Byte> toBytes(Object obj) {
+		switch (obj) {
+			Integer: newArrayList(obj.byteValue)
+			String: obj.bytes
+			List<?>: obj.map[toBytes].flatten.toList
+			default: emptyList
+		}
+	}
+
+	def toHex(Byte b) '''$«Integer.toHexString(b)»'''
+
 }

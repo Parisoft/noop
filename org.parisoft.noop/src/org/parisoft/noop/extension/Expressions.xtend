@@ -88,7 +88,7 @@ class Expressions {
 	}
 
 	def asmConstructorName(NewInstance instance) {
-		instance.type.name + '.' + instance.type.name + if (instance.constructor !== null) {
+		instance.type.name + '.' + instance.type.name + if (instance.constructor !== null && instance.constructor.fields.isNotEmpty) {
 			'@' + Integer.toHexString(instance.constructor.fields.map[variable].join.hashCode)
 		} else {
 			''
@@ -423,7 +423,7 @@ class Expressions {
 						chunks += data.pointers.computeIfAbsent(constructorName + '.receiver', [newArrayList(data.chunkForPointer(it))])
 					}
 
-					chunks += expression.type.inheritedFields.filter[nonConstant].map[value.alloc(data)].flatten
+					chunks += expression.type.inheritedFields.filter[nonConstant || typeOf.singleton].map[value.alloc(data)].flatten
 					chunks.disoverlap(constructorName)
 
 					data.restoreTo(snapshot)
@@ -482,8 +482,15 @@ class Expressions {
 
 	def compile(Expression expression, MetaData data) {
 		switch (expression) {
+			StringLiteral: '''
+				«IF expression.value.startsWith('file://')»
+					.incbin "«expression.value.substring(7)»"
+				«ELSE»
+					.db «expression.value.toBytes.join(', ', [toHex])»
+				«ENDIF»
+			'''
 			ArrayLiteral: '''
-				.db «(expression.valueOf as List).flatten.join(' ', [(it as Integer).toHexString])»
+				.db «expression.valueOf.toBytes.join(', ', [toHex])»
 			'''
 			NewInstance: '''
 				«expression.asmConstructorName»:
