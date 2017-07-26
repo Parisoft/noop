@@ -8,9 +8,9 @@ import java.util.List
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NewInstance
 
-class MetaData {
+class StackData {
 
-	@Accessors var Variable header
+	@Accessors var NewInstance header
 	@Accessors val classes = <NoopClass>newHashSet
 	@Accessors val singletons = <NoopClass>newHashSet
 	@Accessors val constants = <Variable>newHashSet
@@ -41,14 +41,14 @@ class MetaData {
 	def snapshot() {
 		val src = this
 
-		new MetaData => [
+		new StackData => [
 			ptrCounter.set(src.ptrCounter.get)
 			varCounter.set(src.varCounter.get)
 			container = src.container
 		]
 	}
 
-	def restoreTo(MetaData snapshot) {
+	def restoreTo(StackData snapshot) {
 		ptrCounter.set(snapshot.ptrCounter.get)
 		varCounter.set(snapshot.varCounter.get)
 		container = snapshot.container

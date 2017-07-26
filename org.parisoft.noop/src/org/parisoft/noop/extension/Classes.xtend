@@ -4,13 +4,13 @@ import com.google.inject.Inject
 import java.util.Collection
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
-import org.parisoft.noop.generator.MetaData
 import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.StackData
 
 class Classes {
 
@@ -163,6 +163,14 @@ class Classes {
 			new NoopInstance(c.name, c.inheritedFields)
 		}
 	}
+	
+	def asmName(NoopClass c) {
+		'''«c.name».class'''.toString
+	}
+
+	def asmSingletonName(NoopClass c) {
+		'''_«c.name.toLowerCase»'''.toString
+	}
 
 	def int sizeOf(NoopClass c) {
 		switch (c.fullyQualifiedName.toString) {
@@ -187,13 +195,13 @@ class Classes {
 	}
 	
 	def alloc(NoopClass noopClass) {
-		val data = new MetaData
+		val data = new StackData
 		noopClass.alloc(data)
 		
 		return data
 	}
 
-	def void alloc(NoopClass noopClass, MetaData data) {
+	def void alloc(NoopClass noopClass, StackData data) {
 		if (data.classes.add(noopClass)) {
 			noopClass.inheritedFields.filter[constant].forEach[alloc(data)]
 

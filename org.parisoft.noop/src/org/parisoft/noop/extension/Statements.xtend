@@ -3,7 +3,6 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.List
 import org.parisoft.noop.generator.MemChunk
-import org.parisoft.noop.generator.MetaData
 import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.ElseStatement
 import org.parisoft.noop.noop.Expression
@@ -19,6 +18,8 @@ import org.parisoft.noop.noop.Variable
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import java.util.concurrent.atomic.AtomicInteger
+import org.parisoft.noop.generator.StackData
+import org.parisoft.noop.generator.StorageData
 
 class Statements {
 
@@ -44,7 +45,7 @@ class Statements {
 		^return.getContainerOfType(Method).fullyQualifiedName.toString + '.return'
 	}
 
-	def List<MemChunk> alloc(Statement statement, MetaData data) {
+	def List<MemChunk> alloc(Statement statement, StackData data) {
 		switch (statement) {
 			Variable: {
 				val name = statement.asmName(data.container)
@@ -74,9 +75,7 @@ class Statements {
 					} else if (statement.isConstant) {
 						val type = statement.typeOf
 
-						if (type.isNESHeader) {
-							data.header = statement
-						} else if (type.isSingleton) {
+						if (type.isSingleton) {
 							type.alloc(data)
 						} else if (type.isPrimitive) {
 							data.constants += statement
@@ -140,7 +139,7 @@ class Statements {
 		}
 	}
 
-	def alloc(ElseStatement statement, MetaData data) {
+	def alloc(ElseStatement statement, StackData data) {
 		val snapshot = data.snapshot
 		val chunks = statement.body.statements.map[alloc(data)].flatten
 
@@ -149,15 +148,22 @@ class Statements {
 		return chunks + statement.^if?.alloc(data)
 	}
 
-	def compile(Statement statement, MetaData data) {
+	def compile(Statement statement, StorageData data) {
 		switch (statement) {
+			Variable: '''
+				«IF statement.typeOf.isPrimitive»
+					«statement.value.compile(new StorageData => [absolute = statement.asmName(data.container)])»
+				«ELSE»
+					«statement.value.compile(new StorageData => [relative = statement.asmName(data.container)])»
+				«ENDIF»
+			'''
 			AsmStatement:
 				if (statement.vars.isEmpty) {
 					statement.codes.join('', [substring(1, it.length - 1)])
 				} else {
 					val i = new AtomicInteger(0)
-					
-					statement.codes.reduce [c1, c2|
+
+					statement.codes.reduce [ c1, c2 |
 						c1.substring(1, c1.length - 1) + statement.vars.get(i.andIncrement).asmName + c2.substring(1, c2.length - 1)
 					]
 				}

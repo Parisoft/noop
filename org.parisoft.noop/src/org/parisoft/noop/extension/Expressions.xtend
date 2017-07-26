@@ -7,7 +7,6 @@ import org.parisoft.noop.exception.InvalidExpressionException
 import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.exception.NonConstantMemberException
 import org.parisoft.noop.generator.MemChunk
-import org.parisoft.noop.generator.MetaData
 import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.AddExpression
 import org.parisoft.noop.noop.AndExpression
@@ -45,12 +44,17 @@ import org.parisoft.noop.noop.SubExpression
 import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
+import org.parisoft.noop.generator.StackData
+import org.parisoft.noop.generator.StorageData
 
 class Expressions {
+
+	static val FILE_URI = 'file://'
 
 	@Inject extension Classes
 	@Inject extension Members
 	@Inject extension Values
+	@Inject extension Statements
 	@Inject extension TypeSystem
 	@Inject extension Collections
 
@@ -93,6 +97,10 @@ class Expressions {
 		} else {
 			''
 		}
+	}
+
+	def asmReceiverName(NewInstance instance) {
+		instance.asmConstructorName + '.receiver'
 	}
 
 	def NoopClass typeOf(Expression expression) {
@@ -338,7 +346,7 @@ class Expressions {
 		instance.sizeOf * (instance.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1)
 	}
 
-	def List<MemChunk> alloc(Expression expression, MetaData data) {
+	def List<MemChunk> alloc(Expression expression, StackData data) {
 		switch (expression) {
 			AssignmentExpression:
 				expression.right.alloc(data)
@@ -395,7 +403,12 @@ class Expressions {
 			NewInstance: {
 				val chunks = newArrayList
 
-				if (expression.type.isNESHeader || expression.type.isPrimitive) {
+				if (expression.type.isNESHeader) {
+					data.header = expression
+					return chunks
+				}
+
+				if (expression.type.isPrimitive) {
 					return chunks
 				}
 
@@ -420,7 +433,7 @@ class Expressions {
 					data.container = constructorName
 
 					if (expression.type.nonSingleton) {
-						chunks += data.pointers.computeIfAbsent(constructorName + '.receiver', [newArrayList(data.chunkForPointer(it))])
+						chunks += data.pointers.computeIfAbsent(expression.asmReceiverName, [newArrayList(data.chunkForPointer(it))])
 					}
 
 					chunks += expression.type.inheritedFields.filter[nonConstant || typeOf.singleton].map[value.alloc(data)].flatten
@@ -480,21 +493,42 @@ class Expressions {
 		}
 	}
 
-	def compile(Expression expression, MetaData data) {
+	def compile(Expression expression, StorageData data) {
 		switch (expression) {
 			StringLiteral: '''
-				«IF expression.value.startsWith('file://')»
-					.incbin "«expression.value.substring(7)»"
-				«ELSE»
-					.db «expression.value.toBytes.join(', ', [toHex])»
+				«IF data.relative !== null»
+					«data.relative»:
+						«IF expression.value.startsWith(FILE_URI)»
+							.incbin "«expression.value.substring(FILE_URI.length + 1)»"
+						«ELSE»
+							.db «expression.value.toBytes.join(', ', [toHex])»
+						«ENDIF»
 				«ENDIF»
 			'''
 			ArrayLiteral: '''
-				.db «expression.valueOf.toBytes.join(', ', [toHex])»
+				«IF data.relative !== null»
+					«data.relative»:
+						.db «expression.valueOf.toBytes.join(', ', [toHex])»
+				«ENDIF»
 			'''
 			NewInstance: '''
-				«expression.asmConstructorName»:
-					RTS
+				«IF data === null»
+					«expression.asmConstructorName»:
+						RTS
+				«ELSE»
+					«FOR arg : expression?.constructor.fields»
+						«arg.variable.compile(new StorageData => [container = expression.asmConstructorName])»
+					«ENDFOR»
+					«IF data.indirect !== null»
+						«val receiver = expression.asmReceiverName»
+							LDA #<«data.indirect»
+							STA «receiver»+0
+							LDA #>«data.indirect»
+							STA «receiver»+1
+					«ENDIF»
+«««					
+						JSR «expression.asmConstructorName»
+				«ENDIF»	
 			'''
 			default:
 				''

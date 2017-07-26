@@ -6,7 +6,6 @@ import java.util.List
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
-import org.parisoft.noop.generator.MetaData
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelection
@@ -15,11 +14,16 @@ import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import static extension java.lang.Integer.*
 import org.parisoft.noop.noop.NoopFactory
+import org.parisoft.noop.generator.StackData
+import org.parisoft.noop.generator.StorageData
 
 public class Members {
 
 	public static val CONSTANT_SUFFIX = '#'
+	public static val TEMP_VAR_NAME1 = 'billy'
+	public static val TEMP_VAR_NAME2 = 'jimmy'
 
 	@Inject extension Classes
 	@Inject extension Expressions
@@ -148,21 +152,25 @@ public class Members {
 
 	def String asmName(Variable variable, String containerName) {
 		if (variable.typeOf.isSingleton) {
-			'''_«variable.typeOf.name.toLowerCase»'''
+			variable.typeOf.asmSingletonName
 		} else if (variable.isConstant) {
 			variable.fullyQualifiedName.toString
 		} else if (variable.getContainerOfType(Method) !== null) {
-			'''«containerName»«variable.fullyQualifiedName.toString.substring(containerName.indexOf('@'))»@«Integer.toHexString(variable.hashCode)»'''
+			'''«containerName»«variable.fullyQualifiedName.toString.substring(containerName.indexOf('@'))»@«variable.hashCode.toHexString»'''
 		} else {
-			'''«containerName».«variable.name»@«Integer.toHexString(variable.hashCode)»'''
+			'''«containerName».«variable.name»@«variable.hashCode.toHexString»'''
 		}
 	}
 
 	def asmName(Method method) {
-		method.fullyQualifiedName.toString + '@' + Integer.toHexString(method.hashCode)
+		'''«method.fullyQualifiedName.toString»'@'«method.hashCode.toHexString»'''.toString
 	}
 
-	def alloc(Method method, MetaData data) {
+	def asmReceiverName(Method method) {
+		'''«method.asmName».receiver'''.toString
+	}
+
+	def alloc(Method method, StackData data) {
 		if (allocating.add(method)) {
 			try {
 				val snapshot = data.snapshot
@@ -171,7 +179,7 @@ public class Members {
 				data.container = methodName
 
 				val receiver = if (method.containingClass.isNonSingleton) {
-						data.pointers.computeIfAbsent(methodName + '.receiver', [newArrayList(data.chunkForPointer(it))])
+						data.pointers.computeIfAbsent(method.asmReceiverName, [newArrayList(data.chunkForPointer(it))])
 					} else {
 						emptyList
 					}
@@ -201,7 +209,7 @@ public class Members {
 		}
 	}
 
-	def compile(Method method, MetaData data) '''
+	def compile(Method method, StackData data) '''
 		«method.asmName»:
 		«IF method.isMain»
 			;;;;;;;;;; Initial setup begin
@@ -234,8 +242,8 @@ public class Members {
 				INX
 				BNE -clrMem:
 			
-			«val className = method.containingClass.name»
-				JSR «className».«className»
+			«val constructor = NoopFactory::eINSTANCE.createNewInstance => [type = method.containingClass]»
+				JSR «constructor.compile(new StorageData => [absolute = constructor.type.asmSingletonName])»
 			
 			-waitVBlank2
 				BIT $2002
@@ -258,7 +266,7 @@ public class Members {
 			;;;;;;;;;; Effective code begin
 		«ENDIF»
 		«FOR statement : method.body.statements»
-			«statement.compile(data)»
+			«statement.compile(null)»
 		«ENDFOR»
 		«IF method.isNmi»
 			;;;;;;;;;; Effective code end

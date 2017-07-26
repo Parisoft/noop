@@ -14,9 +14,9 @@ import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.TypeSystem
+import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopPackage
-import org.parisoft.noop.noop.Variable
 
 /**
  * Generates code from your model files on save.
@@ -73,13 +73,13 @@ class NoopGenerator extends AbstractGenerator {
 		return games.head
 	}
 
-	private def compile(MetaData data) '''
+	private def compile(StackData data) '''
 		;----------------------------------------------------------------
 		; Class Metadata
 		;----------------------------------------------------------------
 		«var classCount = 0»
 		«FOR noopClass : data.classes.filter[nonPrimitive]»
-			«noopClass.name».class = «classCount++»
+			«noopClass.asmName» = «classCount++»
 			«var fieldOffset = 0»
 			«FOR field : noopClass.inheritedFields.filter[nonConstant]»
 				«field.fullyQualifiedName.toString» = «fieldOffset += field.sizeOf»
@@ -98,13 +98,16 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		«val varStartAddr = data.resetVarCounter»
 		«FOR singleton : data.singletons»
-			_«singleton.name.toLowerCase» = «data.varCounter.getAndAdd(singleton.sizeOf).toHexString(4)»
+			«singleton.asmSingletonName» = «data.varCounter.getAndAdd(singleton.sizeOf).toHexString(4)»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
 		; Variables
 		;----------------------------------------------------------------
+		«Members::TEMP_VAR_NAME1» = $0000
+		«Members::TEMP_VAR_NAME2» = $0002
 		«FOR chunk : data.pointers.values.flatten.sort»
+			«chunk.shiftTo(4)»
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
 		
@@ -129,8 +132,9 @@ class NoopGenerator extends AbstractGenerator {
 			.base $10000 - («(data.header.fieldValue('prgRomPages') as Integer).toHexString» * $4000) 
 		
 		«FOR rom : data.prgRoms»
-			«rom.fullyQualifiedName»:
-				«rom.value.compile(data)»
+			«rom.value.compile(new StorageData => [
+				relative = rom.fullyQualifiedName.toString
+			])»
 		«ENDFOR»
 		
 		«FOR method : data.methods.sortBy[fullyQualifiedName]»
@@ -138,7 +142,7 @@ class NoopGenerator extends AbstractGenerator {
 			
 		«ENDFOR»
 		«FOR constructor : data.constructors.sortBy[type.name]»
-			«constructor.compile(data)»
+			«constructor.compile(null)»
 			
 		«ENDFOR»
 		;----------------------------------------------------------------
@@ -156,8 +160,9 @@ class NoopGenerator extends AbstractGenerator {
 		   .base $0000
 		
 		«FOR rom : data.chrRoms»
-			«rom.fullyQualifiedName»:
-				«rom.value.compile(data)»
+			«rom.value.compile(new StorageData => [
+				relative = rom.fullyQualifiedName.toString
+			])»
 		«ENDFOR»
 	'''
 
@@ -175,7 +180,8 @@ class NoopGenerator extends AbstractGenerator {
 		return '$' + string
 	}
 
-	private def fieldValue(Variable variable, String fieldname) {
-		(variable.valueOf as NoopInstance).fields.findFirst[it.name == fieldname]?.valueOf
+	private def fieldValue(NewInstance instance, String fieldname) {
+		(instance?.constructor.fields.map[variable].findFirst[name == fieldname] ?: instance.type.inheritedFields.findFirst[name == fieldname])?.
+			valueOf
 	}
 }
