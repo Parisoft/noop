@@ -75,7 +75,9 @@ class Statements {
 					} else if (statement.isConstant) {
 						val type = statement.typeOf
 
-						if (type.isSingleton) {
+						if (type.isNESHeader) {
+							return newArrayList
+						} else if (type.isSingleton) {
 							type.alloc(data)
 						} else if (type.isPrimitive) {
 							data.constants += statement
@@ -151,10 +153,21 @@ class Statements {
 	def compile(Statement statement, StorageData data) {
 		switch (statement) {
 			Variable: '''
-				«IF statement.typeOf.isPrimitive»
-					«statement.value.compile(new StorageData => [absolute = statement.asmName(data.container)])»
+				«IF statement.isROM»
+					«statement.value.compile(data => [
+						relative = statement.asmConstantName
+						type = statement.typeOf
+					])»
+				«ELSEIF data.absolute !== null || data.indirect !== null»
+					«statement.value.compile(data => [
+						index = statement.asmOffsetName
+						type = statement.typeOf
+					])»
 				«ELSE»
-					«statement.value.compile(new StorageData => [relative = statement.asmName(data.container)])»
+					«statement.value.compile(data => [
+						absolute = statement.asmName(data.container)
+						type = statement.typeOf
+					])»
 				«ENDIF»
 			'''
 			AsmStatement:

@@ -17,6 +17,8 @@ import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopPackage
+import org.parisoft.noop.^extension.Statements
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Generates code from your model files on save.
@@ -28,6 +30,7 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject extension Classes
 	@Inject extension Members
 	@Inject extension Expressions
+	@Inject extension Statements
 	@Inject extension IQualifiedNameProvider
 	@Inject IResourceDescriptions descriptions
 
@@ -80,17 +83,17 @@ class NoopGenerator extends AbstractGenerator {
 		«var classCount = 0»
 		«FOR noopClass : data.classes.filter[nonPrimitive]»
 			«noopClass.asmName» = «classCount++»
-			«var fieldOffset = 0»
-			«FOR field : noopClass.inheritedFields.filter[nonConstant]»
-				«field.fullyQualifiedName.toString» = «fieldOffset += field.sizeOf»
+			«val fieldOffset = new AtomicInteger(1)»
+			«FOR field : noopClass.allFieldsTopDown.filter[nonConstant]»
+				«field.asmOffsetName» = «fieldOffset.getAndAdd(field.sizeOf)»
 			«ENDFOR»
 			
 		«ENDFOR»
 		;----------------------------------------------------------------
 		; Constants
 		;----------------------------------------------------------------
-		«FOR cons : data.constants.sortBy[fullyQualifiedName]»
-			«cons.fullyQualifiedName.toString» = «cons.valueOf.toString»
+		«FOR cons : data.constants.sortBy[asmConstantName]»
+			«cons.asmConstantName» = «cons.valueOf.toString»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
@@ -132,13 +135,11 @@ class NoopGenerator extends AbstractGenerator {
 			.base $10000 - («(data.header.fieldValue('prgRomPages') as Integer).toHexString» * $4000) 
 		
 		«FOR rom : data.prgRoms»
-			«rom.value.compile(new StorageData => [
-				relative = rom.fullyQualifiedName.toString
-			])»
+			«rom.compile(new StorageData)»
 		«ENDFOR»
 		
 		«FOR method : data.methods.sortBy[fullyQualifiedName]»
-			«method.compile(data)»
+			«method.compile(new StorageData)»
 			
 		«ENDFOR»
 		«FOR constructor : data.constructors.sortBy[type.name]»
@@ -160,9 +161,7 @@ class NoopGenerator extends AbstractGenerator {
 		   .base $0000
 		
 		«FOR rom : data.chrRoms»
-			«rom.value.compile(new StorageData => [
-				relative = rom.fullyQualifiedName.toString
-			])»
+			«rom.compile(new StorageData)»
 		«ENDFOR»
 	'''
 
@@ -181,7 +180,7 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def fieldValue(NewInstance instance, String fieldname) {
-		(instance?.constructor.fields.map[variable].findFirst[name == fieldname] ?: instance.type.inheritedFields.findFirst[name == fieldname])?.
+		(instance?.constructor.fields.map[variable].findFirst[name == fieldname] ?: instance.type.allFieldsBottomUp.findFirst[name == fieldname])?.
 			valueOf
 	}
 }

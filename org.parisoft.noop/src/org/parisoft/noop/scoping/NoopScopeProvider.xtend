@@ -85,8 +85,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 		return switch (container) {
 			NoopClass: {
-				val thisMembers = container.members.takeWhile[it != context].filter(Variable) + container.methods
-				val superMembers = container.inheritedFields + container.inheritedMethods
+				val thisMembers = container.members.takeWhile[it != context].filter(Variable) + container.declaredMethods
+				val superMembers = container.allFieldsBottomUp + container.allMethodsBottomUp
 				Scopes.scopeFor(thisMembers, Scopes.scopeFor(superMembers))
 			}
 			Method:
@@ -113,8 +113,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 		return switch (container) {
 			NoopClass: {
-				val thisMembers = container.members.takeWhile[it != context].filter(Variable) + container.methods.filterOverload(args)
-				val superMembers = container.inheritedFields + container.inheritedMethods.filterOverload(args)
+				val thisMembers = container.members.takeWhile[it != context].filter(Variable) + container.declaredMethods.filterOverload(args)
+				val superMembers = container.allFieldsBottomUp + container.allMethodsBottomUp.filterOverload(args)
 				Scopes.scopeFor(thisMembers, Scopes.scopeFor(superMembers))
 			}
 			Method:
@@ -136,18 +136,18 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			IScope.NULLSCOPE
 		} else if (receiver instanceof NewInstance && (receiver as NewInstance).constructor === null) {
 			Scopes.scopeFor(
-				type.fields.filter[isConstant],
-				Scopes.scopeFor(type.inheritedFields.filter[isConstant])
+				type.declaredFields.filter[isConstant],
+				Scopes.scopeFor(type.allFieldsBottomUp.filter[isConstant])
 			)
 		} else if (selection.hasArgs) {
 			Scopes.scopeFor(
-				type.methods.filterOverload(selection.args) + type.fields,
-				Scopes.scopeFor(type.inheritedMethods.filterOverload(selection.args) + type.inheritedFields)
+				type.declaredMethods.filterOverload(selection.args) + type.declaredFields,
+				Scopes.scopeFor(type.allMethodsBottomUp.filterOverload(selection.args) + type.allFieldsBottomUp)
 			)
 		} else {
 			Scopes.scopeFor(
-				type.fields + type.methods,
-				Scopes.scopeFor(type.inheritedFields + type.inheritedMethods)
+				type.declaredFields + type.declaredMethods,
+				Scopes.scopeFor(type.allFieldsBottomUp + type.allMethodsBottomUp)
 			)
 		}
 	}
@@ -155,7 +155,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	protected def scopeForNewInstance(NewInstance newInstance) {
 		val container = newInstance.type
 		val thisFields = container.members.filter(Variable).filter[isNonConstant]
-		val superFields = container.inheritedFields.filter[isNonConstant]
+		val superFields = container.allFieldsBottomUp.filter[isNonConstant]
 
 		return Scopes.scopeFor(thisFields, Scopes.scopeFor(superFields))
 	}

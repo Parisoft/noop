@@ -8,6 +8,8 @@ import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.exception.NonConstantMemberException
 import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.generator.NoopInstance
+import org.parisoft.noop.generator.StackData
+import org.parisoft.noop.generator.StorageData
 import org.parisoft.noop.noop.AddExpression
 import org.parisoft.noop.noop.AndExpression
 import org.parisoft.noop.noop.ArrayLiteral
@@ -44,8 +46,8 @@ import org.parisoft.noop.noop.SubExpression
 import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
-import org.parisoft.noop.generator.StackData
-import org.parisoft.noop.generator.StorageData
+
+import static extension java.lang.Integer.*
 
 class Expressions {
 
@@ -80,27 +82,23 @@ class Expressions {
 	}
 
 	def asmName(ArrayLiteral array, String containerName) {
-		containerName + '.' + array.typeOf.name.toFirstLower + 'Array@' + Integer.toHexString(array.hashCode)
+		containerName + '.' + array.typeOf.name.toFirstLower + 'Array@' + array.hashCode.toHexString
 	}
 
-	def asmArrayName(NewInstance instance, String containerName) {
-		containerName + '.new' + instance.typeOf.name + 'Array@' + Integer.toHexString(instance.hashCode)
+	def asmTmpArrayName(NewInstance instance, String containerName) {
+		containerName + '.new' + instance.typeOf.name + 'Array@' + instance.hashCode.toHexString
 	}
 
-	def asmVarName(NewInstance instance, String containerName) {
-		containerName + '.new' + instance.typeOf.name + '@' + Integer.toHexString(instance.hashCode)
+	def asmTmpVarName(NewInstance instance, String containerName) {
+		containerName + '.new' + instance.typeOf.name + '@' + instance.hashCode.toHexString
 	}
 
 	def asmConstructorName(NewInstance instance) {
-		instance.type.name + '.' + instance.type.name + if (instance.constructor !== null && instance.constructor.fields.isNotEmpty) {
-			'@' + Integer.toHexString(instance.constructor.fields.map[variable].join.hashCode)
-		} else {
-			''
-		}
+		'''«instance.type.name».«instance.type.name»'''.toString
 	}
 
 	def asmReceiverName(NewInstance instance) {
-		instance.asmConstructorName + '.receiver'
+		'''«instance.asmConstructorName».receiver'''.toString
 	}
 
 	def NoopClass typeOf(Expression expression) {
@@ -295,7 +293,7 @@ class Expressions {
 					expression.value.chars.boxed.collect(Collectors.toList)
 				NewInstance:
 					if (expression.constructor !== null) {
-						new NoopInstance(expression.type.name, expression.type.inheritedFields, expression.constructor)
+						new NoopInstance(expression.type.name, expression.type.allFieldsBottomUp, expression.constructor)
 					} else {
 						expression.type.defaultValueOf
 					}
@@ -408,23 +406,19 @@ class Expressions {
 					return chunks
 				}
 
-				if (expression.type.isPrimitive) {
-					return chunks
-				}
-
 				if (expression.isOnMemberSelectionOrReference) {
-					if (expression.dimension.isEmpty) {
-						chunks += data.variables.computeIfAbsent(expression.asmVarName(data.container), [
+					if (expression.dimension.isEmpty && expression.type.isNonPrimitive && expression.type.isNonSingleton) {
+						chunks += data.variables.computeIfAbsent(expression.asmTmpVarName(data.container), [
 							newArrayList(data.chunkForVar(it, expression.sizeOf))
 						])
-					} else {
-						chunks += data.variables.computeIfAbsent(expression.asmArrayName(data.container), [
+					} else if (expression.dimension.isNotEmpty) {
+						chunks += data.variables.computeIfAbsent(expression.asmTmpArrayName(data.container), [
 							newArrayList(data.chunkForVar(it, expression.fullSizeOf))
 						])
 					}
 				}
 
-				if (expression.dimension.isEmpty) {
+				if (expression.dimension.isEmpty && expression.type.isNonPrimitive) {
 					expression.type.alloc(data)
 
 					val snapshot = data.snapshot
@@ -432,11 +426,11 @@ class Expressions {
 
 					data.container = constructorName
 
-					if (expression.type.nonSingleton) {
+					if (expression.type.isNonSingleton) {
 						chunks += data.pointers.computeIfAbsent(expression.asmReceiverName, [newArrayList(data.chunkForPointer(it))])
 					}
 
-					chunks += expression.type.inheritedFields.filter[nonConstant || typeOf.singleton].map[value.alloc(data)].flatten
+					chunks += expression.type.allFieldsTopDown.filter[nonConstant || typeOf.singleton].map[value.alloc(data)].flatten
 					chunks.disoverlap(constructorName)
 
 					data.restoreTo(snapshot)
@@ -495,11 +489,84 @@ class Expressions {
 
 	def compile(Expression expression, StorageData data) {
 		switch (expression) {
+			ByteLiteral: '''
+				«val bytes = expression.valueOf.toBytes»
+				«IF data.relative !== null»
+					«data.relative»:
+						«IF data.type.sizeOf == 1»
+							.db «bytes.head.toHex»
+						«ELSE»
+							.db «bytes.join(' ', [toHex])»
+						«ENDIF»
+				«ELSEIF data.absolute !== null && data.index !== null»
+					«noop»
+						LDX #«data.index»
+						LDA #«bytes.head.toHex»
+						STA «data.absolute», X
+						«IF data.type.sizeOf > 1»
+							INX
+							LDA #«bytes.last.toHex»
+							STA «data.absolute», X
+						«ENDIF»
+				«ELSEIF data.absolute !== null»
+					«noop»
+						LDA #«bytes.head.toHex»
+						STA «data.absolute»
+						«IF data.type.sizeOf > 1»
+							LDA #«bytes.last.toHex»
+							STA «data.absolute»+1
+						«ENDIF»
+				«ELSEIF data.indirect !== null && data.index !== null»
+					«noop»
+						LDY #«data.index»
+						LDA #«bytes.head.toHex»
+						STA («data.indirect»), Y
+						«IF data.type.sizeOf > 1»
+							INY
+							LDA #«bytes.last.toHex»
+							STA («data.indirect»), Y
+						«ENDIF»
+				«ELSEIF data.indirect !== null»
+					«noop»
+						LDA #«bytes.head.toHex»
+						STA («data.indirect»)
+						«IF data.type.sizeOf > 1»
+							LDY #$01
+							LDA #«bytes.last.toHex»
+							STA («data.indirect»), Y
+						«ENDIF»
+				«ENDIF»
+			'''
+			BoolLiteral: '''
+				«val bool = expression.valueOf.toBytes.head.toHex»
+				«IF data.relative !== null»
+					«data.relative»:
+						.db «bool»
+				«ELSEIF data.absolute !== null && data.index !== null»
+					«noop»
+						LDX #«data.index»
+						LDA #«bool»
+						STA «data.absolute», X
+				«ELSEIF data.absolute !== null»
+					«noop»
+						LDA #«bool»
+						STA «data.absolute»
+				«ELSEIF data.indirect !== null && data.index !== null»
+					«noop»
+						LDY #«data.index»
+						LDA «bool»
+						STA («data.absolute»), Y
+				«ELSEIF data.indirect !== null»
+					«noop»
+						LDA «bool»
+						STA («data.absolute»)
+				«ENDIF»
+			'''
 			StringLiteral: '''
 				«IF data.relative !== null»
 					«data.relative»:
 						«IF expression.value.startsWith(FILE_URI)»
-							.incbin "«expression.value.substring(FILE_URI.length + 1)»"
+							.incbin "«expression.value.substring(FILE_URI.length)»"
 						«ELSE»
 							.db «expression.value.toBytes.join(', ', [toHex])»
 						«ENDIF»
@@ -513,26 +580,147 @@ class Expressions {
 			'''
 			NewInstance: '''
 				«IF data === null»
-					«expression.asmConstructorName»:
-						RTS
-				«ELSE»
-					«FOR arg : expression?.constructor.fields»
-						«arg.variable.compile(new StorageData => [container = expression.asmConstructorName])»
-					«ENDFOR»
-					«IF data.indirect !== null»
+					«val constructor = expression.asmConstructorName»
+					«constructor»:
+					«IF expression.type.isSingleton»
+						«val singleton = expression.type.asmSingletonName»
+							LDA #«expression.type.asmName»
+							STA «singleton»
+							
+						«FOR field : expression.type.allFieldsTopDown.filter[nonConstant || typeOf.singleton]»
+							«field.compile(new StorageData => [
+								container = constructor
+								absolute = singleton
+							])»
+						«ENDFOR»
+					«ELSE»
 						«val receiver = expression.asmReceiverName»
-							LDA #<«data.indirect»
-							STA «receiver»+0
-							LDA #>«data.indirect»
-							STA «receiver»+1
+							LDA #«expression.type.asmName»
+							STA («receiver»)
+							
+						«FOR field : expression.type.allFieldsTopDown.filter[nonConstant || typeOf.singleton]»
+							«field.compile(new StorageData => [
+								container = constructor
+								indirect = receiver
+							])»
+						«ENDFOR»
 					«ENDIF»
-«««					
-						JSR «expression.asmConstructorName»
+					«noop»
+						RTS
+				«ELSEIF expression.dimension.isNotEmpty»
+					
+				«ELSEIF expression.type.isPrimitive»
+					«noop»
+						LDA #$00
+						«IF data.absolute !== null && data.index !== null»
+							LDX #«data.index»
+							STA «data.absolute», X
+							«IF expression.type.sizeOf > 1»
+								INX
+								STA «data.absolute», X
+							«ENDIF»
+						«ELSEIF data.absolute !== null»
+							STA «data.absolute»
+							«IF expression.type.sizeOf > 1»
+								STA «data.absolute»+1
+							«ENDIF»
+						«ELSEIF data.indirect !== null && data.index !== null»
+							LDY #«data.index»
+							STA («data.indirect»), Y
+							«IF expression.type.sizeOf == 2»
+								INY
+								STA («data.indirect»), Y
+							«ENDIF»
+						«ELSEIF data.indirect !== null»
+							STA («data.indirect»)
+							«IF expression.type.sizeOf == 2»
+								LDY #$01
+								STA («data.indirect»), Y
+							«ENDIF»
+						«ENDIF»	
+				«ELSEIF expression.type.isNonNESHeader»
+					«noop»
+						«IF expression.type.isSingleton»
+							JSR «expression.asmConstructorName»
+							«IF data.indirect !== null && data.index !== null»
+								LDY #«data.index»
+								LDA #<«expression.type.asmSingletonName»
+								STA («data.indirect»), Y
+								INY
+								LDA #>«expression.type.asmSingletonName»
+								STA («data.indirect»), Y
+							«ELSEIF data.indirect !== null»
+								LDA #<«expression.type.asmSingletonName»
+								STA («data.indirect»)
+								LDY #$01
+								LDA #>«expression.type.asmSingletonName»
+								STA («data.indirect»), Y
+							«ENDIF»
+						«ELSEIF expression.isOnMemberSelectionOrReference»
+							«val constructor = expression.asmConstructorName»
+							«val receiver = expression.asmReceiverName»
+							«val tmp = expression.asmTmpVarName(constructor)»
+							LDA #<«tmp»
+							STA «receiver»+0
+							LDA #>«tmp»
+							STA «receiver»+1
+							JSR «constructor»
+							«IF data.indirect !== null»
+								LDA «receiver»+0
+								STA «data.indirect»+0
+								LDA «receiver»+1
+								STA «data.indirect»+1
+							«ENDIF»
+						«ELSEIF data.absolute !== null && data.index !== null»
+							«val receiver = expression.asmReceiverName»
+							CLC
+							LDA #<«data.absolute»
+							ADC #«data.index»
+							STA «receiver»+0
+							LDA #>«data.absolute»
+							ADC #$00
+							STA «receiver»+1
+							JSR «expression.asmConstructorName»
+							«FOR field : expression.constructor?.fields ?: emptyList»
+								«field.value.compile(new StorageData => [
+									indirect = receiver									
+									index = field.variable.asmOffsetName
+									type = field.variable.typeOf
+									container = expression.asmConstructorName
+								])»
+							«ENDFOR»
+						«ELSEIF data.absolute !== null»
+							«val receiver = expression.asmReceiverName»
+							LDA #<«data.absolute»
+							STA «receiver»+0
+							LDA #>«data.absolute»
+							STA «receiver»+1
+							JSR «expression.asmReceiverName»
+						«ELSEIF data.indirect !== null && data.index !== null»
+							«val receiver = expression.asmReceiverName»
+							LDY #«data.index»
+							LDA («data.indirect»), Y
+							STA «receiver»+0
+							INY
+							LDA («data.indirect»), Y
+							STA «receiver»+1
+							JSR «expression.asmReceiverName»
+						«ELSEIF data.indirect !== null»
+							«val receiver = expression.asmReceiverName»
+							LDA «data.indirect»+0
+							STA «receiver»+0
+							LDA «data.indirect»+1
+							STA «receiver»+1
+							JSR «expression.asmReceiverName»
+						«ENDIF»
 				«ENDIF»	
 			'''
 			default:
 				''
 		}
+	}
+
+	private def void noop() {
 	}
 
 }

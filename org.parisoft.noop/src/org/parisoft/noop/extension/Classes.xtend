@@ -50,7 +50,7 @@ class Classes {
 	}
 
 	def merge(Collection<NoopClass> classes) {
-		classes.map[
+		classes.map [
 			it.classHierarchy
 		].reduce [ h1, h2 |
 			h1.retainAll(h2)
@@ -58,20 +58,28 @@ class Classes {
 		]?.head ?: TypeSystem::TYPE_VOID
 	}
 
-	def fields(NoopClass c) {
+	def declaredFields(NoopClass c) {
 		c.members.filter(Variable)
 	}
 
-	def methods(NoopClass c) {
+	def declaredMethods(NoopClass c) {
 		c.members.filter(Method)
 	}
 
-	def inheritedFields(NoopClass c) {
+	def allFieldsBottomUp(NoopClass c) {
 		c.classHierarchy.map[members].flatten.filter(Variable)
 	}
 
-	def inheritedMethods(NoopClass c) {
+	def allMethodsBottomUp(NoopClass c) {
 		c.classHierarchy.map[members].flatten.filter(Method)
+	}
+
+	def allFieldsTopDown(NoopClass c) {
+		c.classHierarchy.reverse.map[members].flatten.filter(Variable)
+	}
+
+	def allMethodsTopDown(NoopClass c) {
+		c.classHierarchy.reverse.map[members].flatten.filter(Method)
 	}
 
 	def isInstanceOf(NoopClass c1, NoopClass c2) {
@@ -160,10 +168,10 @@ class Classes {
 		} else if (c.isBoolean) {
 			false
 		} else {
-			new NoopInstance(c.name, c.inheritedFields)
+			new NoopInstance(c.name, c.allFieldsBottomUp)
 		}
 	}
-	
+
 	def asmName(NoopClass c) {
 		'''«c.name».class'''.toString
 	}
@@ -187,30 +195,30 @@ class Classes {
 			case TypeSystem::LIB_UINT:
 				2
 			default: {
-				SIZE_OF_CLASS_TYPE + (c.inheritedFields.filter[nonConstant].map[sizeOf].reduce [ s1, s2 |
+				SIZE_OF_CLASS_TYPE + (c.allFieldsBottomUp.filter[nonConstant].map[sizeOf].reduce [ s1, s2 |
 					s1 + s2
 				] ?: 0)
 			}
 		}
 	}
-	
+
 	def alloc(NoopClass noopClass) {
 		val data = new StackData
 		noopClass.alloc(data)
-		
+
 		return data
 	}
 
 	def void alloc(NoopClass noopClass, StackData data) {
 		if (data.classes.add(noopClass)) {
-			noopClass.inheritedFields.filter[constant].forEach[alloc(data)]
+			noopClass.allFieldsTopDown.filter[constant].forEach[alloc(data)]
 
 			if (noopClass.isSingleton) {
 				data.singletons.add(noopClass)
 
 				if (noopClass.isGame) {
-					noopClass.inheritedMethods.findFirst[main].alloc(data)
-					noopClass.inheritedMethods.findFirst[nmi].alloc(data)
+					noopClass.allMethodsBottomUp.findFirst[main].alloc(data)
+					noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
 				}
 			}
 		}

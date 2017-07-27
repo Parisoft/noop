@@ -161,9 +161,17 @@ public class Members {
 			'''«containerName».«variable.name»@«variable.hashCode.toHexString»'''
 		}
 	}
+	
+	def asmConstantName(Variable variable) {
+		variable.fullyQualifiedName.toString
+	}
+	
+	def asmOffsetName(Variable variable) {
+		variable.fullyQualifiedName.toString
+	}
 
 	def asmName(Method method) {
-		'''«method.fullyQualifiedName.toString»'@'«method.hashCode.toHexString»'''.toString
+		'''«method.fullyQualifiedName.toString»@«method.hashCode.toHexString»'''.toString
 	}
 
 	def asmReceiverName(Method method) {
@@ -209,7 +217,7 @@ public class Members {
 		}
 	}
 
-	def compile(Method method, StackData data) '''
+	def compile(Method method, StorageData data) '''
 		«method.asmName»:
 		«IF method.isMain»
 			;;;;;;;;;; Initial setup begin
@@ -266,7 +274,7 @@ public class Members {
 			;;;;;;;;;; Effective code begin
 		«ENDIF»
 		«FOR statement : method.body.statements»
-			«statement.compile(null)»
+			«statement.compile(new StorageData => [container = method.asmName])»
 		«ENDFOR»
 		«IF method.isNmi»
 			;;;;;;;;;; Effective code end

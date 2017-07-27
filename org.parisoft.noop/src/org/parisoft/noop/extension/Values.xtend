@@ -1,7 +1,6 @@
 package org.parisoft.noop.^extension
 
 import java.util.List
-import java.util.Collections
 
 class Values {
 
@@ -37,7 +36,7 @@ class Values {
 
 	def List<Integer> dimensionOf(List<?> list) {
 		if (list.isEmpty) {
-			Collections.emptyList
+			java.util.Collections.emptyList
 		} else {
 			val dimension = newArrayList(list.size)
 			dimension.addAll(list.head.dimensionOf)
@@ -55,13 +54,23 @@ class Values {
 
 	def List<Byte> toBytes(Object obj) {
 		switch (obj) {
-			Integer: newArrayList(obj.byteValue)
-			String: obj.bytes
-			List<?>: obj.map[toBytes].flatten.toList
-			default: emptyList
+			Integer:
+				newArrayList(obj.bitwiseAnd(0xFF).byteValue, (obj >> 8).byteValue)
+			Boolean:
+				if (obj) {
+					newArrayList(1.byteValue)
+				} else {
+					newArrayList(0.byteValue)
+				}
+			String:
+				obj.bytes
+			List<?>:
+				obj.map[toBytes].flatten.toList
+			default:
+				emptyList
 		}
 	}
 
-	def toHex(Byte b) '''$«Integer.toHexString(b)»'''
+	def toHex(Byte b) '''$«IF b < 0x10»0«ENDIF»«Integer.toHexString(b).toUpperCase»'''
 
 }

@@ -1,6 +1,7 @@
 package org.parisoft.noop.generator
 
 import org.eclipse.xtend.lib.annotations.Accessors
+import org.parisoft.noop.noop.NoopClass
 
 class StorageData {
 
@@ -10,4 +11,18 @@ class StorageData {
 	@Accessors var String indirect // (d) : The JMP instruction has a special indirect addressing mode that can jump to the address stored in a 16-bit pointer anywhere in memory
 	@Accessors var String index    // a, X or (d), Y
 	@Accessors var String container
+	@Accessors var NoopClass type;
+	
+	override toString() '''
+	StorageData{
+		accumulator=«accumulator»
+		,absolute=«absolute»
+		,relative=«relative»
+		,indirect=«indirect»
+		,index=«index»
+		,container=«container»
+		,type=«type?.name»
+	}
+	'''
+	
 }
