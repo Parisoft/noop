@@ -158,7 +158,12 @@ class Statements {
 						relative = statement.asmConstantName
 						type = statement.typeOf
 					])»
-				«ELSEIF data.absolute !== null || data.indirect !== null»
+				«ELSEIF data.absolute !== null»
+					«statement.value.compile(data => [
+						absolute = '''«data.absolute» + #«statement.asmOffsetName»'''
+						type = statement.typeOf
+					])»
+				«ELSEIF data.indirect !== null»
 					«statement.value.compile(data => [
 						index = statement.asmOffsetName
 						type = statement.typeOf

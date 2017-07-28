@@ -72,5 +72,9 @@ class Values {
 	}
 
 	def toHex(Byte b) '''$«IF b < 0x10»0«ENDIF»«Integer.toHexString(b).toUpperCase»'''
+	
+	def toHex(Integer i) {
+		i.byteValue.toHex
+	}
 
 }

@@ -48,6 +48,7 @@ import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
+import org.parisoft.noop.noop.NoopFactory
 
 class Expressions {
 
@@ -99,6 +100,12 @@ class Expressions {
 
 	def asmReceiverName(NewInstance instance) {
 		'''«instance.asmConstructorName».receiver'''.toString
+	}
+
+	def fieldsInitializedOnContructor(NewInstance instance) {
+		instance.type.allFieldsTopDown.filter [
+			nonConstant || (typeOf.singleton && typeOf.nonNESHeader)
+		]
 	}
 
 	def NoopClass typeOf(Expression expression) {
@@ -487,7 +494,7 @@ class Expressions {
 		}
 	}
 
-	def compile(Expression expression, StorageData data) {
+	def String compile(Expression expression, StorageData data) {
 		switch (expression) {
 			ByteLiteral: '''
 				«val bytes = expression.valueOf.toBytes»
@@ -514,7 +521,7 @@ class Expressions {
 						STA «data.absolute»
 						«IF data.type.sizeOf > 1»
 							LDA #«bytes.last.toHex»
-							STA «data.absolute»+1
+							STA «data.absolute» + 1
 						«ENDIF»
 				«ELSEIF data.indirect !== null && data.index !== null»
 					«noop»
@@ -537,31 +544,8 @@ class Expressions {
 						«ENDIF»
 				«ENDIF»
 			'''
-			BoolLiteral: '''
-				«val bool = expression.valueOf.toBytes.head.toHex»
-				«IF data.relative !== null»
-					«data.relative»:
-						.db «bool»
-				«ELSEIF data.absolute !== null && data.index !== null»
-					«noop»
-						LDX #«data.index»
-						LDA #«bool»
-						STA «data.absolute», X
-				«ELSEIF data.absolute !== null»
-					«noop»
-						LDA #«bool»
-						STA «data.absolute»
-				«ELSEIF data.indirect !== null && data.index !== null»
-					«noop»
-						LDY #«data.index»
-						LDA «bool»
-						STA («data.absolute»), Y
-				«ELSEIF data.indirect !== null»
-					«noop»
-						LDA «bool»
-						STA («data.absolute»)
-				«ENDIF»
-			'''
+			BoolLiteral:
+				(NoopFactory::eINSTANCE.createByteLiteral => [value = if (expression.value) 1 else 0]).compile(data)
 			StringLiteral: '''
 				«IF data.relative !== null»
 					«data.relative»:
@@ -587,7 +571,7 @@ class Expressions {
 							LDA #«expression.type.asmName»
 							STA «singleton»
 							
-						«FOR field : expression.type.allFieldsTopDown.filter[nonConstant || typeOf.singleton]»
+						«FOR field : expression.fieldsInitializedOnContructor»
 							«field.compile(new StorageData => [
 								container = constructor
 								absolute = singleton
@@ -598,7 +582,7 @@ class Expressions {
 							LDA #«expression.type.asmName»
 							STA («receiver»)
 							
-						«FOR field : expression.type.allFieldsTopDown.filter[nonConstant || typeOf.singleton]»
+						«FOR field : expression.fieldsInitializedOnContructor»
 							«field.compile(new StorageData => [
 								container = constructor
 								indirect = receiver
@@ -610,110 +594,267 @@ class Expressions {
 				«ELSEIF expression.dimension.isNotEmpty»
 					
 				«ELSEIF expression.type.isPrimitive»
-					«noop»
-						LDA #$00
-						«IF data.absolute !== null && data.index !== null»
-							LDX #«data.index»
-							STA «data.absolute», X
-							«IF expression.type.sizeOf > 1»
-								INX
-								STA «data.absolute», X
-							«ENDIF»
-						«ELSEIF data.absolute !== null»
-							STA «data.absolute»
-							«IF expression.type.sizeOf > 1»
-								STA «data.absolute»+1
-							«ENDIF»
-						«ELSEIF data.indirect !== null && data.index !== null»
+					«(NoopFactory::eINSTANCE.createByteLiteral => [value = 0]).compile(data)»
+				«ELSEIF expression.type.isSingleton»
+					«val constructor = expression.asmConstructorName»
+					«val singleton = expression.type.asmSingletonName»
+						JSR «constructor»
+						«IF data.indirect !== null && data.index !== null»
 							LDY #«data.index»
+							LDA #<«singleton»
 							STA («data.indirect»), Y
-							«IF expression.type.sizeOf == 2»
-								INY
-								STA («data.indirect»), Y
-							«ENDIF»
+							INY
+							LDA #>«singleton»
+							STA («data.indirect»), Y
 						«ELSEIF data.indirect !== null»
+							LDA #<«singleton»
 							STA («data.indirect»)
-							«IF expression.type.sizeOf == 2»
-								LDY #$01
-								STA («data.indirect»), Y
-							«ENDIF»
-						«ENDIF»	
-				«ELSEIF expression.type.isNonNESHeader»
-					«noop»
-						«IF expression.type.isSingleton»
-							JSR «expression.asmConstructorName»
-							«IF data.indirect !== null && data.index !== null»
-								LDY #«data.index»
-								LDA #<«expression.type.asmSingletonName»
-								STA («data.indirect»), Y
-								INY
-								LDA #>«expression.type.asmSingletonName»
-								STA («data.indirect»), Y
-							«ELSEIF data.indirect !== null»
-								LDA #<«expression.type.asmSingletonName»
-								STA («data.indirect»)
-								LDY #$01
-								LDA #>«expression.type.asmSingletonName»
-								STA («data.indirect»), Y
-							«ENDIF»
-						«ELSEIF expression.isOnMemberSelectionOrReference»
-							«val constructor = expression.asmConstructorName»
-							«val receiver = expression.asmReceiverName»
-							«val tmp = expression.asmTmpVarName(constructor)»
-							LDA #<«tmp»
-							STA «receiver»+0
-							LDA #>«tmp»
-							STA «receiver»+1
-							JSR «constructor»
-							«IF data.indirect !== null»
-								LDA «receiver»+0
-								STA «data.indirect»+0
-								LDA «receiver»+1
-								STA «data.indirect»+1
-							«ENDIF»
-						«ELSEIF data.absolute !== null && data.index !== null»
-							«val receiver = expression.asmReceiverName»
+							LDY #$01
+							LDA #>«singleton»
+							STA («data.indirect»), Y
+						«ENDIF»
+					«FOR field : expression.constructor?.fields ?: emptyList»
+						«field.value.compile(new StorageData => [
+							absolute = '''«singleton» + #«field.variable.asmOffsetName»'''
+							type = field.variable.typeOf
+							container = constructor
+						])»
+					«ENDFOR»
+				«ELSEIF expression.isOnMemberSelectionOrReference»
+					«val constructor = expression.asmConstructorName»
+					«val receiver = expression.asmReceiverName»
+					«val tmp = expression.asmTmpVarName(constructor)»
+						LDA #<(«tmp»)
+						STA «receiver» + 0
+						LDA #>(«tmp»)
+						STA «receiver» + 1
+						JSR «constructor»
+						«IF data.indirect !== null»
+							LDA «receiver» + 0
+							STA «data.indirect» + 0
+							LDA «receiver» + 1
+							STA «data.indirect» + 1
+						«ENDIF»
+					«FOR field : expression.constructor?.fields ?: emptyList»
+						«field.value.compile(new StorageData => [
+							indirect = receiver									
+							index = field.variable.asmOffsetName
+							type = field.variable.typeOf
+							container = constructor
+						])»
+					«ENDFOR»
+				«ELSE»
+					«val constructor = expression.asmConstructorName»
+					«val receiver = expression.asmReceiverName»
+						«IF data.absolute !== null && data.index !== null»
 							CLC
-							LDA #<«data.absolute»
+							LDA #<(«data.absolute»)
 							ADC #«data.index»
-							STA «receiver»+0
-							LDA #>«data.absolute»
+							STA «receiver» + 0
+							LDA #>(«data.absolute»)
 							ADC #$00
-							STA «receiver»+1
-							JSR «expression.asmConstructorName»
-							«FOR field : expression.constructor?.fields ?: emptyList»
-								«field.value.compile(new StorageData => [
-									indirect = receiver									
-									index = field.variable.asmOffsetName
-									type = field.variable.typeOf
-									container = expression.asmConstructorName
-								])»
-							«ENDFOR»
+							STA «receiver» + 1
 						«ELSEIF data.absolute !== null»
-							«val receiver = expression.asmReceiverName»
-							LDA #<«data.absolute»
-							STA «receiver»+0
-							LDA #>«data.absolute»
-							STA «receiver»+1
-							JSR «expression.asmReceiverName»
+							LDA #<(«data.absolute»)
+							STA «receiver» + 0
+							LDA #>(«data.absolute»)
+							STA «receiver» + 1
 						«ELSEIF data.indirect !== null && data.index !== null»
-							«val receiver = expression.asmReceiverName»
 							LDY #«data.index»
 							LDA («data.indirect»), Y
-							STA «receiver»+0
+							STA «receiver» + 0
 							INY
 							LDA («data.indirect»), Y
-							STA «receiver»+1
-							JSR «expression.asmReceiverName»
+							STA «receiver» + 1
 						«ELSEIF data.indirect !== null»
-							«val receiver = expression.asmReceiverName»
-							LDA «data.indirect»+0
-							STA «receiver»+0
-							LDA «data.indirect»+1
-							STA «receiver»+1
-							JSR «expression.asmReceiverName»
+							LDA «data.indirect» + 0
+							STA «receiver» + 0
+							LDA «data.indirect» + 1
+							STA «receiver» + 1
 						«ENDIF»
+						JSR «constructor»
+					«FOR field : expression.constructor?.fields ?: emptyList»
+						«field.value.compile(new StorageData => [
+							indirect = receiver									
+							index = field.variable.asmOffsetName
+							type = field.variable.typeOf
+							container = constructor
+						])»
+					«ENDFOR»
 				«ENDIF»	
+			'''
+			MemberSelection: '''
+				TODO: MemberSelection 
+			'''
+			MemberRef: '''
+				«val member = expression.member»
+				«IF member instanceof Variable»
+					«IF member.isConstant && member.typeOf.isPrimitive»
+						«val constant = member.asmConstantName»
+							«IF data.absolute !== null»
+								«IF data.isIndexed»
+									LDX #«data.index»
+								«ENDIF»
+								«FOR i : 0 ..< member.sizeOf»
+									LDA #«IF i == 0»<«ELSE»>«ENDIF»«constant»
+									STA «data.absolute» + «i»«IF data.isIndexed», X«ENDIF»
+								«ENDFOR»
+							«ELSEIF data.indirect !== null»
+								«IF data.isIndexed»
+									LDY #«data.index»
+								«ENDIF»
+								«FOR i : 0..< member.sizeOf»
+									«IF i > 0 && data.isIndexed»
+										INY
+									«ELSEIF i > 0»
+										LDY #«i.toHex»
+									«ENDIF»
+									LDA #«IF i == 0»<«ELSE»>«ENDIF»«constant»
+									STA («data.indirect»)«IF data.isIndexed || i > 0», Y«ENDIF»
+								«ENDFOR»
+							«ENDIF»
+					«ELSEIF member.isField && member.containingClass.isSingleton»
+						«val sourceAbsolute = '''«member.containingClass.asmSingletonName» + #«member.asmOffsetName»'''»
+						«val targetAbsolute = data.absolute»
+						«val targetIndirect = data.indirect»
+							«IF targetAbsolute !== null»
+								«IF data.isIndexed»
+									LDX #«data.index»
+								«ENDIF»
+								«FOR i : 0..< member.sizeOf»
+									LDA «sourceAbsolute» + «i»
+									STA «targetAbsolute» + «i»«IF data.isIndexed», X«ENDIF»
+								«ENDFOR»
+							«ELSEIF targetIndirect !== null && data.isCopy»
+								«IF data.isIndexed»
+									LDY #«data.index»
+								«ELSE»
+									LDY #$00
+								«ENDIF»
+								«FOR i : 0..< member.sizeOf»
+									«IF i > 0»
+										INY
+									«ENDIF»
+									LDA «sourceAbsolute» + «i»
+									STA («targetIndirect»), Y
+								«ENDFOR»
+							«ELSEIF targetIndirect !== null»
+								LDA #<(«sourceAbsolute»)
+								STA «targetIndirect» + 0
+								LDA #>(«sourceAbsolute»)
+								STA «targetIndirect» + 1
+							«ENDIF»
+					«ELSEIF member.isField»
+						«val sourceIndirect = '''«data.container».receiver'''»
+						«val targetAbsolute = data.absolute»
+						«val targetIndirect = data.indirect»
+							«IF targetAbsolute !== null»
+								«IF data.isIndexed»
+									LDX #«data.index»
+								«ENDIF»
+								«FOR i : 0..< member.sizeOf»
+									«IF i == 0»
+										LDY #«member.asmOffsetName»
+									«ELSE»
+										INY
+									«ENDIF»
+									LDA («sourceIndirect»), Y
+									STA «targetAbsolute» + «i»«IF data.isIndexed», X«ENDIF»
+								«ENDFOR»
+							«ELSEIF targetIndirect !== null && data.isCopy»
+								LDX #«member.asmOffsetName»
+								«IF data.isIndexed»
+									LDY #«data.index»
+								«ELSE»
+									LDY #$00
+								«ENDIF»
+								«FOR i : 0..< member.sizeOf»
+									«IF i > 0»
+										INX
+										INY
+									«ENDIF»
+									LDA («sourceIndirect», X)
+									STA («targetIndirect»), Y
+								«ENDFOR»
+							«ELSEIF data.indirect !== null»
+								LDA «sourceIndirect» + 0
+								STA «targetIndirect» + 0
+								LDA «sourceIndirect» + 1
+								STA «targetIndirect» + 1
+							«ENDIF»
+					«ELSEIF member.isParameter && (member.typeOf.isNonPrimitive || member.dimensionOf.isNotEmpty)»
+						«val sourceIndirect = member.asmName»
+						«val targetAbsolute = data.absolute»
+						«val targetIndirect = data.indirect»
+							«IF targetAbsolute !== null»
+								«IF data.isIndexed»
+									LDX #«data.index»
+								«ENDIF»
+								«FOR i : 0..< member.sizeOf»
+									«IF i == 0»
+										LDY #«member.asmOffsetName»
+									«ELSE»
+										INY
+									«ENDIF»
+									LDA («sourceIndirect»), Y
+									STA «targetAbsolute» + «i»«IF data.isIndexed», X«ENDIF»
+								«ENDFOR»
+							«ELSEIF targetIndirect !== null && data.isCopy»
+								LDX #«member.asmOffsetName»
+								«IF data.isIndexed»
+									LDY #«data.index»
+								«ELSE»
+									LDY #$00
+								«ENDIF»
+								«FOR i : 0..< member.sizeOf»
+									«IF i > 0»
+										INX
+										INY
+									«ENDIF»
+									LDA («sourceIndirect», X)
+									STA («targetIndirect»), Y
+								«ENDFOR»
+							«ELSEIF data.indirect !== null»
+								LDA «sourceIndirect» + 0
+								STA «targetIndirect» + 0
+								LDA «sourceIndirect» + 1
+								STA «targetIndirect» + 1
+							«ENDIF»
+					«ELSE»
+						«val sourceAbsolute = member.asmName»
+						«val targetAbsolute = data.absolute»
+						«val targetIndirect = data.indirect»
+							«IF targetAbsolute !== null»
+								«IF data.isIndexed»
+									LDX #«data.index»
+								«ENDIF»
+								«FOR i : 0..< member.sizeOf»
+									LDA «sourceAbsolute» + «i»
+									STA «targetAbsolute» + «i»«IF data.isIndexed», X«ENDIF»
+								«ENDFOR»
+							«ELSEIF targetIndirect !== null && data.isCopy»
+								«IF data.isIndexed»
+									LDY #«data.index»
+								«ELSE»
+									LDY #$00
+								«ENDIF»
+								«FOR i : 0..< member.sizeOf»
+									«IF i > 0»
+										INY
+									«ENDIF»
+									LDA «sourceAbsolute» + «i»
+									STA («targetIndirect»), Y
+								«ENDFOR»
+							«ELSEIF targetIndirect !== null»
+								LDA #<(«sourceAbsolute»)
+								STA «targetIndirect» + 0
+								LDA #>(«sourceAbsolute»)
+								STA «targetIndirect» + 1
+							«ENDIF»
+					«ENDIF»
+				«ELSEIF member instanceof Method»
+					
+				«ENDIF»
 			'''
 			default:
 				''

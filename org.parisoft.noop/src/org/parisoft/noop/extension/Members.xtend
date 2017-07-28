@@ -18,6 +18,7 @@ import static extension java.lang.Integer.*
 import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.generator.StackData
 import org.parisoft.noop.generator.StorageData
+import org.parisoft.noop.noop.NoopClass
 
 public class Members {
 
@@ -43,6 +44,10 @@ public class Members {
 
 	def isParameter(Variable variable) {
 		variable.eContainer instanceof Method
+	}
+	
+	def isField(Variable variable) {
+		variable.eContainer instanceof NoopClass
 	}
 
 	def isNonParameter(Variable variable) {

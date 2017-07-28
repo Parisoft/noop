@@ -195,7 +195,7 @@ class Classes {
 			case TypeSystem::LIB_UINT:
 				2
 			default: {
-				SIZE_OF_CLASS_TYPE + (c.allFieldsBottomUp.filter[nonConstant].map[sizeOf].reduce [ s1, s2 |
+				SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonConstant].map[sizeOf].reduce [ s1, s2 |
 					s1 + s2
 				] ?: 0)
 			}
