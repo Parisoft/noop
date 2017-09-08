@@ -195,7 +195,7 @@ class Classes {
 			case TypeSystem::LIB_UINT:
 				2
 			default: {
-				SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonConstant].map[sizeOf].reduce [ s1, s2 |
+				SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonStatic].map[sizeOf].reduce [ s1, s2 |
 					s1 + s2
 				] ?: 0)
 			}
@@ -211,7 +211,7 @@ class Classes {
 
 	def void alloc(NoopClass noopClass, StackData data) {
 		if (data.classes.add(noopClass)) {
-			noopClass.allFieldsTopDown.filter[constant].forEach[alloc(data)]
+			noopClass.allFieldsTopDown.filter[static].forEach[alloc(data)]
 
 			if (noopClass.isSingleton) {
 				data.singletons.add(noopClass)

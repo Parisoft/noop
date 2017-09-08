@@ -104,7 +104,7 @@ class Expressions {
 
 	def fieldsInitializedOnContructor(NewInstance instance) {
 		instance.type.allFieldsTopDown.filter [
-			nonConstant || (typeOf.singleton && typeOf.nonNESHeader)
+			nonStatic || (typeOf.singleton && typeOf.nonNESHeader)
 		]
 	}
 
@@ -437,7 +437,7 @@ class Expressions {
 						chunks += data.pointers.computeIfAbsent(expression.asmReceiverName, [newArrayList(data.chunkForPointer(it))])
 					}
 
-					chunks += expression.type.allFieldsTopDown.filter[nonConstant || typeOf.singleton].map[value.alloc(data)].flatten
+					chunks += expression.type.allFieldsTopDown.filter[nonStatic || typeOf.singleton].map[value.alloc(data)].flatten
 					chunks.disoverlap(constructorName)
 
 					data.restoreTo(snapshot)
@@ -467,7 +467,7 @@ class Expressions {
 					chunks += expression.args.map[alloc(data)].flatten
 
 					data.restoreTo(snapshot)
-				} else if ((expression.member as Variable).isConstant && expression.typeOf.isPrimitive && expression.dimensionOf.isEmpty) {
+				} else if ((expression.member as Variable).isConstant) {
 					data.constants += expression.member as Variable
 				}
 
@@ -483,7 +483,7 @@ class Expressions {
 					chunks += expression.args.map[alloc(data)].flatten
 
 					data.restoreTo(snapshot)
-				} else if ((expression.member as Variable).isConstant && expression.typeOf.isPrimitive && expression.dimensionOf.isEmpty) {
+				} else if ((expression.member as Variable).isStatic && expression.typeOf.isPrimitive && expression.dimensionOf.isEmpty) {
 					data.constants += expression.member as Variable
 				}
 
@@ -689,7 +689,7 @@ class Expressions {
 			MemberRef: '''
 				«val member = expression.member»
 				«IF member instanceof Variable»
-					«IF member.isConstant && member.typeOf.isPrimitive»
+					«IF member.isStatic && member.typeOf.isPrimitive»
 						«val constant = member.asmConstantName»
 							«IF data.absolute !== null»
 								«IF data.isIndexed»

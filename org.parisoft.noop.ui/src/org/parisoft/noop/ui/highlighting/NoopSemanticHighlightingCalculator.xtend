@@ -41,7 +41,7 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 						if (parent !== null && parent.grammarElement instanceof RuleCall) {
 							rule = (parent.grammarElement as RuleCall).rule
 
-							if (rule.name == 'Variable' && node.text.startsWith(Members::CONSTANT_SUFFIX)) {
+							if (rule.name == 'Variable' && node.text.startsWith(Members::STATIC_PREFIX)) {
 								acceptor.addPosition(node.offset, node.length, NoopHighlightingConfiguration.STRING_ID)
 							}
 						}
@@ -52,14 +52,14 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 						val ref = node.semanticElement as MemberRef
 						val name = ref.member?.name ?: ""
 
-						if (name.startsWith(Members::CONSTANT_SUFFIX)) {
+						if (name.startsWith(Members::STATIC_PREFIX)) {
 							acceptor.addPosition(node.offset, node.length, NoopHighlightingConfiguration.STRING_ID)
 						}
 					} else if (node.semanticElement instanceof MemberSelection) {
 						val selection = node.semanticElement as MemberSelection
 						val name = selection.member?.name ?: ""
 
-						if (!selection.isMethodInvocation && name.startsWith(Members::CONSTANT_SUFFIX)) {
+						if (!selection.isMethodInvocation && name.startsWith(Members::STATIC_PREFIX)) {
 							acceptor.addPosition(node.endOffset - name.length, name.length, NoopHighlightingConfiguration.STRING_ID)
 						}
 					}

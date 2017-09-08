@@ -84,7 +84,7 @@ class NoopGenerator extends AbstractGenerator {
 		«FOR noopClass : data.classes.filter[nonPrimitive]»
 			«noopClass.asmName» = «classCount++»
 			«val fieldOffset = new AtomicInteger(1)»
-			«FOR field : noopClass.allFieldsTopDown.filter[nonConstant]»
+			«FOR field : noopClass.allFieldsTopDown.filter[nonStatic]»
 				«field.asmOffsetName» = «fieldOffset.getAndAdd(field.sizeOf)»
 			«ENDFOR»
 			

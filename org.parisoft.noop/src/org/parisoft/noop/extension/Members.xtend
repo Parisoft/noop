@@ -22,9 +22,11 @@ import org.parisoft.noop.noop.NoopClass
 
 public class Members {
 
-	public static val CONSTANT_SUFFIX = '#'
+	public static val STATIC_PREFIX = '#'
 	public static val TEMP_VAR_NAME1 = 'billy'
 	public static val TEMP_VAR_NAME2 = 'jimmy'
+
+	static val UNDERLINE_CHAR = '_'.charAt(0)
 
 	@Inject extension Classes
 	@Inject extension Expressions
@@ -45,7 +47,7 @@ public class Members {
 	def isParameter(Variable variable) {
 		variable.eContainer instanceof Method
 	}
-	
+
 	def isField(Variable variable) {
 		variable.eContainer instanceof NoopClass
 	}
@@ -55,11 +57,19 @@ public class Members {
 	}
 
 	def isConstant(Variable variable) {
-		variable.name.startsWith(CONSTANT_SUFFIX)
+		variable.isStatic && variable.name.chars.skip(1).allMatch[Character::isUpperCase(it as char) || (it as char) === UNDERLINE_CHAR]
 	}
 
 	def isNonConstant(Variable variable) {
 		!variable.isConstant
+	}
+
+	def isStatic(Variable variable) {
+		variable.name.startsWith(STATIC_PREFIX)
+	}
+
+	def isNonStatic(Variable variable) {
+		!variable.isStatic
 	}
 
 	def isROM(Variable variable) {
@@ -158,7 +168,7 @@ public class Members {
 	def String asmName(Variable variable, String containerName) {
 		if (variable.typeOf.isSingleton) {
 			variable.typeOf.asmSingletonName
-		} else if (variable.isConstant) {
+		} else if (variable.isStatic) {
 			variable.fullyQualifiedName.toString
 		} else if (variable.getContainerOfType(Method) !== null) {
 			'''«containerName»«variable.fullyQualifiedName.toString.substring(containerName.indexOf('@'))»@«variable.hashCode.toHexString»'''
@@ -166,11 +176,11 @@ public class Members {
 			'''«containerName».«variable.name»@«variable.hashCode.toHexString»'''
 		}
 	}
-	
+
 	def asmConstantName(Variable variable) {
 		variable.fullyQualifiedName.toString
 	}
-	
+
 	def asmOffsetName(Variable variable) {
 		variable.fullyQualifiedName.toString
 	}

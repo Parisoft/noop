@@ -1,28 +1,28 @@
 /* Various flags controlling PPU operation */
 PPUControl {
 	
-	#nameTableDefault : %00000000
-	#nameTableTopRight : %00000001
-	#nameTableBottomLeft : %00000010
-	#nameTableBottomRight : %00000011
+	#NAME_TABLE_DEFAULT : %00000000
+	#NAME_TABLE_TOP_RIGHT : %00000001
+	#NAME_TABLE_BOTTOM_LEFT : %00000010
+	#NAME_TABLE_BOTTOM_RIGHT : %00000011
 	
-	#vramIncrementBy1Horizontal : %00000000
-	#vramIncrementBy32Vertical : %00000100
+	#VRAM_INCREMENT_BY_1_HORIZONTAL : %00000000
+	#VRAM_INCREMENT_BY_32_VERTICAL : %00000100
 	
-	#sprite8x8PatternTable0 : %00000000
-	#sprite8x8PatternTable1 : %00001000
+	#SPRITE_8X8_PATTERN_TABLE0 : %00000000
+	#SPRITE_8X8_PATTERN_TABLE1 : %00001000
 	
-	#backgroundPatternTable0 : %00000000
-	#backgroundPatternTable1 : %00010000
+	#BACKGROUND_PATTERN_TABLE0 : %00000000
+	#BACKGROUND_PATTERN_TABLE1 : %00010000
 	
-	#spriteSize8x8 : %00000000
-	#spriteSize8x16 : %00100000
+	#SPRITE_SIZE_8X8 : %00000000
+	#SPRITE_SIZE_8X16 : %00100000
 	
-	#modeDefault : %00000000
-	#modeOutputColorOnEXTPins : %01000000
+	#MODE_DEFAULT : %00000000
+	#MODE_OUTPUT_COLOR_ON_EXT_PINS : %01000000
 	
-	#nmiOff : %00000000
-	#nmiOn : %10000000
+	#NMI_OFF : %00000000
+	#NMI_ON : %10000000
 	
 	/* Base nametable address <br>
 	   (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00) <br>
@@ -39,33 +39,33 @@ PPUControl {
 		   		<th>$2800</th><th>$2C00</th>
 		   </tr>
 	   </table> */
-	nameTableAddress : #nameTableDefault
+	nameTableAddress : #NAME_TABLE_DEFAULT
 	
 	/* VRAM address increment per CPU read/write of PPUDATA <br>
 	  (0: add 1, going across; 1: add 32, going down) */
-	vramIncrement : #vramIncrementBy1Horizontal
+	vramIncrement : #VRAM_INCREMENT_BY_1_HORIZONTAL
 	
 	/* Sprite pattern table address for 8x8 sprites <br>
        (0: $0000; 1: $1000; ignored in 8x16 mode) */
-	sprite8x8PatternTable : #sprite8x8PatternTable0
+	sprite8x8PatternTable : #SPRITE_8X8_PATTERN_TABLE0
 	
 	/* Background pattern table address <br> 
 	   (0: $0000; 1: $1000) */
-	backgroundPatternTable : #backgroundPatternTable1
+	backgroundPatternTable : #BACKGROUND_PATTERN_TABLE1
 	
 	/* Sprite size (0: 8x8; 1: 8x16) */
-	spriteSize : #spriteSize8x8
+	spriteSize : #SPRITE_SIZE_8X8
 	
 	/* PPU master/slave select <br>
        (0: read backdrop from EXT pins; 1: output color on EXT pins)*/
-	mode : #modeDefault
+	mode : #MODE_DEFAULT
 	
 	/* Generate an NMI at the start of the <br>
        vertical blanking interval (false: off; true: on)<br> 
        <br>
        <b>Note:</b> When bit 6 of PPUCTRL is clear (the usual case), the PPU gets the palette index for the background color from the EXT pins. The stock NES grounds these pins, making palette index 0 the background color as expected. A secondary picture generator connected to the EXT pins would be able to replace the background with a different image using colors from the background palette, which could be used e.g. to implement parallax scrolling.
 Setting bit 6 causes the PPU to output the lower four bits of the palette memory index on the EXT pins for each pixel (in addition to normal image drawing) - since only four bits are output, background and sprite pixels can't normally be distinguished this way. As the EXT pins are grounded on an unmodified NES, setting bit 6 is discouraged as it could potentially damage the chip whenever it outputs a non-zero pixel value (due to it effectively shorting Vcc and GND together). Looking at the relevant circuitry in Visual 2C02, it appears that the background palette hack would not be functional for output from the EXT pins; they would always output index 0 for the background color. */
-	enableNMI : #nmiOn
+	enableNMI : #NMI_ON
 	
 	/* 7  bit  0                                                                <br>
        ---- ----                                                                <br>

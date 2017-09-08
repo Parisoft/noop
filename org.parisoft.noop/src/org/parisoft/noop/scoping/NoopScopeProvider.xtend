@@ -136,8 +136,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			IScope.NULLSCOPE
 		} else if (receiver instanceof NewInstance && (receiver as NewInstance).constructor === null) {
 			Scopes.scopeFor(
-				type.declaredFields.filter[isConstant],
-				Scopes.scopeFor(type.allFieldsBottomUp.filter[isConstant])
+				type.declaredFields.filter[static],
+				Scopes.scopeFor(type.allFieldsBottomUp.filter[static])
 			)
 		} else if (selection.hasArgs) {
 			Scopes.scopeFor(
@@ -154,8 +154,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 	protected def scopeForNewInstance(NewInstance newInstance) {
 		val container = newInstance.type
-		val thisFields = container.members.filter(Variable).filter[isNonConstant]
-		val superFields = container.allFieldsBottomUp.filter[isNonConstant]
+		val thisFields = container.members.filter(Variable).filter[nonStatic]
+		val superFields = container.allFieldsBottomUp.filter[nonStatic]
 
 		return Scopes.scopeFor(thisFields, Scopes.scopeFor(superFields))
 	}

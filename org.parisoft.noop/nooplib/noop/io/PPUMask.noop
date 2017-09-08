@@ -1,48 +1,48 @@
 /* Controls the rendering of sprites and backgrounds, as well as colour effects. */
 PPUMask {
 	
-	#greyscaleOff : %00000000
-	#greyscaleOn : %00000001
+	#GREYSCALE_OFF : %00000000
+	#GREYSCALE_ON : %00000001
 	
-	#showBackgroundPixelsOnLeftSideOff : %00000000
-	#showBackgroundPixelsOnLeftSideOn : %00000010 
+	#SHOW_BACKGROUND_PIXELS_ON_LEFT_SIDE_OFF : %00000000
+	#SHOW_BACKGROUND_PIXELS_ON_LEFT_SIDE_ON : %00000010 
 	
-	#showSpritesPixelsOnLeftSideOff : %00000000
-	#showSpritesPixelsOnLeftSideOn : %00000100
+	#SHOW_SPRITES_PIXELS_ON_LEFT_SIDE_OFF : %00000000
+	#SHOW_SPRITES_PIXELS_ON_LEFT_SIDE_ON : %00000100
 	
-	#showBackgroundOff : %00000000
-	#showBackgroundOn : %00001000
+	#SHOW_BACKGROUND_OFF : %00000000
+	#SHOW_BACKGROUND_ON : %00001000
 	
-	#showSpritesOff : %00000000
-	#showSpritesOn : %00010000
+	#SHOW_SPRITES_OFF : %00000000
+	#SHOW_SPRITES_ON : %00010000
 	
-	#emphasizeRedOff : %00000000
-	#emphasizeRedOn : %00100000
+	#EMPHASIZE_RED_OFF : %00000000
+	#EMPHASIZE_RED_ON : %00100000
 	
-	#emphasizeGreenOff : %00000000
-	#emphasizeGreenOn : %01000000
+	#EMPHASIZE_GREEN_OFF : %00000000
+	#EMPHASIZE_GREEN_ON : %01000000
 	
-	#emphasizeBlueOff : %00000000
-	#emphasizeBlueOn : %10000000
+	#EMPHASIZE_BLUE_OFF : %00000000
+	#EMPHASIZE_BLUE_ON : %10000000
 	
 	/* Greyscale (false: normal color, true: produce a greyscale display) */
-	greyscale : #greyscaleOff
+	greyscale : #GREYSCALE_OFF
 	
 	/* true: Show background in leftmost 8 pixels of screen, false: Hide */
-	showBackgroundPixelsOnLeftSide : #showBackgroundPixelsOnLeftSideOn
+	showBackgroundPixelsOnLeftSide : #SHOW_BACKGROUND_PIXELS_ON_LEFT_SIDE_ON
 	
 	/* true: Show sprites in leftmost 8 pixels of screen, false: Hide */
-	showSpritesPixelsOnLeftSide : #showSpritesPixelsOnLeftSideOn
+	showSpritesPixelsOnLeftSide : #SHOW_SPRITES_PIXELS_ON_LEFT_SIDE_ON
 	
-	showBackground : #showBackgroundOn
+	showBackground : #SHOW_BACKGROUND_ON
 	
-	showSprites : #showSpritesOn
+	showSprites : #SHOW_SPRITES_ON
 	
-	emphasizeRed : #emphasizeRedOff
+	emphasizeRed : #EMPHASIZE_RED_OFF
 	
-	emphasizeGreen : #emphasizeGreenOff
+	emphasizeGreen : #EMPHASIZE_GREEN_OFF
 	
-	emphasizeBlue : #emphasizeBlueOff
+	emphasizeBlue : #EMPHASIZE_BLUE_OFF
 	
 	/* 7  bit  0                                                              <br>
        ---- ----                                                              <br>

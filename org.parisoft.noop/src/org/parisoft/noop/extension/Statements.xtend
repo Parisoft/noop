@@ -72,7 +72,7 @@ class Statements {
 						} else if (statement.storage.type == StorageType.CHRROM) {
 							data.chrRoms += statement
 						}
-					} else if (statement.isConstant) {
+					} else if (statement.isStatic) {
 						val type = statement.typeOf
 
 						if (type.isNESHeader) {
