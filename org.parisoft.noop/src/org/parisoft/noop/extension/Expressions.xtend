@@ -683,14 +683,14 @@ class Expressions {
 					«ENDFOR»
 				«ENDIF»	
 			'''
-			MemberSelection: '''
+			MemberSelection: if (true) '''«expression.receiver.compile(data)».sel(«expression.member.name»)''' else '''
 				TODO: MemberSelection 
 			'''
-			MemberRef: '''
+			MemberRef: if (true) '''ref(«expression.member.name»)''' else '''
 				«val member = expression.member»
 				«IF member instanceof Variable»
 					«IF member.isStatic && member.typeOf.isPrimitive»
-						«val constant = member.asmConstantName»
+						«val constant = member.asmStaticName»
 							«IF data.absolute !== null»
 								«IF data.isIndexed»
 									LDX #«data.index»

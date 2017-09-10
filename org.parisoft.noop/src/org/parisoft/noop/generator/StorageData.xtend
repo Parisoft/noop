@@ -14,8 +14,6 @@ class StorageData {
 	@Accessors var NoopClass type
 	@Accessors var boolean copy = true
 
-	var labelCopy = ''
-
 	override toString() '''
 		StorageData{
 			accumulator=«accumulator»
@@ -33,6 +31,19 @@ class StorageData {
 		index !== null
 	}
 
-	def nextLabelCopy() '''«labelCopy += '-'»copy'''
+	override def StorageData clone() {
+		val src = this
+
+		new StorageData => [
+			accumulator = src.accumulator
+			absolute = src.absolute
+			relative = src.relative
+			indirect = src.indirect
+			index = src.index
+			container = src.container
+			type = src.type
+			copy = src.copy
+		]
+	}
 
 }

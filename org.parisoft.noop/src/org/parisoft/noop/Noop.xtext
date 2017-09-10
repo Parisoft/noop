@@ -35,11 +35,7 @@ Statement:
 	AsmStatement) LF+;
 
 ReturnStatement:
-	ReturnValueStatement |
-	{ReturnStatement} name='return';
-
-ReturnValueStatement returns ReturnStatement:
-	name='return' value=Expression;
+	name='return' (value=Expression)?;
 
 IfStatement:
 	name='if' '(' condition=Expression ')' body=Block else=ElseStatement?;
@@ -59,18 +55,6 @@ ForeverStatement:
 
 AsmStatement:
 	codes+=ASM_TO_ASM | (codes+=ASM_TO_VAR vars+=[Variable] (codes+=VAR_TO_VAR vars+=[Variable])* codes+=VAR_TO_ASM);
-
-terminal ASM_TO_VAR:
-	'!' !('!' | '?')* '?';
-
-terminal VAR_TO_VAR:
-	'?' !('!' | '?')* '?';
-
-terminal VAR_TO_ASM:
-	'?' !('!' | '?')* '!';
-
-terminal ASM_TO_ASM:
-	'!' !('!' | '?')* '!';
 
 Expression:
 	AssignmentExpression;
@@ -161,6 +145,18 @@ enum AssignmentType:
 
 enum StorageType:
 	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM';
+
+terminal ASM_TO_VAR:
+	'!' !('!' | '?')* '?';
+
+terminal VAR_TO_VAR:
+	'?' !('!' | '?')* '?';
+
+terminal VAR_TO_ASM:
+	'?' !('!' | '?')* '!';
+
+terminal ASM_TO_ASM:
+	'!' !('!' | '?')* '!';
 
 Byte returns ecore::EIntegerObject:
 	HEX | BIN | CHA | INT;

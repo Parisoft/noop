@@ -177,6 +177,10 @@ public class Members {
 		}
 	}
 
+	def asmStaticName(Variable variable) {
+		variable.fullyQualifiedName.toString
+	}
+
 	def asmConstantName(Variable variable) {
 		variable.fullyQualifiedName.toString
 	}

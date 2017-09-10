@@ -155,7 +155,7 @@ class Statements {
 			Variable: '''
 				«IF statement.isROM»
 					«statement.value.compile(data => [
-						relative = statement.asmConstantName
+						relative = statement.asmStaticName
 						type = statement.typeOf
 					])»
 				«ELSEIF data.absolute !== null»
