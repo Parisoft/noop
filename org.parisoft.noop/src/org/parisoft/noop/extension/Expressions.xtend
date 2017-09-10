@@ -683,10 +683,50 @@ class Expressions {
 					«ENDFOR»
 				«ENDIF»	
 			'''
-			MemberSelection: if (true) '''«expression.receiver.compile(data)».sel(«expression.member.name»)''' else '''
-				TODO: MemberSelection 
+			MemberSelection: '''
+				TODO: expression.indexes
+				«val member = expression.member»
+				«val receiver = expression.receiver»
+				«IF member instanceof Variable»
+					«IF receiver.typeOf.isSingleton»
+						TODO: data.indirect|absolute = singleton.member
+					«ELSE»
+						TODO: data.indirect|absolute = receiver.member
+					«ENDIF»
+				«ELSEIF member instanceof Method»
+					«val method = member as Method»
+					«IF receiver.typeOf.isNonSingleton»
+						«receiver.compile(new StorageData => [
+							indirect = method.asmReceiverName
+							type = receiver.typeOf
+							copy = false
+						])»
+					«ENDIF»
+					«FOR i : 0..< expression.args.size»
+						«val param = method.params.get(i)»
+						«val arg = expression.args.get(i)»
+						«arg.compile(new StorageData => [
+							container = method.asmName
+							type = param.type
+							
+							if (param.type.isPrimitive && param.type.dimensionOf.isEmpty) {
+								absolute = param.asmName
+								copy = true
+							} else {
+								indirect = param.asmName
+								copy = false
+							}
+						])»
+					«ENDFOR»
+					«noop»
+						JSR «method.asmName»
+					«IF member.typeOf.isNonVoid»
+						TODO: data.indirect|absolute = member.return
+					«ENDIF»
+				«ENDIF»				
 			'''
-			MemberRef: if (true) '''ref(«expression.member.name»)''' else '''
+			MemberRef: '''
+				TODO: expression.indexes
 				«val member = expression.member»
 				«IF member instanceof Variable»
 					«IF member.isStatic && member.typeOf.isPrimitive»
@@ -853,7 +893,36 @@ class Expressions {
 							«ENDIF»
 					«ENDIF»
 				«ELSEIF member instanceof Method»
-					
+					«val method = member as Method»
+					«IF method.containingClass.isNonSingleton»
+						«val outerReceiver = '''«data.container».receiver'''»
+						«val innerReceiver = method.asmReceiverName»
+							LDA «outerReceiver» + 0
+							STA «innerReceiver» + 0
+							LDA «outerReceiver» + 1
+							STA «innerReceiver» + 1
+					«ENDIF»
+					«FOR i : 0..< expression.args.size»
+						«val param = method.params.get(i)»
+						«val arg = expression.args.get(i)»
+						«arg.compile(new StorageData => [
+							container = method.asmName
+							type = param.type
+							
+							if (param.type.isPrimitive && param.type.dimensionOf.isEmpty) {
+								absolute = param.asmName
+								copy = true
+							} else {
+								indirect = param.asmName
+								copy = false
+							}
+						])»
+					«ENDFOR»
+					«noop»
+						JSR «method.asmName»
+					«IF member.typeOf.isNonVoid»
+						TODO: data.indirect|absolute = member.return
+					«ENDIF»					
 				«ENDIF»
 			'''
 			default:

@@ -107,6 +107,18 @@ class Classes {
 			false
 		}
 	}
+	
+	def isVoid(NoopClass c) {
+		try {
+			c.fullyQualifiedName.toString == TypeSystem::LIB_VOID
+		} catch (Exception exception) {
+			false
+		}
+	}
+	
+	def isNonVoid(NoopClass c) {
+		!c.isVoid
+	}
 
 	def isPrimitive(NoopClass c) {
 		try {
