@@ -51,6 +51,10 @@ public class Members {
 	def isField(Variable variable) {
 		variable.eContainer instanceof NoopClass
 	}
+	
+	def isNonField(Variable variable) {
+		!variable.isField
+	}
 
 	def isNonParameter(Variable variable) {
 		!variable.isParameter

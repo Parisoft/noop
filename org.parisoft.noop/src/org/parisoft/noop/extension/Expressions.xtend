@@ -753,8 +753,12 @@ class Expressions {
 				TODO: expression.indexes
 				«val member = expression.member»
 				«IF member instanceof Variable»
-					«IF member.isConstant»
-						«val constant = member.asmConstantName»
+					«val varAsIndirect = if (member.isField && member.containingClass.isNonSingleton) {
+						'''«data.container».receiver'''
+					} else if (member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)) {
+						member.asmName
+					}»
+					«IF varAsIndirect !== null»
 						«IF data.absolute !== null»
 							«IF data.isIndexed»
 								«data.index.compile(new StorageData => [
@@ -763,98 +767,19 @@ class Expressions {
 									accumulator = 'X'
 								])»
 							«ENDIF»
-							«FOR i : 0 ..< member.sizeOf»
+							«FOR i : 0..< member.sizeOf»
 								«noop»
-									LDA #«IF i == 0»<«ELSE»>«ENDIF»«constant»
+									«IF i == 0»
+										LDY #«IF member.isField»«member.asmOffsetName»«ELSE»$00«ENDIF»
+									«ELSE»
+										INY
+									«ENDIF»
+									LDA («varAsIndirect»), Y
 									STA «data.absolute» + «i»«IF data.isIndexed», X«ENDIF»
 							«ENDFOR»
-						«ELSEIF data.indirect !== null»
-							«IF data.isIndexed»
-								«data.index.compile(new StorageData => [
-									container = data.container
-									type = data.index.typeOf
-									accumulator = 'Y'
-								])»
-							«ENDIF»
-							«FOR i : 0..< member.sizeOf»
-								«noop»
-									«IF i > 0 && data.isIndexed»
-										INY
-									«ELSEIF i > 0»
-										LDY #«i.toHex»
-									«ENDIF»
-									LDA #«IF i == 0»<«ELSE»>«ENDIF»«constant»
-									STA («data.indirect»)«IF data.isIndexed || i > 0», Y«ENDIF»
-							«ENDFOR»
-						«ENDIF»
-					«ELSEIF member.isField && member.containingClass.isSingleton»
-						«val sourceAbsolute = '''«member.containingClass.asmSingletonName» + #«member.asmOffsetName»'''»
-						«val targetAbsolute = data.absolute»
-						«val targetIndirect = data.indirect»
-						«IF targetAbsolute !== null»
-							«IF data.isIndexed»
-								«data.index.compile(new StorageData => [
-										container = data.container
-										type = data.index.typeOf
-										accumulator = 'X'
-									])»
-							«ENDIF»
-							«FOR i : 0..< member.sizeOf»
-								«noop»
-									LDA «sourceAbsolute» + «i»
-									STA «targetAbsolute» + «i»«IF data.isIndexed», X«ENDIF»
-							«ENDFOR»
-						«ELSEIF targetIndirect !== null && data.isCopy»
-							«IF data.isIndexed»
-								«data.index.compile(new StorageData => [
-									container = data.container
-									type = data.index.typeOf
-									accumulator = 'Y'
-								])»
-							«ELSE»
-								«noop»
-									LDY #$00
-							«ENDIF»
-							«FOR i : 0..< member.sizeOf»
-								«noop»
-									«IF i > 0»
-										INY
-									«ENDIF»
-									LDA «sourceAbsolute» + «i»
-									STA («targetIndirect»), Y
-							«ENDFOR»
-						«ELSEIF targetIndirect !== null»
+						«ELSEIF data.indirect !== null && data.isCopy»
 							«noop»
-								LDA #<(«sourceAbsolute»)
-								STA «targetIndirect» + 0
-								LDA #>(«sourceAbsolute»)
-								STA «targetIndirect» + 1
-						«ENDIF»
-					«ELSEIF member.isField»
-						«val sourceIndirect = '''«data.container».receiver'''»
-						«val targetAbsolute = data.absolute»
-						«val targetIndirect = data.indirect»
-						«IF targetAbsolute !== null»
-							«IF data.isIndexed»
-								«data.index.compile(new StorageData => [
-									container = data.container
-									type = data.index.typeOf
-									accumulator = 'X'
-								])»
-							«ENDIF»
-							«FOR i : 0..< member.sizeOf»
-								«noop»
-									«IF i == 0»
-										LDY #«member.asmOffsetName»
-									«ELSE»
-										INY
-									«ENDIF»
-									LDA («sourceIndirect»), Y
-									STA «targetAbsolute» + «i»«IF data.isIndexed», X«ENDIF»
-							«ENDFOR»
-						«ELSEIF targetIndirect !== null && data.isCopy»
-							«noop»
-								LDX #«member.asmOffsetName»
+								LDX #«IF member.isField»«member.asmOffsetName»«ELSE»$00«ENDIF»
 							«IF data.isIndexed»
 								«data.index.compile(new StorageData => [
 									container = data.container
@@ -871,72 +796,35 @@ class Expressions {
 										INX
 										INY
 									«ENDIF»
-									LDA («sourceIndirect», X)
-									STA («targetIndirect»), Y
+									LDA («varAsIndirect», X)
+									STA («data.indirect»), Y
 							«ENDFOR»
 						«ELSEIF data.indirect !== null»
 							«noop»
-								LDA «sourceIndirect» + 0
-								STA «targetIndirect» + 0
-								LDA «sourceIndirect» + 1
-								STA «targetIndirect» + 1
-						«ENDIF»
-					«ELSEIF member.isParameter && (member.typeOf.isNonPrimitive || member.dimensionOf.isNotEmpty)»
-						«val sourceIndirect = member.asmName»
-						«val targetAbsolute = data.absolute»
-						«val targetIndirect = data.indirect»
-						«IF targetAbsolute !== null»
-							«IF data.isIndexed»
-								«data.index.compile(new StorageData => [
-									container = data.container
-									type = data.index.typeOf
-									accumulator = 'X'
-								])»
-							«ENDIF»
-							«FOR i : 0..< member.sizeOf»
-								«noop»
-									«IF i == 0»
-										LDY #«member.asmOffsetName»
-									«ELSE»
-										INY
-									«ENDIF»
-									LDA («sourceIndirect»), Y
-									STA «targetAbsolute» + «i»«IF data.isIndexed», X«ENDIF»
-							«ENDFOR»
-						«ELSEIF targetIndirect !== null && data.isCopy»
+								LDA «varAsIndirect» + 0
+								STA «data.indirect» + 0
+								LDA «varAsIndirect» + 1
+								STA «data.indirect» + 1
+						«ELSEIF data.accumulator !== null»
+						TODO: just a preview of an accumulator
 							«noop»
-								LDX #«member.asmOffsetName»
-							«IF data.isIndexed»
-								«data.index.compile(new StorageData => [
-									container = data.container
-									type = data.index.typeOf
-									accumulator = 'Y'
-								])»
-							«ELSE»
-								«noop»
-									LDY #$00
-							«ENDIF»
-							«FOR i : 0..< member.sizeOf»
-								«noop»
-									«IF i > 0»
-										INX
-										INY
-									«ENDIF»
-									LDA («sourceIndirect», X)
-									STA («targetIndirect»), Y
-							«ENDFOR»
-						«ELSEIF data.indirect !== null»
-							«noop»
-								LDA «sourceIndirect» + 0
-								STA «targetIndirect» + 0
-								LDA «sourceIndirect» + 1
-								STA «targetIndirect» + 1
+								«IF data.accumulator == 'X' || data.accumulator == 'A'»
+									LDY #«member.asmOffsetName»
+									LDX («varAsIndirect»), Y
+								«ELSE»
+									LDX #«member.asmOffsetName»
+									LD«data.accumulator» («varAsIndirect», X)
+								«ENDIF»
 						«ENDIF»
 					«ELSE»
-						«val sourceAbsolute = member.asmName»
-						«val targetAbsolute = data.absolute»
-						«val targetIndirect = data.indirect»
-						«IF targetAbsolute !== null»
+						«val varAsAbsolute = if (member.isConstant) {
+							member.asmConstantName
+						} else if (member.isField) {
+							'''«member.containingClass.asmSingletonName» + #«member.asmOffsetName»'''
+						} else {
+							member.asmName
+						}»
+						«IF data.absolute !== null»
 							«IF data.isIndexed»
 								«data.index.compile(new StorageData => [
 									container = data.container
@@ -946,16 +834,16 @@ class Expressions {
 							«ENDIF»
 							«FOR i : 0..< member.sizeOf»
 								«noop»
-									LDA «sourceAbsolute» + «i»
-									STA «targetAbsolute» + «i»«IF data.isIndexed», X«ENDIF»
+									LDA «varAsAbsolute» + «i»
+									STA «data.absolute» + «i»«IF data.isIndexed», X«ENDIF»
 							«ENDFOR»
-						«ELSEIF targetIndirect !== null && data.isCopy»
+						«ELSEIF data.indirect !== null && data.isCopy»
 							«IF data.isIndexed»
 								«data.index.compile(new StorageData => [
-									container = data.container
-									type = data.index.typeOf
-									accumulator = 'Y'
-								])»
+								container = data.container
+								type = data.index.typeOf
+								accumulator = 'Y'
+							])»
 							«ELSE»
 								«noop»
 									LDY #$00
@@ -965,15 +853,15 @@ class Expressions {
 									«IF i > 0»
 										INY
 									«ENDIF»
-									LDA «sourceAbsolute» + «i»
-									STA («targetIndirect»), Y
+									LDA «varAsAbsolute» + «i»
+									STA («data.indirect»), Y
 							«ENDFOR»
-						«ELSEIF targetIndirect !== null»
+						«ELSEIF data.indirect !== null»
 							«noop»
-								LDA #<(«sourceAbsolute»)
-								STA «targetIndirect» + 0
-								LDA #>(«sourceAbsolute»)
-								STA «targetIndirect» + 1
+								LDA #<(«varAsAbsolute»)
+								STA «data.indirect» + 0
+								LDA #>(«varAsAbsolute»)
+								STA «data.indirect» + 1
 						«ENDIF»
 					«ENDIF»
 				«ELSEIF member instanceof Method»
