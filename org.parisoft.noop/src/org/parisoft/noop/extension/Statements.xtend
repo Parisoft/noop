@@ -20,6 +20,7 @@ import org.eclipse.xtext.naming.IQualifiedNameProvider
 import java.util.concurrent.atomic.AtomicInteger
 import org.parisoft.noop.generator.StackData
 import org.parisoft.noop.generator.StorageData
+import org.parisoft.noop.noop.NoopFactory
 
 class Statements {
 
@@ -165,7 +166,7 @@ class Statements {
 					])»
 				«ELSEIF data.indirect !== null»
 					«statement.value.compile(data => [
-						index = statement.asmOffsetName
+						index = NoopFactory::eINSTANCE.createMemberRef => [member = statement]
 						type = statement.typeOf
 					])»
 				«ELSE»
