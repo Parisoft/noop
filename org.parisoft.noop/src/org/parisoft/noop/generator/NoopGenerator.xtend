@@ -138,9 +138,25 @@ class NoopGenerator extends AbstractGenerator {
 			«rom.compile(new StorageData)»
 		«ENDFOR»
 		
+		;-- Macros ------------------------------------------------------
+		macro mult8x8to8 ; A = A + «Members::TEMP_VAR_NAME1» * «Members::TEMP_VAR_NAME2»
+		  JMP +loop:
+		-add:
+		  CLC
+		  ADC «Members::TEMP_VAR_NAME1»
+		-loop:
+		  ASL «Members::TEMP_VAR_NAME1»
+		+loop:
+		  LSR «Members::TEMP_VAR_NAME2»
+		  BCS -add:
+		  BNE -loop:
+		endm
+		
+		;-- Methods -----------------------------------------------------
 		«FOR method : data.methods.sortBy[fullyQualifiedName]»
 			«method.compile(new StorageData)»
 			
+		;-- Constructors ------------------------------------------------
 		«ENDFOR»
 		«FOR constructor : data.constructors.sortBy[type.name]»
 			«constructor.compile(null)»

@@ -2,7 +2,10 @@ package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
 import java.util.List
+import java.util.concurrent.atomic.AtomicInteger
 import org.parisoft.noop.generator.MemChunk
+import org.parisoft.noop.generator.StackData
+import org.parisoft.noop.generator.StorageData
 import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.ElseStatement
 import org.parisoft.noop.noop.Expression
@@ -10,17 +13,13 @@ import org.parisoft.noop.noop.ForStatement
 import org.parisoft.noop.noop.ForeverStatement
 import org.parisoft.noop.noop.IfStatement
 import org.parisoft.noop.noop.Method
+import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.eclipse.xtext.naming.IQualifiedNameProvider
-import java.util.concurrent.atomic.AtomicInteger
-import org.parisoft.noop.generator.StackData
-import org.parisoft.noop.generator.StorageData
-import org.parisoft.noop.noop.NoopFactory
 
 class Statements {
 
@@ -28,7 +27,6 @@ class Statements {
 	@Inject extension Classes
 	@Inject extension Collections
 	@Inject extension Expressions
-	@Inject extension IQualifiedNameProvider
 
 	def isVoid(ReturnStatement ^return) {
 		^return === null || ^return.value === null || ^return.method.typeOf.name == TypeSystem.LIB_VOID
@@ -43,7 +41,7 @@ class Statements {
 	}
 
 	def asmName(ReturnStatement ^return) {
-		^return.getContainerOfType(Method).fullyQualifiedName.toString + '.return'
+		'''«^return.getContainerOfType(Method).asmName».return'''.toString
 	}
 
 	def List<MemChunk> alloc(Statement statement, StackData data) {
@@ -60,7 +58,7 @@ class Statements {
 							ptrChunks += data.chunkForPointer(name)
 
 							for (i : 0 ..< statement.dimensionOf.size) {
-								varChunks += data.chunkForVar(name + '.len' + i, 1)
+								varChunks += data.chunkForVar(statement.asmLenName(data.container, i), 1)
 							}
 
 							statement.type.alloc(data)

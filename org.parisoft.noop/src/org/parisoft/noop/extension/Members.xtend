@@ -192,6 +192,10 @@ public class Members {
 	def asmOffsetName(Variable variable) {
 		variable.fullyQualifiedName.toString
 	}
+	
+	def asmLenName(Variable variable, String container, int i) {
+		'''«variable.asmName(container)».len«i»'''.toString
+	}
 
 	def asmName(Method method) {
 		'''«method.fullyQualifiedName.toString»@«method.hashCode.toHexString»'''.toString
@@ -199,6 +203,10 @@ public class Members {
 
 	def asmReceiverName(Method method) {
 		'''«method.asmName».receiver'''.toString
+	}
+	
+	def asmReturnName(Method method) {
+		'''«method.asmName».return'''.toString
 	}
 
 	def alloc(Method method, StackData data) {
