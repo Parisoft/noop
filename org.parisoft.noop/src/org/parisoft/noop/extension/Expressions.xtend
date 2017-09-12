@@ -506,11 +506,7 @@ class Expressions {
 							.db «bytes.join(' ', [toHex])»
 						«ENDIF»
 				«ELSEIF data.absolute !== null && data.index !== null»
-					«data.index.compile(new StorageData => [
-						container = data.container
-						type = data.index.typeOf
-						register = 'X'
-					])»
+					«data.index.compile(new StorageData => [register = 'X'])»
 						LDA #«bytes.head.toHex»
 						STA «data.absolute», X
 						«IF data.type.sizeOf > 1»
@@ -527,11 +523,7 @@ class Expressions {
 							STA «data.absolute» + 1
 						«ENDIF»
 				«ELSEIF data.indirect !== null && data.index !== null»
-					«data.index.compile(new StorageData => [
-						container = data.container
-						type = data.index.typeOf
-						register = 'Y'
-					])»
+					«data.index.compile(new StorageData => [register = 'Y'])»
 						LDA #«bytes.head.toHex»
 						STA («data.indirect»), Y
 						«IF data.type.sizeOf > 1»
@@ -609,11 +601,7 @@ class Expressions {
 					«val singleton = expression.type.asmSingletonName»
 						JSR «constructor»
 					«IF data.indirect !== null && data.index !== null»
-						«data.index.compile(new StorageData => [
-							container = constructor
-							type = data.index.typeOf
-							register = 'Y'
-						])»
+						«data.index.compile(new StorageData => [register = 'Y'])»
 							LDA #<«singleton»
 							STA («data.indirect»), Y
 							INY
@@ -660,11 +648,7 @@ class Expressions {
 					«val constructor = expression.asmConstructorName»
 					«val receiver = expression.asmReceiverName»
 					«IF data.absolute !== null && data.index !== null»
-						«data.index.compile(new StorageData => [
-							container = constructor
-							type = data.index.typeOf
-							register = 'A'
-						])»
+						«data.index.compile(new StorageData => [register = 'A'])»
 							CLC
 							ADC #<(«data.absolute»)
 							STA «receiver» + 0
@@ -678,11 +662,7 @@ class Expressions {
 							LDA #>(«data.absolute»)
 							STA «receiver» + 1
 					«ELSEIF data.indirect !== null && data.index !== null»
-						«data.index.compile(new StorageData => [
-							container = constructor
-							type = data.index.typeOf
-							register = 'Y'
-						])»
+						«data.index.compile(new StorageData => [register = 'Y'])»
 							LDA («data.indirect»), Y
 							STA «receiver» + 0
 							INY
@@ -761,14 +741,10 @@ class Expressions {
 					«IF varAsIndirect !== null»
 						«IF data.absolute !== null»
 							«IF data.isIndexed»
-								«data.index.compile(new StorageData => [
-									container = data.container
-									type = data.index.typeOf
-									register = 'X'
-								])»
+								«data.index.compile(new StorageData => [register = 'X'])»
 							«ENDIF»
 							«IF refIsIndexed»
-								«expression.loadIndex(data, 'Y')»
+								«expression.loadIndexIntoRegiter('Y')»
 							«ELSE»
 								«noop»
 									LDY #«IF member.isField»«member.asmOffsetName»«ELSE»$00«ENDIF»
@@ -783,17 +759,13 @@ class Expressions {
 							«ENDFOR»
 						«ELSEIF data.indirect !== null && data.isCopy»
 							«IF data.isIndexed»
-								«data.index.compile(new StorageData => [
-									container = data.container
-									type = data.index.typeOf
-									register = 'Y'
-								])»
+								«data.index.compile(new StorageData => [register = 'Y'])»
 							«ELSE»
 								«noop»
 									LDY #$00
 							«ENDIF»
 							«IF refIsIndexed»
-								«expression.loadIndex(data, 'X')»
+								«expression.loadIndexIntoRegiter('X')»
 							«ELSE»
 								«noop»
 									LDX #«IF member.isField»«member.asmOffsetName»«ELSE»$00«ENDIF»
@@ -810,7 +782,7 @@ class Expressions {
 						«ELSEIF data.indirect !== null»
 							«IF refIsIndexed || member.isField»
 								«IF refIsIndexed»
-									«expression.loadIndex(data, 'A')»
+									«expression.loadIndexIntoRegiter('A')»
 								«ELSE»
 									«noop»
 										LDA #«member.asmOffsetName»
@@ -832,10 +804,10 @@ class Expressions {
 						«ELSEIF data.register !== null»
 							«IF refIsIndexed»
 								«IF data.register == 'Y'»
-									«expression.loadIndex(data, 'X')»
+									«expression.loadIndexIntoRegiter('X')»
 										LDY («varAsIndirect», X)
 								«ELSE»
-									«expression.loadIndex(data, 'Y')»
+									«expression.loadIndexIntoRegiter('Y')»
 										LD«data.register» («varAsIndirect»), Y
 								«ENDIF»
 							«ELSEIF member.isField»
@@ -868,7 +840,7 @@ class Expressions {
 								])»
 							«ENDIF»
 							«IF refIsIndexed»
-								«expression.loadIndex(data, 'Y')»
+								«expression.loadIndexIntoRegiter('Y')»
 							«ENDIF»
 							«FOR i : 0..< data.type.sizeOf»
 								«noop»
@@ -877,17 +849,13 @@ class Expressions {
 							«ENDFOR»
 						«ELSEIF data.indirect !== null && data.isCopy»
 							«IF data.isIndexed»
-								«data.index.compile(new StorageData => [
-								container = data.container
-								type = data.index.typeOf
-								register = 'Y'
-							])»
+								«data.index.compile(new StorageData => [register = 'Y'])»
 							«ELSE»
 								«noop»
 									LDY #$00
 							«ENDIF»
 							«IF refIsIndexed»
-								«expression.loadIndex(data, 'X')»
+								«expression.loadIndexIntoRegiter('X')»
 							«ENDIF»
 							«FOR i : 0..< data.type.sizeOf»
 								«noop»
@@ -899,7 +867,7 @@ class Expressions {
 							«ENDFOR»
 						«ELSEIF data.indirect !== null»
 							«IF refIsIndexed»
-								«expression.loadIndex(data, 'A')»
+								«expression.loadIndexIntoRegiter('A')»
 									CLC
 									ADC #<(«varAsAbsolute»)
 									STA «data.indirect» + 0
@@ -916,10 +884,10 @@ class Expressions {
 						«ELSEIF data.register !== null»
 							«IF refIsIndexed»
 								«IF data.register == 'Y'»
-									«expression.loadIndex(data, 'X')»
+									«expression.loadIndexIntoRegiter('X')»
 										LDY «varAsAbsolute», X
 								«ELSE»
-									«expression.loadIndex(data, 'Y')»
+									«expression.loadIndexIntoRegiter('Y')»
 										LD«data.register» «varAsAbsolute», Y
 								«ENDIF»
 							«ELSE»
@@ -965,11 +933,7 @@ class Expressions {
 						«val retAsIndirect = method.asmReturnName»
 						«IF data.absolute !== null»
 							«IF data.isIndexed»
-								«data.index.compile(new StorageData => [
-									container = data.container
-									type = data.index.typeOf
-									register = 'X'
-								])»
+								«data.index.compile(new StorageData => [register = 'X'])»
 							«ENDIF»
 							«noop»
 								LDY #$00
@@ -983,11 +947,7 @@ class Expressions {
 							«ENDFOR»
 						«ELSEIF data.indirect !== null && data.isCopy»
 							«IF data.isIndexed»
-								«data.index.compile(new StorageData => [
-								container = data.container
-								type = data.index.typeOf
-								register = 'Y'
-							])»
+								«data.index.compile(new StorageData => [register = 'Y'])»
 							«ELSE»
 								«noop»
 									LDY #$00
@@ -1021,28 +981,20 @@ class Expressions {
 		}
 	}
 
-	private def loadIndex(MemberRef ref, StorageData data, String reg) '''
+	private def loadIndexIntoRegiter(MemberRef ref, String reg) '''
 		«val variable = ref.member as Variable»
 		«val dimension = variable.dimensionOf»
 		«val sizeOfVar = variable.typeOf.sizeOf»
 		«IF dimension.size === 1 && sizeOfVar === 1»
 			«val index = ref.indexes.head»
 			«IF variable.isField»
-				«index.value.compile(new StorageData => [
-					container = data.container
-					type = index.value.typeOf.toByteClass
-					register = 'A'
-				])»
+				«index.value.compile(new StorageData => [register = 'A'])»
 					ADC #«variable.asmOffsetName»
 					«IF reg != 'A'»
 						TA«reg»
 					«ENDIF»
 			«ELSE»
-				«index.value.compile(new StorageData => [
-					container = data.container
-					type = index.value.typeOf.toByteClass
-					register = reg
-				])»
+				«index.value.compile(new StorageData => [register = reg])»
 			«ENDIF»
 		«ELSE»
 			«noop»
@@ -1052,14 +1004,10 @@ class Expressions {
 				PHA
 			«FOR i : 0..< ref.indexes.size»
 				«val index = ref.indexes.get(i)»
-				«index.value.compile(new StorageData => [
-					container = data.container
-					type = index.value.typeOf.toByteClass
-					register = 'A'
-				])»
+				«index.value.compile(new StorageData => [register = 'A'])»
 					«FOR len : (i + 1)..< dimension.size»
 						STA «Members::TEMP_VAR_NAME1»
-						LDA «IF variable.isParameter»«variable.asmLenName(data.container, len)»«ELSE»#«dimension.get(len).toHex»«ENDIF»
+						LDA «IF variable.isParameter»«variable.asmLenName(len)»«ELSE»#«dimension.get(len).toHex»«ENDIF»
 						STA «Members::TEMP_VAR_NAME2»
 						LDA #$00
 						mult8x8to8

@@ -196,6 +196,10 @@ public class Members {
 	def asmLenName(Variable variable, String container, int i) {
 		'''«variable.asmName(container)».len«i»'''.toString
 	}
+	
+	def asmLenName(Variable variable, int i) {
+		variable.asmLenName(variable.getContainerOfType(Method).asmName, i)
+	}
 
 	def asmName(Method method) {
 		'''«method.fullyQualifiedName.toString»@«method.hashCode.toHexString»'''.toString
