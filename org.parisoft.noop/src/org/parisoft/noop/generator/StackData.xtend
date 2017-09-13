@@ -11,9 +11,9 @@ import org.parisoft.noop.noop.NewInstance
 class StackData {
 
 	@Accessors var NewInstance header
-	@Accessors val classes = <NoopClass>newHashSet
-	@Accessors val singletons = <NoopClass>newHashSet
-	@Accessors val constants = <Variable>newHashSet
+	@Accessors val classes = <NoopClass>newLinkedHashSet
+	@Accessors val statics = <Variable>newLinkedHashSet
+	@Accessors val constants = <Variable>newLinkedHashSet
 	@Accessors val prgRoms = <Variable>newLinkedHashSet
 	@Accessors val chrRoms = <Variable>newLinkedHashSet
 	@Accessors val variables = <String, List<MemChunk>>newHashMap
@@ -24,13 +24,14 @@ class StackData {
 	@Accessors val ptrCounter = new AtomicInteger(0x0000)
 	@Accessors val varCounter = new AtomicInteger(0x0400)
 	@Accessors var String container
+	@Accessors var boolean allocStatic = false
 
 	def resetVarCounter() {
 		varCounter.set(0x0400)
 		varCounter.get
 	}
 
-	def chunkForPointer(String variable) {
+	def chunkForPtr(String variable) {
 		new MemChunk(variable, ptrCounter.getAndAdd(2))
 	}
 
@@ -45,6 +46,7 @@ class StackData {
 			ptrCounter.set(src.ptrCounter.get)
 			varCounter.set(src.varCounter.get)
 			container = src.container
+			allocStatic = src.allocStatic
 		]
 	}
 
@@ -52,6 +54,7 @@ class StackData {
 		ptrCounter.set(snapshot.ptrCounter.get)
 		varCounter.set(snapshot.varCounter.get)
 		container = snapshot.container
+		allocStatic = snapshot.allocStatic
 	}
 
 	override toString() '''

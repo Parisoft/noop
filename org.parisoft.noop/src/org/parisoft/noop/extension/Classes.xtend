@@ -5,12 +5,13 @@ import java.util.Collection
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.NoopInstance
+import org.parisoft.noop.generator.StackData
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.StackData
 
 class Classes {
 
@@ -107,7 +108,7 @@ class Classes {
 			false
 		}
 	}
-	
+
 	def isVoid(NoopClass c) {
 		try {
 			c.fullyQualifiedName.toString == TypeSystem::LIB_VOID
@@ -115,7 +116,7 @@ class Classes {
 			false
 		}
 	}
-	
+
 	def isNonVoid(NoopClass c) {
 		!c.isVoid
 	}
@@ -160,20 +161,6 @@ class Classes {
 		!c.isNESHeader
 	}
 
-	def isSingleton(NoopClass c) {
-		try {
-			c.fullyQualifiedName.toString != TypeSystem::LIB_SINGLETON && c.classHierarchy.exists [
-				it.fullyQualifiedName.toString == TypeSystem::LIB_SINGLETON
-			]
-		} catch (Exception exception) {
-			false
-		}
-	}
-
-	def isNonSingleton(NoopClass c) {
-		!c.isSingleton
-	}
-
 	def defaultValueOf(NoopClass c) {
 		if (c.isNumeric) {
 			0
@@ -186,10 +173,6 @@ class Classes {
 
 	def asmName(NoopClass c) {
 		'''«c.name».class'''.toString
-	}
-
-	def asmSingletonName(NoopClass c) {
-		'''_«c.name.toLowerCase»'''.toString
 	}
 
 	def int sizeOf(NoopClass c) {
@@ -225,15 +208,26 @@ class Classes {
 		if (data.classes.add(noopClass)) {
 			noopClass.allFieldsTopDown.filter[static].forEach[alloc(data)]
 
-			if (noopClass.isSingleton) {
-				data.singletons.add(noopClass)
-
-				if (noopClass.isGame) {
-					noopClass.allMethodsBottomUp.findFirst[main].alloc(data)
-					noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
-				}
+			if (noopClass.isGame) {
+				noopClass.allMethodsBottomUp.findFirst[main].alloc(data)
+				noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
+				noopClass.allMethodsBottomUp.findFirst[reset].updateAndAlloc(data)
 			}
 		}
+	}
+
+	def updateAndAlloc(Method reset, StackData data) {
+		val gameClass = reset.containingClass
+		val gameConstructor = NoopFactory::eINSTANCE.createNewInstance => [type = gameClass]
+		val gameInstance = NoopFactory::eINSTANCE.createVariable => [
+			name = Members::STATIC_PREFIX + gameClass.name.toFirstLower
+			value = gameConstructor
+		]
+
+		reset.body.statements += data.statics.reject[typeOf.game]
+		reset.body.statements += gameInstance
+
+		reset.alloc(data)
 	}
 
 }

@@ -55,7 +55,7 @@ class Statements {
 				if (allChunks.isEmpty) {
 					if (statement.isParameter) {
 						if (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty) {
-							ptrChunks += data.chunkForPointer(name)
+							ptrChunks += data.chunkForPtr(name)
 
 							for (i : 0 ..< statement.dimensionOf.size) {
 								varChunks += data.chunkForVar(statement.asmLenName(data.container, i), 1)
@@ -71,16 +71,12 @@ class Statements {
 						} else if (statement.storage.type == StorageType.CHRROM) {
 							data.chrRoms += statement
 						}
-					} else if (statement.isStatic) {
-						val type = statement.typeOf
-
-						if (type.isNESHeader) {
-							return newArrayList
-						} else if (type.isSingleton) {
-							type.alloc(data)
-						} else if (type.isPrimitive) {
-							data.constants += statement
-						}
+					} else if (statement.typeOf.isNESHeader) {
+						return statement.value?.alloc(data)
+					} else if (statement.isConstant) {
+						data.constants += statement
+					} else if (statement.isStatic && !data.isAllocStatic) {
+						data.statics += statement
 					} else {
 						varChunks += data.chunkForVar(name, statement.sizeOf)
 						statement.typeOf.alloc(data)
@@ -125,7 +121,7 @@ class Statements {
 						])
 					} else {
 						data.pointers.compute(statement.asmName, [ name, v |
-							newArrayList(data.chunkForPointer(name))
+							newArrayList(data.chunkForPtr(name))
 						])
 					}
 				} else {

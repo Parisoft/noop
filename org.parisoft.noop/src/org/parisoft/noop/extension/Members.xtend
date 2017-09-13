@@ -6,19 +6,18 @@ import java.util.List
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
+import org.parisoft.noop.generator.StackData
+import org.parisoft.noop.generator.StorageData
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelection
 import org.parisoft.noop.noop.Method
+import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 
-import static extension org.eclipse.xtext.EcoreUtil2.*
 import static extension java.lang.Integer.*
-import org.parisoft.noop.noop.NoopFactory
-import org.parisoft.noop.generator.StackData
-import org.parisoft.noop.generator.StorageData
-import org.parisoft.noop.noop.NoopClass
+import static extension org.eclipse.xtext.EcoreUtil2.*
 
 public class Members {
 
@@ -42,6 +41,14 @@ public class Members {
 		val memberClass = member.containingClass
 
 		contextClass == memberClass || contextClass.isSubclassOf(memberClass)
+	}
+
+	def isStatic(Member member) {
+		member.name.startsWith(STATIC_PREFIX)
+	}
+
+	def isNonStatic(Member member) {
+		!member.isStatic
 	}
 
 	def isParameter(Variable variable) {
@@ -68,14 +75,6 @@ public class Members {
 		!variable.isConstant
 	}
 
-	def isStatic(Variable variable) {
-		variable.name.startsWith(STATIC_PREFIX)
-	}
-
-	def isNonStatic(Variable variable) {
-		!variable.isStatic
-	}
-
 	def isROM(Variable variable) {
 		variable.storage !== null
 	}
@@ -90,6 +89,10 @@ public class Members {
 
 	def isNmi(Method method) {
 		method.containingClass.isGame && method.name == 'nmi' && method.params.isEmpty
+	}
+	
+	def isReset(Method method) {
+		method.containingClass.isGame && method.name == '#reset' && method.params.isEmpty
 	}
 
 	def typeOf(Member member) {
@@ -170,10 +173,8 @@ public class Members {
 	}
 
 	def String asmName(Variable variable, String containerName) {
-		if (variable.typeOf.isSingleton) {
-			variable.typeOf.asmSingletonName
-		} else if (variable.isStatic) {
-			variable.fullyQualifiedName.toString
+		if (variable.isStatic) {
+			variable.asmStaticName
 		} else if (variable.getContainerOfType(Method) !== null) {
 			'''«containerName»«variable.fullyQualifiedName.toString.substring(containerName.indexOf('@'))»@«variable.hashCode.toHexString»'''
 		} else {
@@ -221,23 +222,14 @@ public class Members {
 
 				data.container = methodName
 
-				val receiver = if (method.containingClass.isNonSingleton) {
-						data.pointers.computeIfAbsent(method.asmReceiverName, [newArrayList(data.chunkForPointer(it))])
+				val receiver = if (method.isNonStatic) {
+						data.pointers.computeIfAbsent(method.asmReceiverName, [newArrayList(data.chunkForPtr(it))])
 					} else {
 						emptyList
 					}
 
 				val chunks = (receiver + method.params.map[alloc(data)].flatten).toList
-
-				if (method.isMain) {
-					val constructor = NoopFactory::eINSTANCE.createNewInstance => [
-						type = method.containingClass
-					]
-
-					chunks += constructor.alloc(data)
-				}
-
-				chunks += method.body.statements.map[alloc(data)].flatten.toList
+				chunks += method.body.statements.map[alloc(data => [allocStatic = method.isReset])].flatten.toList
 				chunks.disoverlap(methodName)
 
 				data.restoreTo(snapshot)
@@ -254,8 +246,8 @@ public class Members {
 
 	def compile(Method method, StorageData data) '''
 		«method.asmName»:
-		«IF method.isMain»
-			;;;;;;;;;; Initial setup begin
+		«IF method.isReset»
+				;;;;;;;;;; Initial setup begin
 				SEI          ; disable IRQs
 				CLD          ; disable decimal mode
 				LDX #$40
@@ -284,45 +276,57 @@ public class Members {
 				STA $0200, X
 				INX
 				BNE -clrMem:
-			
-			«val constructor = NoopFactory::eINSTANCE.createNewInstance => [type = method.containingClass]»
-				JSR «constructor.compile(new StorageData => [absolute = constructor.type.asmSingletonName])»
+
+				; Instantiate all static variables, including the game itself
+			«val resetMethod = method.asmName»
+			«FOR staticVar : method.body.statements.filter(Variable).reject[typeOf.game]»
+				«staticVar.compile(new StorageData => [container = resetMethod])»
+			«ENDFOR»
 			
 			-waitVBlank2
 				BIT $2002
 				BPL -waitVBlank2
-			;;;;;;;;;; Initial setup end
-			;;;;;;;;;; Effective code begin
+				;;;;;;;;;; Initial setup end
+			
+			«val gameInstance = method.body.statements.filter(Variable).findFirst[typeOf.game]»
+			«val mainMethod = gameInstance.typeOf.allMethodsBottomUp.findFirst[main]»
+			«val mainReceiver = mainMethod.asmReceiverName»
+				LDA #<(«gameInstance.name»)
+				STA «mainReceiver» + 0
+				LDA #>(«gameInstance.name»)
+				STA «mainReceiver» + 1
+				JMP «mainMethod.asmName»
 		«ELSEIF method.isNmi»
 			;;;;;;;;;; NMI initialization begin
-				PHA
-				TXA
-				PHA
-				TYA
-				PHA
-			
-				LDA #$00
-				STA $2003       ; set the low byte (00) of the RAM address
-				LDA #$02
-				STA $4014       ; set the high byte (02) of the RAM address, start the transfer
+			PHA
+			TXA
+			PHA
+			TYA
+			PHA
+		
+			LDA #$00
+			STA $2003       ; set the low byte (00) of the RAM address
+			LDA #$02
+			STA $4014       ; set the high byte (02) of the RAM address, start the transfer
 			;;;;;;;;;; NMI initialization end
 			;;;;;;;;;; Effective code begin
-		«ENDIF»
 		«FOR statement : method.body.statements»
 			«statement.compile(new StorageData => [container = method.asmName])»
 		«ENDFOR»
-		«IF method.isNmi»
 			;;;;;;;;;; Effective code end
 			;;;;;;;;;; NMI finalization begin
-				PLA
-				TAY
-				PLA
-				TAX
-				PLA
+			PLA
+			TAY
+			PLA
+			TAX
+			PLA
 			;;;;;;;;;; NMI finalization end
 			RTI
 		«ELSE»
-			RTS
+			«FOR statement : method.body.statements»
+				«statement.compile(new StorageData => [container = method.asmName])»
+			«ENDFOR»
+				RTS
 		«ENDIF»
 	'''
 

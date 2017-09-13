@@ -1,4 +1,4 @@
-PPU extends Singleton {
+PPU {
     
     #SCREEN_WIDTH_PX : 256
     #SCREEN_HEIGHT_PX : 240

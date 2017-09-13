@@ -20,7 +20,6 @@ class TypeSystem {
 	public static val LIB_BOOL = "Bool" // LIB_PACKAGE + ".Bool"
 	public static val LIB_VOID = "Void" // LIB_PACKAGE + ".Void"
 	public static val LIB_PRIMITIVE = "Primitive"
-	public static val LIB_SINGLETON = "Singleton"
 	public static val LIB_NES_HEADER = "NESHeader"
 	public static val LIB_GAME = "Game"
 	

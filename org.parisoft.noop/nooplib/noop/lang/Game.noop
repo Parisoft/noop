@@ -1,4 +1,7 @@
-Game extends Singleton {
+Game {
+
+	#reset() {
+	}
 	
 	main() {
 	}

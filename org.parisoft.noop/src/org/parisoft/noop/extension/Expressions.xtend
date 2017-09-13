@@ -103,9 +103,7 @@ class Expressions {
 	}
 
 	def fieldsInitializedOnContructor(NewInstance instance) {
-		instance.type.allFieldsTopDown.filter [
-			nonStatic || (typeOf.singleton && typeOf.nonNESHeader)
-		]
+		instance.type.allFieldsTopDown.filter[nonStatic]
 	}
 
 	def NoopClass typeOf(Expression expression) {
@@ -414,7 +412,7 @@ class Expressions {
 				}
 
 				if (expression.isOnMemberSelectionOrReference) {
-					if (expression.dimension.isEmpty && expression.type.isNonPrimitive && expression.type.isNonSingleton) {
+					if (expression.dimension.isEmpty && expression.type.isNonPrimitive) {
 						chunks += data.variables.computeIfAbsent(expression.asmTmpVarName(data.container), [
 							newArrayList(data.chunkForVar(it, expression.sizeOf))
 						])
@@ -433,11 +431,8 @@ class Expressions {
 
 					data.container = constructorName
 
-					if (expression.type.isNonSingleton) {
-						chunks += data.pointers.computeIfAbsent(expression.asmReceiverName, [newArrayList(data.chunkForPointer(it))])
-					}
-
-					chunks += expression.type.allFieldsTopDown.filter[nonStatic || typeOf.singleton].map[value.alloc(data)].flatten
+					chunks += data.pointers.computeIfAbsent(expression.asmReceiverName, [newArrayList(data.chunkForPtr(it))])
+					chunks += expression.fieldsInitializedOnContructor.map[value.alloc(data)].flatten
 					chunks.disoverlap(constructorName)
 
 					data.restoreTo(snapshot)
@@ -566,61 +561,23 @@ class Expressions {
 			NewInstance: '''
 				«IF data === null»
 					«val constructor = expression.asmConstructorName»
+					«val receiver = expression.asmReceiverName»
 					«constructor»:
-					«IF expression.type.isSingleton»
-						«val singleton = expression.type.asmSingletonName»
-							LDA #«expression.type.asmName»
-							STA «singleton»
-							
-						«FOR field : expression.fieldsInitializedOnContructor»
-							«field.compile(new StorageData => [
-								container = constructor
-								absolute = singleton
-							])»
-						«ENDFOR»
-					«ELSE»
-						«val receiver = expression.asmReceiverName»
-							LDA #«expression.type.asmName»
-							STA («receiver»)
-							
-						«FOR field : expression.fieldsInitializedOnContructor»
-							«field.compile(new StorageData => [
-								container = constructor
-								indirect = receiver
-							])»
-						«ENDFOR»
-					«ENDIF»
+						LDA #«expression.type.asmName»
+						STA («receiver»)
+						
+					«FOR field : expression.fieldsInitializedOnContructor»
+						«field.compile(new StorageData => [
+							container = constructor
+							indirect = receiver
+						])»
+					«ENDFOR»
 					«noop»
 						RTS
 				«ELSEIF expression.dimension.isNotEmpty»
 					TODO: compile array constructor call
 				«ELSEIF expression.type.isPrimitive»
 					«(NoopFactory::eINSTANCE.createByteLiteral => [value = 0]).compile(data)»
-				«ELSEIF expression.type.isSingleton»
-					«val constructor = expression.asmConstructorName»
-					«val singleton = expression.type.asmSingletonName»
-						JSR «constructor»
-					«IF data.indirect !== null && data.index !== null»
-						«data.index.compile(new StorageData => [register = 'Y'])»
-							LDA #<«singleton»
-							STA («data.indirect»), Y
-							INY
-							LDA #>«singleton»
-							STA («data.indirect»), Y
-					«ELSEIF data.indirect !== null»
-						LDA #<«singleton»
-						STA («data.indirect»)
-						LDY #$01
-						LDA #>«singleton»
-						STA («data.indirect»), Y
-					«ENDIF»
-					«FOR field : expression.constructor?.fields ?: emptyList»
-						«field.value.compile(new StorageData => [
-							absolute = '''«singleton» + #«field.variable.asmOffsetName»'''
-							type = field.variable.typeOf
-							container = constructor
-						])»
-					«ENDFOR»
 				«ELSEIF expression.isOnMemberSelectionOrReference»
 					«val constructor = expression.asmConstructorName»
 					«val receiver = expression.asmReceiverName»
@@ -692,14 +649,10 @@ class Expressions {
 				«val member = expression.member»
 				«val receiver = expression.receiver»
 				«IF member instanceof Variable»
-					«IF receiver.typeOf.isSingleton»
-						TODO: data.indirect|absolute = singleton.member
-					«ELSE»
-						TODO: data.indirect|absolute = receiver.member
-					«ENDIF»
+					TODO: data.indirect|absolute = receiver.member
 				«ELSEIF member instanceof Method»
 					«val method = member as Method»
-					«IF receiver.typeOf.isNonSingleton»
+					«IF method.isNonStatic»
 						«receiver.compile(new StorageData => [
 							indirect = method.asmReceiverName
 							type = receiver.typeOf

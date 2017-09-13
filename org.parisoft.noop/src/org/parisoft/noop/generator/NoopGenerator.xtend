@@ -97,11 +97,11 @@ class NoopGenerator extends AbstractGenerator {
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
-		; Singletons
+		; Statics
 		;----------------------------------------------------------------
 		«val varStartAddr = data.resetVarCounter»
-		«FOR singleton : data.singletons»
-			«singleton.asmSingletonName» = «data.varCounter.getAndAdd(singleton.sizeOf).toHexString(4)»
+		«FOR statik : data.statics»
+			«statik.asmStaticName» = «data.varCounter.getAndAdd(statik.sizeOf).toHexString(4)»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
@@ -156,8 +156,8 @@ class NoopGenerator extends AbstractGenerator {
 		«FOR method : data.methods.sortBy[fullyQualifiedName]»
 			«method.compile(new StorageData)»
 			
-		;-- Constructors ------------------------------------------------
 		«ENDFOR»
+		;-- Constructors ------------------------------------------------
 		«FOR constructor : data.constructors.sortBy[type.name]»
 			«constructor.compile(null)»
 			
@@ -168,7 +168,7 @@ class NoopGenerator extends AbstractGenerator {
 			.org $FFFA     
 		
 		 	.dw «data.methods.findFirst[nmi].asmName»
-		 	.dw «data.methods.findFirst[main].asmName»
+		 	.dw «data.methods.findFirst[reset].asmName»
 		 	.dw 0 ; IRQ
 		
 		;----------------------------------------------------------------
