@@ -68,7 +68,9 @@ public class Members {
 	}
 
 	def isConstant(Variable variable) {
-		variable.isStatic && variable.name.chars.skip(1).allMatch[Character::isUpperCase(it as char) || (it as char) === UNDERLINE_CHAR]
+		variable.isStatic && variable.name.chars.skip(1).allMatch[val c = it as char
+							Character::isUpperCase(c) || Character::isDigit(c) || (c) === UNDERLINE_CHAR
+						]
 	}
 
 	def isNonConstant(Variable variable) {
@@ -183,7 +185,7 @@ public class Members {
 	}
 
 	def asmStaticName(Variable variable) {
-		variable.fullyQualifiedName.toString
+		'''«variable.containingClass.name».«variable.name»'''.toString
 	}
 
 	def asmConstantName(Variable variable) {
@@ -229,7 +231,7 @@ public class Members {
 					}
 
 				val chunks = (receiver + method.params.map[alloc(data)].flatten).toList
-				chunks += method.body.statements.map[alloc(data => [allocStatic = method.isReset])].flatten.toList
+				chunks += method.body.statements.map[alloc(data)].flatten.toList
 				chunks.disoverlap(methodName)
 
 				data.restoreTo(snapshot)
@@ -279,7 +281,7 @@ public class Members {
 
 				; Instantiate all static variables, including the game itself
 			«val resetMethod = method.asmName»
-			«FOR staticVar : method.body.statements.filter(Variable).reject[typeOf.game]»
+			«FOR staticVar : data.stack.statics»
 				«staticVar.compile(new StorageData => [container = resetMethod])»
 			«ENDFOR»
 			
@@ -289,11 +291,12 @@ public class Members {
 				;;;;;;;;;; Initial setup end
 			
 			«val gameInstance = method.body.statements.filter(Variable).findFirst[typeOf.game]»
+			«val gameName = gameInstance.asmStaticName»
 			«val mainMethod = gameInstance.typeOf.allMethodsBottomUp.findFirst[main]»
 			«val mainReceiver = mainMethod.asmReceiverName»
-				LDA #<(«gameInstance.name»)
+				LDA #<(«gameName»)
 				STA «mainReceiver» + 0
-				LDA #>(«gameInstance.name»)
+				LDA #>(«gameName»)
 				STA «mainReceiver» + 1
 				JMP «mainMethod.asmName»
 		«ELSEIF method.isNmi»

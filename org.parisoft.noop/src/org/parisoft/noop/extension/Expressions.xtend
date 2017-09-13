@@ -95,7 +95,7 @@ class Expressions {
 	}
 
 	def asmConstructorName(NewInstance instance) {
-		'''«instance.type.name».«instance.type.name»'''.toString
+		'''«instance.type.name».new'''.toString
 	}
 
 	def asmReceiverName(NewInstance instance) {

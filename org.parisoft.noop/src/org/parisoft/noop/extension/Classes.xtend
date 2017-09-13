@@ -211,23 +211,22 @@ class Classes {
 			if (noopClass.isGame) {
 				noopClass.allMethodsBottomUp.findFirst[main].alloc(data)
 				noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
-				noopClass.allMethodsBottomUp.findFirst[reset].updateAndAlloc(data)
+				noopClass.allMethodsBottomUp.findFirst[reset].update(noopClass).alloc(data)
+				
+				data.constants.forEach[alloc(data => [allocStatic = true])]
 			}
 		}
 	}
 
-	def updateAndAlloc(Method reset, StackData data) {
-		val gameClass = reset.containingClass
-		val gameConstructor = NoopFactory::eINSTANCE.createNewInstance => [type = gameClass]
+	def update(Method reset, NoopClass gameImplClass) {
+		val gameConstructor = NoopFactory::eINSTANCE.createNewInstance => [type = gameImplClass]
 		val gameInstance = NoopFactory::eINSTANCE.createVariable => [
-			name = Members::STATIC_PREFIX + gameClass.name.toFirstLower
+			name = Members::STATIC_PREFIX + gameImplClass.name.toFirstLower
 			value = gameConstructor
 		]
 
-		reset.body.statements += data.statics.reject[typeOf.game]
 		reset.body.statements += gameInstance
-
-		reset.alloc(data)
+		reset
 	}
 
 }

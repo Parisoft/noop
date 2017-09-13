@@ -14,6 +14,7 @@ class StorageData {
 	@Accessors var String container
 	@Accessors var NoopClass type
 	@Accessors var boolean copy = true
+	@Accessors var StackData stack
 
 	override toString() '''
 		StorageData{

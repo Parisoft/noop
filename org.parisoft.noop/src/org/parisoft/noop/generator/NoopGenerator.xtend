@@ -154,7 +154,7 @@ class NoopGenerator extends AbstractGenerator {
 		
 		;-- Methods -----------------------------------------------------
 		«FOR method : data.methods.sortBy[fullyQualifiedName]»
-			«method.compile(new StorageData)»
+			«method.compile(new StorageData => [stack = data])»
 			
 		«ENDFOR»
 		;-- Constructors ------------------------------------------------
