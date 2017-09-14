@@ -3,9 +3,9 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.List
 import java.util.concurrent.atomic.AtomicInteger
+import org.parisoft.noop.generator.AllocData
+import org.parisoft.noop.generator.CompileData
 import org.parisoft.noop.generator.MemChunk
-import org.parisoft.noop.generator.StackData
-import org.parisoft.noop.generator.StorageData
 import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.ElseStatement
 import org.parisoft.noop.noop.Expression
@@ -13,7 +13,6 @@ import org.parisoft.noop.noop.ForStatement
 import org.parisoft.noop.noop.ForeverStatement
 import org.parisoft.noop.noop.IfStatement
 import org.parisoft.noop.noop.Method
-import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.StorageType
@@ -44,7 +43,7 @@ class Statements {
 		'''«^return.getContainerOfType(Method).asmName».return'''.toString
 	}
 
-	def List<MemChunk> alloc(Statement statement, StackData data) {
+	def List<MemChunk> alloc(Statement statement, AllocData data) {
 		switch (statement) {
 			Variable: {
 				val name = statement.asmName(data.container)
@@ -71,7 +70,7 @@ class Statements {
 						} else if (statement.storage.type == StorageType.CHRROM) {
 							data.chrRoms += statement
 						}
-					} else if (statement.typeOf.isNESHeader) {
+					} else if (statement.typeOf.isINESHeader) {
 						return statement.value?.alloc(data)
 					} else if (statement.isConstant) {
 						data.constants += statement
@@ -136,7 +135,7 @@ class Statements {
 		}
 	}
 
-	def alloc(ElseStatement statement, StackData data) {
+	def alloc(ElseStatement statement, AllocData data) {
 		val snapshot = data.snapshot
 		val chunks = statement.body.statements.map[alloc(data)].flatten
 
@@ -145,7 +144,7 @@ class Statements {
 		return chunks + statement.^if?.alloc(data)
 	}
 
-	def compile(Statement statement, StorageData data) {
+	def compile(Statement statement, CompileData data) {
 		switch (statement) {
 			Variable: '''
 				«IF statement.isROM»
@@ -160,7 +159,7 @@ class Statements {
 					])»
 				«ELSEIF data.indirect !== null»
 					«statement.value.compile(data => [
-						index = NoopFactory::eINSTANCE.createMemberRef => [member = statement]
+						index = '''#«statement.asmOffsetName»'''
 						type = statement.typeOf
 					])»
 				«ELSE»
@@ -180,6 +179,8 @@ class Statements {
 						c1.substring(1, c1.length - 1) + statement.vars.get(i.andIncrement).asmName + c2.substring(1, c2.length - 1)
 					]
 				}
+			Expression:
+				statement.compile(data)
 			default:
 				''
 		}

@@ -8,7 +8,7 @@ import java.util.List
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NewInstance
 
-class StackData {
+class AllocData {
 
 	@Accessors var NewInstance header
 	@Accessors val classes = <NoopClass>newLinkedHashSet
@@ -42,7 +42,7 @@ class StackData {
 	def snapshot() {
 		val src = this
 
-		new StackData => [
+		new AllocData => [
 			ptrCounter.set(src.ptrCounter.get)
 			varCounter.set(src.varCounter.get)
 			container = src.container
@@ -50,7 +50,7 @@ class StackData {
 		]
 	}
 
-	def restoreTo(StackData snapshot) {
+	def restoreTo(AllocData snapshot) {
 		ptrCounter.set(snapshot.ptrCounter.get)
 		varCounter.set(snapshot.varCounter.get)
 		container = snapshot.container

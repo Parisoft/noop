@@ -5,13 +5,14 @@ import java.util.Collection
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.NoopInstance
-import org.parisoft.noop.generator.StackData
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.AllocData
+import org.parisoft.noop.noop.NewInstance
 
 class Classes {
 
@@ -147,7 +148,7 @@ class Classes {
 		!c.isGame
 	}
 
-	def isNESHeader(NoopClass c) {
+	def isINESHeader(NoopClass c) {
 		try {
 			c.classHierarchy.exists [
 				it.fullyQualifiedName.toString == TypeSystem::LIB_NES_HEADER
@@ -157,8 +158,8 @@ class Classes {
 		}
 	}
 
-	def isNonNESHeader(NoopClass c) {
-		!c.isNESHeader
+	def isNonINESHeader(NoopClass c) {
+		!c.isINESHeader
 	}
 
 	def defaultValueOf(NoopClass c) {
@@ -198,21 +199,22 @@ class Classes {
 	}
 
 	def alloc(NoopClass noopClass) {
-		val data = new StackData
+		val data = new AllocData
 		noopClass.alloc(data)
 
 		return data
 	}
 
-	def void alloc(NoopClass noopClass, StackData data) {
+	def void alloc(NoopClass noopClass, AllocData data) {
 		if (data.classes.add(noopClass)) {
 			noopClass.allFieldsTopDown.filter[static].forEach[alloc(data)]
 
 			if (noopClass.isGame) {
 				noopClass.allMethodsBottomUp.findFirst[main].alloc(data)
 				noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
-				noopClass.allMethodsBottomUp.findFirst[reset].update(noopClass).alloc(data)
+				noopClass.allMethodsTopDown.findFirst[reset].update(noopClass).alloc(data)
 				
+				data.header = noopClass.allFieldsBottomUp.findFirst[typeOf.INESHeader].value as NewInstance
 				data.constants.forEach[alloc(data => [allocStatic = true])]
 			}
 		}

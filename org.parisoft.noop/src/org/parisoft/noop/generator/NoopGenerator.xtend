@@ -76,7 +76,7 @@ class NoopGenerator extends AbstractGenerator {
 		return games.head
 	}
 
-	private def compile(StackData data) '''
+	private def compile(AllocData data) '''
 		;----------------------------------------------------------------
 		; Class Metadata
 		;----------------------------------------------------------------
@@ -135,7 +135,7 @@ class NoopGenerator extends AbstractGenerator {
 			.base $10000 - («(data.header.fieldValue('prgRomPages') as Integer).toHexString» * $4000) 
 		
 		«FOR rom : data.prgRoms»
-			«rom.compile(new StorageData)»
+			«rom.compile(new CompileData)»
 		«ENDFOR»
 		
 		;-- Macros ------------------------------------------------------
@@ -154,7 +154,7 @@ class NoopGenerator extends AbstractGenerator {
 		
 		;-- Methods -----------------------------------------------------
 		«FOR method : data.methods.sortBy[fullyQualifiedName]»
-			«method.compile(new StorageData => [stack = data])»
+			«method.compile(new CompileData => [stack = data])»
 			
 		«ENDFOR»
 		;-- Constructors ------------------------------------------------
@@ -177,7 +177,7 @@ class NoopGenerator extends AbstractGenerator {
 		   .base $0000
 		
 		«FOR rom : data.chrRoms»
-			«rom.compile(new StorageData)»
+			«rom.compile(new CompileData)»
 		«ENDFOR»
 	'''
 

@@ -6,8 +6,6 @@ import java.util.List
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
-import org.parisoft.noop.generator.StackData
-import org.parisoft.noop.generator.StorageData
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelection
@@ -18,6 +16,8 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.CompileData
+import org.parisoft.noop.generator.AllocData
 
 public class Members {
 
@@ -216,7 +216,7 @@ public class Members {
 		'''«method.asmName».return'''.toString
 	}
 
-	def alloc(Method method, StackData data) {
+	def alloc(Method method, AllocData data) {
 		if (allocating.add(method)) {
 			try {
 				val snapshot = data.snapshot
@@ -246,7 +246,7 @@ public class Members {
 		}
 	}
 
-	def compile(Method method, StorageData data) '''
+	def compile(Method method, CompileData data) '''
 		«method.asmName»:
 		«IF method.isReset»
 				;;;;;;;;;; Initial setup begin
@@ -282,7 +282,7 @@ public class Members {
 				; Instantiate all static variables, including the game itself
 			«val resetMethod = method.asmName»
 			«FOR staticVar : data.stack.statics»
-				«staticVar.compile(new StorageData => [container = resetMethod])»
+				«staticVar.compile(new CompileData => [container = resetMethod])»
 			«ENDFOR»
 			
 			-waitVBlank2
@@ -314,7 +314,7 @@ public class Members {
 			;;;;;;;;;; NMI initialization end
 			;;;;;;;;;; Effective code begin
 		«FOR statement : method.body.statements»
-			«statement.compile(new StorageData => [container = method.asmName])»
+			«statement.compile(new CompileData => [container = method.asmName])»
 		«ENDFOR»
 			;;;;;;;;;; Effective code end
 			;;;;;;;;;; NMI finalization begin
@@ -327,7 +327,7 @@ public class Members {
 			RTI
 		«ELSE»
 			«FOR statement : method.body.statements»
-				«statement.compile(new StorageData => [container = method.asmName])»
+				«statement.compile(new CompileData => [container = method.asmName])»
 			«ENDFOR»
 				RTS
 		«ENDIF»

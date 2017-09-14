@@ -1,4 +1,4 @@
-NESHeader {
+INESHeader {
 
 	#NROM : 0
 	#MMC1 : 1
