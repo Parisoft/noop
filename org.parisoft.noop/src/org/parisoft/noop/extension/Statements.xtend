@@ -71,7 +71,7 @@ class Statements {
 							data.chrRoms += statement
 						}
 					} else if (statement.typeOf.isINESHeader) {
-						return statement.value?.alloc(data)
+						return statement?.value.alloc(data)
 					} else if (statement.isConstant) {
 						data.constants += statement
 					} else if (statement.isStatic && !data.isAllocStatic) {

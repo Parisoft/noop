@@ -15,6 +15,7 @@ import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
+import static extension java.lang.Character.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.generator.CompileData
 import org.parisoft.noop.generator.AllocData
@@ -69,7 +70,7 @@ public class Members {
 
 	def isConstant(Variable variable) {
 		variable.isStatic && variable.name.chars.skip(1).allMatch[val c = it as char
-							Character::isUpperCase(c) || Character::isDigit(c) || (c) === UNDERLINE_CHAR
+							c.isUpperCase || c.isDigit || c === UNDERLINE_CHAR
 						]
 	}
 
@@ -281,23 +282,27 @@ public class Members {
 
 				; Instantiate all static variables, including the game itself
 			«val resetMethod = method.asmName»
-			«FOR staticVar : data.stack.statics»
+			«FOR staticVar : data.allocation.statics»
 				«staticVar.compile(new CompileData => [container = resetMethod])»
 			«ENDFOR»
+			
+			«val gameInstance = method.body.statements.filter(Variable).findFirst[typeOf.game]»
+			«val gameName = gameInstance.asmStaticName»
+			«val mainMethod = gameInstance.typeOf.allMethodsBottomUp.findFirst[main]»
+			«val mainReceiver = mainMethod.asmReceiverName»
+			«val nmiReceiver = gameInstance.typeOf.allMethodsBottomUp.findFirst[nmi].asmReceiverName»
+				LDA #<(«gameName»)
+				STA «mainReceiver» + 0
+				STA «nmiReceiver» + 0
+				LDA #>(«gameName»)
+				STA «mainReceiver» + 1
+				STA «nmiReceiver» + 1
 			
 			-waitVBlank2
 				BIT $2002
 				BPL -waitVBlank2
 				;;;;;;;;;; Initial setup end
 			
-			«val gameInstance = method.body.statements.filter(Variable).findFirst[typeOf.game]»
-			«val gameName = gameInstance.asmStaticName»
-			«val mainMethod = gameInstance.typeOf.allMethodsBottomUp.findFirst[main]»
-			«val mainReceiver = mainMethod.asmReceiverName»
-				LDA #<(«gameName»)
-				STA «mainReceiver» + 0
-				LDA #>(«gameName»)
-				STA «mainReceiver» + 1
 				JMP «mainMethod.asmName»
 		«ELSEIF method.isNmi»
 			;;;;;;;;;; NMI initialization begin

@@ -49,6 +49,7 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Integer.*
 import org.parisoft.noop.generator.CompileData
 import org.parisoft.noop.generator.AllocData
+import org.parisoft.noop.noop.Index
 
 class Expressions {
 
@@ -87,11 +88,11 @@ class Expressions {
 	}
 
 	def asmTmpArrayName(NewInstance instance, String containerName) {
-		containerName + '.new' + instance.typeOf.name + 'Array@' + instance.hashCode.toHexString
+		containerName + '.tmp' + instance.typeOf.name + 'Array@' + instance.hashCode.toHexString
 	}
 
 	def asmTmpVarName(NewInstance instance, String containerName) {
-		containerName + '.new' + instance.typeOf.name + '@' + instance.hashCode.toHexString
+		containerName + '.tmp' + instance.typeOf.name + '@' + instance.hashCode.toHexString
 	}
 
 	def asmConstructorName(NewInstance instance) {
@@ -478,7 +479,7 @@ class Expressions {
 					chunks += expression.args.map[alloc(data)].flatten
 
 					data.restoreTo(snapshot)
-				} else if ((expression.member as Variable).isStatic && expression.typeOf.isPrimitive && expression.dimensionOf.isEmpty) {
+				} else if ((expression.member as Variable).isConstant) {
 					data.constants += expression.member as Variable
 				}
 
@@ -649,215 +650,57 @@ class Expressions {
 				«ENDIF»	
 			'''
 			MemberSelection: '''
-				TODO: expression.indexes
 				«val member = expression.member»
 				«val receiver = expression.receiver»
-				«IF member instanceof Variable»
-					TODO: data.indirect|absolute = receiver.member
-				«ELSEIF member instanceof Method»
-					«val method = member as Method»
-					«IF method.isNonStatic»
-						«receiver.compile(new CompileData => [
-							indirect = method.asmReceiverName
-							type = receiver.typeOf
-							copy = false
-						])»
+				«IF member.isStatic»
+					«IF !(receiver instanceof NewInstance)»
+						«receiver.compile(new CompileData => [container = data.container])»
 					«ENDIF»
-					«FOR i : 0..< expression.args.size»
-						«val param = method.params.get(i)»
-						«val arg = expression.args.get(i)»
-						«arg.compile(new CompileData => [
-							container = method.asmName
-							type = param.type
-							
-							if (param.type.isPrimitive && param.type.dimensionOf.isEmpty) {
-								absolute = param.asmName
-								copy = true
-							} else {
-								indirect = param.asmName
-								copy = false
-							}
+					«IF member instanceof Variable»
+						«val varAsAbsolute = if (member.isConstant) member.asmConstantName else member.asmStaticName»
+						«member.compileAbsoluteVarReference(varAsAbsolute, expression.indexes, data)»
+					«ELSEIF member instanceof Method»
+						«val method = member as Method»
+						«method.compileMethodInvocation(expression.args, data)»
+					«ENDIF»
+				«ELSE»
+					«IF member instanceof Variable»
+						«val receiverAsIndirect = Members::TEMP_VAR_NAME1»
+						«receiver.compile(new CompileData => [
+							container = data.container
+							type = receiver.typeOf
+							indirect = receiverAsIndirect
+							copy = false 
 						])»
-					«ENDFOR»
-					«noop»
-						JSR «method.asmName»
-					«IF member.typeOf.isNonVoid»
-						TODO: data.indirect|absolute = member.return
+						«member.compileIndirectVarReference(receiverAsIndirect, expression.indexes, data)»
+					«ELSEIF member instanceof Method»
+						«val method = member as Method»
+						«receiver.compile(new CompileData => [
+							container = data.container
+							type = receiver.typeOf
+							indirect = method.asmReceiverName
+							copy = false 
+						])»
+						«method.compileMethodInvocation(expression.args, data)»
 					«ENDIF»
 				«ENDIF»				
 			'''
 			MemberRef: '''
 				«val member = expression.member»
-				«val refIsIndexed = expression.indexes.isNotEmpty»
 				«IF member instanceof Variable»
-					«val varAsIndirect = if (member.isField && member.isNonStatic) {
-						'''«data.container».receiver'''
-					} else if (member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)) {
-						member.asmName
-					}»
-					«IF varAsIndirect !== null»
-						«IF data.absolute !== null»
-							«IF data.isIndexed»
-								«noop»
-									LDX «data.index»
-							«ENDIF»
-							«IF refIsIndexed»
-								«expression.loadIndexIntoRegiter('Y')»
-							«ELSE»
-								«noop»
-									LDY #«IF member.isField»«member.asmOffsetName»«ELSE»$00«ENDIF»
-							«ENDIF»
-							«FOR i : 0..< data.type.sizeOf»
-								«noop»
-									«IF i > 0»
-										INY
-									«ENDIF»
-									LDA («varAsIndirect»), Y
-									STA «data.absolute» + «i»«IF data.isIndexed», X«ENDIF»
-							«ENDFOR»
-						«ELSEIF data.indirect !== null && data.isCopy»
-							«IF data.isIndexed»
-								«noop»
-									LDY «data.index»
-							«ELSE»
-								«noop»
-									LDY #$00
-							«ENDIF»
-							«IF refIsIndexed»
-								«expression.loadIndexIntoRegiter('X')»
-							«ELSE»
-								«noop»
-									LDX #«IF member.isField»«member.asmOffsetName»«ELSE»$00«ENDIF»
-							«ENDIF»
-							«FOR i : 0..< data.type.sizeOf»
-								«noop»
-									«IF i > 0»
-										INX
-										INY
-									«ENDIF»
-									LDA («varAsIndirect», X)
-									STA («data.indirect»), Y
-							«ENDFOR»
-						«ELSEIF data.indirect !== null»
-							«IF refIsIndexed || member.isField»
-								«IF refIsIndexed»
-									«expression.loadIndexIntoRegiter('A')»
-								«ELSE»
-									«noop»
-										LDA #«member.asmOffsetName»
-								«ENDIF»
-								«noop»
-									CLC
-									ADC «varAsIndirect» + 0
-									STA «data.indirect» + 0
-									LDA #$00
-									ADC «varAsIndirect» + 1
-									STA «data.indirect» + 1
-							«ELSE» 
-								«noop»
-									LDA «varAsIndirect» + 0
-									STA «data.indirect» + 0
-									LDA «varAsIndirect» + 1
-									STA «data.indirect» + 1
-							«ENDIF»
-						«ELSEIF data.register !== null»
-							«IF refIsIndexed»
-								«IF data.register == 'Y'»
-									«expression.loadIndexIntoRegiter('X')»
-										LDY («varAsIndirect», X)
-								«ELSE»
-									«expression.loadIndexIntoRegiter('Y')»
-										LD«data.register» («varAsIndirect»), Y
-								«ENDIF»
-							«ELSEIF member.isField»
-								«IF data.register == 'Y'»
-									«noop»
-										LDX #«member.asmOffsetName»
-										LDY («varAsIndirect», X)
-								«ELSE»
-									«noop»
-										LDY #«member.asmOffsetName»
-										LD«data.register» («varAsIndirect»), Y
-								«ENDIF»
-							«ELSE»
-								«noop»
-									LD«data.register» («varAsIndirect»)
-							«ENDIF»
-						«ENDIF»
+					«IF member.isField && member.isNonStatic»
+						«member.compileIndirectVarReference('''«data.container».receiver''', expression.indexes, data)»
+					«ELSEIF member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)»
+						«member.compileIndirectVarReference(member.asmName, expression.indexes, data)»
+					«ELSEIF member.isConstant»
+						«member.compileAbsoluteVarReference(member.asmConstantName, expression.indexes, data)»
+					«ELSEIF member.isStatic»
+						«member.compileAbsoluteVarReference(member.asmStaticName, expression.indexes, data)»
 					«ELSE»
-						«val varAsAbsolute = if (member.isConstant) {
-							member.asmConstantName
-						} else if (member.isStatic) {
-							member.asmStaticName
-						} else {
-							member.asmName
-						}»
-						«IF data.absolute !== null»
-							«IF data.isIndexed»
-								«noop»
-									LDX «data.index»
-							«ENDIF»
-							«IF refIsIndexed»
-								«expression.loadIndexIntoRegiter('Y')»
-							«ENDIF»
-							«FOR i : 0..< data.type.sizeOf»
-								«noop»
-									LDA «varAsAbsolute» + «i»«IF refIsIndexed», Y«ENDIF»
-									STA «data.absolute» + «i»«IF data.isIndexed», X«ENDIF»
-							«ENDFOR»
-						«ELSEIF data.indirect !== null && data.isCopy»
-							«IF data.isIndexed»
-								«noop»
-									LDY «data.index»
-							«ELSE»
-								«noop»
-									LDY #$00
-							«ENDIF»
-							«IF refIsIndexed»
-								«expression.loadIndexIntoRegiter('X')»
-							«ENDIF»
-							«FOR i : 0..< data.type.sizeOf»
-								«noop»
-									«IF i > 0»
-										INY
-									«ENDIF»
-									LDA «varAsAbsolute» + «i»«IF refIsIndexed», X«ENDIF»
-									STA («data.indirect»), Y
-							«ENDFOR»
-						«ELSEIF data.indirect !== null»
-							«IF refIsIndexed»
-								«expression.loadIndexIntoRegiter('A')»
-									CLC
-									ADC #<(«varAsAbsolute»)
-									STA «data.indirect» + 0
-									LDA #$00
-									ADC #>(«varAsAbsolute»)
-									STA «data.indirect» + 1
-							«ELSE»
-								«noop»
-									LDA #<(«varAsAbsolute»)
-									STA «data.indirect» + 0
-									LDA #>(«varAsAbsolute»)
-									STA «data.indirect» + 1
-							«ENDIF»
-						«ELSEIF data.register !== null»
-							«IF refIsIndexed»
-								«IF data.register == 'Y'»
-									«expression.loadIndexIntoRegiter('X')»
-										LDY «varAsAbsolute», X
-								«ELSE»
-									«expression.loadIndexIntoRegiter('Y')»
-										LD«data.register» «varAsAbsolute», Y
-								«ENDIF»
-							«ELSE»
-								«noop»
-									LD«data.register» «varAsAbsolute»
-							«ENDIF»
-						«ENDIF»
+						«member.compileAbsoluteVarReference(member.asmName, expression.indexes, data)»
 					«ENDIF»
 				«ELSEIF member instanceof Method»
 					«val method = member as Method»
-					«val methodName = method.asmName»
 					«IF method.isNonStatic»
 						«val outerReceiver = '''«data.container».receiver'''»
 						«val innerReceiver = method.asmReceiverName»
@@ -865,89 +708,286 @@ class Expressions {
 							STA «innerReceiver» + 0
 							LDA «outerReceiver» + 1
 							STA «innerReceiver» + 1
+						«method.compileMethodInvocation(expression.args, data)»
 					«ENDIF»
-					«FOR i : 0..< expression.args.size»
-						«val param = method.params.get(i)»
-						«val arg = expression.args.get(i)»
-						«arg.compile(new CompileData => [
-							container = methodName
-							type = param.type
-							
-							if (param.type.isPrimitive && param.dimensionOf.isEmpty) {
-								absolute = param.asmName
-								copy = true
-							} else {
-								indirect = param.asmName
-								copy = false
-							}
-						])»
-						«val dimension = arg.dimensionOf»
-						«FOR dim : 0..< dimension.size»
-							«noop»
-								LDA #«dimension.get(dim).toHex»
-								STA «param.asmLenName(methodName, dim)»
-						«ENDFOR»
-					«ENDFOR»
-					«noop»
-						JSR «method.asmName»
-					«IF member.typeOf.isNonVoid»
-						«val retAsIndirect = method.asmReturnName»
-						«IF data.absolute !== null»
-							«noop»
-								«IF data.isIndexed»
-									LDX «data.index»
-								«ENDIF»
-								«FOR i : 0..< data.type.sizeOf»
-									«IF i == 1»
-										LDY #$01
-									«ELSEIF i > 1»
-										INY
-									«ENDIF»
-									LDA («retAsIndirect»)«IF i > 0», Y«ENDIF»
-									STA «data.absolute» + «i»«IF data.isIndexed», X«ENDIF»
-								«ENDFOR»
-						«ELSEIF data.indirect !== null && data.isCopy»
-							«val sizeOfData = data.type.sizeOf»
-								«IF data.isIndexed»
-									LDY «data.index»
-								«ELSEIF sizeOfData > 1»
-									LDY #$00
-								«ENDIF»
-								«IF sizeOfData > 1»
-									LDX #$00
-								«ENDIF»
-								«FOR i : 0..< sizeOfData»
-									«IF i > 0»
-										INX
-										INY
-									«ENDIF»
-									LDA («retAsIndirect»«IF i > 0», X«ENDIF»)
-									STA («data.indirect»)«IF i > 0 || data.isIndexed», Y«ENDIF»
-								«ENDFOR»
-						«ELSEIF data.indirect !== null»
-							«noop»
-								LDA «retAsIndirect» + 0
-								STA «data.indirect» + 0
-								LDA «retAsIndirect» + 1
-								STA «data.indirect» + 1
-						«ELSEIF data.register !== null»
-							«noop»
-								LD«data.register» («retAsIndirect»)
-						«ENDIF»
-					«ENDIF»
-				«ENDIF»
+				«ENDIF»					
 			'''
 			default:
 				''
 		}
 	}
 
-	private def loadIndexIntoRegiter(MemberRef ref, String reg) '''
-		«val variable = ref.member as Variable»
+	private def compileIndirectVarReference(Variable variable, String varAsIndirect, List<Index> indexes, CompileData data) '''
+		«val varIsIndexed = indexes.isNotEmpty»
+		«IF data.absolute !== null»
+			«IF data.isIndexed»
+				«noop»
+					LDX «data.index»
+			«ENDIF»
+			«IF varIsIndexed»
+				«variable.loadIndexesIntoRegiter(indexes, 'Y')»
+			«ELSE»
+				«noop»
+					LDY #«IF variable.isField»«variable.asmOffsetName»«ELSE»$00«ENDIF»
+			«ENDIF»
+			«FOR i : 0..< data.type.sizeOf»
+				«noop»
+					«IF i > 0»
+						INY
+					«ENDIF»
+					LDA («varAsIndirect»), Y
+					STA «data.absolute» + «i»«IF data.isIndexed», X«ENDIF»
+			«ENDFOR»
+		«ELSEIF data.indirect !== null && data.isCopy»
+			«IF data.isIndexed»
+				«noop»
+					LDY «data.index»
+			«ELSE»
+				«noop»
+					LDY #$00
+			«ENDIF»
+			«IF varIsIndexed»
+				«variable.loadIndexesIntoRegiter(indexes, 'X')»
+			«ELSE»
+				«noop»
+					LDX #«IF variable.isField»«variable.asmOffsetName»«ELSE»$00«ENDIF»
+			«ENDIF»
+			«FOR i : 0..< data.type.sizeOf»
+				«noop»
+					«IF i > 0»
+						INX
+						INY
+					«ENDIF»
+					LDA («varAsIndirect», X)
+					STA («data.indirect»), Y
+			«ENDFOR»
+		«ELSEIF data.indirect !== null»
+			«IF varIsIndexed || variable.isField»
+				«IF varIsIndexed»
+					«variable.loadIndexesIntoRegiter(indexes, 'A')»
+				«ELSE»
+					«noop»
+						LDA #«variable.asmOffsetName»
+				«ENDIF»
+				«noop»
+					CLC
+					ADC «varAsIndirect» + 0
+					STA «data.indirect» + 0
+					LDA #$00
+					ADC «varAsIndirect» + 1
+					STA «data.indirect» + 1
+			«ELSE» 
+				«noop»
+					LDA «varAsIndirect» + 0
+					STA «data.indirect» + 0
+					LDA «varAsIndirect» + 1
+					STA «data.indirect» + 1
+			«ENDIF»
+		«ELSEIF data.register !== null»
+			«IF varIsIndexed»
+				«IF data.register == 'Y'»
+					«variable.loadIndexesIntoRegiter(indexes, 'X')»
+						LDY («varAsIndirect», X)
+				«ELSE»
+					«variable.loadIndexesIntoRegiter(indexes, 'Y')»
+						LD«data.register» («varAsIndirect»), Y
+				«ENDIF»
+			«ELSEIF variable.isField»
+				«IF data.register == 'Y'»
+					«noop»
+						LDX #«variable.asmOffsetName»
+						LDY («varAsIndirect», X)
+				«ELSE»
+					«noop»
+						LDY #«variable.asmOffsetName»
+						LD«data.register» («varAsIndirect»), Y
+				«ENDIF»
+			«ELSE»
+				«noop»
+					LD«data.register» («varAsIndirect»)
+			«ENDIF»
+		«ENDIF»
+	'''
+
+	private def compileAbsoluteVarReference(Variable variable, String varAsAbsolute, List<Index> indexes, CompileData data) '''
+		«val varIsIndexed = indexes.isNotEmpty»
+		«IF data.absolute !== null»
+			«IF data.isIndexed»
+				«noop»
+					LDX «data.index»
+			«ENDIF»
+			«IF varIsIndexed»
+				«variable.loadIndexesIntoRegiter(indexes, 'Y')»
+			«ENDIF»
+			«FOR i : 0..< data.type.sizeOf»
+				«noop»
+					LDA «varAsAbsolute» + «i»«IF varIsIndexed», Y«ENDIF»
+					STA «data.absolute» + «i»«IF data.isIndexed», X«ENDIF»
+			«ENDFOR»
+		«ELSEIF data.indirect !== null && data.isCopy»
+			«IF data.isIndexed»
+				«noop»
+					LDY «data.index»
+			«ELSE»
+				«noop»
+					LDY #$00
+			«ENDIF»
+			«IF varIsIndexed»
+				«variable.loadIndexesIntoRegiter(indexes, 'X')»
+			«ENDIF»
+			«FOR i : 0..< data.type.sizeOf»
+				«noop»
+					«IF i > 0»
+						INY
+					«ENDIF»
+					LDA «varAsAbsolute» + «i»«IF varIsIndexed», X«ENDIF»
+					STA («data.indirect»), Y
+			«ENDFOR»
+		«ELSEIF data.indirect !== null»
+			«IF varIsIndexed»
+				«variable.loadIndexesIntoRegiter(indexes, 'A')»
+					CLC
+					ADC #<(«varAsAbsolute»)
+					STA «data.indirect» + 0
+					LDA #$00
+					ADC #>(«varAsAbsolute»)
+					STA «data.indirect» + 1
+			«ELSE»
+				«noop»
+					LDA #<(«varAsAbsolute»)
+					STA «data.indirect» + 0
+					LDA #>(«varAsAbsolute»)
+					STA «data.indirect» + 1
+			«ENDIF»
+		«ELSEIF data.register !== null»
+			«IF varIsIndexed»
+				«IF data.register == 'Y'»
+					«variable.loadIndexesIntoRegiter(indexes, 'X')»
+						LDY «varAsAbsolute», X
+				«ELSE»
+					«variable.loadIndexesIntoRegiter(indexes, 'Y')»
+						LD«data.register» «varAsAbsolute», Y
+				«ENDIF»
+			«ELSE»
+				«noop»
+					LD«data.register» «varAsAbsolute»
+			«ENDIF»
+		«ENDIF»
+	'''
+
+	private def compileMethodInvocation(Method method, List<Expression> args, CompileData data) '''
+		«val methodName = method.asmName»
+		«FOR i : 0..< args.size»
+			«val param = method.params.get(i)»
+			«val arg = args.get(i)»
+			«arg.compile(new CompileData => [
+				container = methodName
+				type = param.type
+				
+				if (param.type.isPrimitive && param.dimensionOf.isEmpty) {
+					absolute = param.asmName
+					copy = true
+				} else {
+					indirect = param.asmName
+					copy = false
+				}
+			])»
+			«val dimension = arg.dimensionOf»
+			«FOR dim : 0..< dimension.size»
+				«noop»
+					LDA #«dimension.get(dim).toHex»
+					STA «param.asmLenName(methodName, dim)»
+			«ENDFOR»
+		«ENDFOR»
+		«noop»
+			JSR «method.asmName»
+		«IF method.typeOf.isPrimitive»
+			«val retAsAbsolute = method.asmReturnName»
+			«IF data.absolute !== null»
+				«noop»
+					«IF data.isIndexed»
+						LDX «data.index»
+					«ENDIF»
+					«FOR i : 0..< data.type.sizeOf»
+						LDA «retAsAbsolute» + «i»
+						STA «data.absolute» + «i»«IF data.isIndexed», X«ENDIF»
+					«ENDFOR»
+			«ELSEIF data.indirect !== null && data.isCopy»
+				«val sizeOfData = data.type.sizeOf»
+					«IF data.isIndexed»
+						LDY «data.index»
+					«ELSEIF sizeOfData > 1»
+						LDY #$00
+					«ENDIF»
+					«FOR i : 0..< sizeOfData»
+						«IF i > 0»
+							INY
+						«ENDIF»
+						LDA «retAsAbsolute» + «i»
+						STA («data.indirect»)«IF i > 0 || data.isIndexed», Y«ENDIF»
+					«ENDFOR»
+			«ELSEIF data.indirect !== null»
+				«noop»
+					LDA #<(«retAsAbsolute»)
+					STA «data.indirect» + 0
+					LDA #>(«retAsAbsolute»)
+					STA «data.indirect» + 1
+			«ELSEIF data.register !== null»
+				«noop»
+					LD«data.register» «retAsAbsolute»
+			«ENDIF»
+		«ELSEIF method.typeOf.isNonVoid»
+			«val retAsIndirect = method.asmReturnName»
+			«IF data.absolute !== null»
+				«noop»
+					«IF data.isIndexed»
+						LDX «data.index»
+					«ENDIF»
+					«FOR i : 0..< data.type.sizeOf»
+						«IF i == 1»
+							LDY #$01
+						«ELSEIF i > 1»
+							INY
+						«ENDIF»
+						LDA («retAsIndirect»)«IF i > 0», Y«ENDIF»
+						STA «data.absolute» + «i»«IF data.isIndexed», X«ENDIF»
+					«ENDFOR»
+			«ELSEIF data.indirect !== null && data.isCopy»
+				«val sizeOfData = data.type.sizeOf»
+					«IF data.isIndexed»
+						LDY «data.index»
+					«ELSEIF sizeOfData > 1»
+						LDY #$00
+					«ENDIF»
+					«IF sizeOfData > 1»
+						LDX #$00
+					«ENDIF»
+					«FOR i : 0..< sizeOfData»
+						«IF i > 0»
+							INX
+							INY
+						«ENDIF»
+						LDA («retAsIndirect»«IF i > 0», X«ENDIF»)
+						STA («data.indirect»)«IF i > 0 || data.isIndexed», Y«ENDIF»
+					«ENDFOR»
+			«ELSEIF data.indirect !== null»
+				«noop»
+					LDA «retAsIndirect» + 0
+					STA «data.indirect» + 0
+					LDA «retAsIndirect» + 1
+					STA «data.indirect» + 1
+			«ELSEIF data.register !== null»
+				«noop»
+					LD«data.register» («retAsIndirect»)
+			«ENDIF»
+		«ENDIF»
+	'''
+
+	private def loadIndexesIntoRegiter(Variable variable, List<Index> indexes, String reg) '''
 		«val dimension = variable.dimensionOf»
 		«val sizeOfVar = variable.typeOf.sizeOf»
 		«IF dimension.size === 1 && sizeOfVar === 1»
-			«val index = ref.indexes.head»
+			«val index = indexes.head»
 			«IF variable.isField»
 				«index.value.compile(new CompileData => [register = 'A'])»
 					ADC #«variable.asmOffsetName»
@@ -963,8 +1003,8 @@ class Expressions {
 				PHA
 				LDA «Members::TEMP_VAR_NAME2»
 				PHA
-			«FOR i : 0..< ref.indexes.size»
-				«val index = ref.indexes.get(i)»
+			«FOR i : 0..< indexes.size»
+				«val index = indexes.get(i)»
 				«index.value.compile(new CompileData => [register = 'A'])»
 					«FOR len : (i + 1)..< dimension.size»
 						STA «Members::TEMP_VAR_NAME1»
@@ -973,11 +1013,11 @@ class Expressions {
 						LDA #$00
 						mult8x8to8
 					«ENDFOR»
-					«IF (i + 1) < ref.indexes.size»
+					«IF (i + 1) < indexes.size»
 						PHA
 					«ENDIF»
 			«ENDFOR»
-			«FOR i : 1..< ref.indexes.size»
+			«FOR i : 1..< indexes.size»
 				«noop»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA

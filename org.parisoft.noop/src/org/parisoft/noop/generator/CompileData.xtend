@@ -13,7 +13,7 @@ class CompileData {
 	@Accessors var String container
 	@Accessors var NoopClass type
 	@Accessors var boolean copy = true
-	@Accessors var AllocData stack
+	@Accessors var AllocData allocation
 
 	override toString() '''
 		StorageData{
@@ -30,21 +30,6 @@ class CompileData {
 
 	def isIndexed() {
 		index !== null
-	}
-
-	override def CompileData clone() {
-		val src = this
-
-		new CompileData => [
-			register = src.register
-			absolute = src.absolute
-			relative = src.relative
-			indirect = src.indirect
-			index = src.index
-			container = src.container
-			type = src.type
-			copy = src.copy
-		]
 	}
 
 }
