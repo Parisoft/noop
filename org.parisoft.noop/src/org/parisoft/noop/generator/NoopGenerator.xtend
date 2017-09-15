@@ -43,15 +43,17 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def compile(Resource resource) {
-		val game = resource.gameClass
+		val gameImpl = resource.gameClass
 
-		if (game === null) {
+		if (gameImpl === null) {
 			return null
 		}
+		
+		val data = gameImpl.prepare
+		gameImpl.classHierarchy.findLast[game].alloc(data)
+		val content = data.compile
 
-		val content = game.alloc.compile
-
-		new ASM('''«game.name».asm''', content.toString)
+		new ASM('''«gameImpl.name».asm''', content.toString)
 	}
 
 	private def gameClass(Resource resource) {

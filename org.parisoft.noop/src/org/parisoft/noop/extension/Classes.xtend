@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import java.util.Collection
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
+import org.parisoft.noop.generator.AllocData
 import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
@@ -11,8 +12,6 @@ import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.AllocData
-import org.parisoft.noop.noop.NewInstance
 
 class Classes {
 
@@ -198,25 +197,44 @@ class Classes {
 		}
 	}
 
-	def alloc(NoopClass noopClass) {
+	def prepare(NoopClass gameImplClass) {
+		val gameClass = gameImplClass.classHierarchy.findLast[game]
+		val gameInstance = NoopFactory::eINSTANCE.createVariable => [
+			name = '''«Members::STATIC_PREFIX»instance'''
+			value = NoopFactory::eINSTANCE.createNewInstance => [type = gameImplClass]
+		]
+		val mainInvocation = NoopFactory::eINSTANCE.createMemberSelection => [
+			receiver = NoopFactory::eINSTANCE.createMemberRef => [member = gameInstance]
+			member = gameImplClass.allMethodsBottomUp.findFirst[main]
+		]
 		val data = new AllocData
-		noopClass.alloc(data)
+
+		gameImplClass.allMethodsBottomUp.findFirst[reset].body.statements += mainInvocation
+		gameClass.members += gameInstance
+		gameClass.prepare(data)
 
 		return data
 	}
 
-	def void alloc(NoopClass noopClass, AllocData data) {
+	def void prepare(NoopClass noopClass, AllocData data) {
 		if (data.classes.add(noopClass)) {
-			noopClass.allFieldsTopDown.filter[static].forEach[alloc(data)]
+			noopClass.allFieldsTopDown.filter[static].forEach[prepare(data)]
 
 			if (noopClass.isGame) {
-				noopClass.allMethodsBottomUp.findFirst[main].alloc(data)
-				noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
-				noopClass.allMethodsTopDown.findFirst[reset].update(noopClass).alloc(data)
-				
-				data.header = noopClass.allFieldsBottomUp.findFirst[typeOf.INESHeader].value as NewInstance
-				data.constants.forEach[alloc(data => [allocStatic = true])]
+				noopClass.allMethodsBottomUp.findFirst[reset].prepare(data)
+				noopClass.allMethodsBottomUp.findFirst[main].prepare(data)
+				noopClass.allMethodsBottomUp.findFirst[nmi].prepare(data)
 			}
+		}
+	}
+
+	def void alloc(NoopClass noopClass, AllocData data) {
+		if (noopClass.isGame) {
+			data.statics.forEach[alloc(data)]
+			
+			noopClass.allMethodsBottomUp.findFirst[reset].alloc(data)
+			noopClass.allMethodsBottomUp.findFirst[main].alloc(data)
+			noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
 		}
 	}
 

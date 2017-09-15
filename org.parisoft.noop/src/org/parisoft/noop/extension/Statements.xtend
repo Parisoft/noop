@@ -43,6 +43,49 @@ class Statements {
 		'''«^return.getContainerOfType(Method).asmName».return'''.toString
 	}
 
+	def void prepare(Statement statement, AllocData data) {
+		switch (statement) {
+			Variable: {
+				statement.value?.prepare(data)
+				
+				if (statement.isConstant) {
+					data.constants += statement
+				} else if (statement.isROM) {
+					if (statement.storage.type == StorageType.PRGROM) {
+						data.prgRoms += statement
+					} else if (statement.storage.type == StorageType.CHRROM) {
+						data.chrRoms += statement
+					}
+				} else if (statement.isStatic && statement.typeOf.isNonINESHeader) {
+					data.statics += statement
+				}
+			}
+			IfStatement: {
+				statement.condition.prepare(data)
+				statement.body.statements.forEach[prepare(data)]
+			}
+			ForStatement: {
+				statement.variables.forEach[prepare(data)]
+				statement.assignments.forEach[prepare(data)]
+				statement.condition?.prepare(data)
+				statement.expressions.forEach[prepare(data)]
+				statement.body.statements.forEach[prepare(data)]
+			}
+			ForeverStatement: {
+				statement.body.statements.forEach[prepare(data)]
+			}
+			AsmStatement: {
+				statement.vars.forEach[prepare(data)]
+			}
+			ReturnStatement: {
+				statement.value?.prepare(data)
+			}
+			Expression: {
+				statement.prepare(data)
+			}
+		}
+	}
+
 	def List<MemChunk> alloc(Statement statement, AllocData data) {
 		switch (statement) {
 			Variable: {
@@ -59,26 +102,11 @@ class Statements {
 							for (i : 0 ..< statement.dimensionOf.size) {
 								varChunks += data.chunkForVar(statement.asmLenName(data.container, i), 1)
 							}
-
-							statement.type.alloc(data)
 						} else {
 							varChunks += data.chunkForVar(name, statement.sizeOf)
 						}
-					} else if (statement.isROM) {
-						if (statement.storage.type == StorageType.PRGROM) {
-							data.prgRoms += statement
-						} else if (statement.storage.type == StorageType.CHRROM) {
-							data.chrRoms += statement
-						}
-					} else if (statement.typeOf.isINESHeader) {
-						return statement?.value.alloc(data)
-					} else if (statement.isConstant) {
-						data.constants += statement
-					} else if (statement.isStatic && !data.isAllocStatic) {
-						data.statics += statement
-					} else {
+					} else if (statement.isNonStatic) {
 						varChunks += data.chunkForVar(name, statement.sizeOf)
-						statement.typeOf.alloc(data)
 					}
 				}
 
@@ -141,7 +169,7 @@ class Statements {
 
 		data.restoreTo(snapshot)
 
-		return chunks + statement.^if?.alloc(data)
+		return chunks + statement?.^if.alloc(data)
 	}
 
 	def compile(Statement statement, CompileData data) {
