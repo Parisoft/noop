@@ -28,7 +28,7 @@ class Statements {
 	@Inject extension Expressions
 
 	def isVoid(ReturnStatement ^return) {
-		^return === null || ^return.value === null || ^return.method.typeOf.name == TypeSystem.LIB_VOID
+		^return === null || ^return.value === null || ^return.method.typeOf.isNonVoid
 	}
 
 	def isNonVoid(ReturnStatement ^return) {
@@ -144,7 +144,7 @@ class Statements {
 				if (statement.isNonVoid) {
 					if (statement.method.typeOf.isPrimitive) {
 						data.variables.compute(statement.asmName, [ name, v |
-							newArrayList(data.chunkForVar(name, statement.method.sizeOf))
+							newArrayList(data.chunkForVar(name, statement.value.sizeOf))
 						])
 					} else {
 						data.pointers.compute(statement.asmName, [ name, v |
@@ -194,6 +194,28 @@ class Statements {
 					«statement.value.compile(data => [
 						absolute = statement.asmName(data.container)
 						type = statement.typeOf
+					])»
+				«ENDIF»
+			'''
+			ReturnStatement: '''
+				«val method = statement.method»
+				«IF statement.isNonVoid»
+					«statement.value.compile(new CompileData => [
+						container = method.asmName
+						type = statement.value.typeOf
+						
+						if (method.typeOf.isPrimitive) {
+							absolute = method.asmReturnName
+							copy = true
+						} else {
+							indirect = method.asmReturnName
+							copy = false
+						}
+					])»
+				«ELSEIF statement.value !== null»
+					«statement.value.compile(new CompileData => [
+						container = method.asmName
+						type = statement.value.typeOf
 					])»
 				«ENDIF»
 			'''

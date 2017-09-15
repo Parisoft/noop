@@ -50,7 +50,7 @@ class NoopGenerator extends AbstractGenerator {
 		}
 		
 		val data = gameImpl.prepare
-		gameImpl.classHierarchy.findLast[game].alloc(data)
+		gameImpl.alloc(data)
 		val content = data.compile
 
 		new ASM('''«gameImpl.name».asm''', content.toString)

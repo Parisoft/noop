@@ -209,9 +209,9 @@ class Classes {
 		]
 		val data = new AllocData
 
-		gameImplClass.allMethodsBottomUp.findFirst[reset].body.statements += mainInvocation
-		gameClass.members += gameInstance
-		gameClass.prepare(data)
+		gameClass.allMethodsBottomUp.findFirst[reset].body.statements += mainInvocation
+		gameImplClass.members += gameInstance
+		gameImplClass.prepare(data)
 
 		return data
 	}
@@ -221,7 +221,7 @@ class Classes {
 			noopClass.allFieldsTopDown.filter[static].forEach[prepare(data)]
 
 			if (noopClass.isGame) {
-				noopClass.allMethodsBottomUp.findFirst[reset].prepare(data)
+				noopClass.allMethodsBottomUp.findLast[reset].prepare(data)
 				noopClass.allMethodsBottomUp.findFirst[main].prepare(data)
 				noopClass.allMethodsBottomUp.findFirst[nmi].prepare(data)
 			}
@@ -232,7 +232,7 @@ class Classes {
 		if (noopClass.isGame) {
 			data.statics.forEach[alloc(data)]
 			
-			noopClass.allMethodsBottomUp.findFirst[reset].alloc(data)
+			noopClass.allMethodsBottomUp.findLast[reset].alloc(data)
 			noopClass.allMethodsBottomUp.findFirst[main].alloc(data)
 			noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
 		}

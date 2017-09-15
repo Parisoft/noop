@@ -49,6 +49,7 @@ import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
+import static extension org.eclipse.xtext.EcoreUtil2.*
 
 class Expressions {
 
@@ -661,6 +662,12 @@ class Expressions {
 						.db «expression.valueOf.toBytes.join(', ', [toHex])»
 				«ENDIF»
 			'''
+			This: '''
+				«expression.compileSelfReference(data)»
+			'''
+			Super: '''
+				«expression.compileSelfReference(data)»
+			'''
 			NewInstance: '''
 				«IF data === null»
 					«val constructor = expression.asmConstructorName»
@@ -825,6 +832,57 @@ class Expressions {
 				''
 		}
 	}
+
+	private def compileSelfReference(Expression expression, CompileData data) '''
+		«val refAsIndirect = expression.getContainerOfType(Method).asmReceiverName»
+		«IF data.absolute !== null»
+			«IF data.isIndexed»
+				«noop»
+					LDX «data.index»
+			«ENDIF»
+			«val sizeOfData = data.type.sizeOf»
+			«IF sizeOfData > 1»
+				«noop»
+					LDY #$00
+			«ENDIF»
+			«FOR i : 0..< sizeOfData»
+				«noop»
+					«IF i > 0»
+						INY
+					«ENDIF»
+					LDA («refAsIndirect»), Y
+					STA «data.absolute»«IF i > 0» + «i»«ENDIF»«IF data.isIndexed», X«ENDIF»
+			«ENDFOR»
+		«ELSEIF data.indirect !== null && data.isCopy»
+			«IF data.isIndexed»
+				«noop»
+					LDY «data.index»
+			«ELSE»
+				«noop»
+					LDY #$00
+			«ENDIF»
+			«val sizeOfData = data.type.sizeOf»
+			«IF sizeOfData > 1»
+				«noop»
+					LDX #$00
+			«ENDIF»
+			«FOR i : 0..< sizeOfData»
+				«noop»
+					«IF i > 0»
+						INX
+						INY
+					«ENDIF»
+					LDA («refAsIndirect», X)
+					STA («data.indirect»), Y
+			«ENDFOR»
+		«ELSEIF data.indirect !== null»
+			«noop»
+				LDA «refAsIndirect» + 0
+				STA «data.indirect» + 0
+				LDA «refAsIndirect» + 1
+				STA «data.indirect» + 1
+		«ENDIF»
+	'''
 
 	private def void noop() {
 	}
