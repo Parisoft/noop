@@ -6,6 +6,10 @@ import java.util.List
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
+import org.parisoft.noop.generator.AllocData
+import org.parisoft.noop.generator.CompileData
+import org.parisoft.noop.noop.Expression
+import org.parisoft.noop.noop.Index
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelection
@@ -14,13 +18,9 @@ import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 
-import static extension java.lang.Integer.*
 import static extension java.lang.Character.*
+import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.CompileData
-import org.parisoft.noop.generator.AllocData
-import org.parisoft.noop.noop.Index
-import org.parisoft.noop.noop.Expression
 
 public class Members {
 
@@ -221,7 +221,7 @@ public class Members {
 	}
 
 	def prepare(Method method, AllocData data) {
-		
+		method.body.statements.forEach[prepare(data)]
 	}
 
 	def alloc(Method method, AllocData data) {

@@ -437,6 +437,10 @@ class Expressions {
 					data.header = expression
 				} else {
 					expression.type.prepare(data)
+					
+					if (expression.type.isNonPrimitive) {
+						expression.fieldsInitializedOnContructor.forEach[prepare(data)]
+					}
 				}
 			MemberSelection: {
 				expression.receiver.prepare(data)
@@ -531,7 +535,7 @@ class Expressions {
 					}
 				}
 
-				if (expression.dimension.isEmpty && expression.type.isNonPrimitive) {
+				if (expression.type.isNonPrimitive) {
 					val snapshot = data.snapshot
 					val constructorName = expression.asmConstructorName
 
@@ -552,23 +556,19 @@ class Expressions {
 				return chunks
 			}
 			MemberSelection: {
+				val snapshot = data.snapshot
 				val chunks = newArrayList
 
-				if (expression.isInstanceOf || expression.isCast) {
-					val snapshot = data.snapshot
-
-					chunks += expression.receiver.alloc(data)
-
-					data.restoreTo(snapshot)
-				} else if (expression.isMethodInvocation) {
-					val snapshot = data.snapshot
-
+				if (expression.member !== null && expression.isMethodInvocation) {
 					chunks += (expression.member as Method).alloc(data)
-					chunks += expression.receiver.alloc(data)
-					chunks += expression.args.map[alloc(data)].flatten
-
-					data.restoreTo(snapshot)
+				} else if (expression.member !== null && expression.member instanceof Variable) {
+					chunks += (expression.member as Variable).alloc(data)
 				}
+
+				chunks += expression.receiver.alloc(data)
+				chunks += expression.args.map[alloc(data)].flatten
+
+				data.restoreTo(snapshot)
 
 				return chunks
 			}

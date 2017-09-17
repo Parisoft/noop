@@ -12,10 +12,12 @@ import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import java.util.Map
 
 class Classes {
 
 	static val int SIZE_OF_CLASS_TYPE = 1;
+	static val ThreadLocal<Map<NoopClass, Integer>> classeSizeCache = ThreadLocal::withInitial[newHashMap]
 
 	@Inject extension Members
 	@Inject extension Statements
@@ -175,7 +177,7 @@ class Classes {
 		'''«c.name».class'''.toString
 	}
 
-	def int sizeOf(NoopClass c) {
+	def int rawSizeOf(NoopClass c) {
 		switch (c.fullyQualifiedName.toString) {
 			case TypeSystem::LIB_VOID:
 				0
@@ -190,11 +192,15 @@ class Classes {
 			case TypeSystem::LIB_UINT:
 				2
 			default: {
-				SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonStatic].map[sizeOf].reduce [ s1, s2 |
+				SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonStatic].map[typeOf.rawSizeOf].reduce [ s1, s2 |
 					s1 + s2
 				] ?: 0)
 			}
 		}
+	}
+
+	def int sizeOf(NoopClass c) {
+		classeSizeCache.get.computeIfAbsent(c, [rawSizeOf])
 	}
 
 	def prepare(NoopClass gameImplClass) {
@@ -211,6 +217,13 @@ class Classes {
 		gameImplClass.allMethodsBottomUp.findFirst[reset].body.statements += mainInvocation
 		gameImplClass.members += gameInstance
 		gameImplClass.prepare(data)
+
+		data.classes += data.classes.map[classHierarchy].flatten.toSet
+		data.classes.forEach [ class1 |
+			classeSizeCache.get.put(class1, data.classes.filter [ class2 |
+				class2.isInstanceOf(class1)
+			].map[rawSizeOf].max)
+		]
 
 		return data
 	}
