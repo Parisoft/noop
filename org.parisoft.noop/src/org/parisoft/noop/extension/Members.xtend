@@ -307,7 +307,7 @@ public class Members {
 				;;;;;;;;;; Initial setup end
 
 			«FOR statement : method.body.statements»
-				«statement.compile(new CompileData => [container = method.asmName])»			
+				«statement.compile(new CompileData => [container = method.asmName])»
 			«ENDFOR»
 				RTS
 		«ELSEIF method.isNmi»
@@ -412,26 +412,19 @@ public class Members {
 			«ENDIF»
 		«ELSEIF data.register !== null»
 			«IF varIsIndexed»
-				«IF data.register == 'Y'»
-					«variable.compileIndexesIntoRegiter(indexes, 'X')»
-						LDY («varAsIndirect», X)
-				«ELSE»
-					«variable.compileIndexesIntoRegiter(indexes, 'Y')»
-						LD«data.register» («varAsIndirect»), Y
-				«ENDIF»
+				«variable.compileIndexesIntoRegiter(indexes, 'Y')»
+					LDA («varAsIndirect»), Y
 			«ELSEIF variable.isField»
-				«IF data.register == 'Y'»
-					«noop»
-						LDX #«variable.asmOffsetName»
-						LDY («varAsIndirect», X)
-				«ELSE»
-					«noop»
-						LDY #«variable.asmOffsetName»
-						LD«data.register» («varAsIndirect»), Y
-				«ENDIF»
+				«noop»
+					LDY #«variable.asmOffsetName»
+					LDA («varAsIndirect»), Y
 			«ELSE»
 				«noop»
-					LD«data.register» («varAsIndirect»)
+					LDA («varAsIndirect»)
+			«ENDIF»
+			«IF data.register != 'A'»
+				«noop»
+					TA«data.register»
 			«ENDIF»
 		«ENDIF»
 	'''

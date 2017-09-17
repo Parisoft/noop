@@ -198,7 +198,6 @@ class Classes {
 	}
 
 	def prepare(NoopClass gameImplClass) {
-		val gameClass = gameImplClass.classHierarchy.findLast[game]
 		val gameInstance = NoopFactory::eINSTANCE.createVariable => [
 			name = '''«Members::STATIC_PREFIX»instance'''
 			value = NoopFactory::eINSTANCE.createNewInstance => [type = gameImplClass]
@@ -209,7 +208,7 @@ class Classes {
 		]
 		val data = new AllocData
 
-		gameClass.allMethodsBottomUp.findFirst[reset].body.statements += mainInvocation
+		gameImplClass.allMethodsBottomUp.findFirst[reset].body.statements += mainInvocation
 		gameImplClass.members += gameInstance
 		gameImplClass.prepare(data)
 
@@ -221,8 +220,7 @@ class Classes {
 			noopClass.allFieldsTopDown.filter[static].forEach[prepare(data)]
 
 			if (noopClass.isGame) {
-				noopClass.allMethodsBottomUp.findLast[reset].prepare(data)
-				noopClass.allMethodsBottomUp.findFirst[main].prepare(data)
+				noopClass.allMethodsBottomUp.findFirst[reset].prepare(data)
 				noopClass.allMethodsBottomUp.findFirst[nmi].prepare(data)
 			}
 		}
@@ -231,22 +229,10 @@ class Classes {
 	def void alloc(NoopClass noopClass, AllocData data) {
 		if (noopClass.isGame) {
 			data.statics.forEach[alloc(data)]
-			
-			noopClass.allMethodsBottomUp.findLast[reset].alloc(data)
-			noopClass.allMethodsBottomUp.findFirst[main].alloc(data)
+
+			noopClass.allMethodsBottomUp.findFirst[reset].alloc(data)
 			noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
 		}
-	}
-
-	def update(Method reset, NoopClass gameImplClass) {
-		val gameConstructor = NoopFactory::eINSTANCE.createNewInstance => [type = gameImplClass]
-		val gameInstance = NoopFactory::eINSTANCE.createVariable => [
-			name = Members::STATIC_PREFIX + gameImplClass.name.toFirstLower
-			value = gameConstructor
-		]
-
-		reset.body.statements += gameInstance
-		reset
 	}
 
 }
