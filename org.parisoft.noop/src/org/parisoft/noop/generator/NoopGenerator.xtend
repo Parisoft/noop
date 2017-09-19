@@ -198,7 +198,11 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def fieldValue(NewInstance instance, String fieldname) {
-		(instance?.constructor.fields.map[variable].findFirst[name == fieldname] ?: instance.type.allFieldsBottomUp.findFirst[name == fieldname])?.
-			valueOf
+		instance?.constructor?.fields.findFirst[
+			variable.name == fieldname
+		].value.valueOf ?: instance.type.allFieldsBottomUp.findFirst[
+			name == fieldname
+		].valueOf
+			
 	}
 }

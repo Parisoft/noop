@@ -136,8 +136,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			IScope.NULLSCOPE
 		} else if (receiver instanceof NewInstance && (receiver as NewInstance).constructor === null) {
 			Scopes.scopeFor(
-				type.declaredFields.filter[static],
-				Scopes.scopeFor(type.allFieldsBottomUp.filter[static])
+				type.declaredFields.filter[static] + type.declaredMethods.filter[static].filterOverload(selection.args),
+				Scopes.scopeFor(type.allFieldsBottomUp.filter[static] + type.allMethodsBottomUp.filter[static].filterOverload(selection.args))
 			)
 		} else if (selection.hasArgs) {
 			Scopes.scopeFor(

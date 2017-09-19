@@ -28,7 +28,7 @@ class Statements {
 	@Inject extension Expressions
 
 	def isVoid(ReturnStatement ^return) {
-		^return === null || ^return.value === null || ^return.method.typeOf.isNonVoid
+		^return === null || ^return.value === null || ^return.method.typeOf.isVoid
 	}
 
 	def isNonVoid(ReturnStatement ^return) {
@@ -47,7 +47,7 @@ class Statements {
 		switch (statement) {
 			Variable: {
 				statement.value?.prepare(data)
-				
+
 				if (statement.isConstant) {
 					data.constants += statement
 				} else if (statement.isROM) {
@@ -140,7 +140,7 @@ class Statements {
 
 				return chunks.toList
 			}
-			ReturnStatement:
+			ReturnStatement: {
 				if (statement.isNonVoid) {
 					if (statement.method.typeOf.isPrimitive) {
 						data.variables.compute(statement.asmName, [ name, v |
@@ -151,9 +151,10 @@ class Statements {
 							newArrayList(data.chunkForPtr(name))
 						])
 					}
-				} else {
-					newArrayList
 				}
+
+				statement.value?.alloc(data)
+			}
 			Expression:
 				statement.alloc(data)
 			AsmStatement:

@@ -7,6 +7,8 @@ Game {
 		chrRomPages : 1  //1 x 08 = 08Kb
 	}
 	
+	#instance : Game{}
+	
 	#reset() {
 	}
 	

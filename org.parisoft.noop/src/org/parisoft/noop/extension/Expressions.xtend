@@ -83,16 +83,16 @@ class Expressions {
 		container !== null && (container instanceof MemberSelection || container instanceof MemberRef)
 	}
 
-	def asmName(ArrayLiteral array, String containerName) {
-		containerName + '.' + array.typeOf.name.toFirstLower + 'Array@' + array.hashCode.toHexString
+	def asmTmpName(ArrayLiteral array, String containerName) {
+		'''«containerName».tmp«array.typeOf.name»Array@«array.hashCode.toHexString» '''.toString
 	}
 
 	def asmTmpArrayName(NewInstance instance, String containerName) {
-		containerName + '.tmp' + instance.typeOf.name + 'Array@' + instance.hashCode.toHexString
+		'''«containerName».tmp«instance.typeOf.name»Array@«instance.hashCode.toHexString» '''.toString
 	}
 
 	def asmTmpVarName(NewInstance instance, String containerName) {
-		containerName + '.tmp' + instance.typeOf.name + '@' + instance.hashCode.toHexString
+		'''«containerName».tmp«instance.typeOf.name»@«instance.hashCode.toHexString» '''.toString
 	}
 
 	def asmConstructorName(NewInstance instance) {
@@ -146,27 +146,27 @@ class Expressions {
 			MulExpression:
 				expression.typeOfValueOrInt
 			DivExpression:
-				expression.typeOfValueOrInt
+				expression.typeOfValueOrMerge(expression.left, expression.right)
 			BOrExpression:
-				expression.typeOfValueOrInt
+				expression.typeOfValueOrMerge(expression.left, expression.right)
 			BAndExpression:
-				expression.typeOfValueOrInt
+				expression.typeOfValueOrMerge(expression.left, expression.right)
 			LShiftExpression:
 				expression.typeOfValueOrInt
 			RShiftExpression:
-				expression.typeOfValueOrInt
+				expression.typeOfValueOrMerge(expression.left, expression.right)
 			EorExpression:
-				expression.typeOfValueOrInt
+				expression.right.typeOf
 			NotExpression:
 				expression.toBoolClass
 			SigNegExpression:
 				expression.typeOfValueOrInt
 			SigPosExpression:
-				expression.typeOfValueOrInt
+				expression.right.typeOf
 			DecExpression:
-				expression.toIntClass
+				expression.typeOfValueOrInt
 			IncExpression:
-				expression.toIntClass
+				expression.typeOfValueOrInt
 			ByteLiteral:
 				if (expression.value > TypeSystem::MAX_INT) {
 					expression.toUIntClass
@@ -202,23 +202,46 @@ class Expressions {
 		}
 	}
 
+	private def typeOfValue(Expression expression) {
+		val value = expression.valueOf as Integer
+
+		if (value > TypeSystem::MAX_INT) {
+			expression.toUIntClass
+		} else if (value > TypeSystem::MAX_BYTE) {
+			expression.toIntClass
+		} else if (value > TypeSystem::MAX_SBYTE) {
+			expression.toByteClass
+		} else if (value < TypeSystem::MIN_SBYTE) {
+			expression.toIntClass
+		} else if (value < TypeSystem::MIN_BYTE) {
+			expression.toSByteClass
+		} else {
+			expression.toByteClass
+		}
+	}
+	
+	private def typeOfValueOrMerge(Expression expression, Expression left, Expression right) {
+		try {
+			expression.typeOfValue
+		} catch (Exception e) {
+			val leftType = left.typeOf
+			val rightType = right.typeOf
+			
+			if (leftType.rawSizeOf > rightType.rawSizeOf) {
+				leftType
+			} else if (leftType.rawSizeOf < rightType.rawSizeOf) {
+				rightType
+			} else if (leftType.isSigned) {
+				leftType
+			} else {
+				rightType
+			}
+		}
+	}
+
 	private def typeOfValueOrInt(Expression expression) {
 		try {
-			val value = expression.valueOf as Integer
-
-			if (value > TypeSystem::MAX_INT) {
-				expression.toUIntClass
-			} else if (value > TypeSystem::MAX_BYTE) {
-				expression.toIntClass
-			} else if (value > TypeSystem::MAX_SBYTE) {
-				expression.toByteClass
-			} else if (value < TypeSystem::MIN_SBYTE) {
-				expression.toIntClass
-			} else if (value < TypeSystem::MIN_BYTE) {
-				expression.toSByteClass
-			} else {
-				expression.toByteClass
-			}
+			expression.typeOfValue
 		} catch (Exception e) {
 			expression.toIntClass
 		}
@@ -289,6 +312,10 @@ class Expressions {
 					-(expression.right.valueOf as Integer)
 				SigPosExpression:
 					(expression.right.valueOf as Integer)
+				IncExpression:
+					(expression.right.valueOf as Integer) + 1
+				DecExpression:
+					(expression.right.valueOf as Integer) - 1
 				ByteLiteral:
 					expression.value
 				BoolLiteral:
@@ -306,8 +333,6 @@ class Expressions {
 				MemberRef:
 					expression.member.valueOf
 				default:
-//				DecExpression:
-//				IncExpression:
 //			    This: 
 //			    Super:
 					throw new NonConstantExpressionException(expression)
@@ -437,7 +462,7 @@ class Expressions {
 					data.header = expression
 				} else {
 					expression.type.prepare(data)
-					
+
 					if (expression.type.isNonPrimitive) {
 						expression.fieldsInitializedOnContructor.forEach[prepare(data)]
 					}
@@ -512,7 +537,7 @@ class Expressions {
 				expression.right.alloc(data)
 			ArrayLiteral:
 				if (expression.isOnMemberSelectionOrReference) {
-					data.variables.computeIfAbsent(expression.asmName(data.container), [newArrayList(data.chunkForVar(it, expression.fullSizeOf))])
+					data.variables.computeIfAbsent(expression.asmTmpName(data.container), [newArrayList(data.chunkForVar(it, expression.fullSizeOf))])
 				} else {
 					newArrayList
 				}
@@ -559,14 +584,26 @@ class Expressions {
 				val snapshot = data.snapshot
 				val chunks = newArrayList
 
-				if (expression.member !== null && expression.isMethodInvocation) {
-					chunks += (expression.member as Method).alloc(data)
-				} else if (expression.member !== null && expression.member instanceof Variable) {
-					chunks += (expression.member as Variable).alloc(data)
-				}
+				if (expression.isInstanceOf || expression.isCast) {
+					chunks += expression.receiver.alloc(data)
+				} else if (expression.isMethodInvocation) {
+					val method = expression.member as Method
 
-				chunks += expression.receiver.alloc(data)
-				chunks += expression.args.map[alloc(data)].flatten
+					chunks += method.alloc(data)
+					chunks += expression.args.map[alloc(data)].flatten
+
+					if (method.isNonStatic) {
+						chunks += expression.receiver.alloc(data)
+					}
+				} else if (expression.member instanceof Variable) {
+					val variable = expression.member as Variable
+
+					chunks += variable.alloc(data)
+
+					if (variable.isNonStatic) {
+						chunks += expression.receiver.alloc(data)
+					}
+				}
 
 				data.restoreTo(snapshot)
 
@@ -660,6 +697,8 @@ class Expressions {
 				«IF data.relative !== null»
 					«data.relative»:
 						.db «expression.valueOf.toBytes.join(', ', [toHex])»
+				«ELSE»
+					;TODO compile «expression»
 				«ENDIF»
 			'''
 			This: '''
@@ -694,15 +733,15 @@ class Expressions {
 					«val tmp = expression.asmTmpVarName(constructor)»
 						LDA #<(«tmp»)
 						STA «receiver» + 0
+						«IF data.indirect !== null»
+							STA «data.indirect» + 0
+						«ENDIF»
 						LDA #>(«tmp»)
 						STA «receiver» + 1
-						JSR «constructor»
 						«IF data.indirect !== null»
-							LDA «receiver» + 0
-							STA «data.indirect» + 0
-							LDA «receiver» + 1
 							STA «data.indirect» + 1
 						«ENDIF»
+						JSR «constructor»
 					«FOR field : expression.constructor?.fields ?: emptyList»
 						«field.value.compile(new CompileData => [
 							indirect = receiver									

@@ -9,7 +9,7 @@ PPU {
     #NAME_TABLE_BOTTOM_LEFT : PPUControl.#NAME_TABLE_BOTTOM_LEFT
     #NAME_TABLE_BOTTOM_RIGHT : PPUControl.#NAME_TABLE_BOTTOM_RIGHT
     
-    loadBgPalettes(Byte[][] palettes) {
+    #loadBgPalettes(Byte[][] palettes) {
     	!	LDA $2002             ; read PPU status to reset the high/low latch !
     	!	LDA #$3F                                                            !
     	!	STA $2006             ; write the high byte of $3F00 address        !
@@ -25,7 +25,7 @@ PPU {
     	!	BNE -loop:                                                          !
     }
     
-    loadSpritesPalettes(Byte[][] palettes) {
+    #loadSpritesPalettes(Byte[][] palettes) {
     	!	LDA $2002	       ; read PPU status to reset the high/low latch !
     	!	LDA #$3F                                                         !
     	!	STA $2006	       ; write the high byte of $3F00 address        !
@@ -41,7 +41,7 @@ PPU {
     	!	BNE -loop:                                                       !
     }
     
-    setBgNameTable(Byte index, Byte row, Byte col, Byte[][] nameTable) {
+    #setBgNameTable(Byte index, Byte row, Byte col, Byte[][] nameTable) {
     	i : 0
     	j : 0
     	addr : Int
@@ -149,7 +149,7 @@ PPU {
     	!+for0end:                         !
     }
 
-	setBgNameTableTile(Byte index, Byte row, Byte col, Byte tile) {
+	#setBgNameTableTile(Byte index, Byte row, Byte col, Byte tile) {
 		i : Int
     	!; i = row * 32                    !
     	!	LDA ?row?                      !
@@ -209,29 +209,29 @@ PPU {
     	!	STA $2007                      !
     }
     
-    setBgAttributeTable(Byte nameTableIndex, Byte[][] attributeTable) {
-    	//native
+    #setBgAttributeTable(Byte nameTableIndex, Byte[][] attributeTable) {
+    	!	;TODO PPU.#setBgAttributeTable(Byte nameTableIndex, Byte[][] attributeTable) !
     }
     
-    setPPUControl(PPUControl ppuctrl) {
+    #setPPUControl(PPUControl ppuctrl) {
     	setPPUControl(ppuctrl.toByte)
     }
     
-    setPPUControl(Byte ppuctrl) {
+    #setPPUControl(Byte ppuctrl) {
     	!	LDA ?ppuctrl? !
     	!	STA $2000     !
     }
     
-    setPPUMask(PPUMask ppumask) {
+    #setPPUMask(PPUMask ppumask) {
     	setPPUMask(ppumask.toByte)
     }
     
-    setPPUMask(Byte ppumask) {
+    #setPPUMask(Byte ppumask) {
     	!	LDA ?ppumask? !
     	!	STA $2001     !
     }
     
-    setScrolling(Byte x, Byte y) {
+    #setScrolling(Byte x, Byte y) {
     	!	LDA #$00  !
     	!	STA $2006 !
     	!	STA $2006 !
@@ -241,7 +241,7 @@ PPU {
     	!	STA $2005 !
     }
     
-    waitVBlank() {
+    #waitVBlank() {
     	!-loop:       !
 		!	BIT $2002 !
 		!	BPL -loop !

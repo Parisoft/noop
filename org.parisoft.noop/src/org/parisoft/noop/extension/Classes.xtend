@@ -163,6 +163,18 @@ class Classes {
 		!c.isINESHeader
 	}
 
+	def isSigned(NoopClass c) {
+		switch (c.fullyQualifiedName.toString) {
+			case TypeSystem::LIB_SBYTE: true
+			case TypeSystem::LIB_INT: true
+			default: false
+		}
+	}
+	
+	def isUnsigned(NoopClass c) {
+		!c.isSigned
+	}
+
 	def defaultValueOf(NoopClass c) {
 		if (c.isNumeric) {
 			0
@@ -192,7 +204,7 @@ class Classes {
 			case TypeSystem::LIB_UINT:
 				2
 			default: {
-				SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonStatic].map[typeOf.rawSizeOf].reduce [ s1, s2 |
+				SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonStatic].map[rawSizeOf].reduce [ s1, s2 |
 					s1 + s2
 				] ?: 0)
 			}
@@ -204,25 +216,32 @@ class Classes {
 	}
 
 	def prepare(NoopClass gameImplClass) {
-		val gameInstance = NoopFactory::eINSTANCE.createVariable => [
-			name = '''«Members::STATIC_PREFIX»instance'''
-			value = NoopFactory::eINSTANCE.createNewInstance => [type = gameImplClass]
-		]
+		val gameInstance = gameImplClass.allFieldsBottomUp.findFirst[name == '''«Members::STATIC_PREFIX»instance'''.toString]
+		gameInstance.value = NoopFactory::eINSTANCE.createNewInstance => [type = gameImplClass]
+
 		val mainInvocation = NoopFactory::eINSTANCE.createMemberSelection => [
 			receiver = NoopFactory::eINSTANCE.createMemberRef => [member = gameInstance]
 			member = gameImplClass.allMethodsBottomUp.findFirst[main]
 		]
+
 		val data = new AllocData
 
 		gameImplClass.allMethodsBottomUp.findFirst[reset].body.statements += mainInvocation
-		gameImplClass.members += gameInstance
 		gameImplClass.prepare(data)
+
+		classeSizeCache.get.clear
 
 		data.classes += data.classes.map[classHierarchy].flatten.toSet
 		data.classes.forEach [ class1 |
-			classeSizeCache.get.put(class1, data.classes.filter [ class2 |
-				class2.isInstanceOf(class1)
-			].map[rawSizeOf].max)
+			if (class1.isPrimitive) {
+				classeSizeCache.get.put(class1, class1.rawSizeOf)
+			} else {
+				classeSizeCache.get.put(class1, data.classes.filter [ class2 |
+					class2.isInstanceOf(class1)
+				].map [
+					rawSizeOf
+				].max)
+			}
 		]
 
 		return data

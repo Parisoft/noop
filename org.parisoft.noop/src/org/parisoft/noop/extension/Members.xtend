@@ -168,6 +168,12 @@ public class Members {
 		}
 	}
 
+	def rawSizeOf(Member member) {
+		member.typeOf.rawSizeOf * (member.dimensionOf.reduce [ d1, d2 |
+			d1 * d2
+		] ?: 1)
+	}
+
 	def sizeOf(Member member) {
 		member.typeOf.sizeOf * (member.dimensionOf.reduce [ d1, d2 |
 			d1 * d2
