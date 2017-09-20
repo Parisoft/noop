@@ -219,14 +219,14 @@ class Expressions {
 			expression.toByteClass
 		}
 	}
-	
+
 	private def typeOfValueOrMerge(Expression expression, Expression left, Expression right) {
 		try {
 			expression.typeOfValue
 		} catch (Exception e) {
 			val leftType = left.typeOf
 			val rightType = right.typeOf
-			
+
 			if (leftType.rawSizeOf > rightType.rawSizeOf) {
 				leftType
 			} else if (leftType.rawSizeOf < rightType.rawSizeOf) {
@@ -321,9 +321,9 @@ class Expressions {
 				BoolLiteral:
 					expression.value
 				ArrayLiteral:
-					expression.values.map[it.valueOf]
+					expression.values.map[valueOf]
 				StringLiteral:
-					expression.value.chars.boxed.collect(Collectors.toList)
+					expression.value.chars.boxed.collect(Collectors::toList)
 				NewInstance:
 					if (expression.constructor !== null) {
 						new NoopInstance(expression.type.name, expression.type.allFieldsBottomUp, expression.constructor)
@@ -630,6 +630,64 @@ class Expressions {
 
 	def String compile(Expression expression, CompileData data) {
 		switch (expression) {
+			BOrExpression: '''
+				«IF data.type.sizeOf === 1»
+					«expression.left.compile(new CompileData => [
+						container = data.container
+						type = data.type
+						register = 'A'
+					])»
+					«expression.right.compile(new CompileData => [
+						container = data.container
+						type = data.type
+						operation = 'ORA'
+					])»
+						«IF data.absolute !== null»
+							«IF data.isIndexed»
+								LDX «data.index»
+							«ENDIF»
+							STA «data.absolute»«IF data.isIndexed», X«ENDIF»
+						«ELSEIF data.indirect !== null»
+							«IF data.isIndexed»
+								LDY «data.index»
+							«ENDIF»
+							STA («data.indirect»)«IF data.isIndexed», Y«ENDIF»
+						«ENDIF»
+				«ELSEIF data.type.sizeOf === 2»
+					«expression.left.compile(data)»
+					«expression.right.compile(new CompileData => [
+						container = data.container
+						type = data.type
+						absolute = Members::TEMP_VAR_NAME1
+					])»
+						«IF data.absolute !== null»
+							«IF data.isIndexed»
+								LDX «data.index»
+							«ENDIF»
+							LDA «data.absolute»«IF data.isIndexed» + 0, X«ENDIF»
+							ORA «Members::TEMP_VAR_NAME1»
+							STA «data.absolute»«IF data.isIndexed»+ 0, X«ENDIF»
+							LDA «data.absolute»«IF data.isIndexed»+ 1, X«ENDIF»
+							ORA «Members::TEMP_VAR_NAME1»
+							STA «data.absolute»«IF data.isIndexed»+ 1, X«ENDIF»
+						«ELSEIF data.indirect !== null»
+							«IF data.isIndexed»
+								LDY «data.index»
+							«ENDIF»
+							LDA («data.indirect»)«IF data.isIndexed», Y«ENDIF»
+							ORA «Members::TEMP_VAR_NAME1»
+							STA («data.indirect»)«IF data.isIndexed», Y«ENDIF»
+							«IF data.isIndexed»
+								INY
+							«ELSE»
+								LDY #$00
+							«ENDIF»
+							LDA («data.indirect»), Y
+							ORA «Members::TEMP_VAR_NAME1» + 1
+							STA («data.indirect»), Y
+						«ENDIF»
+				«ENDIF»
+			'''
 			ByteLiteral: '''
 				«val bytes = expression.valueOf.toBytes»
 				«IF data.relative !== null»
