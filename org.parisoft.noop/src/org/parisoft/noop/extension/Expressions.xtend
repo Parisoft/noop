@@ -55,7 +55,7 @@ class Expressions {
 
 	static val FILE_URI = 'file://'
 
-	@Inject extension ASMs
+	@Inject extension Datas
 	@Inject extension Classes
 	@Inject extension Members
 	@Inject extension Values
@@ -709,7 +709,6 @@ class Expressions {
 					«constructor»:
 						LDA #«expression.type.asmName»
 						STA («receiver»)
-						
 					«FOR field : expression.fieldsInitializedOnContructor»
 						«field.compile(new CompileData => [
 							container = constructor

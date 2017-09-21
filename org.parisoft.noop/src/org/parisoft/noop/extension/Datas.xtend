@@ -1,20 +1,13 @@
 package org.parisoft.noop.^extension
 
-import org.parisoft.noop.generator.CompileData
 import com.google.inject.Inject
-import org.parisoft.noop.noop.NoopClass
-
-import static extension java.lang.Integer.*
 import java.util.concurrent.atomic.AtomicInteger
+import org.parisoft.noop.generator.CompileData
 
-class ASMs {
+class Datas {
 
 	@Inject extension Classes
-	@Inject extension Members
 	@Inject extension Values
-	@Inject extension Statements
-	@Inject extension TypeSystem
-	@Inject extension Collections
 
 	val loopThreshold = 8
 	val labelCounter = new AtomicInteger
@@ -22,7 +15,7 @@ class ASMs {
 	def int sizeOf(CompileData data) {
 		data.type.sizeOf
 	}
-	
+
 	def isPointer(CompileData data) {
 		data.indirect !== null && !data.isCopy
 	}
@@ -195,7 +188,8 @@ class ASMs {
 
 	private def copyAbsoluteToIndirect(CompileData src, CompileData dst) '''
 		«IF dst.sizeOf < loopThreshold»
-			«FOR i : 0 ..< Math::min(src.sizeOf, dst.sizeOf)»
+			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
+			«FOR i : 0 ..< minSize»
 				«noop»
 					«IF src.isIndexed»
 						LDX «src.index»
@@ -205,7 +199,7 @@ class ASMs {
 					«ENDIF»
 					LDA «src.absolute»«IF i > 0» + «i»«ENDIF»«IF src.isIndexed», X«ENDIF»
 					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
-					«IF dst.isIndexed»
+					«IF dst.isIndexed && i < minSize - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -220,11 +214,15 @@ class ASMs {
 					«noop»
 						LDA #$00
 				«ENDIF»
+				«IF dst.isIndexed»
+					«noop»
+						INY
+				«ENDIF»
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
 					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
-					«IF dst.isIndexed»
+					«IF dst.isIndexed && i < dst.sizeOf - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -288,7 +286,8 @@ class ASMs {
 
 	private def copyIndirectToAbsolute(CompileData src, CompileData dst) '''
 		«IF dst.sizeOf < loopThreshold»
-			«FOR i : 0 ..< Math::min(src.sizeOf, dst.sizeOf)»
+			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
+			«FOR i : 0 ..< minSize»
 				«noop»
 					«IF src.isIndexed»
 						LDY «src.index»
@@ -298,7 +297,7 @@ class ASMs {
 					«ENDIF»
 					LDA («src.indirect»)«IF src.isIndexed», Y«ENDIF»
 					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
-					«IF src.isIndexed»
+					«IF src.isIndexed && i < minSize - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -365,7 +364,8 @@ class ASMs {
 
 	private def copyIndirectToIndirect(CompileData src, CompileData dst) '''
 		«IF dst.sizeOf < loopThreshold»
-			«FOR i : 0 ..< Math::min(src.sizeOf, dst.sizeOf)»
+			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
+			«FOR i : 0 ..< minSize»
 				«noop»
 					«IF src.isIndexed»
 						LDX «src.index»
@@ -375,10 +375,10 @@ class ASMs {
 					«ENDIF»
 					LDA («src.indirect»«IF src.isIndexed», X«ENDIF»)
 					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
-					«IF src.isIndexed»
+					«IF src.isIndexed && i < minSize - 1»
 						INX
 					«ENDIF»
-					«IF dst.isIndexed»
+					«IF dst.isIndexed && i < minSize - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -393,11 +393,15 @@ class ASMs {
 					«noop»
 						LDA #$00
 				«ENDIF»
+				«IF dst.isIndexed»
+					«noop»
+						INY
+				«ENDIF»
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
 					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
-					«IF dst.isIndexed»
+					«IF dst.isIndexed && i < dst.sizeOf - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»

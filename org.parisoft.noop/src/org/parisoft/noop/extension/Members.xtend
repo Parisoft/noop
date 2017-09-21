@@ -30,7 +30,7 @@ public class Members {
 
 	static val UNDERLINE_CHAR = '_'.charAt(0)
 
-	@Inject extension ASMs
+	@Inject extension Datas
 	@Inject extension Classes
 	@Inject extension Expressions
 	@Inject extension Statements
@@ -357,7 +357,7 @@ public class Members {
 			index = if (indexes.isNotEmpty) {
 				variable.nameOfTmpIndex(indexes, data.container)
 			} else {
-				variable.nameOfOffset
+				'''#«variable.nameOfOffset»'''
 			}
 		]»
 		«IF data.isCopy»
@@ -422,7 +422,7 @@ public class Members {
 			«val param = method.params.get(i)»
 			«val arg = args.get(i)»
 			«arg.compile(new CompileData => [
-				container = methodName
+				container = data.container
 				type = param.type
 				
 				if (param.type.isPrimitive && param.dimensionOf.isEmpty) {
@@ -462,15 +462,14 @@ public class Members {
 		«val sizeOfVar = variable.typeOf.sizeOf»
 		«IF dimension.size === 1 && sizeOfVar === 1»
 			«indexes.head.value.compile(new CompileData => [register = 'A'])»
-				«IF variable.isField»
+				«IF variable.isField && variable.isNonStatic»
 					CLC
 					ADC #«variable.nameOfOffset»
 				«ENDIF»
 				STA «indexName»
 		«ELSE»
 			«FOR i : 0..< indexes.size»
-				«val index = indexes.get(i)»
-				«index.value.compile(new CompileData => [register = 'A'])»
+				«indexes.get(i).value.compile(new CompileData => [register = 'A'])»
 					«FOR len : (i + 1)..< dimension.size»
 						STA «Members::TEMP_VAR_NAME1»
 						LDA «IF variable.isParameter»«variable.nameOfLen(len)»«ELSE»#«dimension.get(len).byteValue.toHex»«ENDIF»
@@ -496,7 +495,7 @@ public class Members {
 					LDA #$00
 					mult8x8to8
 				«ENDIF»
-				«IF variable.isField»
+				«IF variable.isField && variable.isNonStatic»
 					ADC #«variable.nameOfOffset»
 				«ENDIF»
 				STA «indexName»
