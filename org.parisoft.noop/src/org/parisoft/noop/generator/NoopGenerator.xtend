@@ -87,15 +87,15 @@ class NoopGenerator extends AbstractGenerator {
 			«noopClass.asmName» = «classCount++»
 			«val fieldOffset = new AtomicInteger(1)»
 			«FOR field : noopClass.allFieldsTopDown.filter[nonStatic]»
-				«field.asmOffsetName» = «fieldOffset.getAndAdd(field.sizeOf)»
+				«field.nameOfOffset» = «fieldOffset.getAndAdd(field.sizeOf)»
 			«ENDFOR»
 			
 		«ENDFOR»
 		;----------------------------------------------------------------
 		; Constants
 		;----------------------------------------------------------------
-		«FOR cons : data.constants.sortBy[asmConstantName]»
-			«cons.asmConstantName» = «cons.valueOf.toString»
+		«FOR cons : data.constants.sortBy[nameOfConstant]»
+			«cons.nameOfConstant» = «cons.valueOf.toString»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
@@ -103,7 +103,7 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		«val varStartAddr = data.resetVarCounter»
 		«FOR statik : data.statics»
-			«statik.asmStaticName» = «data.varCounter.getAndAdd(statik.sizeOf).toHexString(4)»
+			«statik.nameOfStatic» = «data.varCounter.getAndAdd(statik.sizeOf).toHexString(4)»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
@@ -169,8 +169,8 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 			.org $FFFA     
 		
-		 	.dw «data.methods.findFirst[nmi].asmName»
-		 	.dw «data.methods.findFirst[reset].asmName»
+		 	.dw «data.methods.findFirst[nmi].nameOf»
+		 	.dw «data.methods.findFirst[reset].nameOf»
 		 	.dw 0 ; IRQ
 		
 		;----------------------------------------------------------------

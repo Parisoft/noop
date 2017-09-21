@@ -55,6 +55,7 @@ class Expressions {
 
 	static val FILE_URI = 'file://'
 
+	@Inject extension ASMs
 	@Inject extension Classes
 	@Inject extension Members
 	@Inject extension Values
@@ -83,24 +84,28 @@ class Expressions {
 		container !== null && (container instanceof MemberSelection || container instanceof MemberRef)
 	}
 
-	def asmTmpName(ArrayLiteral array, String containerName) {
+	def nameOfTmpReceiver(Expression expression, String containerName) {
+		'''«containerName».tmp«expression.typeOf.name»Rcv@«expression.hashCode.toHexString» '''.toString
+	}
+
+	def nameOfTmp(ArrayLiteral array, String containerName) {
 		'''«containerName».tmp«array.typeOf.name»Array@«array.hashCode.toHexString» '''.toString
 	}
 
-	def asmTmpArrayName(NewInstance instance, String containerName) {
+	def nameOfTmpArray(NewInstance instance, String containerName) {
 		'''«containerName».tmp«instance.typeOf.name»Array@«instance.hashCode.toHexString» '''.toString
 	}
 
-	def asmTmpVarName(NewInstance instance, String containerName) {
+	def nameOfTmpVar(NewInstance instance, String containerName) {
 		'''«containerName».tmp«instance.typeOf.name»@«instance.hashCode.toHexString» '''.toString
 	}
 
-	def asmConstructorName(NewInstance instance) {
+	def nameOfConstructor(NewInstance instance) {
 		'''«instance.type.name».new'''.toString
 	}
 
-	def asmReceiverName(NewInstance instance) {
-		'''«instance.asmConstructorName».receiver'''.toString
+	def nameOfReceiver(NewInstance instance) {
+		'''«instance.nameOfConstructor».rcv'''.toString
 	}
 
 	def fieldsInitializedOnContructor(NewInstance instance) {
@@ -537,7 +542,7 @@ class Expressions {
 				expression.right.alloc(data)
 			ArrayLiteral:
 				if (expression.isOnMemberSelectionOrReference) {
-					data.variables.computeIfAbsent(expression.asmTmpName(data.container), [newArrayList(data.chunkForVar(it, expression.fullSizeOf))])
+					data.variables.computeIfAbsent(expression.nameOfTmp(data.container), [newArrayList(data.chunkForVar(it, expression.fullSizeOf))])
 				} else {
 					newArrayList
 				}
@@ -550,11 +555,11 @@ class Expressions {
 
 				if (expression.isOnMemberSelectionOrReference) {
 					if (expression.dimension.isEmpty && expression.type.isNonPrimitive) {
-						chunks += data.variables.computeIfAbsent(expression.asmTmpVarName(data.container), [
+						chunks += data.variables.computeIfAbsent(expression.nameOfTmpVar(data.container), [
 							newArrayList(data.chunkForVar(it, expression.sizeOf))
 						])
 					} else if (expression.dimension.isNotEmpty) {
-						chunks += data.variables.computeIfAbsent(expression.asmTmpArrayName(data.container), [
+						chunks += data.variables.computeIfAbsent(expression.nameOfTmpArray(data.container), [
 							newArrayList(data.chunkForVar(it, expression.fullSizeOf))
 						])
 					}
@@ -562,11 +567,11 @@ class Expressions {
 
 				if (expression.type.isNonPrimitive) {
 					val snapshot = data.snapshot
-					val constructorName = expression.asmConstructorName
+					val constructorName = expression.nameOfConstructor
 
 					data.container = constructorName
 
-					chunks += data.pointers.computeIfAbsent(expression.asmReceiverName, [newArrayList(data.chunkForPtr(it))])
+					chunks += data.pointers.computeIfAbsent(expression.nameOfReceiver, [newArrayList(data.chunkForPtr(it))])
 					chunks += expression.fieldsInitializedOnContructor.map[value.alloc(data)].flatten
 					chunks.disoverlap(constructorName)
 
@@ -602,6 +607,15 @@ class Expressions {
 
 					if (variable.isNonStatic) {
 						chunks += expression.receiver.alloc(data)
+						chunks += data.pointers.computeIfAbsent(expression.receiver.nameOfTmpReceiver(data.container), [
+							newArrayList(data.chunkForPtr(it))
+						])
+					}
+
+					if (expression.indexes.isNotEmpty) {
+						chunks += data.variables.computeIfAbsent(expression.member.nameOfTmpIndex(expression.indexes, data.container), [
+							newArrayList(data.chunkForVar(it, 1))
+						])
 					}
 				}
 
@@ -619,6 +633,10 @@ class Expressions {
 					chunks += expression.args.map[alloc(data)].flatten
 
 					data.restoreTo(snapshot)
+				} else if (expression.indexes.isNotEmpty) {
+					chunks += data.variables.computeIfAbsent(expression.member.nameOfTmpIndex(expression.indexes, data.container), [
+						newArrayList(data.chunkForVar(it, 1))
+					])
 				}
 
 				return chunks
@@ -631,116 +649,33 @@ class Expressions {
 	def String compile(Expression expression, CompileData data) {
 		switch (expression) {
 			BOrExpression: '''
-				«IF data.type.sizeOf === 1»
-					«expression.left.compile(new CompileData => [
-						container = data.container
-						type = data.type
-						register = 'A'
-					])»
-					«expression.right.compile(new CompileData => [
-						container = data.container
-						type = data.type
-						operation = 'ORA'
-					])»
-						«IF data.absolute !== null»
-							«IF data.isIndexed»
-								LDX «data.index»
-							«ENDIF»
-							STA «data.absolute»«IF data.isIndexed», X«ENDIF»
-						«ELSEIF data.indirect !== null»
-							«IF data.isIndexed»
-								LDY «data.index»
-							«ENDIF»
-							STA («data.indirect»)«IF data.isIndexed», Y«ENDIF»
-						«ENDIF»
-				«ELSEIF data.type.sizeOf === 2»
-					«expression.left.compile(data)»
-					«expression.right.compile(new CompileData => [
-						container = data.container
-						type = data.type
-						absolute = Members::TEMP_VAR_NAME1
-					])»
-						«IF data.absolute !== null»
-							«IF data.isIndexed»
-								LDX «data.index»
-							«ENDIF»
-							LDA «data.absolute»«IF data.isIndexed» + 0, X«ENDIF»
-							ORA «Members::TEMP_VAR_NAME1»
-							STA «data.absolute»«IF data.isIndexed»+ 0, X«ENDIF»
-							LDA «data.absolute»«IF data.isIndexed»+ 1, X«ENDIF»
-							ORA «Members::TEMP_VAR_NAME1»
-							STA «data.absolute»«IF data.isIndexed»+ 1, X«ENDIF»
-						«ELSEIF data.indirect !== null»
-							«IF data.isIndexed»
-								LDY «data.index»
-							«ENDIF»
-							LDA («data.indirect»)«IF data.isIndexed», Y«ENDIF»
-							ORA «Members::TEMP_VAR_NAME1»
-							STA («data.indirect»)«IF data.isIndexed», Y«ENDIF»
-							«IF data.isIndexed»
-								INY
-							«ELSE»
-								LDY #$00
-							«ENDIF»
-							LDA («data.indirect»), Y
-							ORA «Members::TEMP_VAR_NAME1» + 1
-							STA («data.indirect»), Y
-						«ENDIF»
-				«ENDIF»
+				;TODO «expression.left» | «expression.right» 
 			'''
 			ByteLiteral: '''
-				«val bytes = expression.valueOf.toBytes»
 				«IF data.relative !== null»
+					«val bytes = expression.valueOf.toBytes»
 					«data.relative»:
-						«IF data.type.sizeOf == 1»
+						«IF data.sizeOf == 1»
 							.db «bytes.head.toHex»
 						«ELSE»
 							.db «bytes.join(' ', [toHex])»
 						«ENDIF»
-				«ELSEIF data.absolute !== null && data.index !== null»
-					«noop»
-						LDX «data.index»
-						LDA #«bytes.head.toHex»
-						STA «data.absolute», X
-						«IF data.type.sizeOf > 1»
-							INX
-							LDA #«bytes.last.toHex»
-							STA «data.absolute», X
-						«ENDIF»
-				«ELSEIF data.absolute !== null»
-					«noop»
-						LDA #«bytes.head.toHex»
-						STA «data.absolute»
-						«IF data.type.sizeOf > 1»
-							LDA #«bytes.last.toHex»
-							STA «data.absolute» + 1
-						«ENDIF»
-				«ELSEIF data.indirect !== null && data.index !== null»
-					«noop»
-						LDY «data.index»
-						LDA #«bytes.head.toHex»
-						STA («data.indirect»), Y
-						«IF data.type.sizeOf > 1»
-							INY
-							LDA #«bytes.last.toHex»
-							STA («data.indirect»), Y
-						«ENDIF»
-				«ELSEIF data.indirect !== null»
-					«noop»
-						LDA #«bytes.head.toHex»
-						STA («data.indirect»)
-						«IF data.type.sizeOf > 1»
-							LDY #$01
-							LDA #«bytes.last.toHex»
-							STA («data.indirect»), Y
-						«ENDIF»
-				«ELSEIF data.getRegister !== null»
-					«noop»
-						LD«data.getRegister» «bytes.head.toHex»
+				«ELSE»
+					«val src = new CompileData => [
+						type = expression.typeOf
+						immediate = expression.value.toHex.toString
+					]»
+					«IF data.copy»
+						«src.copyTo(data)»
+					«ELSE»
+						«data.pointTo(src)»
+					«ENDIF»
 				«ENDIF»
 			'''
-			BoolLiteral:
-				(NoopFactory::eINSTANCE.createByteLiteral => [value = if (expression.value) 1 else 0]).compile(data)
+			BoolLiteral: '''
+				«val boolAsByte = NoopFactory::eINSTANCE.createByteLiteral => [value = if (expression.value) 1 else 0]»
+				«boolAsByte.compile(data)»
+			'''
 			StringLiteral: '''
 				«IF data.relative !== null»
 					«data.relative»:
@@ -749,6 +684,8 @@ class Expressions {
 						«ELSE»
 							.db «expression.value.toBytes.join(', ', [toHex])»
 						«ENDIF»
+				«ELSE»
+					;TODO compile «expression»
 				«ENDIF»
 			'''
 			ArrayLiteral: '''
@@ -767,8 +704,8 @@ class Expressions {
 			'''
 			NewInstance: '''
 				«IF data === null»
-					«val constructor = expression.asmConstructorName»
-					«val receiver = expression.asmReceiverName»
+					«val constructor = expression.nameOfConstructor»
+					«val receiver = expression.nameOfReceiver»
 					«constructor»:
 						LDA #«expression.type.asmName»
 						STA («receiver»)
@@ -784,69 +721,26 @@ class Expressions {
 				«ELSEIF expression.dimension.isNotEmpty»
 					TODO: compile array constructor call
 				«ELSEIF expression.type.isPrimitive»
-					«(NoopFactory::eINSTANCE.createByteLiteral => [value = 0]).compile(data)»
-				«ELSEIF expression.isOnMemberSelectionOrReference»
-					«val constructor = expression.asmConstructorName»
-					«val receiver = expression.asmReceiverName»
-					«val tmp = expression.asmTmpVarName(constructor)»
-						LDA #<(«tmp»)
-						STA «receiver» + 0
-						«IF data.indirect !== null»
-							STA «data.indirect» + 0
-						«ENDIF»
-						LDA #>(«tmp»)
-						STA «receiver» + 1
-						«IF data.indirect !== null»
-							STA «data.indirect» + 1
-						«ENDIF»
-						JSR «constructor»
-					«FOR field : expression.constructor?.fields ?: emptyList»
-						«field.value.compile(new CompileData => [
-							indirect = receiver									
-							index = '''#«field.variable.asmOffsetName»'''
-							type = field.variable.typeOf
-							container = constructor
-						])»
-					«ENDFOR»
+					«val defaultByte = NoopFactory::eINSTANCE.createByteLiteral => [value = 0]»
+					«defaultByte.compile(data)»
 				«ELSE»
-					«val constructor = expression.asmConstructorName»
-					«val receiver = expression.asmReceiverName»
-					«IF data.absolute !== null && data.index !== null»
-						«noop»
-							CLC
-							LDA #<(«data.absolute»)
-							ADC «data.index»
-							STA «receiver» + 0
-							LDA #>(«data.absolute»)
-							ADC #$00
-							STA «receiver» + 1
-					«ELSEIF data.absolute !== null»
-						«noop»
-							LDA #<(«data.absolute»)
-							STA «receiver» + 0
-							LDA #>(«data.absolute»)
-							STA «receiver» + 1
-					«ELSEIF data.indirect !== null && data.index !== null»
-						«noop»
-							LDY «data.index»
-							LDA («data.indirect»), Y
-							STA «receiver» + 0
-							INY
-							LDA («data.indirect»), Y
-							STA «receiver» + 1
-					«ELSEIF data.indirect !== null»
-						«noop»
-							LDA «data.indirect» + 0
-							STA «receiver» + 0
-							LDA «data.indirect» + 1
-							STA «receiver» + 1
+					«val constructor = expression.nameOfConstructor»
+					«val receiver = new CompileData => [indirect = expression.nameOfReceiver]»
+					«IF expression.isOnMemberSelectionOrReference»
+						«val tmp = new CompileData => [absolute = expression.nameOfTmpVar(constructor)]»
+						«IF data.isPointer»
+							«data.pointTo(tmp)»
+						«ENDIF»
+						«receiver.pointTo(tmp)»
+					«ELSE»
+						«receiver.pointTo(data)»
 					«ENDIF»
 					«noop»
 						JSR «constructor»
 					«FOR field : expression.constructor?.fields ?: emptyList»
 						«field.value.compile(new CompileData => [
-							indirect = receiver									
-							index = '''#«field.variable.asmOffsetName»'''
+							indirect = receiver.indirect									
+							index = '''#«field.variable.nameOfOffset»'''
 							type = field.variable.typeOf
 							container = constructor
 						])»
@@ -861,16 +755,15 @@ class Expressions {
 					;TODO: «receiver.typeOf.name».instanceOf(«expression.type»)
 				«ELSEIF expression.isCast»
 					«receiver.compile(data)»
-					;TODO: «receiver.typeOf.name».cast(«expression.type»)
 				«ELSEIF member.isStatic»
 					«IF !(receiver instanceof NewInstance)»
 						«receiver.compile(new CompileData => [container = data.container])»
 					«ENDIF»
 					«IF member instanceof Variable»
 						«IF member.isConstant»
-							«member.compileConstantReference(member.asmConstantName, expression.indexes, data)»
+							«member.compileConstantReference(data)»
 						«ELSE»
-							«member.compileAbsoluteReference(member.asmStaticName, expression.indexes, data)»
+							«member.compileStaticReference(expression.indexes, data)»
 						«ENDIF»
 					«ELSEIF member instanceof Method»
 						«val method = member as Method»
@@ -878,20 +771,20 @@ class Expressions {
 					«ENDIF»
 				«ELSE»
 					«IF member instanceof Variable»
-						«val receiverAsIndirect = Members::TEMP_VAR_NAME1»
+						«val rcv = expression.nameOfTmpReceiver(data.container)»
 						«receiver.compile(new CompileData => [
 							container = data.container
 							type = receiver.typeOf
-							indirect = receiverAsIndirect
-							copy = false 
+							indirect = rcv
+							copy = false
 						])»
-						«member.compileIndirectReference(receiverAsIndirect, expression.indexes, data)»
+						«member.compileIndirectReference(rcv, expression.indexes, data)»
 					«ELSEIF member instanceof Method»
 						«val method = member as Method»
 						«receiver.compile(new CompileData => [
 							container = data.container
 							type = receiver.typeOf
-							indirect = method.asmReceiverName
+							indirect = method.nameOfReceiver
 							copy = false 
 						])»
 						«method.compileInvocation(expression.args, data)»
@@ -902,27 +795,24 @@ class Expressions {
 				«val member = expression.member»
 				«IF member instanceof Variable»
 					«IF member.isField && member.isNonStatic»
-						«member.compileIndirectReference('''«data.container».receiver''', expression.indexes, data)»
+						«member.compileIndirectReference('''«data.container».rcv''', expression.indexes, data)»
 					«ELSEIF member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)»
-						«member.compileIndirectReference(member.asmName, expression.indexes, data)»
+						«member.compileIndirectReference(member.nameOf, expression.indexes, data)»
 					«ELSEIF member.isConstant»
-						«member.compileConstantReference(member.asmConstantName, expression.indexes, data)»
+						«member.compileConstantReference(data)»
 					«ELSEIF member.isStatic»
-						«member.compileAbsoluteReference(member.asmStaticName, expression.indexes, data)»
+						«member.compileStaticReference(expression.indexes, data)»
 					«ELSE»
-						«member.compileAbsoluteReference(member.asmName, expression.indexes, data)»
+						«member.compileLocalReference(expression.indexes, data)»
 					«ENDIF»
 				«ELSEIF member instanceof Method»
 					«val method = member as Method»
 					«IF method.isNonStatic»
-						«val outerReceiver = '''«data.container».receiver'''»
-						«val innerReceiver = method.asmReceiverName»
-							LDA «outerReceiver» + 0
-							STA «innerReceiver» + 0
-							LDA «outerReceiver» + 1
-							STA «innerReceiver» + 1
-						«method.compileInvocation(expression.args, data)»
+						«val outerReceiver = new CompileData => [indirect = '''«data.container».rcv''']»
+						«val innerReceiver = new CompileData => [indirect = method.nameOfReceiver]»
+						«innerReceiver.pointTo(outerReceiver)»
 					«ENDIF»
+					«method.compileInvocation(expression.args, data)»
 				«ENDIF»					
 			'''
 			default:
@@ -931,53 +821,16 @@ class Expressions {
 	}
 
 	private def compileSelfReference(Expression expression, CompileData data) '''
-		«val refAsIndirect = expression.getContainerOfType(Method).asmReceiverName»
-		«IF data.absolute !== null»
-			«IF data.isIndexed»
-				«noop»
-					LDX «data.index»
-			«ENDIF»
-			«val sizeOfData = data.type.sizeOf»
-			«IF sizeOfData > 1»
-				«noop»
-					LDY #$00
-			«ENDIF»
-			«FOR i : 0..< sizeOfData»
-				«noop»
-					«IF i > 0»
-						INY
-					«ENDIF»
-					LDA («refAsIndirect»), Y
-					STA «data.absolute»«IF i > 0» + «i»«ENDIF»«IF data.isIndexed», X«ENDIF»
-			«ENDFOR»
-		«ELSEIF data.indirect !== null && data.isCopy»
-			«IF data.isIndexed»
-				«noop»
-					LDY «data.index»
-			«ELSE»
-				«noop»
-					LDY #$00
-			«ENDIF»
-			«val sizeOfData = data.type.sizeOf»
-			«IF sizeOfData > 1»
-				«noop»
-					LDX #$00
-			«ENDIF»
-			«FOR i : 0..< sizeOfData»
-				«noop»
-					«IF i > 0»
-						INX
-						INY
-					«ENDIF»
-					LDA («refAsIndirect», X)
-					STA («data.indirect»), Y
-			«ENDFOR»
-		«ELSEIF data.indirect !== null»
-			«noop»
-				LDA «refAsIndirect» + 0
-				STA «data.indirect» + 0
-				LDA «refAsIndirect» + 1
-				STA «data.indirect» + 1
+		«val method = expression.getContainerOfType(Method)»
+		«val instance = new CompileData => [
+			container = method.nameOf
+			type = expression.typeOf
+			indirect = method.nameOfReceiver
+		]»
+		«IF data.isCopy»
+			«instance.copyTo(data)»
+		«ELSE»
+			«data.pointTo(instance)»
 		«ENDIF»
 	'''
 

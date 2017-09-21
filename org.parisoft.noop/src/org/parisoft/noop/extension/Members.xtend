@@ -30,6 +30,7 @@ public class Members {
 
 	static val UNDERLINE_CHAR = '_'.charAt(0)
 
+	@Inject extension ASMs
 	@Inject extension Classes
 	@Inject extension Expressions
 	@Inject extension Statements
@@ -180,13 +181,17 @@ public class Members {
 		] ?: 1)
 	}
 
-	def asmName(Variable variable) {
-		variable.asmName(variable.getContainerOfType(Method)?.asmName)
+	def nameOfTmpIndex(Member member, List<Index> indexes, String containerName) {
+		'''«containerName».«member.name»At«indexes.join('x', [it.value.valueOf.toString])»@«indexes.hashCode.toHexString»'''.toString
 	}
 
-	def String asmName(Variable variable, String containerName) {
+	def nameOf(Variable variable) {
+		variable.nameOf(variable.getContainerOfType(Method)?.nameOf)
+	}
+
+	def String nameOf(Variable variable, String containerName) {
 		if (variable.isStatic) {
-			variable.asmStaticName
+			variable.nameOfStatic
 		} else if (variable.getContainerOfType(Method) !== null) {
 			'''«containerName»«variable.fullyQualifiedName.toString.substring(containerName.indexOf('@'))»@«variable.hashCode.toHexString»'''
 		} else {
@@ -194,36 +199,36 @@ public class Members {
 		}
 	}
 
-	def asmStaticName(Variable variable) {
+	def nameOfStatic(Variable variable) {
 		'''«variable.containingClass.name».«variable.name»'''.toString
 	}
 
-	def asmConstantName(Variable variable) {
+	def nameOfConstant(Variable variable) {
 		variable.fullyQualifiedName.toString
 	}
 
-	def asmOffsetName(Variable variable) {
+	def nameOfOffset(Variable variable) {
 		variable.fullyQualifiedName.toString
 	}
 	
-	def asmLenName(Variable variable, String container, int i) {
-		'''«variable.asmName(container)».len«i»'''.toString
+	def nameOfLen(Variable variable, String container, int i) {
+		'''«variable.nameOf(container)».len«i»'''.toString
 	}
 	
-	def asmLenName(Variable variable, int i) {
-		variable.asmLenName(variable.getContainerOfType(Method).asmName, i)
+	def nameOfLen(Variable variable, int i) {
+		variable.nameOfLen(variable.getContainerOfType(Method).nameOf, i)
 	}
 
-	def asmName(Method method) {
+	def nameOf(Method method) {
 		'''«method.fullyQualifiedName.toString»@«method.hashCode.toHexString»'''.toString
 	}
 
-	def asmReceiverName(Method method) {
-		'''«method.asmName».receiver'''.toString
+	def nameOfReceiver(Method method) {
+		'''«method.nameOf».rcv'''.toString
 	}
 	
-	def asmReturnName(Method method) {
-		'''«method.asmName».return'''.toString
+	def nameOfReturn(Method method) {
+		'''«method.nameOf».ret'''.toString
 	}
 
 	def prepare(Method method, AllocData data) {
@@ -234,12 +239,12 @@ public class Members {
 		if (allocating.add(method)) {
 			try {
 				val snapshot = data.snapshot
-				val methodName = method.asmName
+				val methodName = method.nameOf
 
 				data.container = methodName
 
 				val receiver = if (method.isNonStatic) {
-						data.pointers.computeIfAbsent(method.asmReceiverName, [newArrayList(data.chunkForPtr(it))])
+						data.pointers.computeIfAbsent(method.nameOfReceiver, [newArrayList(data.chunkForPtr(it))])
 					} else {
 						emptyList
 					}
@@ -261,7 +266,7 @@ public class Members {
 	}
 
 	def compile(Method method, CompileData data) '''
-		«method.asmName»:
+		«method.nameOf»:
 		«IF method.isReset»
 				;;;;;;;;;; Initial setup begin
 				SEI          ; disable IRQs
@@ -294,26 +299,17 @@ public class Members {
 				BNE -clrMem:
 
 				; Instantiate all static variables, including the game itself
-			«val resetMethod = method.asmName»
+			«val resetMethod = method.nameOf»
 			«FOR staticVar : data.allocation.statics»
 				«staticVar.compile(new CompileData => [container = resetMethod])»
 			«ENDFOR»
-			
-			«val gameInstance = data.allocation.statics.findFirst[typeOf.game]»
-			«val gameName = gameInstance.asmStaticName»
-			«val nmiReceiver = gameInstance.typeOf.allMethodsBottomUp.findFirst[nmi].asmReceiverName»
-				LDA #<(«gameName»)
-				STA «nmiReceiver» + 0
-				LDA #>(«gameName»)
-				STA «nmiReceiver» + 1
 			
 			-waitVBlank2
 				BIT $2002
 				BPL -waitVBlank2
 				;;;;;;;;;; Initial setup end
-
 			«FOR statement : method.body.statements»
-				«statement.compile(new CompileData => [container = method.asmName])»
+				«statement.compile(new CompileData => [container = method.nameOf])»
 			«ENDFOR»
 				RTS
 		«ELSEIF method.isNmi»
@@ -331,7 +327,7 @@ public class Members {
 			;;;;;;;;;; NMI initialization end
 			;;;;;;;;;; Effective code begin
 		«FOR statement : method.body.statements»
-			«statement.compile(new CompileData => [container = method.asmName])»
+			«statement.compile(new CompileData => [container = method.nameOf])»
 		«ENDFOR»
 			;;;;;;;;;; Effective code end
 			;;;;;;;;;; NMI finalization begin
@@ -344,207 +340,84 @@ public class Members {
 			RTI
 		«ELSE»
 			«FOR statement : method.body.statements»
-				«statement.compile(new CompileData => [container = method.asmName])»
+				«statement.compile(new CompileData => [container = method.nameOf])»
 			«ENDFOR»
 				RTS
 		«ENDIF»
 	'''
 
-	def compileIndirectReference(Variable variable, String varAsIndirect, List<Index> indexes, CompileData data) '''
-		«val varIsIndexed = indexes.isNotEmpty»
-		«IF data.absolute !== null»
-			«IF data.isIndexed»
-				«noop»
-					LDX «data.index»
-			«ENDIF»
-			«IF varIsIndexed»
-				«variable.compileIndexesIntoRegiter(indexes, 'Y')»
-			«ELSE»
-				«noop»
-					LDY #«IF variable.isField»«variable.asmOffsetName»«ELSE»$00«ENDIF»
-			«ENDIF»
-			«FOR i : 0..< data.type.sizeOf»
-				«noop»
-					«IF i > 0»
-						INY
-					«ENDIF»
-					LDA («varAsIndirect»), Y
-					STA «data.absolute»«IF i > 0» + «i»«ENDIF»«IF data.isIndexed», X«ENDIF»
-			«ENDFOR»
-		«ELSEIF data.indirect !== null && data.isCopy»
-			«IF data.isIndexed»
-				«noop»
-					LDY «data.index»
-			«ELSE»
-				«noop»
-					LDY #$00
-			«ENDIF»
-			«IF varIsIndexed»
-				«variable.compileIndexesIntoRegiter(indexes, 'X')»
-			«ELSE»
-				«noop»
-					LDX #«IF variable.isField»«variable.asmOffsetName»«ELSE»$00«ENDIF»
-			«ENDIF»
-			«FOR i : 0..< data.type.sizeOf»
-				«noop»
-					«IF i > 0»
-						INX
-						INY
-					«ENDIF»
-					LDA («varAsIndirect», X)
-					STA («data.indirect»), Y
-			«ENDFOR»
-		«ELSEIF data.indirect !== null»
-			«IF varIsIndexed || variable.isField»
-				«IF varIsIndexed»
-					«variable.compileIndexesIntoRegiter(indexes, 'A')»
-				«ELSE»
-					«noop»
-						LDA #«variable.asmOffsetName»
-				«ENDIF»
-				«noop»
-					CLC
-					ADC «varAsIndirect» + 0
-					STA «data.indirect» + 0
-					LDA #$00
-					ADC «varAsIndirect» + 1
-					STA «data.indirect» + 1
-			«ELSE» 
-				«noop»
-					LDA «varAsIndirect» + 0
-					STA «data.indirect» + 0
-					LDA «varAsIndirect» + 1
-					STA «data.indirect» + 1
-			«ENDIF»
-		«ELSEIF data.register !== null»
-			«IF varIsIndexed»
-				«variable.compileIndexesIntoRegiter(indexes, 'Y')»
-					LDA («varAsIndirect»), Y
-			«ELSEIF variable.isField»
-				«noop»
-					LDY #«variable.asmOffsetName»
-					LDA («varAsIndirect»), Y
-			«ELSE»
-				«noop»
-					LDA («varAsIndirect»)
-			«ENDIF»
-			«IF data.register != 'A'»
-				«noop»
-					TA«data.register»
-			«ENDIF»
+	def compileIndirectReference(Variable variable, String receiver, List<Index> indexes, CompileData data) '''
+		«IF indexes.isNotEmpty»
+			«variable.compileIndexes(indexes, data)»
+		«ENDIF»
+		«val ref = new CompileData => [
+			container = data.container
+			type = variable.typeOf
+			indirect = receiver
+			index = if (indexes.isNotEmpty) {
+				variable.nameOfTmpIndex(indexes, data.container)
+			} else {
+				variable.nameOfOffset
+			}
+		]»
+		«IF data.isCopy»
+			«ref.copyTo(data)»
+		«ELSE»
+			«data.pointTo(ref)»
 		«ENDIF»
 	'''
 
-	def compileAbsoluteReference(Variable variable, String varAsAbsolute, List<Index> indexes, CompileData data) '''
-		«val varIsIndexed = indexes.isNotEmpty»
-		«IF data.absolute !== null»
-			«IF data.isIndexed»
-				«noop»
-					LDX «data.index»
-			«ENDIF»
-			«IF varIsIndexed»
-				«variable.compileIndexesIntoRegiter(indexes, 'Y')»
-			«ENDIF»
-			«FOR i : 0..< data.type.sizeOf»
-				«noop»
-					LDA «varAsAbsolute»«IF i > 0» + «i»«ENDIF»«IF varIsIndexed», Y«ENDIF»
-					STA «data.absolute»«IF i > 0» + «i»«ENDIF»«IF data.isIndexed», X«ENDIF»
-			«ENDFOR»
-		«ELSEIF data.indirect !== null && data.isCopy»
-			«IF data.isIndexed»
-				«noop»
-					LDY «data.index»
-			«ELSE»
-				«noop»
-					LDY #$00
-			«ENDIF»
-			«IF varIsIndexed»
-				«variable.compileIndexesIntoRegiter(indexes, 'X')»
-			«ENDIF»
-			«FOR i : 0..< data.type.sizeOf»
-				«noop»
-					«IF i > 0»
-						INY
-					«ENDIF»
-					LDA «varAsAbsolute»«IF i > 0» + «i»«ENDIF»«IF varIsIndexed», X«ENDIF»
-					STA («data.indirect»), Y
-			«ENDFOR»
-		«ELSEIF data.indirect !== null»
-			«IF varIsIndexed»
-				«variable.compileIndexesIntoRegiter(indexes, 'A')»
-					CLC
-					ADC #<(«varAsAbsolute»)
-					STA «data.indirect» + 0
-					LDA #$00
-					ADC #>(«varAsAbsolute»)
-					STA «data.indirect» + 1
-			«ELSE»
-				«noop»
-					LDA #<(«varAsAbsolute»)
-					STA «data.indirect» + 0
-					LDA #>(«varAsAbsolute»)
-					STA «data.indirect» + 1
-			«ENDIF»
-		«ELSEIF data.register !== null»
-			«IF varIsIndexed»
-				«IF data.register == 'Y'»
-					«variable.compileIndexesIntoRegiter(indexes, 'X')»
-						LDY «varAsAbsolute», X
-				«ELSE»
-					«variable.compileIndexesIntoRegiter(indexes, 'Y')»
-						LD«data.register» «varAsAbsolute», Y
-				«ENDIF»
-			«ELSE»
-				«noop»
-					LD«data.register» «varAsAbsolute»
-			«ENDIF»
+	def compileStaticReference(Variable variable, List<Index> indexes, CompileData data) '''
+		«IF indexes.isNotEmpty»
+			«variable.compileIndexes(indexes, data)»
+		«ENDIF»
+		«val stat = new CompileData => [
+			container = data.container
+			type = variable.typeOf
+			absolute = variable.nameOfStatic
+			index = if (indexes.isNotEmpty) {
+				variable.nameOfTmpIndex(indexes, data.container)
+			}
+		]»
+		«IF data.isCopy»
+			«stat.copyTo(data)»
+		«ELSE»
+			«data.pointTo(stat)»
 		«ENDIF»
 	'''
 	
-	def compileConstantReference(Variable variable, String varAsConstant, List<Index> indexes, CompileData data) '''
-		«IF data.absolute !== null»
-			«IF data.isIndexed»
-				«noop»
-					LDX «data.index»
-			«ENDIF»
-			«noop»
-				LDA #<(«varAsConstant»)
-				STA «data.absolute»«IF data.isIndexed», X«ENDIF»
-				«IF data.type.sizeOf > 1»
-					LDA #>(«varAsConstant»)
-					STA «data.absolute» + 1«IF data.isIndexed», X«ENDIF»
-				«ENDIF»
-		«ELSEIF data.indirect !== null && data.isCopy»
-			«val sizeOfData = data.type.sizeOf»
-			«IF data.isIndexed»
-				«noop»
-					LDY «data.index»
-			«ELSEIF sizeOfData > 1»
-				«noop»
-					LDY #$00
-			«ENDIF»
-			«noop»
-				LDA #<(«varAsConstant»)
-				STA («data.indirect»)«IF sizeOfData > 1 || data.isIndexed», Y«ENDIF»
-				«IF sizeOfData > 1»
-					INY
-					LDA #>(«varAsConstant»)
-					STA («data.indirect»), Y
-				«ENDIF»
-		«ELSEIF data.indirect !== null»
-			«noop»
-				LDA #<(«varAsConstant»)
-				STA «data.indirect» + 0
-				LDA #>(«varAsConstant»)
-				STA «data.indirect» + 1
-		«ELSEIF data.register !== null»
-			«noop»
-				LD«data.register» #<(«varAsConstant»)
+	def compileLocalReference(Variable variable, List<Index> indexes, CompileData data) '''
+		«IF indexes.isNotEmpty»
+			«variable.compileIndexes(indexes, data)»
+		«ENDIF»
+		«val stat = new CompileData => [
+			container = data.container
+			type = variable.typeOf
+			absolute = variable.nameOf
+			index = if (indexes.isNotEmpty) {
+				variable.nameOfTmpIndex(indexes, data.container)
+			}
+		]»
+		«IF data.isCopy»
+			«stat.copyTo(data)»
+		«ELSE»
+			«data.pointTo(stat)»
+		«ENDIF»
+	'''
+	
+	def compileConstantReference(Variable variable, CompileData data) '''
+		«val const = new CompileData => [
+			container = data.container
+			type = variable.typeOf
+			immediate = variable.nameOfConstant
+		]»
+		«IF data.isCopy»
+			«const.copyTo(data)»
 		«ENDIF»
 	'''
 
 	def compileInvocation(Method method, List<Expression> args, CompileData data) '''
-		«val methodName = method.asmName»
+		«val methodName = method.nameOf»
 		«FOR i : 0..< args.size»
 			«val param = method.params.get(i)»
 			«val arg = args.get(i)»
@@ -553,125 +426,54 @@ public class Members {
 				type = param.type
 				
 				if (param.type.isPrimitive && param.dimensionOf.isEmpty) {
-					absolute = param.asmName
+					absolute = param.nameOf
 					copy = true
 				} else {
-					indirect = param.asmName
+					indirect = param.nameOf
 					copy = false
 				}
 			])»
 			«val dimension = arg.dimensionOf»
 			«FOR dim : 0..< dimension.size»
 				«noop»
-					LDA #«dimension.get(dim).toHex»
-					STA «param.asmLenName(methodName, dim)»
+					LDA #«dimension.get(dim).byteValue.toHex»
+					STA «param.nameOfLen(methodName, dim)»
 			«ENDFOR»
 		«ENDFOR»
 		«noop»
-			JSR «method.asmName»
-		«IF method.typeOf.isPrimitive»
-			«val retAsAbsolute = method.asmReturnName»
-			«IF data.absolute !== null»
-				«noop»
-					«IF data.isIndexed»
-						LDX «data.index»
-					«ENDIF»
-					«FOR i : 0..< data.type.sizeOf»
-						LDA «retAsAbsolute»«IF i > 0» + «i»«ENDIF»
-						STA «data.absolute»«IF i > 0» + «i»«ENDIF»«IF data.isIndexed», X«ENDIF»
-					«ENDFOR»
-			«ELSEIF data.indirect !== null && data.isCopy»
-				«val sizeOfData = data.type.sizeOf»
-					«IF data.isIndexed»
-						LDY «data.index»
-					«ELSEIF sizeOfData > 1»
-						LDY #$00
-					«ENDIF»
-					«FOR i : 0..< sizeOfData»
-						«IF i > 0»
-							INY
-						«ENDIF»
-						LDA «retAsAbsolute»«IF i > 0» + «i»«ENDIF»
-						STA («data.indirect»)«IF i > 0 || data.isIndexed», Y«ENDIF»
-					«ENDFOR»
-			«ELSEIF data.indirect !== null»
-				«noop»
-					LDA #<(«retAsAbsolute»)
-					STA «data.indirect» + 0
-					LDA #>(«retAsAbsolute»)
-					STA «data.indirect» + 1
-			«ELSEIF data.register !== null»
-				«noop»
-					LD«data.register» «retAsAbsolute»
-			«ENDIF»
-		«ELSEIF method.typeOf.isNonVoid»
-			«val retAsIndirect = method.asmReturnName»
-			«IF data.absolute !== null»
-				«noop»
-					«IF data.isIndexed»
-						LDX «data.index»
-					«ENDIF»
-					«FOR i : 0..< data.type.sizeOf»
-						«IF i == 1»
-							LDY #$01
-						«ELSEIF i > 1»
-							INY
-						«ENDIF»
-						LDA («retAsIndirect»)«IF i > 0», Y«ENDIF»
-						STA «data.absolute»«IF i > 0» + «i»«ENDIF»«IF data.isIndexed», X«ENDIF»
-					«ENDFOR»
-			«ELSEIF data.indirect !== null && data.isCopy»
-				«val sizeOfData = data.type.sizeOf»
-					«IF data.isIndexed»
-						LDY «data.index»
-					«ELSEIF sizeOfData > 1»
-						LDY #$00
-					«ENDIF»
-					«IF sizeOfData > 1»
-						LDX #$00
-					«ENDIF»
-					«FOR i : 0..< sizeOfData»
-						«IF i > 0»
-							INX
-							INY
-						«ENDIF»
-						LDA («retAsIndirect»«IF i > 0», X«ENDIF»)
-						STA («data.indirect»)«IF i > 0 || data.isIndexed», Y«ENDIF»
-					«ENDFOR»
-			«ELSEIF data.indirect !== null»
-				«noop»
-					LDA «retAsIndirect» + 0
-					STA «data.indirect» + 0
-					LDA «retAsIndirect» + 1
-					STA «data.indirect» + 1
-			«ELSEIF data.register !== null»
-				«noop»
-					LD«data.register» («retAsIndirect»)
+			JSR «method.nameOf»
+		«IF method.typeOf.isNonVoid»
+			«val ret = new CompileData => [
+				container = data.container
+				type = method.typeOf
+				indirect = method.nameOfReturn
+			]»
+			«IF data.isCopy»
+				«ret.copyTo(data)»
+			«ELSE»
+				«data.pointTo(ret)»
 			«ENDIF»
 		«ENDIF»
 	'''
 
-	def compileIndexesIntoRegiter(Variable variable, List<Index> indexes, String reg) '''
+	def compileIndexes(Variable variable, List<Index> indexes, CompileData data) '''
+		«val indexName = variable.nameOfTmpIndex(indexes, data.container)»
 		«val dimension = variable.dimensionOf»
 		«val sizeOfVar = variable.typeOf.sizeOf»
 		«IF dimension.size === 1 && sizeOfVar === 1»
-			«val index = indexes.head»
-			«IF variable.isField»
-				«index.value.compile(new CompileData => [register = 'A'])»
-					ADC #«variable.asmOffsetName»
-					«IF reg != 'A'»
-						TA«reg»
-					«ENDIF»
-			«ELSE»
-				«index.value.compile(new CompileData => [register = reg])»
-			«ENDIF»
+			«indexes.head.value.compile(new CompileData => [register = 'A'])»
+				«IF variable.isField»
+					CLC
+					ADC #«variable.nameOfOffset»
+				«ENDIF»
+				STA «indexName»
 		«ELSE»
 			«FOR i : 0..< indexes.size»
 				«val index = indexes.get(i)»
 				«index.value.compile(new CompileData => [register = 'A'])»
 					«FOR len : (i + 1)..< dimension.size»
 						STA «Members::TEMP_VAR_NAME1»
-						LDA «IF variable.isParameter»«variable.asmLenName(len)»«ELSE»#«dimension.get(len).toHex»«ENDIF»
+						LDA «IF variable.isParameter»«variable.nameOfLen(len)»«ELSE»#«dimension.get(len).byteValue.toHex»«ENDIF»
 						STA «Members::TEMP_VAR_NAME2»
 						LDA #$00
 						mult8x8to8
@@ -689,17 +491,15 @@ public class Members {
 			«noop»
 				«IF sizeOfVar > 1»
 					STA «Members::TEMP_VAR_NAME1»
-					LDA #«sizeOfVar.toHex»
+					LDA #«sizeOfVar.byteValue.toHex»
 					STA «Members::TEMP_VAR_NAME2»
 					LDA #$00
 					mult8x8to8
 				«ENDIF»
 				«IF variable.isField»
-					ADC #«variable.asmOffsetName»
+					ADC #«variable.nameOfOffset»
 				«ENDIF»
-				«IF reg != 'A'»
-					TA«reg»
-				«ENDIF»
+				STA «indexName»
 		«ENDIF»
 	'''
 	

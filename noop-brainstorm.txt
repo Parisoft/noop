@@ -279,7 +279,7 @@ Cast
 		Ex.: aByte.as(Int)
 	2.2 Warn when the receiver class inherits or is the same as the cast class (useless cast) 
 		EX.: A<-B<-C and b.as(A) or b.as(B)
-	2.2 Warn when the receiver class is inherited by the cast class and the cast is not inside a if(instanceOf) instatement
+	2.2 Warn when the receiver class is inherited by the cast class and the cast is not inside a if(instanceOf) instatement (unchecked cast)
 		Ex.: A<-B<-C and b.as(C)
 	2.1 Error when the receiver class do not inherit nor is inherited by the cast class
 		Ex.: A<-B<-C and b.as(D)

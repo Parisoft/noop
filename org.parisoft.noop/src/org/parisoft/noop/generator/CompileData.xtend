@@ -35,5 +35,5 @@ class CompileData {
 	def isIndexed() {
 		index !== null
 	}
-
+	
 }

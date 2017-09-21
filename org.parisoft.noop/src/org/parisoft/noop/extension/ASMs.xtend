@@ -16,50 +16,58 @@ class ASMs {
 	@Inject extension TypeSystem
 	@Inject extension Collections
 
-	val loopThreshold = 16
+	val loopThreshold = 8
 	val labelCounter = new AtomicInteger
 
-	def copyTo(CompileData orig, CompileData dest) '''
-		«IF orig.immediate !== null»
-			«IF dest.absolute !== null»
-				«orig.copyImmediateToAbsolute(dest)»
-			«ELSEIF dest.indirect !== null»
-				«orig.copyImmediateToIndirect(dest)»
-			«ELSEIF dest.register !== null»
-				«orig.copyImmediateToRegister(dest)»
+	def int sizeOf(CompileData data) {
+		data.type.sizeOf
+	}
+	
+	def isPointer(CompileData data) {
+		data.indirect !== null && !data.isCopy
+	}
+
+	def copyTo(CompileData src, CompileData dst) '''
+		«IF src.immediate !== null»
+			«IF dst.absolute !== null»
+				«src.copyImmediateToAbsolute(dst)»
+			«ELSEIF dst.indirect !== null»
+				«src.copyImmediateToIndirect(dst)»
+			«ELSEIF dst.register !== null»
+				«src.copyImmediateToRegister(dst)»
 			«ENDIF»
-		«ELSEIF orig.absolute !== null»
-			«IF dest.absolute !== null»
-				«orig.copyAbsoluteToAbsolute(dest)»
-			«ELSEIF dest.indirect !== null»
-				«orig.copyAbsoluteToIndirect(dest)»
-			«ELSEIF dest.register !== null»
-				«orig.copyAbsoluteToRegister(dest)»
+		«ELSEIF src.absolute !== null»
+			«IF dst.absolute !== null»
+				«src.copyAbsoluteToAbsolute(dst)»
+			«ELSEIF dst.indirect !== null»
+				«src.copyAbsoluteToIndirect(dst)»
+			«ELSEIF dst.register !== null»
+				«src.copyAbsoluteToRegister(dst)»
 			«ENDIF»
-		«ELSEIF orig.indirect !== null»
-			«IF dest.absolute !== null»
-				«orig.copyIndirectToAbsolute(dest)»
-			«ELSEIF dest.indirect !== null»
-				«orig.copyIndirectToIndirect(dest)»
-			«ELSEIF dest.register !== null»
-				«orig.copyIndirectToRegister(dest)»
+		«ELSEIF src.indirect !== null»
+			«IF dst.absolute !== null»
+				«src.copyIndirectToAbsolute(dst)»
+			«ELSEIF dst.indirect !== null»
+				«src.copyIndirectToIndirect(dst)»
+			«ELSEIF dst.register !== null»
+				«src.copyIndirectToRegister(dst)»
 			«ENDIF»
 		«ENDIF»
 	'''
 
-	private def copyImmediateToAbsolute(CompileData orig, CompileData dest) '''
-		«IF dest.isIndexed»
+	private def copyImmediateToAbsolute(CompileData src, CompileData dst) '''
+		«IF dst.isIndexed»
 			«noop»
-				LDX «dest.index»
+				LDX «dst.index»
 		«ENDIF»
 		«noop»
-			LDA #<(«orig.immediate»)
-			STA «dest.absolute»«IF dest.isIndexed», X«ENDIF»
-		«IF dest.type.sizeOf > 1»
-			«IF orig.type.sizeOf > 1»
+			LDA #<(«src.immediate»)
+			STA «dst.absolute»«IF dst.isIndexed», X«ENDIF»
+		«IF dst.sizeOf > 1»
+			«IF src.sizeOf > 1»
 				«noop»
-					LDA #>(«orig.immediate»)
-			«ELSEIF orig.type.isSigned»
+					LDA #>(«src.immediate»)
+			«ELSEIF src.type.isSigned»
 				«val signLabel = labelForSignedComplementEnd»
 					ORA #$7F
 					BMI +«signLabel»
@@ -70,23 +78,23 @@ class ASMs {
 					LDA #$00
 			«ENDIF»
 			«noop»
-				STA «dest.absolute» + 1«IF dest.isIndexed», X«ENDIF»
+				STA «dst.absolute» + 1«IF dst.isIndexed», X«ENDIF»
 		«ENDIF»
 	'''
 
-	private def copyImmediateToIndirect(CompileData orig, CompileData dest) '''
-		«IF dest.isIndexed»
+	private def copyImmediateToIndirect(CompileData src, CompileData dst) '''
+		«IF dst.isIndexed»
 			«noop»
-				LDY «dest.index»
+				LDY «dst.index»
 		«ENDIF»
 		«noop»
-			LDA #<(«orig.immediate»)
-			STA («dest.indirect»)«IF dest.isIndexed», Y«ENDIF»
-		«IF dest.type.sizeOf > 1»
-			«IF orig.type.sizeOf > 1»
+			LDA #<(«src.immediate»)
+			STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
+		«IF dst.sizeOf > 1»
+			«IF src.sizeOf > 1»
 				«noop»
-					LDA #>(«orig.immediate»)
-			«ELSEIF orig.type.isSigned»
+					LDA #>(«src.immediate»)
+			«ELSEIF src.type.isSigned»
 				«val signLabel = labelForSignedComplementEnd»
 					ORA #$7F
 					BMI +«signLabel»
@@ -96,36 +104,36 @@ class ASMs {
 				«noop»
 					LDA #$00
 			«ENDIF»
-			«IF dest.isIndexed»
+			«IF dst.isIndexed»
 				INY
 			«ELSE»
 				LDY #$01
 			«ENDIF»
 			«noop»
-				STA «dest.indirect», Y
+				STA «dst.indirect», Y
 		«ENDIF»
 	'''
 
-	private def copyImmediateToRegister(CompileData orig, CompileData dest) '''
+	private def copyImmediateToRegister(CompileData src, CompileData dst) '''
 		«noop»
-			LD«dest.register» #<(«orig.immediate»)
+			LD«dst.register» #<(«src.immediate»)
 	'''
 
-	private def copyAbsoluteToAbsolute(CompileData orig, CompileData dest) '''
-		«IF dest.type.sizeOf < loopThreshold»
-			«FOR i : 0 ..< Math::min(orig.type.sizeOf, dest.type.sizeOf)»
+	private def copyAbsoluteToAbsolute(CompileData src, CompileData dst) '''
+		«IF dst.sizeOf < loopThreshold»
+			«FOR i : 0 ..< Math::min(src.sizeOf, dst.sizeOf)»
 				«noop»
-					«IF orig.isIndexed»
-						LDY «orig.index»
+					«IF src.isIndexed»
+						LDY «src.index»
 					«ENDIF»
-					«IF dest.isIndexed»
-						LDX «dest.index»
+					«IF dst.isIndexed»
+						LDX «dst.index»
 					«ENDIF»
-					LDA «orig.absolute»«IF i > 0» + «i»«ENDIF»«IF orig.isIndexed», Y«ENDIF»
-					STA «dest.absolute»«IF i > 0» + «i»«ENDIF»«IF dest.isIndexed», X«ENDIF»
+					LDA «src.absolute»«IF i > 0» + «i»«ENDIF»«IF src.isIndexed», Y«ENDIF»
+					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
 			«ENDFOR»
-			«IF orig.type.sizeOf < dest.type.sizeOf»
-				«IF orig.type.isSigned»
+			«IF src.sizeOf < dst.sizeOf»
+				«IF src.type.isSigned»
 					«val signLabel = labelForSignedComplementEnd»
 						ORA #$7F
 						BMI +«signLabel»
@@ -136,40 +144,40 @@ class ASMs {
 						LDA #$00
 				«ENDIF»
 			«ENDIF»
-			«FOR i : orig.type.sizeOf ..< dest.type.sizeOf»
+			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
-					STA «dest.absolute»«IF i > 0» + «i»«ENDIF»«IF dest.isIndexed», X«ENDIF»
+					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val minSize = '''#«Math::min(orig.type.sizeOf, dest.type.sizeOf).toHex»'''»
+			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).byteValue.toHex»'''»
 			«val copyLoop = labelForCopyLoop»
-			«IF orig.isIndexed && dest.isIndexed»
+			«IF src.isIndexed && dst.isIndexed»
 				«noop»
 					CLC
-					LDA «orig.index»
+					LDA «src.index»
 					ADC «minSize»
-					TAY «orig.index»
+					TAY «src.index»
 					CLC
-					LDA «dest.index»
+					LDA «dst.index»
 					ADC «minSize»
-					TAX «dest.index»
+					TAX «dst.index»
 				-«copyLoop»
 					DEY
 					DEX
-					LDA «orig.absolute», Y
-					STA «dest.absolute», X
-					CPY «orig.index»
+					LDA «src.absolute», Y
+					STA «dst.absolute», X
+					CPY «src.index»
 					BNE -«copyLoop»
-			«ELSEIF orig.isIndexed || dest.isIndexed»
+			«ELSEIF src.isIndexed || dst.isIndexed»
 				«noop»
 					CLC
-					LDA «IF orig.isIndexed»«orig.index»«ELSE»«dest.index»«ENDIF»
+					LDA «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
 					ADC «minSize» - 1
 					TAY
 					LDX «minSize» - 1
 				-«copyLoop»
-					LDA «orig.absolute»«IF orig.isIndexed», Y«ELSE», X«ENDIF»
-					STA «dest.absolute»«IF dest.isIndexed», Y«ELSE», X«ENDIF»
+					LDA «src.absolute»«IF src.isIndexed», Y«ELSE», X«ENDIF»
+					STA «dst.absolute»«IF dst.isIndexed», Y«ELSE», X«ENDIF»
 					DEY
 					DEX
 					BPL -«copyLoop»
@@ -177,32 +185,32 @@ class ASMs {
 				«noop»
 					LDX «minSize» - 1
 				-«copyLoop»
-					LDA «orig.absolute», X
-					STA «dest.absolute», X
+					LDA «src.absolute», X
+					STA «dst.absolute», X
 					DEX
 					BPL -«copyLoop»
 			«ENDIF»
 		«ENDIF»
 	'''
 
-	private def copyAbsoluteToIndirect(CompileData orig, CompileData dest) '''
-		«IF dest.type.sizeOf < loopThreshold»
-			«FOR i : 0 ..< Math::min(orig.type.sizeOf, dest.type.sizeOf)»
+	private def copyAbsoluteToIndirect(CompileData src, CompileData dst) '''
+		«IF dst.sizeOf < loopThreshold»
+			«FOR i : 0 ..< Math::min(src.sizeOf, dst.sizeOf)»
 				«noop»
-					«IF orig.isIndexed»
-						LDX «orig.index»
+					«IF src.isIndexed»
+						LDX «src.index»
 					«ENDIF»
-					«IF dest.isIndexed»
-						LDY «dest.index»
+					«IF dst.isIndexed»
+						LDY «dst.index»
 					«ENDIF»
-					LDA «orig.absolute»«IF i > 0» + «i»«ENDIF»«IF orig.isIndexed», X«ENDIF»
-					STA («dest.indirect»)«IF dest.isIndexed», Y«ENDIF»
-					«IF dest.isIndexed»
+					LDA «src.absolute»«IF i > 0» + «i»«ENDIF»«IF src.isIndexed», X«ENDIF»
+					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
+					«IF dst.isIndexed»
 						INY
 					«ENDIF»
 			«ENDFOR»
-			«IF orig.type.sizeOf < dest.type.sizeOf»
-				«IF orig.type.isSigned»
+			«IF src.sizeOf < dst.sizeOf»
+				«IF src.type.isSigned»
 					«val signLabel = labelForSignedComplementEnd»
 						ORA #$7F
 						BMI +«signLabel»
@@ -213,43 +221,43 @@ class ASMs {
 						LDA #$00
 				«ENDIF»
 			«ENDIF»
-			«FOR i : orig.type.sizeOf ..< dest.type.sizeOf»
+			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
-					STA («dest.indirect»)«IF dest.isIndexed», Y«ENDIF»
-					«IF dest.isIndexed»
+					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
+					«IF dst.isIndexed»
 						INY
 					«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val minSize = '''#«Math::min(orig.type.sizeOf, dest.type.sizeOf).toHex»'''»
+			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).byteValue.toHex»'''»
 			«val copyLoop = labelForCopyLoop»
-			«IF orig.isIndexed && dest.isIndexed»
+			«IF src.isIndexed && dst.isIndexed»
 				«noop»
 					CLC
-					LDA «orig.index»
+					LDA «src.index»
 					ADC «minSize»
-					TAX «orig.index»
+					TAX «src.index»
 					CLC
-					LDA «dest.index»
+					LDA «dst.index»
 					ADC «minSize»
-					TAY «dest.index»
+					TAY «dst.index»
 				-«copyLoop»
 					DEY
 					DEX
-					LDA «orig.absolute», X
-					STA («dest.indirect»), Y
-					CPX «orig.index»
+					LDA «src.absolute», X
+					STA («dst.indirect»), Y
+					CPX «src.index»
 					BNE -«copyLoop»
-			«ELSEIF orig.isIndexed || dest.isIndexed»
+			«ELSEIF src.isIndexed || dst.isIndexed»
 				«noop»
 					CLC
-					LDA «IF orig.isIndexed»«orig.index»«ELSE»«dest.index»«ENDIF»
+					LDA «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
 					ADC «minSize» - 1
 					TAX
 					LDY «minSize» - 1
 				-«copyLoop»
-					LDA «orig.absolute»«IF orig.isIndexed», X«ELSE», Y«ENDIF»
-					STA («dest.indirect»«IF dest.isIndexed», X)«ELSE»), Y«ENDIF»
+					LDA «src.absolute»«IF src.isIndexed», X«ELSE», Y«ENDIF»
+					STA («dst.indirect»«IF dst.isIndexed», X)«ELSE»), Y«ENDIF»
 					DEX
 					DEY
 					BPL -«copyLoop»
@@ -257,45 +265,45 @@ class ASMs {
 				«noop»
 					LDY «minSize» - 1
 				-«copyLoop»
-					LDA «orig.absolute», Y
-					STA («dest.indirect»), Y
+					LDA «src.absolute», Y
+					STA («dst.indirect»), Y
 					DEY
 					BPL -«copyLoop»
 			«ENDIF»
 		«ENDIF»
 	'''
 
-	private def copyAbsoluteToRegister(CompileData orig, CompileData dest) '''
+	private def copyAbsoluteToRegister(CompileData src, CompileData dst) '''
 		«noop»
-			«IF orig.isIndexed»
-				LDX «orig.index»
-				LDA «orig.absolute», X
-				«IF dest.register != 'A'»
-					TA«dest.register»
+			«IF src.isIndexed»
+				LDX «src.index»
+				LDA «src.absolute», X
+				«IF dst.register != 'A'»
+					TA«dst.register»
 				«ENDIF»
 			«ELSE»
-				LD«dest.register» «orig.absolute»
+				LD«dst.register» «src.absolute»
 			«ENDIF»
 	'''
 
-	private def copyIndirectToAbsolute(CompileData orig, CompileData dest) '''
-		«IF dest.type.sizeOf < loopThreshold»
-			«FOR i : 0 ..< Math::min(orig.type.sizeOf, dest.type.sizeOf)»
+	private def copyIndirectToAbsolute(CompileData src, CompileData dst) '''
+		«IF dst.sizeOf < loopThreshold»
+			«FOR i : 0 ..< Math::min(src.sizeOf, dst.sizeOf)»
 				«noop»
-					«IF orig.isIndexed»
-						LDY «orig.index»
+					«IF src.isIndexed»
+						LDY «src.index»
 					«ENDIF»
-					«IF dest.isIndexed»
-						LDX «dest.index»
+					«IF dst.isIndexed»
+						LDX «dst.index»
 					«ENDIF»
-					LDA («orig.indirect»)«IF orig.isIndexed», Y«ENDIF»
-					STA «dest.absolute»«IF i > 0» + «i»«ENDIF»«IF dest.isIndexed», X«ENDIF»
-					«IF orig.isIndexed»
+					LDA («src.indirect»)«IF src.isIndexed», Y«ENDIF»
+					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
+					«IF src.isIndexed»
 						INY
 					«ENDIF»
 			«ENDFOR»
-			«IF orig.type.sizeOf < dest.type.sizeOf»
-				«IF orig.type.isSigned»
+			«IF src.sizeOf < dst.sizeOf»
+				«IF src.type.isSigned»
 					«val signLabel = labelForSignedComplementEnd»
 						ORA #$7F
 						BMI +«signLabel»
@@ -306,40 +314,40 @@ class ASMs {
 						LDA #$00
 				«ENDIF»
 			«ENDIF»
-			«FOR i : orig.type.sizeOf ..< dest.type.sizeOf»
+			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
-					STA «dest.absolute»«IF i > 0» + «i»«ENDIF»«IF dest.isIndexed», X«ENDIF»
+					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val minSize = '''#«Math::min(orig.type.sizeOf, dest.type.sizeOf).toHex»'''»
+			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).byteValue.toHex»'''»
 			«val copyLoop = labelForCopyLoop»
-			«IF orig.isIndexed && dest.isIndexed»
+			«IF src.isIndexed && dst.isIndexed»
 				«noop»
 					CLC
-					LDA «orig.index»
+					LDA «src.index»
 					ADC «minSize»
-					TAY «orig.index»
+					TAY «src.index»
 					CLC
-					LDA «dest.index»
+					LDA «dst.index»
 					ADC «minSize»
-					TAX «dest.index»
+					TAX «dst.index»
 				-«copyLoop»
 					DEY
 					DEX
-					LDA («orig.indirect»), Y
-					STA «dest.absolute», X
-					CPY «orig.index»
+					LDA («src.indirect»), Y
+					STA «dst.absolute», X
+					CPY «src.index»
 					BNE -«copyLoop»
-			«ELSEIF orig.isIndexed || dest.isIndexed»
+			«ELSEIF src.isIndexed || dst.isIndexed»
 				«noop»
 					CLC
-					LDA «IF orig.isIndexed»«orig.index»«ELSE»«dest.index»«ENDIF»
+					LDA «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
 					ADC «minSize» - 1
 					TAX
 					LDY «minSize» - 1
 				-«copyLoop»
-					LDA («orig.indirect»«IF orig.isIndexed», X)«ELSE»), Y«ENDIF»
-					STA «dest.absolute»«IF dest.isIndexed», X«ELSE», Y«ENDIF»
+					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
+					STA «dst.absolute»«IF dst.isIndexed», X«ELSE», Y«ENDIF»
 					DEX
 					DEY
 					BPL -«copyLoop»
@@ -347,35 +355,35 @@ class ASMs {
 				«noop»
 					LDY «minSize» - 1
 				-«copyLoop»
-					LDA («orig.indirect»), Y
-					STA «dest.absolute», Y
+					LDA («src.indirect»), Y
+					STA «dst.absolute», Y
 					DEY
 					BPL -«copyLoop»
 			«ENDIF»
 		«ENDIF»
 	'''
 
-	private def copyIndirectToIndirect(CompileData orig, CompileData dest) '''
-		«IF dest.type.sizeOf < loopThreshold»
-			«FOR i : 0 ..< Math::min(orig.type.sizeOf, dest.type.sizeOf)»
+	private def copyIndirectToIndirect(CompileData src, CompileData dst) '''
+		«IF dst.sizeOf < loopThreshold»
+			«FOR i : 0 ..< Math::min(src.sizeOf, dst.sizeOf)»
 				«noop»
-					«IF orig.isIndexed»
-						LDX «orig.index»
+					«IF src.isIndexed»
+						LDX «src.index»
 					«ENDIF»
-					«IF dest.isIndexed»
-						LDY «dest.index»
+					«IF dst.isIndexed»
+						LDY «dst.index»
 					«ENDIF»
-					LDA («orig.indirect»«IF orig.isIndexed», X«ENDIF»)
-					STA («dest.indirect»)«IF dest.isIndexed», Y«ENDIF»
-					«IF orig.isIndexed»
+					LDA («src.indirect»«IF src.isIndexed», X«ENDIF»)
+					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
+					«IF src.isIndexed»
 						INX
 					«ENDIF»
-					«IF dest.isIndexed»
+					«IF dst.isIndexed»
 						INY
 					«ENDIF»
 			«ENDFOR»
-			«IF orig.type.sizeOf < dest.type.sizeOf»
-				«IF orig.type.isSigned»
+			«IF src.sizeOf < dst.sizeOf»
+				«IF src.type.isSigned»
 					«val signLabel = labelForSignedComplementEnd»
 						ORA #$7F
 						BMI +«signLabel»
@@ -386,43 +394,43 @@ class ASMs {
 						LDA #$00
 				«ENDIF»
 			«ENDIF»
-			«FOR i : orig.type.sizeOf ..< dest.type.sizeOf»
+			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
-					STA («dest.indirect»)«IF dest.isIndexed», Y«ENDIF»
-					«IF dest.isIndexed»
+					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
+					«IF dst.isIndexed»
 						INY
 					«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val minSize = '''#«Math::min(orig.type.sizeOf, dest.type.sizeOf).toHex»'''»
+			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).byteValue.toHex»'''»
 			«val copyLoop = labelForCopyLoop»
-			«IF orig.isIndexed && dest.isIndexed»
+			«IF src.isIndexed && dst.isIndexed»
 				«noop»
 					CLC
-					LDA «orig.index»
+					LDA «src.index»
 					ADC «minSize»
-					TAX «orig.index»
+					TAX «src.index»
 					CLC
-					LDA «dest.index»
+					LDA «dst.index»
 					ADC «minSize»
-					TAY «dest.index»
+					TAY «dst.index»
 				-«copyLoop»
 					DEY
 					DEX
-					LDA («orig.indirect», X)
-					STA («dest.indirect»), Y
-					CPX «orig.index»
+					LDA («src.indirect», X)
+					STA («dst.indirect»), Y
+					CPX «src.index»
 					BNE -«copyLoop»
-			«ELSEIF orig.isIndexed || dest.isIndexed»
+			«ELSEIF src.isIndexed || dst.isIndexed»
 				«noop»
 					CLC
-					LDA «IF orig.isIndexed»«orig.index»«ELSE»«dest.index»«ENDIF»
+					LDA «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
 					ADC «minSize» - 1
 					TAX
 					LDY «minSize» - 1
 				-«copyLoop»
-					LDA («orig.indirect»«IF orig.isIndexed», X)«ELSE»), Y«ENDIF»
-					STA («dest.indirect»«IF dest.isIndexed», X)«ELSE»), Y«ENDIF»
+					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
+					STA («dst.indirect»«IF dst.isIndexed», X)«ELSE»), Y«ENDIF»
 					DEX
 					DEY
 					BPL -«copyLoop»
@@ -430,61 +438,61 @@ class ASMs {
 				«noop»
 					LDY «minSize» - 1
 				-«copyLoop»
-					LDA («orig.indirect»), Y
-					STA («dest.indirect»), Y
+					LDA («src.indirect»), Y
+					STA («dst.indirect»), Y
 					DEY
 					BPL -«copyLoop»
 			«ENDIF»
 		«ENDIF»
 	'''
 
-	private def copyIndirectToRegister(CompileData orig, CompileData dest) '''
+	private def copyIndirectToRegister(CompileData src, CompileData dst) '''
 		«noop»
-			«IF orig.isIndexed»
-				LDY «orig.index»
+			«IF src.isIndexed»
+				LDY «src.index»
 			«ENDIF»
-			LDA («orig.indirect»)«IF orig.isIndexed», Y«ENDIF»
-			«IF dest.register != 'A'»
-				TA«dest.register»
+			LDA («src.indirect»)«IF src.isIndexed», Y«ENDIF»
+			«IF dst.register != 'A'»
+				TA«dst.register»
 			«ENDIF»
 	'''
 
-	def pointTo(CompileData orig, CompileData dest) '''
-		«IF orig.absolute !== null && dest.indirect !== null»
-			«orig.pointAbsoluteToIndirect(dest)»
-		«ELSEIF orig.indirect !== null && dest.indirect !== null»
-			«orig.pointIndirectToIndirect(dest)»
+	def pointTo(CompileData ptr, CompileData src) '''
+		«IF src.absolute !== null && ptr.indirect !== null»
+			«ptr.pointIndirectToAbsolute(src)»
+		«ELSEIF src.indirect !== null && ptr.indirect !== null»
+			«ptr.pointIndirectToIndirect(src)»
 		«ENDIF»
 	'''
 
-	private def pointAbsoluteToIndirect(CompileData orig, CompileData dest) '''
+	private def pointIndirectToAbsolute(CompileData ptr, CompileData src) '''
 		«noop»
-			LDA #<(«orig.absolute»)
-			«IF orig.isIndexed»
+			LDA #<(«src.absolute»)
+			«IF src.isIndexed»
 				CLC
-				ADC «orig.index»
+				ADC «src.index»
 			«ENDIF»
-			STA «dest.indirect»
-			LDA #>(«orig.absolute»)
-			«IF orig.isIndexed»
+			STA «ptr.indirect»
+			LDA #>(«src.absolute»)
+			«IF src.isIndexed»
 				ADC #$00
 			«ENDIF»
-			STA «dest.indirect» + 1
+			STA «ptr.indirect» + 1
 	'''
 
-	private def pointIndirectToIndirect(CompileData orig, CompileData dest) '''
+	private def pointIndirectToIndirect(CompileData ptr, CompileData src) '''
 		«noop»
-			LDA «orig.indirect»
-			«IF orig.isIndexed»
+			LDA «src.indirect»
+			«IF src.isIndexed»
 				CLC
-				ADC «orig.index»
+				ADC «src.index»
 			«ENDIF»
-			STA «dest.indirect»
-			LDA «orig.indirect» + 1
-			«IF orig.isIndexed»
+			STA «ptr.indirect»
+			LDA «src.indirect» + 1
+			«IF src.isIndexed»
 				ADC #$00
 			«ENDIF»
-			STA «dest.indirect» + 1
+			STA «ptr.indirect» + 1
 	'''
 
 	private def labelForSignedComplementEnd() {

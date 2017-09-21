@@ -39,8 +39,12 @@ class Statements {
 		^return.getContainerOfType(Method)
 	}
 
-	def asmName(ReturnStatement ^return) {
-		'''«^return.getContainerOfType(Method).asmName».return'''.toString
+	def nameOf(ReturnStatement ^return) {
+		'''«^return.getContainerOfType(Method).nameOf».ret'''.toString
+	}
+
+	def nameOfLen(ReturnStatement ^return) {
+		'''«^return.getContainerOfType(Method).nameOf».ret.len'''.toString
 	}
 
 	def void prepare(Statement statement, AllocData data) {
@@ -89,7 +93,7 @@ class Statements {
 	def List<MemChunk> alloc(Statement statement, AllocData data) {
 		switch (statement) {
 			Variable: {
-				val name = statement.asmName(data.container)
+				val name = statement.nameOf(data.container)
 				val ptrChunks = data.pointers.computeIfAbsent(name, [newArrayList])
 				val varChunks = data.variables.computeIfAbsent(name, [newArrayList])
 				val allChunks = ptrChunks + varChunks
@@ -100,7 +104,7 @@ class Statements {
 							ptrChunks += data.chunkForPtr(name)
 
 							for (i : 0 ..< statement.dimensionOf.size) {
-								varChunks += data.chunkForVar(statement.asmLenName(data.container, i), 1)
+								varChunks += data.chunkForVar(statement.nameOfLen(data.container, i), 1)
 							}
 						} else {
 							varChunks += data.chunkForVar(name, statement.sizeOf)
@@ -118,7 +122,7 @@ class Statements {
 
 				data.restoreTo(snapshot)
 
-				return (chunks + statement.^else?.alloc(data)).toList
+				return (chunks + statement.^else?.alloc(data)).filterNull.toList
 			}
 			ForStatement: {
 				val snapshot = data.snapshot
@@ -130,7 +134,7 @@ class Statements {
 
 				data.restoreTo(snapshot)
 
-				return chunks
+				return chunks.filterNull.toList
 			}
 			ForeverStatement: {
 				val snapshot = data.snapshot
@@ -141,19 +145,17 @@ class Statements {
 				return chunks.toList
 			}
 			ReturnStatement: {
+				val chunks = newArrayList
+
 				if (statement.isNonVoid) {
-					if (statement.method.typeOf.isPrimitive) {
-						data.variables.compute(statement.asmName, [ name, v |
-							newArrayList(data.chunkForVar(name, statement.value.sizeOf))
-						])
-					} else {
-						data.pointers.compute(statement.asmName, [ name, v |
-							newArrayList(data.chunkForPtr(name))
-						])
-					}
+					chunks += data.pointers.computeIfAbsent(statement.nameOf, [ name |
+						newArrayList(data.chunkForPtr(name))
+					])
 				}
 
-				statement.value?.alloc(data)
+				chunks += statement.value?.alloc(data)
+
+				return chunks.filterNull.toList
 			}
 			Expression:
 				statement.alloc(data)
@@ -178,22 +180,22 @@ class Statements {
 			Variable: '''
 				«IF statement.isROM»
 					«statement.value.compile(data => [
-						relative = statement.asmStaticName
+						relative = statement.nameOfStatic
 						type = statement.typeOf
 					])»
 				«ELSEIF data.absolute !== null»
 					«statement.value.compile(data => [
-						absolute = '''«data.absolute» + #«statement.asmOffsetName»'''
+						absolute = '''«data.absolute» + #«statement.nameOfOffset»'''
 						type = statement.typeOf
 					])»
 				«ELSEIF data.indirect !== null»
 					«statement.value.compile(data => [
-						index = '''#«statement.asmOffsetName»'''
+						index = '''#«statement.nameOfOffset»'''
 						type = statement.typeOf
 					])»
 				«ELSE»
 					«statement.value.compile(data => [
-						absolute = statement.asmName(data.container)
+						absolute = statement.nameOf(data.container)
 						type = statement.typeOf
 					])»
 				«ENDIF»
@@ -202,20 +204,14 @@ class Statements {
 				«val method = statement.method»
 				«IF statement.isNonVoid»
 					«statement.value.compile(new CompileData => [
-						container = method.asmName
+						container = method.nameOf
 						type = statement.value.typeOf
-						
-						if (method.typeOf.isPrimitive) {
-							absolute = method.asmReturnName
-							copy = true
-						} else {
-							indirect = method.asmReturnName
-							copy = false
-						}
+						indirect = method.nameOfReturn
+						copy = false
 					])»
 				«ELSEIF statement.value !== null»
 					«statement.value.compile(new CompileData => [
-						container = method.asmName
+						container = method.nameOf
 						type = statement.value.typeOf
 					])»
 				«ENDIF»
@@ -227,7 +223,7 @@ class Statements {
 					val i = new AtomicInteger(0)
 
 					statement.codes.reduce [ c1, c2 |
-						c1.substring(1, c1.length - 1) + statement.vars.get(i.andIncrement).asmName + c2.substring(1, c2.length - 1)
+						c1.substring(1, c1.length - 1) + statement.vars.get(i.andIncrement).nameOf + c2.substring(1, c2.length - 1)
 					]
 				}
 			Expression:
