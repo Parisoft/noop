@@ -50,6 +50,7 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.Index
 
 class Expressions {
 
@@ -85,19 +86,23 @@ class Expressions {
 	}
 
 	def nameOfTmpReceiver(Expression expression, String containerName) {
-		'''«containerName».tmp«expression.typeOf.name»Rcv@«expression.hashCode.toHexString» '''.toString
+		'''«containerName».tmp«expression.typeOf.name»Rcv@«expression.hashCode.toHexString»'''.toString
+	}
+	
+	def nameOfTmp(List<Index> indexes, String containerName) {
+		'''«containerName».index«indexes.join('x', [it.value.valueOf.toString])»@«indexes.hashCode.toHexString»'''.toString
 	}
 
 	def nameOfTmp(ArrayLiteral array, String containerName) {
-		'''«containerName».tmp«array.typeOf.name»Array@«array.hashCode.toHexString» '''.toString
+		'''«containerName».tmp«array.typeOf.name»Array@«array.hashCode.toHexString»'''.toString
 	}
 
 	def nameOfTmpArray(NewInstance instance, String containerName) {
-		'''«containerName».tmp«instance.typeOf.name»Array@«instance.hashCode.toHexString» '''.toString
+		'''«containerName».tmp«instance.typeOf.name»Array@«instance.hashCode.toHexString»'''.toString
 	}
 
 	def nameOfTmpVar(NewInstance instance, String containerName) {
-		'''«containerName».tmp«instance.typeOf.name»@«instance.hashCode.toHexString» '''.toString
+		'''«containerName».tmp«instance.typeOf.name»@«instance.hashCode.toHexString»'''.toString
 	}
 
 	def nameOfConstructor(NewInstance instance) {
@@ -540,12 +545,17 @@ class Expressions {
 				expression.right.alloc(data)
 			IncExpression:
 				expression.right.alloc(data)
-			ArrayLiteral:
+			ArrayLiteral: {
+				val chunks = expression.values.map[alloc(data)].flatten.toList
+
 				if (expression.isOnMemberSelectionOrReference) {
-					data.variables.computeIfAbsent(expression.nameOfTmp(data.container), [newArrayList(data.chunkForVar(it, expression.fullSizeOf))])
-				} else {
-					newArrayList
+					chunks += data.variables.computeIfAbsent(expression.nameOfTmp(data.container), [
+						newArrayList(data.chunkForVar(it, expression.fullSizeOf))
+					])
 				}
+
+				return chunks
+			}
 			NewInstance: {
 				val chunks = newArrayList
 
@@ -613,7 +623,7 @@ class Expressions {
 					}
 
 					if (expression.indexes.isNotEmpty) {
-						chunks += data.variables.computeIfAbsent(expression.member.nameOfTmpIndex(expression.indexes, data.container), [
+						chunks += data.variables.computeIfAbsent(expression.indexes.nameOfTmp(data.container), [
 							newArrayList(data.chunkForVar(it, 1))
 						])
 					}
@@ -634,7 +644,7 @@ class Expressions {
 
 					data.restoreTo(snapshot)
 				} else if (expression.indexes.isNotEmpty) {
-					chunks += data.variables.computeIfAbsent(expression.member.nameOfTmpIndex(expression.indexes, data.container), [
+					chunks += data.variables.computeIfAbsent(expression.indexes.nameOfTmp(data.container), [
 						newArrayList(data.chunkForVar(it, 1))
 					])
 				}
@@ -648,6 +658,9 @@ class Expressions {
 
 	def String compile(Expression expression, CompileData data) {
 		switch (expression) {
+			AssignmentExpression: '''
+				;TODO «expression»
+			'''
 			BOrExpression: '''
 				;TODO «expression.left» | «expression.right» 
 			'''
@@ -684,8 +697,29 @@ class Expressions {
 						«ELSE»
 							.db «expression.value.toBytes.join(', ', [toHex])»
 						«ENDIF»
-				«ELSE»
-					;TODO compile «expression»
+				«ELSEIF data.absolute !== null»
+					«val bytes = expression.value.bytes»
+						«IF data.isIndexed»
+							LDX «data.index»
+						«ENDIF»
+						«FOR i : 0 ..< bytes.size»
+							LDA #«bytes.get(i).toHex»
+							STA «data.absolute»«IF i > 0» + «i»«ENDIF»«IF data.isIndexed», X«ENDIF»
+						«ENDFOR»
+				«ELSEIF data.indirect !== null»
+					«val bytes = expression.value.bytes»
+						«IF data.isIndexed»
+							LDY «data.index»
+						«ENDIF»
+						«FOR i : 0 ..< bytes.size»
+							«IF i > 0 && data.isIndexed»
+								INY
+							«ELSEIF i == 1»
+								LDY #$01
+							«ENDIF»
+							LDA #«bytes.get(i).toHex»
+							STA («data.indirect»)«IF i > 0 || data.isIndexed», Y«ENDIF»
+						«ENDFOR»
 				«ENDIF»
 			'''
 			ArrayLiteral: '''
@@ -693,7 +727,40 @@ class Expressions {
 					«data.relative»:
 						.db «expression.valueOf.toBytes.join(', ', [toHex])»
 				«ELSE»
-					;TODO compile «expression»
+					«val tmp = if (expression.isOnMemberSelectionOrReference) {
+						new CompileData => [
+							container = data.container
+							absolute = expression.nameOfTmp(data.container)
+							type = data.type
+						]
+					} else {
+						data.clone
+					}»
+					«val sizes = <Integer>newArrayList»
+					«FOR element : expression.flatList»
+						«val dst = tmp.clone»
+						«IF sizes.isNotEmpty»
+							«IF dst.absolute !== null»
+								«dst.absolute = '''«dst.absolute» + «sizes.reduce[s1, s2| s1 + s2]»'''»
+							«ELSEIF dst.indirect !== null && dst.index.startsWith('#')»
+								«dst.index = '''«dst.index» + «sizes.reduce[s1, s2| s1 + s2]»'''»
+							«ELSEIF dst.indirect !== null && dst.isIndexed»
+								«noop»
+									CLC
+									LDA «dst.index»
+									ADC #«sizes.last.byteValue.toHex»
+									STA «dst.index»
+							«ELSEIF dst.indirect !== null»
+								«dst.index = '''#«sizes.reduce[s1, s2| s1 + s2].byteValue.toHex»'''»
+							«ENDIF»
+						«ENDIF»
+						«IF sizes += element.sizeOf»
+							«element.compile(dst)»
+						«ENDIF»
+					«ENDFOR»
+					«IF expression.isOnMemberSelectionOrReference && data.isPointer»
+						«data.pointTo(tmp)»
+					«ENDIF»
 				«ENDIF»
 			'''
 			This: '''

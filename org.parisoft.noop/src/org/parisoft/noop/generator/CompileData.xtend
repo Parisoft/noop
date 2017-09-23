@@ -36,4 +36,20 @@ class CompileData {
 		index !== null
 	}
 	
+	override CompileData clone() {
+		val src = this
+		new CompileData => [
+			immediate = src.immediate
+			register = src.register
+			absolute = src.absolute
+			relative = src.relative
+			indirect = src.indirect
+			index = src.index
+			operation = src.operation
+			container = src.container
+			type = src.type
+			copy = src.copy
+		]
+	}
+	
 }

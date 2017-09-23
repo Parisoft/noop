@@ -458,6 +458,296 @@ class Datas {
 			«ENDIF»
 	'''
 
+	def copyArrayTo(CompileData src, CompileData dst, int len)'''
+		«IF src.absolute !== null && dst.absolute !== null»
+			«src.copyArrayAbsoluteToAbsoulte(dst, len)»
+		«ELSEIF src.absolute !== null && dst.indirect !== null»
+			«src.copyArrayAbsoluteToIndirect(dst, len)»
+		«ELSEIF src.indirect !== null && dst.absolute !== null»
+			«src.copyArrayIndirectToAbsolute(dst, len)»
+		«ELSEIF src.indirect !== null && dst.indirect !== null»
+			«src.copyArrayIndirectToIndirect(dst, len)»
+		«ENDIF»
+	'''
+
+	private def copyArrayAbsoluteToAbsoulte(CompileData src, CompileData dst, int len) '''
+		«val bytes = len * dst.sizeOf»
+		«IF bytes < loopThreshold»
+			«noop»
+				«IF src.isIndexed»
+					LDY «src.index»
+				«ENDIF»
+				«IF dst.isIndexed»
+					LDX «dst.index»
+				«ENDIF»
+			«FOR i : 0 ..< bytes»
+				«noop»
+					LDA «src.absolute»«IF i > 0» + «i»«ENDIF»«IF src.isIndexed», Y«ENDIF»
+					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
+			«ENDFOR»
+		«ELSE»
+			«val limit = '''#«bytes.byteValue.toHex»'''»
+			«val copyLoop = labelForCopyLoop»
+			«IF src.isIndexed && dst.isIndexed»
+				«noop»
+					CLC
+					LDA «src.index»
+					ADC «limit»
+					TAY «src.index»
+					CLC
+					LDA «dst.index»
+					ADC «limit»
+					TAX «dst.index»
+				-«copyLoop»
+					DEY
+					DEX
+					LDA «src.absolute», Y
+					STA «dst.absolute», X
+					CPY «src.index»
+					BNE -«copyLoop»
+			«ELSEIF src.isIndexed || dst.isIndexed»
+				«noop»
+					LDY «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
+					LDX #$00
+				-«copyLoop»
+					LDA «src.absolute»«IF src.isIndexed», Y«ELSE», X«ENDIF»
+					STA «dst.absolute»«IF dst.isIndexed», Y«ELSE», X«ENDIF»
+					INY
+					INX
+					CPX «limit»
+					BNE -«copyLoop»
+			«ELSE»
+				«noop»
+					LDX #$00
+				-«copyLoop»
+					LDA «src.absolute», X
+					STA «dst.absolute», X
+					INX
+					CPX «limit»
+					BNE -«copyLoop»
+			«ENDIF»
+		«ENDIF»
+	'''
+
+	private def copyArrayAbsoluteToIndirect(CompileData src, CompileData dst, int len) '''
+		«val bytes = len * dst.sizeOf»
+		«IF bytes < loopThreshold»
+			«noop»
+				«IF src.isIndexed»
+					LDX «src.index»
+				«ENDIF»
+				«IF dst.isIndexed»
+					LDY «dst.index»
+				«ENDIF»
+			«FOR i : 0 ..< bytes»
+				«noop»
+					LDA «src.absolute»«IF i > 0» + «i»«ENDIF»«IF src.isIndexed», X«ENDIF»
+					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
+					«IF dst.isIndexed && i < bytes - 1»
+						INY
+					«ENDIF»
+			«ENDFOR»
+		«ELSE»
+			«val limit = '''#«bytes.byteValue.toHex»'''»
+			«val copyLoop = labelForCopyLoop»
+			«IF src.isIndexed && dst.isIndexed»
+				«noop»
+					CLC
+					LDA «src.index»
+					ADC «limit»
+					TAX «src.index»
+					CLC
+					LDA «dst.index»
+					ADC «limit»
+					TAY «dst.index»
+				-«copyLoop»
+					DEY
+					DEX
+					LDA «src.absolute», X
+					STA («dst.indirect»), Y
+					CPX «src.index»
+					BNE -«copyLoop»
+			«ELSEIF src.isIndexed || dst.isIndexed»
+				«noop»
+					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
+					LDY #$00
+				-«copyLoop»
+					LDA «src.absolute»«IF src.isIndexed», X«ELSE», Y«ENDIF»
+					STA («dst.indirect»«IF dst.isIndexed», X)«ELSE»), Y«ENDIF»
+					INX
+					INY
+					CPX «limit»
+					BNE -«copyLoop»
+			«ELSE»
+				«noop»
+					LDY #$00
+				-«copyLoop»
+					LDA «src.absolute», Y
+					STA («dst.indirect»), Y
+					INY
+					CPY «limit»
+					BNE -«copyLoop»
+			«ENDIF»
+		«ENDIF»
+	'''
+
+	private def copyArrayIndirectToAbsolute(CompileData src, CompileData dst, int len) '''
+		«val bytes = len * dst.sizeOf»
+		«IF bytes < loopThreshold»
+			«noop»
+				«IF src.isIndexed»
+					LDY «src.index»
+				«ENDIF»
+				«IF dst.isIndexed»
+					LDX «dst.index»
+				«ENDIF»
+			«FOR i : 0 ..< bytes»
+				«noop»
+					LDA («src.indirect»)«IF src.isIndexed», Y«ENDIF»
+					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
+					«IF src.isIndexed && i < bytes - 1»
+						INY
+					«ENDIF»
+			«ENDFOR»
+		«ELSE»
+			«val limit = '''#«bytes.byteValue.toHex»'''»
+			«val copyLoop = labelForCopyLoop»
+			«IF src.isIndexed && dst.isIndexed»
+				«noop»
+					CLC
+					LDA «src.index»
+					ADC «limit»
+					TAY «src.index»
+					CLC
+					LDA «dst.index»
+					ADC «limit»
+					TAX «dst.index»
+				-«copyLoop»
+					DEY
+					DEX
+					LDA («src.indirect»), Y
+					STA «dst.absolute», X
+					CPY «src.index»
+					BNE -«copyLoop»
+			«ELSEIF src.isIndexed || dst.isIndexed»
+				«noop»
+					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
+					LDY #$00
+				-«copyLoop»
+					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
+					STA «dst.absolute»«IF dst.isIndexed», X«ELSE», Y«ENDIF»
+					INX
+					INY
+					CPY «limit»
+					BNE -«copyLoop»
+			«ELSE»
+				«noop»
+					LDY «limit» - 1
+				-«copyLoop»
+					LDA («src.indirect»), Y
+					STA «dst.absolute», Y
+					INY
+					CPY «limit»
+					BNE -«copyLoop»
+			«ENDIF»
+		«ENDIF»
+	'''
+
+	private def copyArrayIndirectToIndirect(CompileData src, CompileData dst, int len) '''
+		«val bytes = len * dst.sizeOf»
+		«IF bytes < loopThreshold»
+			«noop»
+				«IF src.isIndexed»
+					LDX «src.index»
+				«ENDIF»
+				«IF dst.isIndexed»
+					LDY «dst.index»
+				«ENDIF»
+			«FOR i : 0 ..< bytes»
+				«noop»
+					LDA («src.indirect»«IF src.isIndexed», X«ENDIF»)
+					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
+					«IF src.isIndexed && i < bytes - 1»
+						INX
+					«ENDIF»
+					«IF dst.isIndexed && i < bytes - 1»
+						INY
+					«ENDIF»
+			«ENDFOR»
+			«IF src.sizeOf < dst.sizeOf»
+				«IF src.type.isSigned»
+					«val signLabel = labelForSignedComplementEnd»
+						ORA #$7F
+						BMI +«signLabel»
+						LDA #$00
+					+«signLabel»
+				«ELSE»
+					«noop»
+						LDA #$00
+				«ENDIF»
+				«IF dst.isIndexed»
+					«noop»
+						INY
+				«ENDIF»
+			«ENDIF»
+			«FOR i : src.sizeOf ..< dst.sizeOf»
+				«noop»
+					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
+					«IF dst.isIndexed && i < dst.sizeOf - 1»
+						INY
+					«ENDIF»
+			«ENDFOR»
+		«ELSE»
+			«val limit = '''#«bytes.byteValue.toHex»'''»
+			«val copyLoop = labelForCopyLoop»
+			«IF src.isIndexed && dst.isIndexed»
+				«noop»
+					CLC
+					LDA «src.index»
+					ADC «limit»
+					TAX «src.index»
+					CLC
+					LDA «dst.index»
+					ADC «limit»
+					TAY «dst.index»
+				-«copyLoop»
+					DEY
+					DEX
+					LDA («src.indirect», X)
+					STA («dst.indirect»), Y
+					CPX «src.index»
+					BNE -«copyLoop»
+			«ELSEIF src.isIndexed || dst.isIndexed»
+				«noop»
+					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
+					LDY #$00
+				-«copyLoop»
+					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
+					STA («dst.indirect»«IF dst.isIndexed», X)«ELSE»), Y«ENDIF»
+					INX
+					INY
+					CPY «limit»
+					BNE -«copyLoop»
+			«ELSE»
+				«noop»
+					LDY #$00
+				-«copyLoop»
+					LDA («src.indirect»), Y
+					STA («dst.indirect»), Y
+					INY
+					CPY «limit»
+					BNE -«copyLoop»
+			«ENDIF»
+		«ENDIF»
+	'''
+	
+	def fillArrayWith(CompileData array, CompileData identity, int len)'''
+	'''
+	
+	private def fillArrayAbsoluteWithAbsolute(CompileData array, CompileData identity, int len)'''
+		
+	'''
+
 	def pointTo(CompileData ptr, CompileData src) '''
 		«IF src.absolute !== null && ptr.indirect !== null»
 			«ptr.pointIndirectToAbsolute(src)»

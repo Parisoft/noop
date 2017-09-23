@@ -1,6 +1,10 @@
 package org.parisoft.noop.^extension
 
 import java.util.List
+import org.parisoft.noop.noop.ArrayLiteral
+import org.parisoft.noop.noop.Expression
+import org.parisoft.noop.noop.NoopFactory
+import org.parisoft.noop.noop.StringLiteral
 
 class Values {
 
@@ -69,6 +73,18 @@ class Values {
 			default:
 				emptyList
 		}
+	}
+
+	def List<Expression> flatList(ArrayLiteral array) {
+		array.values.map [
+			if (it instanceof ArrayLiteral) {
+				it.flatList
+			} else if (it instanceof StringLiteral) {
+				it.value.bytes.map[b | NoopFactory::eINSTANCE.createByteLiteral => [value = b.intValue]]
+			} else {
+				newArrayList(it)
+			}
+		].flatten.toList
 	}
 
 	def toHex(Byte b) '''$«IF b < 0x10»0«ENDIF»«Integer::toHexString(b).toUpperCase»'''

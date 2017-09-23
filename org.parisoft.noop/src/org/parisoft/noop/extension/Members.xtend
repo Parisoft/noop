@@ -101,6 +101,10 @@ public class Members {
 	def isReset(Method method) {
 		method.containingClass.isGame && method.name == '#reset' && method.params.isEmpty
 	}
+	
+	def isArrayReference(Variable variable, List<Index> indexes) {
+		variable.dimensionOf.size > indexes.size
+	}
 
 	def typeOf(Member member) {
 		switch (member) {
@@ -155,6 +159,10 @@ public class Members {
 	def valueOf(Method method) {
 		throw new NonConstantMemberException
 	}
+	
+	def lenOfArrayReference(Variable variable, List<Index> indexes) {
+		variable.dimensionOf.drop(indexes.size).reduce[d1, d2| d1 * d2]
+	}
 
 	def List<Integer> dimensionOf(Member member) {
 		switch (member) {
@@ -179,10 +187,6 @@ public class Members {
 		member.typeOf.sizeOf * (member.dimensionOf.reduce [ d1, d2 |
 			d1 * d2
 		] ?: 1)
-	}
-
-	def nameOfTmpIndex(Member member, List<Index> indexes, String containerName) {
-		'''«containerName».«member.name»At«indexes.join('x', [it.value.valueOf.toString])»@«indexes.hashCode.toHexString»'''.toString
 	}
 
 	def nameOf(Variable variable) {
@@ -355,13 +359,17 @@ public class Members {
 			type = variable.typeOf
 			indirect = receiver
 			index = if (indexes.isNotEmpty) {
-				variable.nameOfTmpIndex(indexes, data.container)
+				indexes.nameOfTmp(data.container)
 			} else {
 				'''#«variable.nameOfOffset»'''
 			}
 		]»
 		«IF data.isCopy»
-			«ref.copyTo(data)»
+			«IF variable.isArrayReference(indexes)»
+				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+			«ELSE»
+				«ref.copyTo(data)»
+			«ENDIF»
 		«ELSE»
 			«data.pointTo(ref)»
 		«ENDIF»
@@ -371,18 +379,22 @@ public class Members {
 		«IF indexes.isNotEmpty»
 			«variable.compileIndexes(indexes, data)»
 		«ENDIF»
-		«val stat = new CompileData => [
+		«val ref = new CompileData => [
 			container = data.container
 			type = variable.typeOf
 			absolute = variable.nameOfStatic
 			index = if (indexes.isNotEmpty) {
-				variable.nameOfTmpIndex(indexes, data.container)
+				indexes.nameOfTmp(data.container)
 			}
 		]»
 		«IF data.isCopy»
-			«stat.copyTo(data)»
+			«IF variable.isArrayReference(indexes)»
+				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+			«ELSE»
+				«ref.copyTo(data)»
+			«ENDIF»
 		«ELSE»
-			«data.pointTo(stat)»
+			«data.pointTo(ref)»
 		«ENDIF»
 	'''
 	
@@ -390,18 +402,22 @@ public class Members {
 		«IF indexes.isNotEmpty»
 			«variable.compileIndexes(indexes, data)»
 		«ENDIF»
-		«val stat = new CompileData => [
+		«val ref = new CompileData => [
 			container = data.container
 			type = variable.typeOf
 			absolute = variable.nameOf
 			index = if (indexes.isNotEmpty) {
-				variable.nameOfTmpIndex(indexes, data.container)
+				indexes.nameOfTmp(data.container)
 			}
 		]»
 		«IF data.isCopy»
-			«stat.copyTo(data)»
+			«IF variable.isArrayReference(indexes)»
+				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+			«ELSE»
+				«ref.copyTo(data)»
+			«ENDIF»
 		«ELSE»
-			«data.pointTo(stat)»
+			«data.pointTo(ref)»
 		«ENDIF»
 	'''
 	
@@ -457,7 +473,7 @@ public class Members {
 	'''
 
 	def compileIndexes(Variable variable, List<Index> indexes, CompileData data) '''
-		«val indexName = variable.nameOfTmpIndex(indexes, data.container)»
+		«val indexName = indexes.nameOfTmp(data.container)»
 		«val dimension = variable.dimensionOf»
 		«val sizeOfVar = variable.typeOf.sizeOf»
 		«IF dimension.size === 1 && sizeOfVar === 1»
