@@ -89,6 +89,6 @@ class Values {
 
 	def toHex(Byte b) '''$«IF b < 0x10»0«ENDIF»«Integer::toHexString(b).toUpperCase»'''
 
-	def toHex(Integer i) '''$«Integer::toHexString(i).toUpperCase»'''
+	def toHex(Integer i) '''$«IF i < 0x10 || i < 0x1000»0«ENDIF»«Integer::toHexString(i).toUpperCase»'''
 
 }

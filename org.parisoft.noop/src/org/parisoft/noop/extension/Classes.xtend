@@ -54,9 +54,9 @@ class Classes {
 
 	def merge(Collection<NoopClass> classes) {
 		classes.map [
-			it.classHierarchy
+			classHierarchy
 		].reduce [ h1, h2 |
-			h1.retainAll(h2)
+			h1.removeIf[c1 | !h2.exists[c2 | c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString]]
 			h1
 		]?.head ?: TypeSystem::TYPE_VOID
 	}
@@ -202,6 +202,8 @@ class Classes {
 			case TypeSystem::LIB_INT:
 				2
 			case TypeSystem::LIB_UINT:
+				2
+			case TypeSystem::LIB_PRIMITIVE:
 				2
 			default: {
 				SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonStatic].map[rawSizeOf].reduce [ s1, s2 |

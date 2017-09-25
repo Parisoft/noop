@@ -122,7 +122,7 @@ class Statements {
 
 				data.restoreTo(snapshot)
 
-				return (chunks + statement.^else?.alloc(data)).filterNull.toList
+				return (chunks + (statement?.^else?.alloc(data) ?: emptyList)).filterNull.toList
 			}
 			ForStatement: {
 				val snapshot = data.snapshot

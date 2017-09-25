@@ -88,9 +88,9 @@ class Expressions {
 	def nameOfTmpReceiver(Expression expression, String containerName) {
 		'''«containerName».tmp«expression.typeOf.name»Rcv@«expression.hashCode.toHexString»'''.toString
 	}
-	
+
 	def nameOfTmp(List<Index> indexes, String containerName) {
-		'''«containerName».index«indexes.join('x', [it.value.valueOf.toString])»@«indexes.hashCode.toHexString»'''.toString
+		'''«containerName».idx«indexes.join('x', [it.value.valueOf.toString])»@«indexes.hashCode.toHexString»'''.toString
 	}
 
 	def nameOfTmp(ArrayLiteral array, String containerName) {
@@ -197,7 +197,7 @@ class Expressions {
 				if (expression.values.isEmpty) {
 					expression.toObjectClass
 				} else {
-					expression.values.map[it.typeOf].merge
+					expression.values.map[typeOf].merge
 				}
 			StringLiteral:
 				expression.toByteClass
@@ -604,16 +604,14 @@ class Expressions {
 				} else if (expression.isMethodInvocation) {
 					val method = expression.member as Method
 
-					chunks += method.alloc(data)
-					chunks += expression.args.map[alloc(data)].flatten
-
 					if (method.isNonStatic) {
 						chunks += expression.receiver.alloc(data)
 					}
+
+					chunks += expression.args.map[alloc(data)].flatten
+					chunks += method.alloc(data)
 				} else if (expression.member instanceof Variable) {
 					val variable = expression.member as Variable
-
-					chunks += variable.alloc(data)
 
 					if (variable.isNonStatic) {
 						chunks += expression.receiver.alloc(data)
@@ -621,6 +619,8 @@ class Expressions {
 							newArrayList(data.chunkForPtr(it))
 						])
 					}
+
+					chunks += variable.alloc(data)
 
 					if (expression.indexes.isNotEmpty) {
 						chunks += data.variables.computeIfAbsent(expression.indexes.nameOfTmp(data.container), [
@@ -634,20 +634,19 @@ class Expressions {
 				return chunks
 			}
 			MemberRef: {
+				val snapshot = data.snapshot
 				val chunks = newArrayList
 
 				if (expression.isMethodInvocation) {
-					val snapshot = data.snapshot
-
-					chunks += (expression.member as Method).alloc(data)
 					chunks += expression.args.map[alloc(data)].flatten
-
-					data.restoreTo(snapshot)
+					chunks += (expression.member as Method).alloc(data)
 				} else if (expression.indexes.isNotEmpty) {
 					chunks += data.variables.computeIfAbsent(expression.indexes.nameOfTmp(data.container), [
 						newArrayList(data.chunkForVar(it, 1))
 					])
 				}
+
+				data.restoreTo(snapshot)
 
 				return chunks
 			}
@@ -736,27 +735,25 @@ class Expressions {
 					} else {
 						data.clone
 					}»
-					«val sizes = <Integer>newArrayList»
-					«FOR element : expression.flatList»
+					«val elements = expression.flatList»
+					«FOR i : 0 ..< elements.size»
 						«val dst = tmp.clone»
-						«IF sizes.isNotEmpty»
+						«IF i > 0»
 							«IF dst.absolute !== null»
-								«dst.absolute = '''«dst.absolute» + «sizes.reduce[s1, s2| s1 + s2]»'''»
+								«dst.absolute = '''«dst.absolute» + «i * expression.sizeOf»'''»
 							«ELSEIF dst.indirect !== null && dst.index.startsWith('#')»
-								«dst.index = '''«dst.index» + «sizes.reduce[s1, s2| s1 + s2]»'''»
+								«dst.index = '''«dst.index» + «i * expression.sizeOf»'''»
 							«ELSEIF dst.indirect !== null && dst.isIndexed»
 								«noop»
 									CLC
 									LDA «dst.index»
-									ADC #«sizes.last.byteValue.toHex»
+									ADC #«expression.sizeOf.byteValue.toHex»
 									STA «dst.index»
 							«ELSEIF dst.indirect !== null»
-								«dst.index = '''#«sizes.reduce[s1, s2| s1 + s2].byteValue.toHex»'''»
+								«dst.index = '''#«(i * expression.sizeOf).byteValue.toHex»'''»
 							«ENDIF»
 						«ENDIF»
-						«IF sizes += element.sizeOf»
-							«element.compile(dst)»
-						«ENDIF»
+						«elements.get(i).compile(dst)»
 					«ENDFOR»
 					«IF expression.isOnMemberSelectionOrReference && data.isPointer»
 						«data.pointTo(tmp)»
