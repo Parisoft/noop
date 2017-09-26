@@ -22,6 +22,7 @@ import static extension org.eclipse.xtext.EcoreUtil2.*
 
 class Statements {
 
+	@Inject extension Datas
 	@Inject extension Members
 	@Inject extension Classes
 	@Inject extension Collections
@@ -94,31 +95,29 @@ class Statements {
 		switch (statement) {
 			Variable: {
 				val name = statement.nameOf(data.container)
-				val ptrChunks = data.pointers.computeIfAbsent(name, [newArrayList])
-				val varChunks = data.variables.computeIfAbsent(name, [newArrayList])
-				val allChunks = ptrChunks + varChunks
+				val chunks = newArrayList
 
-				if (allChunks.isEmpty) {
-					if (statement.isParameter) {
-						if (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty) {
-							ptrChunks += data.chunkForPtr(name)
+				if (statement.isParameter) {
+					if (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty) {
+						chunks += data.computePtr(name)
 
-							for (i : 0 ..< statement.dimensionOf.size) {
-								varChunks += data.chunkForVar(statement.nameOfLen(data.container, i), 1)
-							}
-						} else {
-							varChunks += data.chunkForVar(name, statement.sizeOf)
+						for (i : 0 ..< statement.dimensionOf.size) {
+							chunks += data.computeVar(statement.nameOfLen(data.container, i), 1)
 						}
-					} else if (statement.isNonStatic) {
-						varChunks += data.chunkForVar(name, statement.sizeOf)
+					} else {
+						chunks += data.computeVar(name, statement.sizeOf)
 					}
+				} else if (statement.isNonStatic) {
+					chunks += data.computeVar(name, statement.sizeOf)
 				}
 
-				return (allChunks + statement?.value.alloc(data)).filterNull.toList
+				return (chunks + statement?.value.alloc(data)).filterNull.toList
 			}
 			IfStatement: {
 				val snapshot = data.snapshot
 				val chunks = statement.condition.alloc(data) + statement.body.statements.map[alloc(data)].flatten
+
+				chunks.disoverlap(data.container)
 
 				data.restoreTo(snapshot)
 
@@ -131,6 +130,7 @@ class Statements {
 				chunks += statement.condition?.alloc(data)
 				chunks += statement.expressions.map[alloc(data)].flatten
 				chunks += statement.body.statements.map[alloc(data)].flatten
+				chunks.disoverlap(data.container)
 
 				data.restoreTo(snapshot)
 
@@ -139,7 +139,9 @@ class Statements {
 			ForeverStatement: {
 				val snapshot = data.snapshot
 				val chunks = statement.body.statements.map[alloc(data)].flatten
-
+				
+				chunks.disoverlap(data.container)
+				
 				data.restoreTo(snapshot)
 
 				return chunks.toList
@@ -167,6 +169,8 @@ class Statements {
 	def alloc(ElseStatement statement, AllocData data) {
 		val snapshot = data.snapshot
 		val chunks = statement.body.statements.map[alloc(data)].flatten
+
+		chunks.disoverlap(data.container)
 
 		data.restoreTo(snapshot)
 

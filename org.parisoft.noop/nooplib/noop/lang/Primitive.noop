@@ -1,2 +1,6 @@
 Primitive {
+
+	dispose() {
+    	//native
+    }
 }

@@ -2,7 +2,9 @@ package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
 import java.util.concurrent.atomic.AtomicInteger
+import org.parisoft.noop.generator.AllocData
 import org.parisoft.noop.generator.CompileData
+import org.parisoft.noop.generator.MemChunk
 
 class Datas {
 
@@ -458,7 +460,7 @@ class Datas {
 			«ENDIF»
 	'''
 
-	def copyArrayTo(CompileData src, CompileData dst, int len)'''
+	def copyArrayTo(CompileData src, CompileData dst, int len) '''
 		«IF src.absolute !== null && dst.absolute !== null»
 			«src.copyArrayAbsoluteToAbsoulte(dst, len)»
 		«ELSEIF src.absolute !== null && dst.indirect !== null»
@@ -740,11 +742,11 @@ class Datas {
 			«ENDIF»
 		«ENDIF»
 	'''
-	
-	def fillArrayWith(CompileData array, CompileData identity, int len)'''
+
+	def fillArrayWith(CompileData array, CompileData identity, int len) '''
 	'''
-	
-	private def fillArrayAbsoluteWithAbsolute(CompileData array, CompileData identity, int len)'''
+
+	private def fillArrayAbsoluteWithAbsolute(CompileData array, CompileData identity, int len) '''
 		
 	'''
 
@@ -795,5 +797,93 @@ class Datas {
 	}
 
 	private def noop() {
+	}
+
+	def computePtr(AllocData data, String varName) {
+		data.pointers.compute(varName, [ name, value |
+			var chunks = value
+
+			if (chunks === null) {
+				chunks = newArrayList(data.chunkForPtr(name))
+			} else if (data.ptrCounter.get < chunks.last.hi) {
+				data.ptrCounter.set(chunks.last.hi + 1)
+			}
+
+			return chunks
+		])
+	}
+
+	def computeVar(AllocData data, String varName, int size) {
+		data.variables.compute(varName, [ name, value |
+			var chunks = value
+
+			if (chunks === null) {
+				chunks = newArrayList(data.chunkForVar(name, size))
+			} else if (data.varCounter.get < chunks.last.hi) {
+				data.varCounter.set(chunks.last.hi + 1)
+			}
+
+			return chunks
+		])
+	}
+
+	def computeTmp(AllocData data, String varName, int size) {
+		if (size > 2) {
+			data.variables.compute(varName, [ name, value |
+				var chunks = value
+
+				if (chunks === null) {
+					chunks = newArrayList(data.chunkForVar(name, size) => [tmp = true])
+				} else if (data.varCounter.get < chunks.last.hi) {
+					data.varCounter.set(chunks.last.hi + 1)
+				}
+
+				return chunks
+			])
+		} else {
+			data.pointers.compute(varName, [ name, value |
+				var chunks = value
+
+				if (chunks === null) {
+					chunks = newArrayList(data.chunkForZP(name, size) => [tmp = true])
+				} else if (data.ptrCounter.get < chunks.last.hi) {
+					data.ptrCounter.set(chunks.last.hi + 1)
+				}
+
+				return chunks
+			])
+		}
+	}
+
+	def void disoverlap(Iterable<MemChunk> chunks, String methodName) {
+		println('--------------------------------')
+		println('''disoverlaping «methodName» chunks «chunks»''')
+
+		chunks.forEach [ chunk, index |
+			if (chunk.variable.startsWith(methodName) && chunk.isNonDisposed) {
+				chunks.drop(index).reject [
+					it.variable.startsWith(methodName)
+				].forEach [ outer |
+					if (chunk.overlap(outer)) {
+						println('''«chunk» overlaps «outer»''')
+
+						val delta = chunk.deltaFrom(outer)
+
+						chunks.drop(index).filter [
+							it.variable.startsWith(methodName)
+						].forEach [ inner |
+							println('''«inner» shift to «delta»''')
+
+							inner.shiftTo(delta)
+						]
+					}
+				]
+			}
+		]
+
+		chunks.filter[tmp].forEach[disposed = true]
+
+		println('''disoverlapped «methodName» to «chunks»''')
+		println('--------------------------------')
 	}
 }

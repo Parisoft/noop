@@ -8,6 +8,7 @@ class MemChunk implements Comparable<MemChunk> {
 	@Accessors var int hi
 	@Accessors var String variable
 	@Accessors var boolean disposed = false
+	@Accessors var boolean tmp = false
 
 	new(String variable, int addr) {
 		this.variable = variable

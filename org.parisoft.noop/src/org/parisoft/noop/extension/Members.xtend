@@ -31,11 +31,11 @@ public class Members {
 	static val UNDERLINE_CHAR = '_'.charAt(0)
 
 	@Inject extension Datas
-	@Inject extension Classes
-	@Inject extension Expressions
-	@Inject extension Statements
-	@Inject extension Collections
 	@Inject extension Values
+	@Inject extension Classes
+	@Inject extension Statements
+	@Inject extension Expressions
+	@Inject extension Collections
 	@Inject extension IQualifiedNameProvider
 
 	val running = new HashSet<Member>
@@ -100,6 +100,14 @@ public class Members {
 	
 	def isReset(Method method) {
 		method.containingClass.isGame && method.name == '#reset' && method.params.isEmpty
+	}
+	
+	def isDispose(Method method) {
+		method.name == 'dispose' && method.params.isEmpty
+	}
+	
+	def isNonDispose(Method method) {
+		!method.isDispose
 	}
 	
 	def isArrayReference(Variable variable, List<Index> indexes) {
@@ -239,6 +247,32 @@ public class Members {
 		method.body.statements.forEach[prepare(data)]
 	}
 
+	def dispose(Member member, AllocData data) {
+		if (member instanceof Variable) {
+			if (member.isNonStatic && member.isNonField && member.isNonParameter) { // TODO check for non for/forEach/while variables
+				val pointers = data.pointers.get(member.nameOf)
+				
+				if (pointers !== null) {
+					pointers.forEach[disposed = true]
+					
+					if (pointers.last.hi === data.ptrCounter.get + 1) {
+						data.ptrCounter.set(pointers.last.lo)
+					}
+				}
+				
+				val variables = data.variables.get(member.nameOf)
+
+				if (variables !== null) {
+					variables.forEach[disposed = true]
+					
+					if (variables.last.hi === data.varCounter.get - 1) {
+						data.varCounter.set(variables.last.lo)
+					}
+				}				
+			}
+		}
+	}
+
 	def alloc(Method method, AllocData data) {
 		if (allocating.add(method)) {
 			try {
@@ -270,8 +304,9 @@ public class Members {
 	}
 
 	def compile(Method method, CompileData data) '''
-		«method.nameOf»:
-		«IF method.isReset»
+		«IF method.isNonDispose»
+			«method.nameOf»:
+			«IF method.isReset»
 				;;;;;;;;;; Initial setup begin
 				SEI          ; disable IRQs
 				CLD          ; disable decimal mode
@@ -302,7 +337,7 @@ public class Members {
 				INX
 				BNE -clrMem:
 
-				; Instantiate all static variables, including the game itself
+			; Instantiate all static variables, including the game itself
 			«val resetMethod = method.nameOf»
 			«FOR staticVar : data.allocation.statics»
 				«staticVar.compile(new CompileData => [container = resetMethod])»
@@ -316,37 +351,38 @@ public class Members {
 				«statement.compile(new CompileData => [container = method.nameOf])»
 			«ENDFOR»
 				RTS
-		«ELSEIF method.isNmi»
-			;;;;;;;;;; NMI initialization begin
-			PHA
-			TXA
-			PHA
-			TYA
-			PHA
-		
-			LDA #$00
-			STA $2003       ; set the low byte (00) of the RAM address
-			LDA #$02
-			STA $4014       ; set the high byte (02) of the RAM address, start the transfer
-			;;;;;;;;;; NMI initialization end
-			;;;;;;;;;; Effective code begin
-		«FOR statement : method.body.statements»
-			«statement.compile(new CompileData => [container = method.nameOf])»
-		«ENDFOR»
-			;;;;;;;;;; Effective code end
-			;;;;;;;;;; NMI finalization begin
-			PLA
-			TAY
-			PLA
-			TAX
-			PLA
-			;;;;;;;;;; NMI finalization end
-			RTI
-		«ELSE»
+			«ELSEIF method.isNmi»
+				;;;;;;;;;; NMI initialization begin
+				PHA
+				TXA
+				PHA
+				TYA
+				PHA
+			
+				LDA #$00
+				STA $2003       ; set the low byte (00) of the RAM address
+				LDA #$02
+				STA $4014       ; set the high byte (02) of the RAM address, start the transfer
+				;;;;;;;;;; NMI initialization end
+				;;;;;;;;;; Effective code begin
 			«FOR statement : method.body.statements»
 				«statement.compile(new CompileData => [container = method.nameOf])»
 			«ENDFOR»
-				RTS
+				;;;;;;;;;; Effective code end
+				;;;;;;;;;; NMI finalization begin
+				PLA
+				TAY
+				PLA
+				TAX
+				PLA
+				;;;;;;;;;; NMI finalization end
+				RTI
+			«ELSE»
+				«FOR statement : method.body.statements»
+					«statement.compile(new CompileData => [container = method.nameOf])»
+				«ENDFOR»
+					RTS
+			«ENDIF»
 		«ENDIF»
 	'''
 
@@ -433,11 +469,12 @@ public class Members {
 	'''
 
 	def compileInvocation(Method method, List<Expression> args, CompileData data) '''
-		«val methodName = method.nameOf»
-		«FOR i : 0..< args.size»
-			«val param = method.params.get(i)»
-			«val arg = args.get(i)»
-			«arg.compile(new CompileData => [
+		«IF method.isNonDispose»
+			«val methodName = method.nameOf»
+			«FOR i : 0..< args.size»
+				«val param = method.params.get(i)»
+				«val arg = args.get(i)»
+				«arg.compile(new CompileData => [
 				container = data.container
 				type = param.type
 				
@@ -449,25 +486,26 @@ public class Members {
 					copy = false
 				}
 			])»
-			«val dimension = arg.dimensionOf»
-			«FOR dim : 0..< dimension.size»
-				«noop»
-					LDA #«dimension.get(dim).byteValue.toHex»
-					STA «param.nameOfLen(methodName, dim)»
+				«val dimension = arg.dimensionOf»
+				«FOR dim : 0..< dimension.size»
+					«noop»
+						LDA #«dimension.get(dim).byteValue.toHex»
+						STA «param.nameOfLen(methodName, dim)»
+				«ENDFOR»
 			«ENDFOR»
-		«ENDFOR»
-		«noop»
-			JSR «method.nameOf»
-		«IF method.typeOf.isNonVoid»
-			«val ret = new CompileData => [
+			«noop»
+				JSR «method.nameOf»
+			«IF method.typeOf.isNonVoid»
+				«val ret = new CompileData => [
 				container = data.container
 				type = method.typeOf
 				indirect = method.nameOfReturn
 			]»
-			«IF data.isCopy»
-				«ret.copyTo(data)»
-			«ELSE»
-				«data.pointTo(ret)»
+				«IF data.isCopy»
+					«ret.copyTo(data)»
+				«ELSE»
+					«data.pointTo(ret)»
+				«ENDIF»
 			«ENDIF»
 		«ENDIF»
 	'''

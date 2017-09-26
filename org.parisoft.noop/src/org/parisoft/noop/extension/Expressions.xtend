@@ -57,9 +57,9 @@ class Expressions {
 	static val FILE_URI = 'file://'
 
 	@Inject extension Datas
+	@Inject extension Values
 	@Inject extension Classes
 	@Inject extension Members
-	@Inject extension Values
 	@Inject extension Statements
 	@Inject extension TypeSystem
 	@Inject extension Collections
@@ -598,26 +598,35 @@ class Expressions {
 				} else if (expression.isMethodInvocation) {
 					val method = expression.member as Method
 
-					chunks += method.alloc(data)
-					chunks += expression.args.map[alloc(data)].flatten
+					if (method.isDispose) {
+						expression.receiver.dispose(data)
+						return chunks
+					}
+
+					val methodChunks = method.alloc(data)
 
 					if (method.isNonStatic) {
 						chunks += expression.receiver.alloc(data)
 					}
+
+					chunks += expression.args.map[alloc(data)].flatten
+					chunks += methodChunks
 				} else if (expression.member instanceof Variable) {
 					val variable = expression.member as Variable
-
-					chunks += variable.alloc(data)
-
-					if (expression.indexes.isNotEmpty) {
-						chunks += data.computeTmp(expression.indexes.nameOfTmp(data.container), 1)
-					}
 
 					if (variable.isNonStatic) {
 						chunks += expression.receiver.alloc(data)
 						chunks += data.computePtr(expression.receiver.nameOfTmpReceiver(data.container))
 					}
+
+					if (expression.indexes.isNotEmpty) {
+						chunks += data.computeTmp(expression.indexes.nameOfTmp(data.container), 1)
+					}
+
+					chunks += variable.alloc(data)
 				}
+				
+				chunks.disoverlap(data.container)
 
 				data.restoreTo(snapshot)
 
@@ -628,11 +637,14 @@ class Expressions {
 				val chunks = newArrayList
 
 				if (expression.isMethodInvocation) {
+					val methodChunks = (expression.member as Method).alloc(data)
 					chunks += expression.args.map[alloc(data)].flatten
-					chunks += (expression.member as Method).alloc(data)
+					chunks += methodChunks
 				} else if (expression.indexes.isNotEmpty) {
 					chunks += data.computeTmp(expression.indexes.nameOfTmp(data.container), 1)
 				}
+				
+				chunks.disoverlap(data.container)
 
 				data.restoreTo(snapshot)
 
@@ -640,6 +652,12 @@ class Expressions {
 			}
 			default:
 				newArrayList
+		}
+	}
+
+	def dispose(Expression expression, AllocData data) {
+		if (expression instanceof MemberRef) {
+			expression.member.dispose(data)
 		}
 	}
 
