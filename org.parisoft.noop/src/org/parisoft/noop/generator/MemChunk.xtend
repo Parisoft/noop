@@ -7,6 +7,7 @@ class MemChunk implements Comparable<MemChunk> {
 	@Accessors var int lo
 	@Accessors var int hi
 	@Accessors var String variable
+	@Accessors var boolean disposed = false
 
 	new(String variable, int addr) {
 		this.variable = variable
@@ -26,6 +27,10 @@ class MemChunk implements Comparable<MemChunk> {
 
 	def nonZP() {
 		!isZP
+	}
+	
+	def isNonDisposed() {
+		!isDisposed
 	}
 
 	def overlap(MemChunk other) {

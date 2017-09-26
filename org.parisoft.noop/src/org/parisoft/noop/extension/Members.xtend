@@ -248,7 +248,7 @@ public class Members {
 				data.container = methodName
 
 				val receiver = if (method.isNonStatic) {
-						data.pointers.computeIfAbsent(method.nameOfReceiver, [newArrayList(data.chunkForPtr(it))])
+						data.computePtr(method.nameOfReceiver)
 					} else {
 						emptyList
 					}

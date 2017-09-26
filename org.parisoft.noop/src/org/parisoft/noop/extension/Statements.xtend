@@ -148,9 +148,7 @@ class Statements {
 				val chunks = newArrayList
 
 				if (statement.isNonVoid) {
-					chunks += data.pointers.computeIfAbsent(statement.nameOf, [ name |
-						newArrayList(data.chunkForPtr(name))
-					])
+					chunks += data.computePtr(statement.nameOf)
 				}
 
 				chunks += statement.value?.alloc(data)

@@ -34,11 +34,15 @@ class AllocData {
 	def chunkForPtr(String variable) {
 		new MemChunk(variable, ptrCounter.getAndAdd(2))
 	}
+	
+	def chunkForZP(String variable, int size) {
+		new MemChunk(variable, ptrCounter.getAndAdd(size), size)
+	}
 
 	def chunkForVar(String variable, int size) {
 		new MemChunk(variable, varCounter.getAndAdd(size), size)
 	}
-
+	
 	def snapshot() {
 		val src = this
 

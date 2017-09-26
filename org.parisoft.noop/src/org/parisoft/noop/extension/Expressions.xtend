@@ -549,9 +549,7 @@ class Expressions {
 				val chunks = expression.values.map[alloc(data)].flatten.toList
 
 				if (expression.isOnMemberSelectionOrReference) {
-					chunks += data.variables.computeIfAbsent(expression.nameOfTmp(data.container), [
-						newArrayList(data.chunkForVar(it, expression.fullSizeOf))
-					])
+					chunks += data.computeTmp(expression.nameOfTmp(data.container), expression.fullSizeOf)
 				}
 
 				return chunks
@@ -565,13 +563,9 @@ class Expressions {
 
 				if (expression.isOnMemberSelectionOrReference) {
 					if (expression.dimension.isEmpty && expression.type.isNonPrimitive) {
-						chunks += data.variables.computeIfAbsent(expression.nameOfTmpVar(data.container), [
-							newArrayList(data.chunkForVar(it, expression.sizeOf))
-						])
+						chunks += data.computeTmp(expression.nameOfTmpVar(data.container), expression.sizeOf)
 					} else if (expression.dimension.isNotEmpty) {
-						chunks += data.variables.computeIfAbsent(expression.nameOfTmpArray(data.container), [
-							newArrayList(data.chunkForVar(it, expression.fullSizeOf))
-						])
+						chunks += data.computeTmp(expression.nameOfTmpArray(data.container), expression.fullSizeOf)
 					}
 				}
 
@@ -581,7 +575,7 @@ class Expressions {
 
 					data.container = constructorName
 
-					chunks += data.pointers.computeIfAbsent(expression.nameOfReceiver, [newArrayList(data.chunkForPtr(it))])
+					chunks += data.computePtr(expression.nameOfReceiver)
 					chunks += expression.fieldsInitializedOnContructor.map[value.alloc(data)].flatten
 					chunks.disoverlap(constructorName)
 
@@ -604,28 +598,24 @@ class Expressions {
 				} else if (expression.isMethodInvocation) {
 					val method = expression.member as Method
 
+					chunks += method.alloc(data)
+					chunks += expression.args.map[alloc(data)].flatten
+
 					if (method.isNonStatic) {
 						chunks += expression.receiver.alloc(data)
 					}
-
-					chunks += expression.args.map[alloc(data)].flatten
-					chunks += method.alloc(data)
 				} else if (expression.member instanceof Variable) {
 					val variable = expression.member as Variable
-
-					if (variable.isNonStatic) {
-						chunks += expression.receiver.alloc(data)
-						chunks += data.pointers.computeIfAbsent(expression.receiver.nameOfTmpReceiver(data.container), [
-							newArrayList(data.chunkForPtr(it))
-						])
-					}
 
 					chunks += variable.alloc(data)
 
 					if (expression.indexes.isNotEmpty) {
-						chunks += data.variables.computeIfAbsent(expression.indexes.nameOfTmp(data.container), [
-							newArrayList(data.chunkForVar(it, 1))
-						])
+						chunks += data.computeTmp(expression.indexes.nameOfTmp(data.container), 1)
+					}
+
+					if (variable.isNonStatic) {
+						chunks += expression.receiver.alloc(data)
+						chunks += data.computePtr(expression.receiver.nameOfTmpReceiver(data.container))
 					}
 				}
 
@@ -641,9 +631,7 @@ class Expressions {
 					chunks += expression.args.map[alloc(data)].flatten
 					chunks += (expression.member as Method).alloc(data)
 				} else if (expression.indexes.isNotEmpty) {
-					chunks += data.variables.computeIfAbsent(expression.indexes.nameOfTmp(data.container), [
-						newArrayList(data.chunkForVar(it, 1))
-					])
+					chunks += data.computeTmp(expression.indexes.nameOfTmp(data.container), 1)
 				}
 
 				data.restoreTo(snapshot)
