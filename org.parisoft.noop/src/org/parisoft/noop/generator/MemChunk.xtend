@@ -70,7 +70,9 @@ class MemChunk implements Comparable<MemChunk> {
 		MemChunk{
 			variable:«variable»,
 			lo:«Integer.toHexString(lo)», 
-			hi:«Integer.toHexString(hi)»
+			hi:«Integer.toHexString(hi)»,
+			disposed:«disposed»,
+			tmp:«tmp»
 		}
 	'''
 	

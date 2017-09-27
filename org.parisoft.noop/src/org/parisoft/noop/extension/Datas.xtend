@@ -856,8 +856,8 @@ class Datas {
 	}
 
 	def void disoverlap(Iterable<MemChunk> chunks, String methodName) {
-		println('--------------------------------')
-		println('''disoverlaping «methodName» chunks «chunks»''')
+//		println('--------------------------------')
+//		println('''disoverlaping «methodName» chunks «chunks»''')
 
 		chunks.forEach [ chunk, index |
 			if (chunk.variable.startsWith(methodName) && chunk.isNonDisposed) {
@@ -865,15 +865,16 @@ class Datas {
 					it.variable.startsWith(methodName)
 				].forEach [ outer |
 					if (chunk.overlap(outer)) {
-						println('''«chunk» overlaps «outer»''')
+//						println('''«chunk» overlaps «outer»''')
 
 						val delta = chunk.deltaFrom(outer)
 
 						chunks.drop(index).filter [
 							it.variable.startsWith(methodName)
+						].filter[
+							it.ZP == chunk.ZP
 						].forEach [ inner |
-							println('''«inner» shift to «delta»''')
-
+//							println('''«inner» shift to «delta»''')
 							inner.shiftTo(delta)
 						]
 					}
@@ -881,9 +882,9 @@ class Datas {
 			}
 		]
 
-		chunks.filter[tmp].forEach[disposed = true]
+		chunks.filter[tmp].filter[variable.startsWith(methodName)].forEach[disposed = true]
 
-		println('''disoverlapped «methodName» to «chunks»''')
-		println('--------------------------------')
+//		println('''disoverlapped «methodName» to «chunks»''')
+//		println('--------------------------------')
 	}
 }

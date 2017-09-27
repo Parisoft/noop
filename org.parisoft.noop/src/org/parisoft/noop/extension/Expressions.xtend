@@ -796,7 +796,7 @@ class Expressions {
 					«val constructor = expression.nameOfConstructor»
 					«val receiver = new CompileData => [indirect = expression.nameOfReceiver]»
 					«IF expression.isOnMemberSelectionOrReference»
-						«val tmp = new CompileData => [absolute = expression.nameOfTmpVar(constructor)]»
+						«val tmp = new CompileData => [absolute = expression.nameOfTmpVar(data.container)]»
 						«IF data.isPointer»
 							«data.pointTo(tmp)»
 						«ENDIF»
