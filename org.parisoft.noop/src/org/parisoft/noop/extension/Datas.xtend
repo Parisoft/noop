@@ -47,6 +47,12 @@ class Datas {
 			«ELSEIF dst.register !== null»
 				«src.copyIndirectToRegister(dst)»
 			«ENDIF»
+		«ELSEIF src.register !== null»
+			«IF dst.absolute !== null»
+				«src.copyRegisterToAbsolute(dst)»
+			«ELSEIF dst.indirect !== null»
+				«src.copyRegisterToIndirect(dst)»
+			«ENDIF»
 		«ENDIF»
 	'''
 
@@ -104,7 +110,11 @@ class Datas {
 
 	private def copyImmediateToRegister(CompileData src, CompileData dst) '''
 		«noop»
-			LD«dst.register» #<(«src.immediate»)
+			«IF dst.sizeOf > 1»
+				LDA #>(«src.immediate»)
+				PHA
+			«ENDIF»
+			LDA #<(«src.immediate»)
 	'''
 
 	private def copyAbsoluteToAbsolute(CompileData src, CompileData dst) '''
@@ -266,16 +276,31 @@ class Datas {
 	'''
 
 	private def copyAbsoluteToRegister(CompileData src, CompileData dst) '''
-		«noop»
-			«IF src.isIndexed»
+		«IF src.isIndexed»
+			«noop»
 				LDX «src.index»
-				LDA «src.absolute», X
-				«IF dst.register != 'A'»
-					TA«dst.register»
-				«ENDIF»
+		«ENDIF»
+		«IF src.sizeOf < dst.sizeOf»
+			«IF src.type.isSigned»
+				«val signLabel = labelForSignedComplementEnd»
+					LDA «src.absolute»«IF src.isIndexed», X«ENDIF»
+					ORA #$7F
+					BMI +«signLabel»
+					LDA #$00
+				+«signLabel»
 			«ELSE»
-				LD«dst.register» «src.absolute»
+				«noop»
+					LDA #$00
 			«ENDIF»
+			«noop»
+				PHA
+		«ELSEIF dst.sizeOf > 1»
+			«noop»
+				LDA «src.absolute» + 1«IF src.isIndexed», X«ENDIF»
+				PHA
+		«ENDIF»
+		«noop»
+			LDA «src.absolute»«IF src.isIndexed», X«ENDIF»
 	'''
 
 	private def copyIndirectToAbsolute(CompileData src, CompileData dst) '''
@@ -437,12 +462,91 @@ class Datas {
 	'''
 
 	private def copyIndirectToRegister(CompileData src, CompileData dst) '''
-		«noop»
-			LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
-			LDA («src.indirect»), Y
-			«IF dst.register != 'A'»
-				TA«dst.register»
+		«IF src.sizeOf < dst.sizeOf»
+			«noop»
+				LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
+			«IF src.type.isSigned»
+				«val signLabel = labelForSignedComplementEnd»
+					LDA («src.indirect»), Y
+					ORA #$7F
+					BMI +«signLabel»
+					LDA #$00
+				+«signLabel»
+			«ELSE»
+				«noop»
+					LDA #$00
 			«ENDIF»
+			«noop»
+				PHA
+		«ELSEIF dst.sizeOf > 1»
+			«noop»
+				«IF src.isIndexed»
+					LDY «src.index»
+					INY
+				«ELSE»
+					LDY #$01
+				«ENDIF»
+				LDA («src.indirect»), Y
+				PHA
+				DEY
+		«ENDIF»
+		«noop»
+			LDA («src.indirect»), Y
+	'''
+
+	private def copyRegisterToAbsolute(CompileData src, CompileData dst) '''
+		«noop»
+			«IF dst.isIndexed»
+				LDX «dst.index»
+			«ENDIF»
+			STA «dst.absolute»«IF dst.isIndexed», X«ENDIF»
+		«IF dst.sizeOf > 1»
+			«IF src.sizeOf > 1»
+				«noop»
+					PLA
+			«ELSEIF src.type.isSigned»
+				«val signLabel = labelForSignedComplementEnd»
+					ORA #$7F
+					BMI +«signLabel»
+					LDA #$00
+				+«signLabel»
+			«ELSE»
+				«noop»
+					LDA #$00
+			«ENDIF»
+			«noop»
+				STA «dst.absolute» + 1«IF dst.isIndexed», X«ENDIF»
+		«ELSEIF src.sizeOf > 1»
+			«noop»
+				PLA
+		«ENDIF»
+	'''
+
+	private def copyRegisterToIndirect(CompileData src, CompileData dst) '''
+		«noop»
+			LDY «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
+			STA («dst.indirect»), Y
+		«IF dst.sizeOf > 1»
+			«IF src.sizeOf > 1»
+				«noop»
+					PLA
+			«ELSEIF src.type.isSigned»
+				«val signLabel = labelForSignedComplementEnd»
+					ORA #$7F
+					BMI +«signLabel»
+					LDA #$00
+				+«signLabel»
+			«ELSE»
+				«noop»
+					LDA #$00
+			«ENDIF»
+			«noop»
+				INY
+				STA («dst.indirect»), Y
+		«ELSEIF src.sizeOf > 1»
+			«noop»
+				PLA
+		«ENDIF»
 	'''
 
 	def copyArrayTo(CompileData src, CompileData dst, int len) '''
@@ -728,7 +832,6 @@ class Datas {
 	'''
 
 	private def fillArrayAbsoluteWithAbsolute(CompileData array, CompileData identity, int len) '''
-		
 	'''
 
 	def pointTo(CompileData ptr, CompileData src) '''
