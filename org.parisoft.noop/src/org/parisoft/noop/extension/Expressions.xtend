@@ -715,15 +715,15 @@ class Expressions {
 					«val bytes = expression.value.bytes»
 						«IF data.isIndexed»
 							LDY «data.index»
+						«ELSE»
+							LDY #$00
 						«ENDIF»
 						«FOR i : 0 ..< bytes.size»
-							«IF i > 0 && data.isIndexed»
+							«IF i > 0»
 								INY
-							«ELSEIF i == 1»
-								LDY #$01
 							«ENDIF»
 							LDA #«bytes.get(i).toHex»
-							STA («data.indirect»)«IF i > 0 || data.isIndexed», Y«ENDIF»
+							STA («data.indirect»), Y
 						«ENDFOR»
 				«ENDIF»
 			'''
@@ -777,8 +777,9 @@ class Expressions {
 					«val constructor = expression.nameOfConstructor»
 					«val receiver = expression.nameOfReceiver»
 					«constructor»:
+						LDY #$00
 						LDA #«expression.type.asmName»
-						STA («receiver»)
+						STA («receiver»), Y
 					«FOR field : expression.fieldsInitializedOnContructor»
 						«field.compile(new CompileData => [
 							container = constructor

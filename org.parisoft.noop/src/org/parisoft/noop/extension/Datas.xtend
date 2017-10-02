@@ -78,13 +78,10 @@ class Datas {
 	'''
 
 	private def copyImmediateToIndirect(CompileData src, CompileData dst) '''
-		«IF dst.isIndexed»
-			«noop»
-				LDY «dst.index»
-		«ENDIF»
 		«noop»
+			LDY «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
 			LDA #<(«src.immediate»)
-			STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
+			STA («dst.indirect»), Y
 		«IF dst.sizeOf > 1»
 			«IF src.sizeOf > 1»
 				«noop»
@@ -99,13 +96,9 @@ class Datas {
 				«noop»
 					LDA #$00
 			«ENDIF»
-			«IF dst.isIndexed»
-				INY
-			«ELSE»
-				LDY #$01
-			«ENDIF»
 			«noop»
-				STA «dst.indirect», Y
+				INY
+				STA («dst.indirect»), Y
 		«ENDIF»
 	'''
 
@@ -196,12 +189,14 @@ class Datas {
 				«ENDIF»
 				«IF dst.isIndexed»
 					LDY «dst.index»
+				«ELSE»
+					LDY #$00
 				«ENDIF»
 			«FOR i : 0 ..< minSize»
 				«noop»
 					LDA «src.absolute»«IF i > 0» + «i»«ENDIF»«IF src.isIndexed», X«ENDIF»
-					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
-					«IF dst.isIndexed && i < minSize - 1»
+					STA («dst.indirect»), Y
+					«IF i < minSize - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -216,15 +211,13 @@ class Datas {
 					«noop»
 						LDA #$00
 				«ENDIF»
-				«IF dst.isIndexed»
-					«noop»
-						INY
-				«ENDIF»
+				«noop»
+					INY
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
-					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
-					«IF dst.isIndexed && i < dst.sizeOf - 1»
+					STA («dst.indirect»), Y
+					«IF i < dst.sizeOf - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -290,15 +283,17 @@ class Datas {
 			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
 				«IF src.isIndexed»
 					LDY «src.index»
+				«ELSE»
+					LDY #$00
 				«ENDIF»
 				«IF dst.isIndexed»
 					LDX «dst.index»
 				«ENDIF»
 			«FOR i : 0 ..< minSize»
 				«noop»
-					LDA («src.indirect»)«IF src.isIndexed», Y«ENDIF»
+					LDA («src.indirect»), Y
 					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
-					«IF src.isIndexed && i < minSize - 1»
+					«IF i < minSize - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -365,20 +360,14 @@ class Datas {
 	private def copyIndirectToIndirect(CompileData src, CompileData dst) '''
 		«IF dst.sizeOf < loopThreshold»
 			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
-				«IF src.isIndexed»
-					LDX «src.index»
-				«ENDIF»
-				«IF dst.isIndexed»
-					LDY «dst.index»
-				«ENDIF»
+				LDX «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
+				LDY «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
 			«FOR i : 0 ..< minSize»
 				«noop»
-					LDA («src.indirect»«IF src.isIndexed», X«ENDIF»)
-					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
-					«IF src.isIndexed && i < minSize - 1»
+					LDA («src.indirect», X)
+					STA («dst.indirect»), Y
+					«IF i < minSize - 1»
 						INX
-					«ENDIF»
-					«IF dst.isIndexed && i < minSize - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -393,15 +382,13 @@ class Datas {
 					«noop»
 						LDA #$00
 				«ENDIF»
-				«IF dst.isIndexed»
-					«noop»
-						INY
-				«ENDIF»
+				«noop»
+					INY
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
-					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
-					«IF dst.isIndexed && i < dst.sizeOf - 1»
+					STA («dst.indirect»), Y
+					«IF i < dst.sizeOf - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -451,10 +438,8 @@ class Datas {
 
 	private def copyIndirectToRegister(CompileData src, CompileData dst) '''
 		«noop»
-			«IF src.isIndexed»
-				LDY «src.index»
-			«ENDIF»
-			LDA («src.indirect»)«IF src.isIndexed», Y«ENDIF»
+			LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
+			LDA («src.indirect»), Y
 			«IF dst.register != 'A'»
 				TA«dst.register»
 			«ENDIF»
@@ -540,12 +525,14 @@ class Datas {
 				«ENDIF»
 				«IF dst.isIndexed»
 					LDY «dst.index»
+				«ELSE»
+					LDY #$00
 				«ENDIF»
 			«FOR i : 0 ..< bytes»
 				«noop»
 					LDA «src.absolute»«IF i > 0» + «i»«ENDIF»«IF src.isIndexed», X«ENDIF»
-					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
-					«IF dst.isIndexed && i < bytes - 1»
+					STA («dst.indirect»), Y
+					«IF i < bytes - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -599,15 +586,17 @@ class Datas {
 			«noop»
 				«IF src.isIndexed»
 					LDY «src.index»
+				«ELSE»
+					LDY #$00
 				«ENDIF»
 				«IF dst.isIndexed»
 					LDX «dst.index»
 				«ENDIF»
 			«FOR i : 0 ..< bytes»
 				«noop»
-					LDA («src.indirect»)«IF src.isIndexed», Y«ENDIF»
+					LDA («src.indirect»), Y
 					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
-					«IF src.isIndexed && i < bytes - 1»
+					«IF i < bytes - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -659,20 +648,14 @@ class Datas {
 		«val bytes = len * dst.sizeOf»
 		«IF bytes < loopThreshold»
 			«noop»
-				«IF src.isIndexed»
-					LDX «src.index»
-				«ENDIF»
-				«IF dst.isIndexed»
-					LDY «dst.index»
-				«ENDIF»
+				LDX «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
+				LDY «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
 			«FOR i : 0 ..< bytes»
 				«noop»
-					LDA («src.indirect»«IF src.isIndexed», X«ENDIF»)
-					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
-					«IF src.isIndexed && i < bytes - 1»
+					LDA («src.indirect», X)
+					STA («dst.indirect»), Y
+					«IF i < bytes - 1»
 						INX
-					«ENDIF»
-					«IF dst.isIndexed && i < bytes - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -687,15 +670,13 @@ class Datas {
 					«noop»
 						LDA #$00
 				«ENDIF»
-				«IF dst.isIndexed»
-					«noop»
-						INY
-				«ENDIF»
+				«noop»
+					INY
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
-					STA («dst.indirect»)«IF dst.isIndexed», Y«ENDIF»
-					«IF dst.isIndexed && i < dst.sizeOf - 1»
+					STA («dst.indirect»), Y
+					«IF i < dst.sizeOf - 1»
 						INY
 					«ENDIF»
 			«ENDFOR»
@@ -858,7 +839,6 @@ class Datas {
 	def void disoverlap(Iterable<MemChunk> chunks, String methodName) {
 //		println('--------------------------------')
 //		println('''disoverlaping «methodName» chunks «chunks»''')
-
 		chunks.forEach [ chunk, index |
 			if (chunk.variable.startsWith(methodName) && chunk.isNonDisposed) {
 				chunks.drop(index).reject [
@@ -866,12 +846,11 @@ class Datas {
 				].forEach [ outer |
 					if (chunk.overlap(outer)) {
 //						println('''«chunk» overlaps «outer»''')
-
 						val delta = chunk.deltaFrom(outer)
 
 						chunks.drop(index).filter [
 							it.variable.startsWith(methodName)
-						].filter[
+						].filter [
 							it.ZP == chunk.ZP
 						].forEach [ inner |
 //							println('''«inner» shift to «delta»''')
