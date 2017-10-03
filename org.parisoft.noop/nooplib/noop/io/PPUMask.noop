@@ -58,6 +58,6 @@ PPUMask {
        +--------- Emphasize blue*                                             <br>
        * NTSC colors. PAL and Dendy swaps green and red                       <br>*/
 	toByte() {
-		return (greyscale | showBackgroundPixelsOnLeftSide | showSpritesPixelsOnLeftSide | showBackground | showSprites | emphasizeRed | emphasizeGreen | emphasizeBlue).as(Byte)
+		return greyscale | showBackgroundPixelsOnLeftSide | showSpritesPixelsOnLeftSide | showBackground | showSprites | emphasizeRed | emphasizeGreen | emphasizeBlue
 	}
 }

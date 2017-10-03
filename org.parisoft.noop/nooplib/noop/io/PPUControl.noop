@@ -84,6 +84,6 @@ Setting bit 6 causes the PPU to output the lower four bits of the palette memory
        +--------- Generate an NMI at the start of the                           <br>
                   vertical blanking interval (0: off; 1: on)                    <br> */
 	toByte() {
-		return (nameTableAddress | vramIncrement | sprite8x8PatternTable | backgroundPatternTable | spriteSize | mode | enableNMI).as(Byte)
+		return nameTableAddress | vramIncrement | sprite8x8PatternTable | backgroundPatternTable | spriteSize | mode | enableNMI
 	}
 }

@@ -5,13 +5,24 @@ import org.parisoft.noop.noop.NoopClass
 
 class CompileData {
 
+	enum Operation {
+		ADDITION, 
+		SUBTRACTION,
+		MULTIPLICATION,
+		DIVISION,
+		BIT_OR,
+		BIT_AND,
+		BIT_LEFT_SHIFT,
+		BIT_RIGHT_SHIFT
+	}
+
 	@Accessors var String immediate // #a
 	@Accessors var String register // A, X or Y
 	@Accessors var String absolute // a : Fetches the value from a 16-bit address anywhere in memory
 	@Accessors var String relative // label : Branch instructions (e.g. BEQ, BCS) have a relative addressing mode that specifies an 8-bit signed offset relative to the current PC
 	@Accessors var String indirect // (d) : The JMP instruction has a special indirect addressing mode that can jump to the address stored in a 16-bit pointer anywhere in memory
 	@Accessors var String index // a, X or (d), Y
-	@Accessors var String operation // Ex.: ORA a
+	@Accessors var Operation operation // Ex.: ORA a
 	@Accessors var String container
 	@Accessors var NoopClass type
 	@Accessors var boolean copy = true

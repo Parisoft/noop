@@ -10,6 +10,7 @@ class Datas {
 
 	@Inject extension Classes
 	@Inject extension Values
+	@Inject extension Maths
 
 	val loopThreshold = 8
 	val labelCounter = new AtomicInteger
@@ -20,6 +21,16 @@ class Datas {
 
 	def isPointer(CompileData data) {
 		data.indirect !== null && !data.isCopy
+	}
+
+	def transferTo(CompileData src, CompileData dst) {
+		if (src.operation !== null) {
+			dst.operateOn(src)
+		} else if (dst.isCopy) {
+			src.copyTo(dst)
+		} else {
+			dst.pointTo(src)
+		}
 	}
 
 	def copyTo(CompileData src, CompileData dst) '''
@@ -68,15 +79,8 @@ class Datas {
 			«IF src.sizeOf > 1»
 				«noop»
 					LDA #>(«src.immediate»)
-			«ELSEIF src.type.isSigned»
-				«val signLabel = labelForSignedComplementEnd»
-					ORA #$7F
-					BMI +«signLabel»
-					LDA #$00
-				+«signLabel»
 			«ELSE»
-				«noop»
-					LDA #$00
+				«src.loadMSB»
 			«ENDIF»
 			«noop»
 				STA «dst.absolute» + 1«IF dst.isIndexed», X«ENDIF»
@@ -92,15 +96,8 @@ class Datas {
 			«IF src.sizeOf > 1»
 				«noop»
 					LDA #>(«src.immediate»)
-			«ELSEIF src.type.isSigned»
-				«val signLabel = labelForSignedComplementEnd»
-					ORA #$7F
-					BMI +«signLabel»
-					LDA #$00
-				+«signLabel»
 			«ELSE»
-				«noop»
-					LDA #$00
+				«src.loadMSB»
 			«ENDIF»
 			«noop»
 				INY
@@ -132,16 +129,7 @@ class Datas {
 					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
 			«ENDFOR»
 			«IF src.sizeOf < dst.sizeOf»
-				«IF src.type.isSigned»
-					«val signLabel = labelForSignedComplementEnd»
-						ORA #$7F
-						BMI +«signLabel»
-						LDA #$00
-					+«signLabel»
-				«ELSE»
-					«noop»
-						LDA #$00
-				«ENDIF»
+				«src.loadMSB»
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
@@ -211,17 +199,7 @@ class Datas {
 					«ENDIF»
 			«ENDFOR»
 			«IF src.sizeOf < dst.sizeOf»
-				«IF src.type.isSigned»
-					«val signLabel = labelForSignedComplementEnd»
-						ORA #$7F
-						BMI +«signLabel»
-						LDA #$00
-					+«signLabel»
-				«ELSE»
-					«noop»
-						LDA #$00
-				«ENDIF»
-				«noop»
+				«src.loadMSB»
 					INY
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
@@ -280,23 +258,18 @@ class Datas {
 			«noop»
 				LDX «src.index»
 		«ENDIF»
-		«IF src.sizeOf < dst.sizeOf»
-			«IF src.type.isSigned»
-				«val signLabel = labelForSignedComplementEnd»
-					LDA «src.absolute»«IF src.isIndexed», X«ENDIF»
-					ORA #$7F
-					BMI +«signLabel»
-					LDA #$00
-				+«signLabel»
-			«ELSE»
+		«IF dst.sizeOf > 1»
+			«IF src.sizeOf > 1»
 				«noop»
-					LDA #$00
+					LDA «src.absolute» + 1«IF src.isIndexed», X«ENDIF»
+			«ELSE»
+				«IF src.type.isSigned»
+					«noop»
+						LDA «src.absolute»«IF src.isIndexed», X«ENDIF»
+				«ENDIF»
+				«src.loadMSB»
 			«ENDIF»
 			«noop»
-				PHA
-		«ELSEIF dst.sizeOf > 1»
-			«noop»
-				LDA «src.absolute» + 1«IF src.isIndexed», X«ENDIF»
 				PHA
 		«ENDIF»
 		«noop»
@@ -323,16 +296,7 @@ class Datas {
 					«ENDIF»
 			«ENDFOR»
 			«IF src.sizeOf < dst.sizeOf»
-				«IF src.type.isSigned»
-					«val signLabel = labelForSignedComplementEnd»
-						ORA #$7F
-						BMI +«signLabel»
-						LDA #$00
-					+«signLabel»
-				«ELSE»
-					«noop»
-						LDA #$00
-				«ENDIF»
+				«src.loadMSB»
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
@@ -397,17 +361,7 @@ class Datas {
 					«ENDIF»
 			«ENDFOR»
 			«IF src.sizeOf < dst.sizeOf»
-				«IF src.type.isSigned»
-					«val signLabel = labelForSignedComplementEnd»
-						ORA #$7F
-						BMI +«signLabel»
-						LDA #$00
-					+«signLabel»
-				«ELSE»
-					«noop»
-						LDA #$00
-				«ENDIF»
-				«noop»
+				«src.loadMSB»
 					INY
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
@@ -462,33 +416,31 @@ class Datas {
 	'''
 
 	private def copyIndirectToRegister(CompileData src, CompileData dst) '''
-		«IF src.sizeOf < dst.sizeOf»
-			«noop»
-				LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
-			«IF src.type.isSigned»
-				«val signLabel = labelForSignedComplementEnd»
+		«IF dst.sizeOf > 1»
+			«IF src.sizeOf > 1»
+				«noop»
+					«IF src.isIndexed»
+						LDY «src.index»
+						INY
+					«ELSE»
+						LDY #$01
+					«ENDIF»
 					LDA («src.indirect»), Y
-					ORA #$7F
-					BMI +«signLabel»
-					LDA #$00
-				+«signLabel»
+					PHA
+					DEY
 			«ELSE»
 				«noop»
-					LDA #$00
-			«ENDIF»
-			«noop»
-				PHA
-		«ELSEIF dst.sizeOf > 1»
-			«noop»
-				«IF src.isIndexed»
-					LDY «src.index»
-					INY
-				«ELSE»
-					LDY #$01
+					LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
+				«IF src.type.isSigned»
+					«noop»
+						LDA («src.indirect»), Y
 				«ENDIF»
-				LDA («src.indirect»), Y
-				PHA
-				DEY
+				«src.loadMSB»
+					PHA
+			«ENDIF»
+		«ELSE»
+			«noop»
+				LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
 		«ENDIF»
 		«noop»
 			LDA («src.indirect»), Y
@@ -504,15 +456,8 @@ class Datas {
 			«IF src.sizeOf > 1»
 				«noop»
 					PLA
-			«ELSEIF src.type.isSigned»
-				«val signLabel = labelForSignedComplementEnd»
-					ORA #$7F
-					BMI +«signLabel»
-					LDA #$00
-				+«signLabel»
 			«ELSE»
-				«noop»
-					LDA #$00
+				«src.loadMSB»
 			«ENDIF»
 			«noop»
 				STA «dst.absolute» + 1«IF dst.isIndexed», X«ENDIF»
@@ -530,15 +475,8 @@ class Datas {
 			«IF src.sizeOf > 1»
 				«noop»
 					PLA
-			«ELSEIF src.type.isSigned»
-				«val signLabel = labelForSignedComplementEnd»
-					ORA #$7F
-					BMI +«signLabel»
-					LDA #$00
-				+«signLabel»
 			«ELSE»
-				«noop»
-					LDA #$00
+				«src.loadMSB»
 			«ENDIF»
 			«noop»
 				INY
@@ -763,27 +701,6 @@ class Datas {
 						INY
 					«ENDIF»
 			«ENDFOR»
-			«IF src.sizeOf < dst.sizeOf»
-				«IF src.type.isSigned»
-					«val signLabel = labelForSignedComplementEnd»
-						ORA #$7F
-						BMI +«signLabel»
-						LDA #$00
-					+«signLabel»
-				«ELSE»
-					«noop»
-						LDA #$00
-				«ENDIF»
-				«noop»
-					INY
-			«ENDIF»
-			«FOR i : src.sizeOf ..< dst.sizeOf»
-				«noop»
-					STA («dst.indirect»), Y
-					«IF i < dst.sizeOf - 1»
-						INY
-					«ENDIF»
-			«ENDFOR»
 		«ELSE»
 			«val limit = '''#«bytes.byteValue.toHex»'''»
 			«val copyLoop = labelForCopyLoop»
@@ -872,13 +789,7 @@ class Datas {
 			STA «ptr.indirect» + 1
 	'''
 
-	private def labelForSignedComplementEnd() {
-		'''signedComplementEnd«labelCounter.andIncrement»:'''
-	}
-
-	private def labelForCopyLoop() {
-		'''copyLoop«labelCounter.andIncrement»:'''
-	}
+	private def labelForCopyLoop() '''copyLoop«labelCounter.andIncrement»:'''
 
 	private def noop() {
 	}

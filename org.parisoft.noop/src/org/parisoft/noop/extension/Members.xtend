@@ -31,6 +31,7 @@ public class Members {
 	static val UNDERLINE_CHAR = '_'.charAt(0)
 
 	@Inject extension Datas
+	@Inject extension Maths
 	@Inject extension Values
 	@Inject extension Classes
 	@Inject extension Statements
@@ -400,7 +401,9 @@ public class Members {
 				'''#«variable.nameOfOffset»'''
 			}
 		]»
-		«IF data.isCopy»
+		«IF data.operation !== null»
+			«data.operateOn(ref)»
+		«ELSEIF data.isCopy»
 			«IF variable.isArrayReference(indexes)»
 				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 			«ELSE»
@@ -423,7 +426,9 @@ public class Members {
 				indexes.nameOfTmp(data.container)
 			}
 		]»
-		«IF data.isCopy»
+		«IF data.operation !== null»
+			«data.operateOn(ref)»
+		«ELSEIF data.isCopy»
 			«IF variable.isArrayReference(indexes)»
 				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 			«ELSE»
@@ -446,7 +451,9 @@ public class Members {
 				indexes.nameOfTmp(data.container)
 			}
 		]»
-		«IF data.isCopy»
+		«IF data.operation !== null»
+			«data.operateOn(ref)»
+		«ELSEIF data.isCopy»
 			«IF variable.isArrayReference(indexes)»
 				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 			«ELSE»
@@ -463,7 +470,9 @@ public class Members {
 			type = variable.typeOf
 			immediate = variable.nameOfConstant
 		]»
-		«IF data.isCopy»
+		«IF data.operation !== null»
+			«data.operateOn(const)»
+		«ELSEIF data.isCopy»
 			«const.copyTo(data)»
 		«ENDIF»
 	'''
@@ -475,37 +484,33 @@ public class Members {
 				«val param = method.params.get(i)»
 				«val arg = args.get(i)»
 				«arg.compile(new CompileData => [
-				container = data.container
-				type = param.type
-				
-				if (param.type.isPrimitive && param.dimensionOf.isEmpty) {
-					absolute = param.nameOf
-					copy = true
-				} else {
-					indirect = param.nameOf
-					copy = false
-				}
-			])»
+					container = data.container
+					type = param.type
+					
+					if (param.type.isPrimitive && param.dimensionOf.isEmpty) {
+						absolute = param.nameOf
+						copy = true
+					} else {
+						indirect = param.nameOf
+						copy = false
+					}
+				])»
 				«val dimension = arg.dimensionOf»
 				«FOR dim : 0..< dimension.size»
-					«noop»
-						LDA #«dimension.get(dim).byteValue.toHex»
-						STA «param.nameOfLen(methodName, dim)»
+				«noop»
+					LDA #«dimension.get(dim).byteValue.toHex»
+					STA «param.nameOfLen(methodName, dim)»
 				«ENDFOR»
 			«ENDFOR»
 			«noop»
 				JSR «method.nameOf»
 			«IF method.typeOf.isNonVoid»
 				«val ret = new CompileData => [
-				container = data.container
-				type = method.typeOf
-				indirect = method.nameOfReturn
-			]»
-				«IF data.isCopy»
-					«ret.copyTo(data)»
-				«ELSE»
-					«data.pointTo(ret)»
-				«ENDIF»
+					container = data.container
+					type = method.typeOf
+					indirect = method.nameOfReturn
+				]»
+				«ret.transferTo(data)»
 			«ENDIF»
 		«ENDIF»
 	'''

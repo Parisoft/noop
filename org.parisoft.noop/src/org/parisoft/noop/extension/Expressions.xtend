@@ -51,12 +51,14 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.noop.Index
+import org.parisoft.noop.generator.CompileData.Operation
 
 class Expressions {
 
 	static val FILE_URI = 'file://'
 
 	@Inject extension Datas
+	@Inject extension Maths
 	@Inject extension Values
 	@Inject extension Classes
 	@Inject extension Members
@@ -625,7 +627,7 @@ class Expressions {
 
 					chunks += variable.alloc(data)
 				}
-				
+
 				chunks.disoverlap(data.container)
 
 				data.restoreTo(snapshot)
@@ -643,7 +645,7 @@ class Expressions {
 				} else if (expression.indexes.isNotEmpty) {
 					chunks += data.computeTmp(expression.indexes.nameOfTmp(data.container), 1)
 				}
-				
+
 				chunks.disoverlap(data.container)
 
 				data.restoreTo(snapshot)
@@ -667,7 +669,41 @@ class Expressions {
 				;TODO «expression»
 			'''
 			BOrExpression: '''
-				;TODO «expression.left» | «expression.right» 
+				«val lda = new CompileData => [
+					container = data.container
+					type = data.type
+					register = 'A'
+				]»
+				«val ora = new CompileData => [
+					container = data.container
+					type = expression.right.typeOf
+					operation = Operation::BIT_OR
+				]»
+					«IF data.operation !== null»
+						PHA
+					«ENDIF» 
+				«expression.left.compile(lda)»
+				«expression.right.compile(ora)»
+				«IF data.operation !== null»
+					«FOR i : 0 ..< data.sizeOf»
+						«noop»
+							STA «Members::TEMP_VAR_NAME1»«IF i > 0» + «i»«ENDIF»
+							PLA
+					«ENDFOR»
+					«val tmp = new CompileData => [
+						container = data.container
+						type = data.type
+						absolute = Members::TEMP_VAR_NAME1
+					]»
+					«data.operateOn(tmp)»
+				«ELSEIF data.isCopy»
+					«val res = new CompileData => [
+						container = data.container
+						type = data.type
+						register = 'A'
+					]»
+					«res.copyTo(data)»
+				«ENDIF»
 			'''
 			ByteLiteral: '''
 				«IF data.relative !== null»
@@ -683,11 +719,7 @@ class Expressions {
 						type = expression.typeOf
 						immediate = expression.value.toHex.toString
 					]»
-					«IF data.copy»
-						«src.copyTo(data)»
-					«ELSE»
-						«data.pointTo(src)»
-					«ENDIF»
+					«src.transferTo(data)»
 				«ENDIF»
 			'''
 			BoolLiteral: '''
