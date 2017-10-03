@@ -141,7 +141,8 @@ Index:
 	'[' value=Expression ']';
 
 enum AssignmentType:
-	ASSIGN=':=' | ADD_ASSIGN='+=' | SUB_ASSIGN='-=' | MUL_ASSIGN='*=' | DIV_ASSIGN='/=';
+	ASSIGN=':=' | ADD_ASSIGN='+=' | SUB_ASSIGN='-=' | MUL_ASSIGN='*=' | DIV_ASSIGN='/=' | BOR_ASSIGN='|=' |
+	BAN_ASSIGN='&=' | BLS_ASSIGN='<<=' | BRS_ASSIGN='>>=';
 
 enum StorageType:
 	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM';

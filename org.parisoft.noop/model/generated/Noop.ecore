@@ -100,6 +100,10 @@
     <eLiterals name="SUB_ASSIGN" value="2" literal="-="/>
     <eLiterals name="MUL_ASSIGN" value="3" literal="*="/>
     <eLiterals name="DIV_ASSIGN" value="4" literal="/="/>
+    <eLiterals name="BOR_ASSIGN" value="5" literal="|="/>
+    <eLiterals name="BAN_ASSIGN" value="6" literal="&amp;="/>
+    <eLiterals name="BLS_ASSIGN" value="7" literal="&lt;&lt;="/>
+    <eLiterals name="BRS_ASSIGN" value="8" literal=">>="/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EEnum" name="StorageType">
     <eLiterals name="PRGROM" literal="@PRG-ROM"/>

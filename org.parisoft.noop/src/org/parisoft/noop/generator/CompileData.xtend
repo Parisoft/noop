@@ -6,6 +6,8 @@ import org.parisoft.noop.noop.NoopClass
 class CompileData {
 
 	enum Operation {
+		OR,
+		AND,
 		ADDITION, 
 		SUBTRACTION,
 		MULTIPLICATION,
@@ -13,7 +15,10 @@ class CompileData {
 		BIT_OR,
 		BIT_AND,
 		BIT_LEFT_SHIFT,
-		BIT_RIGHT_SHIFT
+		BIT_RIGHT_SHIFT,
+		EXCLUSIVE_OR,
+		NEGATION,
+		SIGNUM
 	}
 
 	@Accessors var String immediate // #a

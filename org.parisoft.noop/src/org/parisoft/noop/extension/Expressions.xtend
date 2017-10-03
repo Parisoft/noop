@@ -8,6 +8,7 @@ import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.exception.NonConstantMemberException
 import org.parisoft.noop.generator.AllocData
 import org.parisoft.noop.generator.CompileData
+import org.parisoft.noop.generator.CompileData.Operation
 import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.AddExpression
@@ -27,6 +28,7 @@ import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.GeExpression
 import org.parisoft.noop.noop.GtExpression
 import org.parisoft.noop.noop.IncExpression
+import org.parisoft.noop.noop.Index
 import org.parisoft.noop.noop.LShiftExpression
 import org.parisoft.noop.noop.LeExpression
 import org.parisoft.noop.noop.LtExpression
@@ -50,8 +52,6 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.Index
-import org.parisoft.noop.generator.CompileData.Operation
 
 class Expressions {
 
@@ -668,43 +668,16 @@ class Expressions {
 			AssignmentExpression: '''
 				;TODO «expression»
 			'''
-			BOrExpression: '''
-				«val lda = new CompileData => [
-					container = data.container
-					type = data.type
-					register = 'A'
-				]»
-				«val ora = new CompileData => [
-					container = data.container
-					type = expression.right.typeOf
-					operation = Operation::BIT_OR
-				]»
-					«IF data.operation !== null»
-						PHA
-					«ENDIF» 
-				«expression.left.compile(lda)»
-				«expression.right.compile(ora)»
-				«IF data.operation !== null»
-					«FOR i : 0 ..< data.sizeOf»
-						«noop»
-							STA «Members::TEMP_VAR_NAME1»«IF i > 0» + «i»«ENDIF»
-							PLA
-					«ENDFOR»
-					«val tmp = new CompileData => [
-						container = data.container
-						type = data.type
-						absolute = Members::TEMP_VAR_NAME1
-					]»
-					«data.operateOn(tmp)»
-				«ELSEIF data.isCopy»
-					«val res = new CompileData => [
-						container = data.container
-						type = data.type
-						register = 'A'
-					]»
-					«res.copyTo(data)»
-				«ENDIF»
-			'''
+			OrExpression: '''«Operation::OR.compile(expression.left, expression.right, data)»'''
+			AndExpression: '''«Operation::AND.compile(expression.left, expression.right, data)»'''
+			AddExpression: '''«Operation::ADDITION.compile(expression.left, expression.right, data)»'''
+			SubExpression: '''«Operation::SUBTRACTION.compile(expression.left, expression.right, data)»'''
+			BOrExpression: '''«Operation::BIT_OR.compile(expression.left, expression.right, data)»'''
+			BAndExpression: '''«Operation::BIT_AND.compile(expression.left, expression.right, data)»'''
+			EorExpression: '''«Operation::EXCLUSIVE_OR.compile(expression.right, data)»'''
+			NotExpression: '''«Operation::NEGATION.compile(expression.right, data)»'''
+			SigNegExpression: '''«Operation::SIGNUM.compile(expression.right, data)»'''
+			SigPosExpression: expression.right.compile(data)
 			ByteLiteral: '''
 				«IF data.relative !== null»
 					«val bytes = expression.valueOf.toBytes»
@@ -921,6 +894,82 @@ class Expressions {
 				''
 		}
 	}
+
+	private def compile(Operation binaryOperation, Expression left, Expression right, CompileData data) '''
+		«val lda = new CompileData => [
+				container = data.container
+				type = data.type
+				register = 'A'
+			]»
+		«val opr = new CompileData => [
+				container = data.container
+				type = data.type
+				operation = binaryOperation
+			]»
+			«IF data.operation !== null»
+				PHA
+			«ENDIF» 
+		«left.compile(lda)»
+		«right.compile(opr)»
+		«IF data.operation !== null»
+			«FOR i : 0 ..< data.sizeOf»
+				«noop»
+					STA «Members::TEMP_VAR_NAME1»«IF i > 0» + «i»«ENDIF»
+					PLA
+			«ENDFOR»
+			«val tmp = new CompileData => [
+					container = data.container
+					type = data.type
+					absolute = Members::TEMP_VAR_NAME1
+				]»
+			«data.operateOn(tmp)»
+		«ELSEIF data.isCopy»
+			«val res = new CompileData => [
+					container = data.container
+					type = data.type
+					register = 'A'
+				]»
+			«res.copyTo(data)»
+		«ENDIF»
+	'''
+	
+	private def compile(Operation unaryOperation, Expression right, CompileData data) '''
+		«val lda = new CompileData => [
+				container = data.container
+				type = data.type
+				register = 'A'
+			]»
+		«val acc = new CompileData => [
+				container = data.container
+				type = data.type
+				operation = unaryOperation
+			]»
+			«IF data.operation !== null»
+				PHA
+			«ENDIF» 
+		«right.compile(lda)»
+		«acc.operate»
+		«IF data.operation !== null»
+			«FOR i : 0 ..< data.sizeOf»
+				«noop»
+					STA «Members::TEMP_VAR_NAME1»«IF i > 0» + «i»«ENDIF»
+					PLA
+			«ENDFOR»
+			«val tmp = new CompileData => [
+					container = data.container
+					type = data.type
+					absolute = Members::TEMP_VAR_NAME1
+				]»
+			«data.operateOn(tmp)»
+		«ELSEIF data.isCopy»
+			«val res = new CompileData => [
+					container = data.container
+					type = data.type
+					register = 'A'
+				]»
+			«res.copyTo(data)»
+		«ENDIF»
+	'''
 
 	private def compileSelfReference(Expression expression, CompileData data) '''
 		«val method = expression.getContainerOfType(Method)»

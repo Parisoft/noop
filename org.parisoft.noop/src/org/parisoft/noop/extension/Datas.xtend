@@ -24,7 +24,7 @@ class Datas {
 	}
 
 	def transferTo(CompileData src, CompileData dst) {
-		if (src.operation !== null) {
+		if (dst.operation !== null) {
 			dst.operateOn(src)
 		} else if (dst.isCopy) {
 			src.copyTo(dst)
@@ -80,7 +80,7 @@ class Datas {
 				«noop»
 					LDA #>(«src.immediate»)
 			«ELSE»
-				«src.loadMSB»
+				«src.loadMSBFromAcc»
 			«ENDIF»
 			«noop»
 				STA «dst.absolute» + 1«IF dst.isIndexed», X«ENDIF»
@@ -97,7 +97,7 @@ class Datas {
 				«noop»
 					LDA #>(«src.immediate»)
 			«ELSE»
-				«src.loadMSB»
+				«src.loadMSBFromAcc»
 			«ENDIF»
 			«noop»
 				INY
@@ -106,12 +106,20 @@ class Datas {
 	'''
 
 	private def copyImmediateToRegister(CompileData src, CompileData dst) '''
-		«noop»
-			«IF dst.sizeOf > 1»
-				LDA #>(«src.immediate»)
-				PHA
+		«IF dst.sizeOf > 1»
+			«IF src.sizeOf > 1»
+				«noop»
+					LDA #>(«src.immediate»)
+			«ELSE»
+				«src.loadMSB»
 			«ENDIF»
-			LDA #<(«src.immediate»)
+			«noop»
+				PHA
+				LDA #<(«src.immediate»)
+		«ELSE»
+			«noop»
+				LDA #«src.immediate»
+		«ENDIF»
 	'''
 
 	private def copyAbsoluteToAbsolute(CompileData src, CompileData dst) '''
@@ -129,7 +137,7 @@ class Datas {
 					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
 			«ENDFOR»
 			«IF src.sizeOf < dst.sizeOf»
-				«src.loadMSB»
+				«src.loadMSBFromAcc»
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
@@ -199,7 +207,7 @@ class Datas {
 					«ENDIF»
 			«ENDFOR»
 			«IF src.sizeOf < dst.sizeOf»
-				«src.loadMSB»
+				«src.loadMSBFromAcc»
 					INY
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
@@ -263,10 +271,6 @@ class Datas {
 				«noop»
 					LDA «src.absolute» + 1«IF src.isIndexed», X«ENDIF»
 			«ELSE»
-				«IF src.type.isSigned»
-					«noop»
-						LDA «src.absolute»«IF src.isIndexed», X«ENDIF»
-				«ENDIF»
 				«src.loadMSB»
 			«ENDIF»
 			«noop»
@@ -296,7 +300,7 @@ class Datas {
 					«ENDIF»
 			«ENDFOR»
 			«IF src.sizeOf < dst.sizeOf»
-				«src.loadMSB»
+				«src.loadMSBFromAcc»
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
 				«noop»
@@ -361,7 +365,7 @@ class Datas {
 					«ENDIF»
 			«ENDFOR»
 			«IF src.sizeOf < dst.sizeOf»
-				«src.loadMSB»
+				«src.loadMSBFromAcc»
 					INY
 			«ENDIF»
 			«FOR i : src.sizeOf ..< dst.sizeOf»
@@ -431,10 +435,6 @@ class Datas {
 			«ELSE»
 				«noop»
 					LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
-				«IF src.type.isSigned»
-					«noop»
-						LDA («src.indirect»), Y
-				«ENDIF»
 				«src.loadMSB»
 					PHA
 			«ENDIF»
@@ -457,7 +457,7 @@ class Datas {
 				«noop»
 					PLA
 			«ELSE»
-				«src.loadMSB»
+				«src.loadMSBFromAcc»
 			«ENDIF»
 			«noop»
 				STA «dst.absolute» + 1«IF dst.isIndexed», X«ENDIF»
@@ -476,7 +476,7 @@ class Datas {
 				«noop»
 					PLA
 			«ELSE»
-				«src.loadMSB»
+				«src.loadMSBFromAcc»
 			«ENDIF»
 			«noop»
 				INY

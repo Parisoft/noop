@@ -508,7 +508,12 @@ public class Members {
 				«val ret = new CompileData => [
 					container = data.container
 					type = method.typeOf
-					indirect = method.nameOfReturn
+					
+					if (method.typeOf.isPrimitive && method.dimensionOf.isEmpty) {
+						absolute = method.nameOfReturn
+					} else {
+						indirect = method.nameOfReturn
+					}
 				]»
 				«ret.transferTo(data)»
 			«ENDIF»

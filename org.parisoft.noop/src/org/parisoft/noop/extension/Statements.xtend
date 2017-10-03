@@ -139,9 +139,9 @@ class Statements {
 			ForeverStatement: {
 				val snapshot = data.snapshot
 				val chunks = statement.body.statements.map[alloc(data)].flatten
-				
+
 				chunks.disoverlap(data.container)
-				
+
 				data.restoreTo(snapshot)
 
 				return chunks.toList
@@ -207,9 +207,15 @@ class Statements {
 				«IF statement.isNonVoid»
 					«statement.value.compile(new CompileData => [
 						container = method.nameOf
-						type = statement.value.typeOf
-						indirect = method.nameOfReturn
-						copy = false
+						type = statement.method.typeOf
+						
+						if (type.isPrimitive && statement.method.dimensionOf.isEmpty) {
+							absolute = method.nameOfReturn
+							copy = true							
+						} else {
+							indirect = method.nameOfReturn
+							copy = false
+						}
 					])»
 				«ELSEIF statement.value !== null»
 					«statement.value.compile(new CompileData => [

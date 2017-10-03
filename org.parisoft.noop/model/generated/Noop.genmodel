@@ -12,6 +12,10 @@
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/SUB_ASSIGN"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/MUL_ASSIGN"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/DIV_ASSIGN"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/BOR_ASSIGN"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/BAN_ASSIGN"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/BLS_ASSIGN"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/BRS_ASSIGN"/>
     </genEnums>
     <genEnums typeSafeEnumCompatible="false" ecoreEnum="Noop.ecore#//StorageType">
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/PRGROM"/>
