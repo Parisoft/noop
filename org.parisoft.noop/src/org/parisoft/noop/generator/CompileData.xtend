@@ -16,9 +16,11 @@ class CompileData {
 		BIT_AND,
 		BIT_LEFT_SHIFT,
 		BIT_RIGHT_SHIFT,
-		EXCLUSIVE_OR,
+		BIT_EXCLUSIVE_OR,
 		NEGATION,
-		SIGNUM
+		SIGNUM,
+		DECREMENT,
+		INCREMENT
 	}
 
 	@Accessors var String immediate // #a

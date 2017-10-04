@@ -31,10 +31,11 @@ public class Members {
 	static val UNDERLINE_CHAR = '_'.charAt(0)
 
 	@Inject extension Datas
-	@Inject extension Maths
 	@Inject extension Values
 	@Inject extension Classes
+	@Inject extension Operations
 	@Inject extension Statements
+	@Inject extension TypeSystem
 	@Inject extension Expressions
 	@Inject extension Collections
 	@Inject extension IQualifiedNameProvider
@@ -525,7 +526,11 @@ public class Members {
 		«val dimension = variable.dimensionOf»
 		«val sizeOfVar = variable.typeOf.sizeOf»
 		«IF dimension.size === 1 && sizeOfVar === 1»
-			«indexes.head.value.compile(new CompileData => [register = 'A'])»
+			«indexes.head.value.compile(new CompileData => [
+				container = data.container
+				type = data.type.toByteClass
+				register = 'A'
+			])»
 				«IF variable.isField && variable.isNonStatic»
 					CLC
 					ADC #«variable.nameOfOffset»
@@ -533,7 +538,11 @@ public class Members {
 				STA «indexName»
 		«ELSE»
 			«FOR i : 0..< indexes.size»
-				«indexes.get(i).value.compile(new CompileData => [register = 'A'])»
+				«indexes.get(i).value.compile(new CompileData => [
+					container = data.container
+					type = data.type.toByteClass
+					register = 'A'
+				])»
 					«FOR len : (i + 1)..< dimension.size»
 						STA «Members::TEMP_VAR_NAME1»
 						LDA «IF variable.isParameter»«variable.nameOfLen(len)»«ELSE»#«dimension.get(len).byteValue.toHex»«ENDIF»

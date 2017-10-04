@@ -58,10 +58,10 @@ class Expressions {
 	static val FILE_URI = 'file://'
 
 	@Inject extension Datas
-	@Inject extension Maths
 	@Inject extension Values
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension Operations
 	@Inject extension Statements
 	@Inject extension TypeSystem
 	@Inject extension Collections
@@ -92,7 +92,7 @@ class Expressions {
 	}
 
 	def nameOfTmp(List<Index> indexes, String containerName) {
-		'''«containerName».idx«indexes.join('x', [it.value.valueOf.toString])»@«indexes.hashCode.toHexString»'''.toString
+		'''«containerName».idx@«indexes.hashCode.toHexString»'''.toString
 	}
 
 	def nameOfTmp(ArrayLiteral array, String containerName) {
@@ -489,13 +489,18 @@ class Expressions {
 				} else if (expression.member instanceof Method) {
 					(expression.member as Method).prepare(data)
 				}
+
+				expression.indexes.forEach[value.prepare(data)]
 			}
-			MemberRef:
+			MemberRef: {
 				if (expression.member instanceof Variable) {
 					(expression.member as Variable).prepare(data)
 				} else if (expression.member instanceof Method) {
 					(expression.member as Method).prepare(data)
 				}
+
+				expression.indexes.forEach[value.prepare(data)]
+			}
 		}
 	}
 
@@ -622,6 +627,7 @@ class Expressions {
 					}
 
 					if (expression.indexes.isNotEmpty) {
+						chunks += expression.indexes.map[value.alloc(data)].flatten
 						chunks += data.computeTmp(expression.indexes.nameOfTmp(data.container), 1)
 					}
 
@@ -642,7 +648,10 @@ class Expressions {
 					val methodChunks = (expression.member as Method).alloc(data)
 					chunks += expression.args.map[alloc(data)].flatten
 					chunks += methodChunks
-				} else if (expression.indexes.isNotEmpty) {
+				}
+
+				if (expression.indexes.isNotEmpty) {
+					chunks += expression.indexes.map[value.alloc(data)].flatten
 					chunks += data.computeTmp(expression.indexes.nameOfTmp(data.container), 1)
 				}
 
@@ -674,10 +683,26 @@ class Expressions {
 			SubExpression: '''«Operation::SUBTRACTION.compile(expression.left, expression.right, data)»'''
 			BOrExpression: '''«Operation::BIT_OR.compile(expression.left, expression.right, data)»'''
 			BAndExpression: '''«Operation::BIT_AND.compile(expression.left, expression.right, data)»'''
-			EorExpression: '''«Operation::EXCLUSIVE_OR.compile(expression.right, data)»'''
+			EorExpression: '''«Operation::BIT_EXCLUSIVE_OR.compile(expression.right, data)»'''
 			NotExpression: '''«Operation::NEGATION.compile(expression.right, data)»'''
 			SigNegExpression: '''«Operation::SIGNUM.compile(expression.right, data)»'''
-			SigPosExpression: expression.right.compile(data)
+			SigPosExpression:
+				expression.right.compile(data)
+			IncExpression: '''
+				«val inc = new CompileData => [
+					container = data.container
+					type = expression.right.typeOf
+					operation = Operation::INCREMENT
+				]»
+					«IF data.operation !== null»
+						PHA
+					«ENDIF»
+				«expression.right.compile(inc)»
+					«IF data.operation !== null»
+						PLA
+					«ENDIF»
+				«expression.right.compile(data)»
+			'''
 			ByteLiteral: '''
 				«IF data.relative !== null»
 					«val bytes = expression.valueOf.toBytes»
@@ -846,7 +871,7 @@ class Expressions {
 					«ENDIF»
 				«ELSE»
 					«IF member instanceof Variable»
-						«val rcv = expression.nameOfTmpReceiver(data.container)»
+						«val rcv = receiver.nameOfTmpReceiver(data.container)»
 						«receiver.compile(new CompileData => [
 							container = data.container
 							type = receiver.typeOf
@@ -932,7 +957,7 @@ class Expressions {
 			«res.copyTo(data)»
 		«ENDIF»
 	'''
-	
+
 	private def compile(Operation unaryOperation, Expression right, CompileData data) '''
 		«val lda = new CompileData => [
 				container = data.container

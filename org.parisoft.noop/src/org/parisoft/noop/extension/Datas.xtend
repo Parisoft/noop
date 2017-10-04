@@ -8,9 +8,9 @@ import org.parisoft.noop.generator.MemChunk
 
 class Datas {
 
-	@Inject extension Classes
 	@Inject extension Values
-	@Inject extension Maths
+	@Inject extension Classes
+	@Inject extension Operations
 
 	val loopThreshold = 8
 	val labelCounter = new AtomicInteger

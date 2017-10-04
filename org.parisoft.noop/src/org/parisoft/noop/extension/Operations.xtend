@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import java.util.concurrent.atomic.AtomicInteger
 import org.parisoft.noop.generator.CompileData
 
-class Maths {
+class Operations {
 
 	@Inject extension Datas
 	@Inject extension Classes
@@ -13,81 +13,121 @@ class Maths {
 
 	def operateOn(CompileData acc, CompileData data) {
 		switch (acc.operation) {
+			case OR: acc.or(data)
+			case AND: acc.and(data)
 			case ADDITION: acc.add(data)
 			case SUBTRACTION: acc.subtract(data)
 			case BIT_OR: acc.bitOr(data)
 			case BIT_AND: acc.bitAnd(data)
+			case INCREMENT: data.increment
+			case DECREMENT: data.decrement
 			default: ''''''
 		}
 	}
-	
+
 	def operate(CompileData acc) {
 		switch (acc.operation) {
-			case EXCLUSIVE_OR: acc.exclusiveOr
+			case BIT_EXCLUSIVE_OR: acc.bitExclusiveOr
 			case NEGATION: acc.negate
 			case SIGNUM: acc.signum
 			default: ''''''
 		}
 	}
 
-	def add(CompileData acc, CompileData data) '''
-		«IF data.immediate !== null»
-			«acc.addImmediate(data)»
-		«ELSEIF data.absolute !== null»
-			«acc.addAbsolute(data)»
-		«ELSEIF data.indirect !== null»
-			«acc.addIndirect(data)»
-		«ENDIF»
-	'''
+	def or(CompileData acc, CompileData data) {
+		if (data.immediate !== null) {
+			data.operateImmediate('ORA')
+		} else if (data.absolute !== null) {
+			data.operateAbsolute('ORA')
+		} else if (data.indirect !== null) {
+			data.operateIndirect('ORA')
+		}
+	}
 
-	def subtract(CompileData acc, CompileData data) '''
-		«IF data.immediate !== null»
-			«acc.subtractImmediate(data)»
-		«ELSEIF data.absolute !== null»
-			«acc.subtractAbsolute(data)»
-		«ELSEIF data.indirect !== null»
-			«acc.subtractIndirect(data)»
-		«ENDIF»
-	'''
+	def and(CompileData acc, CompileData data) {
+		if (data.immediate !== null) {
+			data.operateImmediate('AND')
+		} else if (data.absolute !== null) {
+			data.operateAbsolute('AND')
+		} else if (data.indirect !== null) {
+			data.operateIndirect('AND')
+		}
+	}
 
-	def bitOr(CompileData acc, CompileData data) '''
-		«IF data.immediate !== null»
-			«acc.bitOrImmediate(data)»
-		«ELSEIF data.absolute !== null»
-			«acc.bitOrAbsolute(data)»
-		«ELSEIF data.indirect !== null»
-			«acc.bitOrIndirect(data)»
-		«ENDIF»
-	'''
+	def add(CompileData acc, CompileData data) {
+		if (data.immediate !== null) {
+			acc.operateImmediate('ADC', 'CLC', data)
+		} else if (data.absolute !== null) {
+			acc.operateAbsolute('ADC', 'CLC', data)
+		} else if (data.indirect !== null) {
+			acc.operateIndirect('ADC', 'CLC', data)
+		}
+	}
 
-	def bitAnd(CompileData acc, CompileData data) '''
-		«IF data.immediate !== null»
-			«acc.bitAndImmediate(data)»
-		«ELSEIF data.absolute !== null»
-			«acc.bitAndAbsolute(data)»
-		«ELSEIF data.indirect !== null»
-			«acc.bitAndIndirect(data)»
-		«ENDIF»
-	'''
-	
-	def exclusiveOr(CompileData acc)'''
+	def subtract(CompileData acc, CompileData data) {
+		if (data.immediate !== null) {
+			acc.operateImmediate('SBC', 'SEC', data)
+		} else if (data.absolute !== null) {
+			acc.operateAbsolute('SBC', 'SEC', data)
+		} else if (data.indirect !== null) {
+			acc.operateIndirect('SBC', 'SEC', data)
+		}
+	}
+
+	def bitOr(CompileData acc, CompileData data) {
+		if (data.immediate !== null) {
+			acc.operateImmediate('ORA', data)
+		} else if (data.absolute !== null) {
+			acc.operateAbsolute('ORA', data)
+		} else if (data.indirect !== null) {
+			acc.operateIndirect('ORA', data)
+		}
+	}
+
+	def bitAnd(CompileData acc, CompileData data) {
+		if (data.immediate !== null) {
+			acc.operateImmediate('AND', data)
+		} else if (data.absolute !== null) {
+			acc.operateAbsolute('AND', data)
+		} else if (data.indirect !== null) {
+			acc.operateIndirect('AND', data)
+		}
+	}
+
+	def increment(CompileData data) {
+		if (data.absolute !== null) {
+			data.incAbsolute
+		} else if (data.indirect !== null) {
+			data.incIndirect
+		}
+	}
+
+	def decrement(CompileData data) {
+		if (data.absolute !== null) {
+			data.decAbsolute
+		} else if (data.indirect !== null) {
+			data.decIndirect
+		}
+	}
+
+	def bitExclusiveOr(CompileData acc) '''
 		«noop»
 			EOR #$FF
-		«IF acc.sizeOf > 1»
-			STA «Members::TEMP_VAR_NAME1»
-			PLA
-			EOR #$FF
-			PHA
-			LDA «Members::TEMP_VAR_NAME1»
-		«ENDIF»
+			«IF acc.sizeOf > 1»
+				STA «Members::TEMP_VAR_NAME1»
+				PLA
+				EOR #$FF
+				PHA
+				LDA «Members::TEMP_VAR_NAME1»
+			«ENDIF»
 	'''
-	
-	def negate(CompileData acc)'''
+
+	def negate(CompileData acc) '''
 		«noop»
 			EOR #$FF
 	'''
-	
-	def signum(CompileData acc)'''
+
+	def signum(CompileData acc) '''
 		«IF acc.sizeOf > 1»
 			«noop»
 				SEC
@@ -107,78 +147,6 @@ class Maths {
 				EOR #$FF
 				ADC #$01
 		«ENDIF»
-	'''
-
-	private def orImmediate(CompileData acc, CompileData data) '''
-		«data.operateImmediate('ORA')»
-	'''
-
-	private def orAbsolute(CompileData acc, CompileData data) '''
-		«data.operateAbsolute('ORA')»
-	'''
-
-	private def orIndirect(CompileData acc, CompileData data) '''
-		«data.operateIndirect('ORA')»
-	'''
-
-	private def andImmediate(CompileData acc, CompileData data) '''
-		«data.operateImmediate('AND')»
-	'''
-
-	private def andAbsolute(CompileData acc, CompileData data) '''
-		«data.operateAbsolute('AND')»
-	'''
-
-	private def andIndirect(CompileData acc, CompileData data) '''
-		«data.operateIndirect('AND')»
-	'''
-
-	private def addImmediate(CompileData acc, CompileData data) '''
-		«acc.operateImmediate('ADC', 'CLC', data)»
-	'''
-
-	private def addAbsolute(CompileData acc, CompileData data) '''
-		«acc.operateAbsolute('ADC', 'CLC', data)»
-	'''
-
-	private def addIndirect(CompileData acc, CompileData data) '''
-		«acc.operateIndirect('ADC', 'CLC', data)»
-	'''
-
-	private def subtractImmediate(CompileData acc, CompileData data) '''
-		«acc.operateImmediate('SBC', 'SEC', data)»
-	'''
-
-	private def subtractAbsolute(CompileData acc, CompileData data) '''
-		«acc.operateAbsolute('SBC', 'SEC', data)»
-	'''
-
-	private def subtractIndirect(CompileData acc, CompileData data) '''
-		«acc.operateIndirect('SBC', 'SEC', data)»
-	'''
-
-	private def bitOrImmediate(CompileData acc, CompileData data) '''
-		«acc.operateImmediate('ORA', data)»
-	'''
-
-	private def bitOrAbsolute(CompileData acc, CompileData data) '''
-		«acc.operateAbsolute('ORA', data)»
-	'''
-
-	private def bitOrIndirect(CompileData acc, CompileData data) '''
-		«acc.operateIndirect('ORA', data)»
-	'''
-
-	private def bitAndImmediate(CompileData acc, CompileData data) '''
-		«acc.operateImmediate('AND', data)»
-	'''
-
-	private def bitAndAbsolute(CompileData acc, CompileData data) '''
-		«acc.operateAbsolute('AND', data)»
-	'''
-
-	private def bitAndIndirect(CompileData acc, CompileData data) '''
-		«acc.operateIndirect('AND', data)»
 	'''
 
 	private def incAbsolute(CompileData data) '''
@@ -377,8 +345,8 @@ class Maths {
 		«ENDIF»
 	'''
 
-	def loadMSBFromAcc(CompileData data) '''
-		«IF data.type.isSigned»
+	def loadMSBFromAcc(CompileData acc) '''
+		«IF acc.type.isSigned»
 			«val signLabel = labelForSignedMSBEnd»
 				ORA #$7F
 				BMI +«signLabel»
