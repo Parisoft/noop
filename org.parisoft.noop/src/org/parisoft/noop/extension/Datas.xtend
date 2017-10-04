@@ -12,7 +12,7 @@ class Datas {
 	@Inject extension Classes
 	@Inject extension Operations
 
-	val loopThreshold = 8
+	val loopThreshold = 9
 	val labelCounter = new AtomicInteger
 
 	def int sizeOf(CompileData data) {

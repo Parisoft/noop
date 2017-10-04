@@ -19,6 +19,8 @@ class Operations {
 			case SUBTRACTION: acc.subtract(operand)
 			case BIT_OR: acc.bitOr(operand)
 			case BIT_AND: acc.bitAnd(operand)
+			case BIT_SHIFT_LEFT: acc.bitShiftLeft(operand)
+			case BIT_SHIFT_RIGHT: acc.bitShiftRight(operand)
 			case INCREMENT: operand.increment
 			case DECREMENT: operand.decrement
 			default: ''''''
@@ -84,6 +86,26 @@ class Operations {
 		}
 	}
 
+	def bitShiftLeft(CompileData acc, CompileData operand) {
+		if (operand.immediate !== null) {
+			acc.bitShiftLeftImmediate(operand)
+		} else if (operand.absolute !== null) {
+			acc.bitShiftLeftAbsolute(operand)
+		} else if (operand.indirect !== null) {
+			acc.bitShiftLeftIndirect(operand)
+		}
+	}
+	
+	def bitShiftRight(CompileData acc, CompileData operand) {
+		if (operand.immediate !== null) {
+			acc.bitShiftRightImmediate(operand)
+		} else if (operand.absolute !== null) {
+			acc.bitShiftRightAbsolute(operand)
+		} else if (operand.indirect !== null) {
+			acc.bitShiftRightIndirect(operand)
+		}
+	}
+	
 	def bitAnd(CompileData acc, CompileData operand) {
 		if (operand.immediate !== null) {
 			acc.operateImmediate('AND', operand)
@@ -124,7 +146,7 @@ class Operations {
 
 	def negate(CompileData acc) '''
 		«noop»
-			EOR #$FF
+			EOR #%00000001
 	'''
 
 	def signum(CompileData acc) '''
@@ -146,6 +168,205 @@ class Operations {
 				CLC
 				EOR #$FF
 				ADC #$01
+		«ENDIF»
+	'''
+
+	private def bitShiftLeftImmediate(CompileData acc, CompileData operand) '''
+		«IF acc.sizeOf > 1»
+			«val shiftLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				STA «Members::TEMP_VAR_NAME1»
+				PLA
+				LDX #«operand.immediate»
+				BEQ +«shiftEnd»
+			-«shiftLoop»
+				ASL «Members::TEMP_VAR_NAME1»
+				ROL A
+				DEX
+				BNE -«shiftLoop»
+				PHA
+				LDA «Members::TEMP_VAR_NAME1»
+			+«shiftEnd»
+		«ELSE»
+			«val labelLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				LDX #«operand.immediate»
+				BEQ +«shiftEnd»
+			-«labelLoop»
+				ASL A
+				DEX
+				BNE -«labelLoop»
+			+«shiftEnd»
+		«ENDIF»
+	'''
+	
+	private def bitShiftLeftAbsolute(CompileData acc, CompileData operand) '''
+		«IF acc.sizeOf > 1»
+			«val shiftLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				STA «Members::TEMP_VAR_NAME1»
+				PLA
+				«IF operand.isIndexed»
+					LDX «operand.index»
+				«ENDIF»
+				LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				BEQ +«shiftEnd»
+			-«shiftLoop»
+				ASL «Members::TEMP_VAR_NAME1»
+				ROL A
+				DEY
+				BNE -«shiftLoop»
+				PHA
+				LDA «Members::TEMP_VAR_NAME1»
+			+«shiftEnd»
+		«ELSE»
+			«val shiftLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				«IF operand.isIndexed»
+					LDX «operand.index»
+				«ENDIF»
+				LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				BEQ +«shiftEnd»
+			-«shiftLoop»
+				ASL A
+				DEY
+				BNE -«shiftLoop»
+			+«shiftEnd»
+		«ENDIF»
+	'''
+	
+	private def bitShiftLeftIndirect(CompileData acc, CompileData operand) '''
+		«IF acc.sizeOf > 1»
+			«val shiftLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				STA «Members::TEMP_VAR_NAME1»
+				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
+				LDA («operand.indirect»), Y
+				BEQ +«shiftEnd»
+				TAX
+				PLA
+			-«shiftLoop»
+				ASL «Members::TEMP_VAR_NAME1»
+				ROL A
+				DEX
+				BNE -«shiftLoop»
+				PHA
+			+«shiftEnd»
+				LDA «Members::TEMP_VAR_NAME1»
+		«ELSE»
+			«val shiftLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				STA «Members::TEMP_VAR_NAME1»
+				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
+				LDA («operand.indirect»), Y
+				BEQ +«shiftEnd»
+				TAX
+				LDA «Members::TEMP_VAR_NAME1»
+			-«shiftLoop»
+				ASL A
+				DEX
+				BNE -«shiftLoop»
+			+«shiftEnd»
+				LDA «Members::TEMP_VAR_NAME1»
+		«ENDIF»
+	'''
+	private def bitShiftRightImmediate(CompileData acc, CompileData operand) '''
+		«IF acc.sizeOf > 1»
+			«val shiftLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				STA «Members::TEMP_VAR_NAME1»
+				PLA
+				LDX #«operand.immediate»
+				BEQ +«shiftEnd»
+			-«shiftLoop»
+				LSR A
+				ROR «Members::TEMP_VAR_NAME1»
+				DEX
+				BNE -«shiftLoop»
+				PHA
+				LDA «Members::TEMP_VAR_NAME1»
+			+«shiftEnd»
+		«ELSE»
+			«val labelLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				LDX #«operand.immediate»
+				BEQ +«shiftEnd»
+			-«labelLoop»
+				LSR A
+				DEX
+				BNE -«labelLoop»
+			+«shiftEnd»
+		«ENDIF»
+	'''
+	
+	private def bitShiftRightAbsolute(CompileData acc, CompileData operand) '''
+		«IF acc.sizeOf > 1»
+			«val shiftLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				STA «Members::TEMP_VAR_NAME1»
+				PLA
+				«IF operand.isIndexed»
+					LDX «operand.index»
+				«ENDIF»
+				LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				BEQ +«shiftEnd»
+			-«shiftLoop»
+				LSR A
+				ROR «Members::TEMP_VAR_NAME1»
+				DEY
+				BNE -«shiftLoop»
+				PHA
+				LDA «Members::TEMP_VAR_NAME1»
+			+«shiftEnd»
+		«ELSE»
+			«val shiftLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				«IF operand.isIndexed»
+					LDX «operand.index»
+				«ENDIF»
+				LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				BEQ +«shiftEnd»
+			-«shiftLoop»
+				LSR A
+				DEY
+				BNE -«shiftLoop»
+			+«shiftEnd»
+		«ENDIF»
+	'''
+	
+	private def bitShiftRightIndirect(CompileData acc, CompileData operand) '''
+		«IF acc.sizeOf > 1»
+			«val shiftLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				STA «Members::TEMP_VAR_NAME1»
+				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
+				LDA («operand.indirect»), Y
+				BEQ +«shiftEnd»
+				TAX
+				PLA
+			-«shiftLoop»
+				LSR A
+				ROR «Members::TEMP_VAR_NAME1»
+				DEX
+				BNE -«shiftLoop»
+				PHA
+			+«shiftEnd»
+				LDA «Members::TEMP_VAR_NAME1»
+		«ELSE»
+			«val shiftLoop = labelForShiftLoop»
+			«val shiftEnd = labelForShiftEnd»
+				STA «Members::TEMP_VAR_NAME1»
+				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
+				LDA («operand.indirect»), Y
+				BEQ +«shiftEnd»
+				TAX
+				LDA «Members::TEMP_VAR_NAME1»
+			-«shiftLoop»
+				LSR A
+				DEX
+				BNE -«shiftLoop»
+			+«shiftEnd»
+				LDA «Members::TEMP_VAR_NAME1»
 		«ENDIF»
 	'''
 
@@ -363,6 +584,10 @@ class Operations {
 	private def labelForIncDone() '''incDone«labelCounter.andIncrement»:'''
 
 	private def labelForDecMSBSkip() '''decMSBSkip«labelCounter.andIncrement»:'''
+	
+	private def labelForShiftLoop() '''shiftLoop«labelCounter.andIncrement»:'''
+	
+	private def labelForShiftEnd() '''shiftEnd«labelCounter.andIncrement»:'''
 
 	private def noop() {
 	}

@@ -683,6 +683,8 @@ class Expressions {
 			SubExpression: '''«Operation::SUBTRACTION.compileBinary(expression.left, expression.right, data)»'''
 			BOrExpression: '''«Operation::BIT_OR.compileBinary(expression.left, expression.right, data)»'''
 			BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, data)»'''
+			LShiftExpression: '''«Operation::BIT_SHIFT_LEFT.compileBinary(expression.left, expression.right, data)»'''
+			RShiftExpression: '''«Operation::BIT_SHIFT_RIGHT.compileBinary(expression.left, expression.right, data)»'''
 			EorExpression: '''«Operation::BIT_EXCLUSIVE_OR.compileUnary(expression.right, data)»'''
 			NotExpression: '''«Operation::NEGATION.compileUnary(expression.right, data)»'''
 			SigNegExpression: '''«Operation::SIGNUM.compileUnary(expression.right, data)»'''
