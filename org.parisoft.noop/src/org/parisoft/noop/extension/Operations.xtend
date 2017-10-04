@@ -11,16 +11,16 @@ class Operations {
 
 	val labelCounter = new AtomicInteger
 
-	def operateOn(CompileData acc, CompileData data) {
+	def operateOn(CompileData acc, CompileData operand) {
 		switch (acc.operation) {
-			case OR: acc.or(data)
-			case AND: acc.and(data)
-			case ADDITION: acc.add(data)
-			case SUBTRACTION: acc.subtract(data)
-			case BIT_OR: acc.bitOr(data)
-			case BIT_AND: acc.bitAnd(data)
-			case INCREMENT: data.increment
-			case DECREMENT: data.decrement
+			case OR: acc.or(operand)
+			case AND: acc.and(operand)
+			case ADDITION: acc.add(operand)
+			case SUBTRACTION: acc.subtract(operand)
+			case BIT_OR: acc.bitOr(operand)
+			case BIT_AND: acc.bitAnd(operand)
+			case INCREMENT: operand.increment
+			case DECREMENT: operand.decrement
 			default: ''''''
 		}
 	}
@@ -34,79 +34,79 @@ class Operations {
 		}
 	}
 
-	def or(CompileData acc, CompileData data) {
-		if (data.immediate !== null) {
-			data.operateImmediate('ORA')
-		} else if (data.absolute !== null) {
-			data.operateAbsolute('ORA')
-		} else if (data.indirect !== null) {
-			data.operateIndirect('ORA')
+	def or(CompileData acc, CompileData operand) {
+		if (operand.immediate !== null) {
+			operand.operateImmediate('ORA')
+		} else if (operand.absolute !== null) {
+			operand.operateAbsolute('ORA')
+		} else if (operand.indirect !== null) {
+			operand.operateIndirect('ORA')
 		}
 	}
 
-	def and(CompileData acc, CompileData data) {
-		if (data.immediate !== null) {
-			data.operateImmediate('AND')
-		} else if (data.absolute !== null) {
-			data.operateAbsolute('AND')
-		} else if (data.indirect !== null) {
-			data.operateIndirect('AND')
+	def and(CompileData acc, CompileData operand) {
+		if (operand.immediate !== null) {
+			operand.operateImmediate('AND')
+		} else if (operand.absolute !== null) {
+			operand.operateAbsolute('AND')
+		} else if (operand.indirect !== null) {
+			operand.operateIndirect('AND')
 		}
 	}
 
-	def add(CompileData acc, CompileData data) {
-		if (data.immediate !== null) {
-			acc.operateImmediate('ADC', 'CLC', data)
-		} else if (data.absolute !== null) {
-			acc.operateAbsolute('ADC', 'CLC', data)
-		} else if (data.indirect !== null) {
-			acc.operateIndirect('ADC', 'CLC', data)
+	def add(CompileData acc, CompileData operand) {
+		if (operand.immediate !== null) {
+			acc.operateImmediate('ADC', 'CLC', operand)
+		} else if (operand.absolute !== null) {
+			acc.operateAbsolute('ADC', 'CLC', operand)
+		} else if (operand.indirect !== null) {
+			acc.operateIndirect('ADC', 'CLC', operand)
 		}
 	}
 
-	def subtract(CompileData acc, CompileData data) {
-		if (data.immediate !== null) {
-			acc.operateImmediate('SBC', 'SEC', data)
-		} else if (data.absolute !== null) {
-			acc.operateAbsolute('SBC', 'SEC', data)
-		} else if (data.indirect !== null) {
-			acc.operateIndirect('SBC', 'SEC', data)
+	def subtract(CompileData acc, CompileData operand) {
+		if (operand.immediate !== null) {
+			acc.operateImmediate('SBC', 'SEC', operand)
+		} else if (operand.absolute !== null) {
+			acc.operateAbsolute('SBC', 'SEC', operand)
+		} else if (operand.indirect !== null) {
+			acc.operateIndirect('SBC', 'SEC', operand)
 		}
 	}
 
-	def bitOr(CompileData acc, CompileData data) {
-		if (data.immediate !== null) {
-			acc.operateImmediate('ORA', data)
-		} else if (data.absolute !== null) {
-			acc.operateAbsolute('ORA', data)
-		} else if (data.indirect !== null) {
-			acc.operateIndirect('ORA', data)
+	def bitOr(CompileData acc, CompileData operand) {
+		if (operand.immediate !== null) {
+			acc.operateImmediate('ORA', operand)
+		} else if (operand.absolute !== null) {
+			acc.operateAbsolute('ORA', operand)
+		} else if (operand.indirect !== null) {
+			acc.operateIndirect('ORA', operand)
 		}
 	}
 
-	def bitAnd(CompileData acc, CompileData data) {
-		if (data.immediate !== null) {
-			acc.operateImmediate('AND', data)
-		} else if (data.absolute !== null) {
-			acc.operateAbsolute('AND', data)
-		} else if (data.indirect !== null) {
-			acc.operateIndirect('AND', data)
+	def bitAnd(CompileData acc, CompileData operand) {
+		if (operand.immediate !== null) {
+			acc.operateImmediate('AND', operand)
+		} else if (operand.absolute !== null) {
+			acc.operateAbsolute('AND', operand)
+		} else if (operand.indirect !== null) {
+			acc.operateIndirect('AND', operand)
 		}
 	}
 
-	def increment(CompileData data) {
-		if (data.absolute !== null) {
-			data.incAbsolute
-		} else if (data.indirect !== null) {
-			data.incIndirect
+	def increment(CompileData operand) {
+		if (operand.absolute !== null) {
+			operand.incAbsolute
+		} else if (operand.indirect !== null) {
+			operand.incIndirect
 		}
 	}
 
-	def decrement(CompileData data) {
-		if (data.absolute !== null) {
-			data.decAbsolute
-		} else if (data.indirect !== null) {
-			data.decIndirect
+	def decrement(CompileData operand) {
+		if (operand.absolute !== null) {
+			operand.decAbsolute
+		} else if (operand.indirect !== null) {
+			operand.decIndirect
 		}
 	}
 
@@ -149,29 +149,29 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def incAbsolute(CompileData data) '''
+	private def incAbsolute(CompileData operand) '''
 		«noop»
-			«IF data.isIndexed»
-				LDX «data.index»
+			«IF operand.isIndexed»
+				LDX «operand.index»
 			«ENDIF»
-			INC «data.absolute»«IF data.isIndexed», X«ENDIF»
-		«IF data.sizeOf > 1»
+			INC «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+		«IF operand.sizeOf > 1»
 			«val labelDone = labelForIncDone»
 				BNE +«labelDone»
-				INC «data.absolute» + 1«IF data.isIndexed», X«ENDIF»
+				INC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
 			+«labelDone»
 		«ENDIF»
 	'''
 
-	private def incIndirect(CompileData data) '''
+	private def incIndirect(CompileData operand) '''
 		«noop»
-			LDY «IF data.isIndexed»«data.index»«ELSE»#$00«ENDIF»
-			INC («data.indirect»), Y
-		«IF data.sizeOf > 1»
+			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
+			INC («operand.indirect»), Y
+		«IF operand.sizeOf > 1»
 			«val labelDone = labelForIncDone»
 				BNE +«labelDone»
 				INY
-				INC («data.indirect»), Y
+				INC («operand.indirect»), Y
 			+«labelDone»
 		«ENDIF»
 	'''
@@ -212,29 +212,29 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def operateImmediate(CompileData data, String instruction) '''
+	private def operateImmediate(CompileData operand, String instruction) '''
 		«noop»
-			«instruction» #«data.immediate»
+			«instruction» #«operand.immediate»
 	'''
 
-	private def operateImmediate(CompileData acc, String instruction, CompileData data) '''
-		«operateImmediate(acc, instruction, null, data)»
+	private def operateImmediate(CompileData acc, String instruction, CompileData operand) '''
+		«operateImmediate(acc, instruction, null, operand)»
 	'''
 
-	private def operateImmediate(CompileData acc, String instruction, String clear, CompileData data) '''
+	private def operateImmediate(CompileData acc, String instruction, String clear, CompileData operand) '''
 		«IF acc.sizeOf > 1»
 			«noop»
 				«IF clear !== null»
 					«clear»
 				«ENDIF»
-				«instruction» #<(«data.immediate»)
+				«instruction» #<(«operand.immediate»)
 				STA «Members::TEMP_VAR_NAME1»
-			«IF data.sizeOf > 1»
+			«IF operand.sizeOf > 1»
 				«noop»
 					PLA
-					«instruction» #>(«data.immediate»)
+					«instruction» #>(«operand.immediate»)
 			«ELSE»
-				«data.loadMSB»
+				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1» + 1
 					PLA
 					«instruction» «Members::TEMP_VAR_NAME1» + 1
@@ -247,40 +247,40 @@ class Operations {
 				«IF clear !== null»
 					«clear»
 				«ENDIF»
-				«instruction» #«data.immediate»
+				«instruction» #«operand.immediate»
 		«ENDIF»
 	'''
 
-	private def operateAbsolute(CompileData data, String instruction) '''
+	private def operateAbsolute(CompileData operand, String instruction) '''
 		«noop»
-			«IF data.isIndexed»
-				LDX «data.index»
+			«IF operand.isIndexed»
+				LDX «operand.index»
 			«ENDIF»
-			«instruction» «data.absolute»«IF data.isIndexed», X«ENDIF»
+			«instruction» «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 	'''
 
-	private def operateAbsolute(CompileData acc, String instruction, CompileData data) '''
-		«operateAbsolute(acc, instruction, null, data)»
+	private def operateAbsolute(CompileData acc, String instruction, CompileData operand) '''
+		«operateAbsolute(acc, instruction, null, operand)»
 	'''
 
-	private def operateAbsolute(CompileData acc, String instruction, String clear, CompileData data) '''
+	private def operateAbsolute(CompileData acc, String instruction, String clear, CompileData operand) '''
 		«noop»
-			«IF data.isIndexed»
-				LDX «data.index»
+			«IF operand.isIndexed»
+				LDX «operand.index»
 			«ENDIF»
 			«IF clear !== null»
 				«clear»
 			«ENDIF»
-			«instruction» «data.absolute»«IF data.isIndexed», X«ENDIF»
+			«instruction» «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 		«IF acc.sizeOf > 1»
 			«noop»
 				STA «Members::TEMP_VAR_NAME1»
-			«IF data.sizeOf > 1»
+			«IF operand.sizeOf > 1»
 				«noop»
 					PLA
-					«instruction» «data.absolute» + 1«IF data.isIndexed», X«ENDIF»
+					«instruction» «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
 			«ELSE»
-				«data.loadMSB»
+				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1» + 1
 					PLA
 					«instruction» «Members::TEMP_VAR_NAME1» + 1
@@ -291,33 +291,33 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def operateIndirect(CompileData data, String instruction) '''
+	private def operateIndirect(CompileData operand, String instruction) '''
 		«noop»
-			LDY «IF data.isIndexed»«data.index»«ELSE»#$00«ENDIF»
-			«instruction» «data.indirect», Y
+			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
+			«instruction» «operand.indirect», Y
 	'''
 
-	private def operateIndirect(CompileData acc, String instruction, CompileData data) '''
-		«operateIndirect(acc, instruction, null, data)»
+	private def operateIndirect(CompileData acc, String instruction, CompileData operand) '''
+		«operateIndirect(acc, instruction, null, operand)»
 	'''
 
-	private def operateIndirect(CompileData acc, String instruction, String clear, CompileData data) '''
+	private def operateIndirect(CompileData acc, String instruction, String clear, CompileData operand) '''
 		«noop»
-			LDY «IF data.isIndexed»«data.index»«ELSE»#$00«ENDIF»
+			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 			«IF clear !== null»
 				«clear»
 			«ENDIF»
-			«instruction» («data.indirect»), Y
+			«instruction» («operand.indirect»), Y
 		«IF acc.sizeOf > 1»
 			«noop»
 				STA «Members::TEMP_VAR_NAME1»
-			«IF data.sizeOf > 1»
+			«IF operand.sizeOf > 1»
 				«noop»
 					INY
 					PLA
-					«instruction» («data.indirect»), Y
+					«instruction» («operand.indirect»), Y
 			«ELSE»
-				«data.loadMSB»
+				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1» + 1
 					PLA
 					«instruction» «Members::TEMP_VAR_NAME1» + 1

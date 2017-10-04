@@ -677,32 +677,18 @@ class Expressions {
 			AssignmentExpression: '''
 				;TODO «expression»
 			'''
-			OrExpression: '''«Operation::OR.compile(expression.left, expression.right, data)»'''
-			AndExpression: '''«Operation::AND.compile(expression.left, expression.right, data)»'''
-			AddExpression: '''«Operation::ADDITION.compile(expression.left, expression.right, data)»'''
-			SubExpression: '''«Operation::SUBTRACTION.compile(expression.left, expression.right, data)»'''
-			BOrExpression: '''«Operation::BIT_OR.compile(expression.left, expression.right, data)»'''
-			BAndExpression: '''«Operation::BIT_AND.compile(expression.left, expression.right, data)»'''
-			EorExpression: '''«Operation::BIT_EXCLUSIVE_OR.compile(expression.right, data)»'''
-			NotExpression: '''«Operation::NEGATION.compile(expression.right, data)»'''
-			SigNegExpression: '''«Operation::SIGNUM.compile(expression.right, data)»'''
-			SigPosExpression:
-				expression.right.compile(data)
-			IncExpression: '''
-				«val inc = new CompileData => [
-					container = data.container
-					type = expression.right.typeOf
-					operation = Operation::INCREMENT
-				]»
-					«IF data.operation !== null»
-						PHA
-					«ENDIF»
-				«expression.right.compile(inc)»
-					«IF data.operation !== null»
-						PLA
-					«ENDIF»
-				«expression.right.compile(data)»
-			'''
+			OrExpression: '''«Operation::OR.compileBinary(expression.left, expression.right, data)»'''
+			AndExpression: '''«Operation::AND.compileBinary(expression.left, expression.right, data)»'''
+			AddExpression: '''«Operation::ADDITION.compileBinary(expression.left, expression.right, data)»'''
+			SubExpression: '''«Operation::SUBTRACTION.compileBinary(expression.left, expression.right, data)»'''
+			BOrExpression: '''«Operation::BIT_OR.compileBinary(expression.left, expression.right, data)»'''
+			BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, data)»'''
+			EorExpression: '''«Operation::BIT_EXCLUSIVE_OR.compileUnary(expression.right, data)»'''
+			NotExpression: '''«Operation::NEGATION.compileUnary(expression.right, data)»'''
+			SigNegExpression: '''«Operation::SIGNUM.compileUnary(expression.right, data)»'''
+			SigPosExpression: '''«expression.right.compile(data)»'''
+			IncExpression: '''«Operation::INCREMENT.compileInc(expression.right, data)»'''
+			DecExpression: '''«Operation::DECREMENT.compileInc(expression.right, data)»'''
 			ByteLiteral: '''
 				«IF data.relative !== null»
 					«val bytes = expression.valueOf.toBytes»
@@ -920,7 +906,23 @@ class Expressions {
 		}
 	}
 
-	private def compile(Operation binaryOperation, Expression left, Expression right, CompileData data) '''
+	private def compileInc(Operation incOperation, Expression expression, CompileData data) '''
+		«val inc = new CompileData => [
+				container = data.container
+				type = expression.typeOf
+				operation = incOperation
+			]»
+			«IF data.operation !== null»
+				PHA
+			«ENDIF»
+		«expression.compile(inc)»
+			«IF data.operation !== null»
+				PLA
+			«ENDIF»
+		«expression.compile(data)»
+	'''
+
+	private def compileBinary(Operation binaryOperation, Expression left, Expression right, CompileData data) '''
 		«val lda = new CompileData => [
 				container = data.container
 				type = data.type
@@ -958,7 +960,7 @@ class Expressions {
 		«ENDIF»
 	'''
 
-	private def compile(Operation unaryOperation, Expression right, CompileData data) '''
+	private def compileUnary(Operation unaryOperation, Expression right, CompileData data) '''
 		«val lda = new CompileData => [
 				container = data.container
 				type = data.type
