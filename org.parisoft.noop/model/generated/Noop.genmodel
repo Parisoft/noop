@@ -89,6 +89,12 @@
     <genClasses ecoreClass="Noop.ecore#//Index">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Index/value"/>
     </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//PosDecExpression">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//PosDecExpression/left"/>
+    </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//PosIncExpression">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//PosIncExpression/left"/>
+    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//AssignmentExpression">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//AssignmentExpression/left"/>
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//AssignmentExpression/assignment"/>

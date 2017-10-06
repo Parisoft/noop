@@ -8,6 +8,10 @@ class CompileData {
 	enum Operation {
 		OR,
 		AND,
+		COMPARE_EQ,
+		COMPARE_NE,
+		COMPARE_LT,
+		COMPARE_GE,
 		ADDITION, 
 		SUBTRACTION,
 		MULTIPLICATION,

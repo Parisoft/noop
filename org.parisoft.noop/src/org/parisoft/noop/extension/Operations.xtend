@@ -170,6 +170,9 @@ class Operations {
 				ADC #$01
 		«ENDIF»
 	'''
+	
+	private def compareEqualsImmediate(CompileData acc, CompileData operand)'''
+	'''
 
 	private def bitShiftLeftImmediate(CompileData acc, CompileData operand) '''
 		«IF acc.sizeOf > 1»

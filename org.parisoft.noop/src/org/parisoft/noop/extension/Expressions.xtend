@@ -52,6 +52,8 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.PosIncExpression
+import org.parisoft.noop.noop.PosDecExpression
 
 class Expressions {
 
@@ -127,14 +129,6 @@ class Expressions {
 		switch (expression) {
 			AssignmentExpression:
 				expression.left.typeOf
-			MemberSelection:
-				if (expression.isInstanceOf) {
-					expression.toBoolClass
-				} else if (expression.isCast) {
-					expression.type
-				} else {
-					expression.member.typeOf
-				}
 			OrExpression:
 				expression.toBoolClass
 			AndExpression:
@@ -179,6 +173,10 @@ class Expressions {
 				expression.typeOfValueOrInt
 			IncExpression:
 				expression.typeOfValueOrInt
+			PosDecExpression:
+				expression.typeOfValueOrInt
+			PosIncExpression:
+				expression.typeOfValueOrInt
 			ByteLiteral:
 				if (expression.value > TypeSystem::MAX_INT) {
 					expression.toUIntClass
@@ -209,6 +207,14 @@ class Expressions {
 				expression.containingClass.superClassOrObject
 			NewInstance:
 				expression.type
+			MemberSelection:
+				if (expression.isInstanceOf) {
+					expression.toBoolClass
+				} else if (expression.isCast) {
+					expression.type
+				} else {
+					expression.member.typeOf
+				}
 			MemberRef:
 				expression.member.typeOf
 		}
@@ -264,14 +270,6 @@ class Expressions {
 			switch (expression) {
 				AssignmentExpression:
 					expression.right.valueOf
-				MemberSelection:
-					if (expression.isInstanceOf) {
-						throw new NonConstantExpressionException(expression)
-					} else if (expression.isCast) {
-						expression.receiver.valueOf
-					} else {
-						expression.member.valueOf
-					}
 				OrExpression:
 					(expression.left.valueOf as Boolean) || (expression.right.valueOf as Boolean)
 				AndExpression:
@@ -328,6 +326,10 @@ class Expressions {
 					(expression.right.valueOf as Integer) + 1
 				DecExpression:
 					(expression.right.valueOf as Integer) - 1
+				PosIncExpression:
+					(expression.left.valueOf as Integer) + 1
+				PosDecExpression:
+					(expression.left.valueOf as Integer) - 1
 				ByteLiteral:
 					expression.value
 				BoolLiteral:
@@ -341,6 +343,14 @@ class Expressions {
 						new NoopInstance(expression.type.name, expression.type.allFieldsBottomUp, expression.constructor)
 					} else {
 						expression.type.defaultValueOf
+					}
+				MemberSelection:
+					if (expression.isInstanceOf) {
+						throw new NonConstantExpressionException(expression)
+					} else if (expression.isCast) {
+						expression.receiver.valueOf
+					} else {
+						expression.member.valueOf
 					}
 				MemberRef:
 					expression.member.valueOf
@@ -467,6 +477,10 @@ class Expressions {
 				expression.right.prepare(data)
 			IncExpression:
 				expression.right.prepare(data)
+			PosDecExpression:
+				expression.left.prepare(data)
+			PosIncExpression:
+				expression.left.prepare(data)
 			ArrayLiteral:
 				expression.typeOf.prepare(data)
 			NewInstance:
@@ -552,6 +566,10 @@ class Expressions {
 				expression.right.alloc(data)
 			IncExpression:
 				expression.right.alloc(data)
+			PosDecExpression:
+				expression.left.alloc(data)
+			PosIncExpression:
+				expression.left.alloc(data)
 			ArrayLiteral: {
 				val chunks = expression.values.map[alloc(data)].flatten.toList
 
@@ -679,7 +697,9 @@ class Expressions {
 			'''
 			OrExpression: '''«Operation::OR.compileBinary(expression.left, expression.right, data)»'''
 			AndExpression: '''«Operation::AND.compileBinary(expression.left, expression.right, data)»'''
-			AddExpression: '''«Operation::ADDITION.compileBinary(expression.left, expression.right, data)»'''
+			AddExpression: '''
+				«Operation::ADDITION.compileBinary(expression.left, expression.right, data)»
+			'''
 			SubExpression: '''«Operation::SUBTRACTION.compileBinary(expression.left, expression.right, data)»'''
 			BOrExpression: '''«Operation::BIT_OR.compileBinary(expression.left, expression.right, data)»'''
 			BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, data)»'''
@@ -689,8 +709,12 @@ class Expressions {
 			NotExpression: '''«Operation::NEGATION.compileUnary(expression.right, data)»'''
 			SigNegExpression: '''«Operation::SIGNUM.compileUnary(expression.right, data)»'''
 			SigPosExpression: '''«expression.right.compile(data)»'''
-			IncExpression: '''«Operation::INCREMENT.compileInc(expression.right, data)»'''
 			DecExpression: '''«Operation::DECREMENT.compileInc(expression.right, data)»'''
+			IncExpression: '''«Operation::INCREMENT.compileInc(expression.right, data)»'''
+			PosDecExpression: '''«Operation::DECREMENT.compilePosInc(expression.left, data)»'''
+			PosIncExpression: '''
+				«Operation::INCREMENT.compilePosInc(expression.left, data)»
+			'''
 			ByteLiteral: '''
 				«IF data.relative !== null»
 					«val bytes = expression.valueOf.toBytes»
@@ -922,6 +946,17 @@ class Expressions {
 				PLA
 			«ENDIF»
 		«expression.compile(data)»
+	'''
+
+	private def compilePosInc(Operation incOperation, Expression left, CompileData data) '''
+		«val inc = new CompileData => [
+				container = data.container
+				type = left.typeOf
+				operation = incOperation
+			]»
+		«left.compile(data)»
+		;FIXME:
+		«inc.operateOn(data)»
 	'''
 
 	private def compileBinary(Operation binaryOperation, Expression left, Expression right, CompileData data) '''

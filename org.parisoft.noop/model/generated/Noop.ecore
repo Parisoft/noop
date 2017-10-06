@@ -109,6 +109,14 @@
     <eLiterals name="PRGROM" literal="@PRG-ROM"/>
     <eLiterals name="CHRROM" value="1" literal="@CHR-ROM"/>
   </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="PosDecExpression" eSuperTypes="#//Expression">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"
+        containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="PosIncExpression" eSuperTypes="#//Expression">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"
+        containment="true"/>
+  </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="AssignmentExpression" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"
         containment="true"/>

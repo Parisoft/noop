@@ -157,6 +157,10 @@ public class Members {
 	}
 
 	def valueOf(Variable variable) {
+		if (variable.isNonConstant) {
+			throw new NonConstantMemberException
+		}
+		
 		if (running.add(variable)) {
 			try {
 				return variable.value.valueOf

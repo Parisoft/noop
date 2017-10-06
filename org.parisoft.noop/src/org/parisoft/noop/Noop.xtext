@@ -57,7 +57,13 @@ AsmStatement:
 	codes+=ASM_TO_ASM | (codes+=ASM_TO_VAR vars+=[Variable] (codes+=VAR_TO_VAR vars+=[Variable])* codes+=VAR_TO_ASM);
 
 Expression:
-	AssignmentExpression;
+	PosDecExpression;
+
+PosDecExpression returns Expression:
+	PosIncExpression => ({PosDecExpression.left=current} '--')*;
+
+PosIncExpression returns Expression:
+	AssignmentExpression => ({PosIncExpression.left=current} '++')*;
 
 AssignmentExpression returns Expression:
 	OrExpression ({AssignmentExpression.left=current} assignment=AssignmentType right=Expression)?;
