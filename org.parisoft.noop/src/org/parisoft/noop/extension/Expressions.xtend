@@ -54,6 +54,7 @@ import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.noop.PosIncExpression
 import org.parisoft.noop.noop.PosDecExpression
+import org.parisoft.noop.generator.CompileData.Mode
 
 class Expressions {
 
@@ -803,7 +804,7 @@ class Expressions {
 						«ENDIF»
 						«elements.get(i).compile(dst)»
 					«ENDFOR»
-					«IF expression.isOnMemberSelectionOrReference && data.isPointer»
+					«IF expression.isOnMemberSelectionOrReference && data.mode === Mode::POINT»
 						«data.pointTo(tmp)»
 					«ENDIF»
 				«ENDIF»
@@ -840,7 +841,7 @@ class Expressions {
 					«val receiver = new CompileData => [indirect = expression.nameOfReceiver]»
 					«IF expression.isOnMemberSelectionOrReference»
 						«val tmp = new CompileData => [absolute = expression.nameOfTmpVar(data.container)]»
-						«IF data.isPointer»
+						«IF data.mode === Mode::POINT»
 							«data.pointTo(tmp)»
 						«ENDIF»
 						«receiver.pointTo(tmp)»
@@ -888,7 +889,7 @@ class Expressions {
 							container = data.container
 							type = receiver.typeOf
 							indirect = rcv
-							copy = false
+							mode = Mode::POINT
 						])»
 						«member.compileIndirectReference(rcv, expression.indexes, data)»
 					«ELSEIF member instanceof Method»
@@ -897,7 +898,7 @@ class Expressions {
 							container = data.container
 							type = receiver.typeOf
 							indirect = method.nameOfReceiver
-							copy = false 
+							mode = Mode::POINT
 						])»
 						«method.compileInvocation(expression.args, data)»
 					«ENDIF»
@@ -937,14 +938,9 @@ class Expressions {
 				container = data.container
 				type = expression.typeOf
 				operation = incOperation
+				mode = Mode::OPERATE
 			]»
-			«IF data.operation !== null»
-				PHA
-			«ENDIF»
 		«expression.compile(inc)»
-			«IF data.operation !== null»
-				PLA
-			«ENDIF»
 		«expression.compile(data)»
 	'''
 
@@ -964,38 +960,32 @@ class Expressions {
 				container = data.container
 				type = data.type
 				register = 'A'
+				mode = Mode::COPY
 			]»
 		«val opr = new CompileData => [
 				container = data.container
 				type = data.type
 				operation = binaryOperation
+				mode = Mode::OPERATE
 			]»
-«««			«IF data.operation !== null»
-«««				PHA
-«««			«ENDIF» 
-		«left.compile(lda)»
-		«val rcomp = right.compile(opr)»
-			«IF rcomp.contains('''	LDA''')»
+			«IF data.operation !== null»
 				PHA
 			«ENDIF»
-		«rcomp»
-			«IF rcomp.contains('''	LDA''')»
-				PLA
-			«ENDIF»
-		«IF data.operation !== null»
+		«left.compile(lda)»
+		«right.compile(opr)»
+		«IF data.mode === Mode::OPERATE»
 			«noop»
-				STA «Members::TEMP_VAR_NAME1»
-				«IF data.sizeOf > 1»
+				«FOR i : 0..< data.sizeOf»
+					STA «Members::TEMP_VAR_NAME1»«IF i > 0» + «i»«ENDIF»
 					PLA
-					STA «Members::TEMP_VAR_NAME1» + 1
-				«ENDIF»
+				«ENDFOR»
 			«val tmp = new CompileData => [
 					container = data.container
 					type = data.type
 					absolute = Members::TEMP_VAR_NAME1
 				]»
 			«data.operateOn(tmp)»
-		«ELSEIF data.isCopy»
+		«ELSEIF data.mode === Mode::COPY»
 			«val res = new CompileData => [
 					container = data.container
 					type = data.type
@@ -1010,18 +1000,20 @@ class Expressions {
 				container = data.container
 				type = data.type
 				register = 'A'
+				mode = Mode::COPY
 			]»
 		«val acc = new CompileData => [
 				container = data.container
 				type = data.type
 				operation = unaryOperation
+				mode = Mode::OPERATE
 			]»
 			«IF data.operation !== null»
 				PHA
 			«ENDIF» 
 		«right.compile(lda)»
 		«acc.operate»
-		«IF data.operation !== null»
+		«IF data.mode === Mode::OPERATE»
 			«FOR i : 0 ..< data.sizeOf»
 				«noop»
 					STA «Members::TEMP_VAR_NAME1»«IF i > 0» + «i»«ENDIF»
@@ -1033,7 +1025,7 @@ class Expressions {
 					absolute = Members::TEMP_VAR_NAME1
 				]»
 			«data.operateOn(tmp)»
-		«ELSEIF data.isCopy»
+		«ELSEIF data.mode === Mode::COPY»
 			«val res = new CompileData => [
 					container = data.container
 					type = data.type
@@ -1050,9 +1042,9 @@ class Expressions {
 			type = expression.typeOf
 			indirect = method.nameOfReceiver
 		]»
-		«IF data.isCopy»
+		«IF data.mode === Mode::COPY»
 			«instance.copyTo(data)»
-		«ELSE»
+		«ELSEIF data.mode === Mode::POINT»
 			«data.pointTo(instance)»
 		«ENDIF»
 	'''

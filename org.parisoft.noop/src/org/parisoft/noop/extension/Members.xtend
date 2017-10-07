@@ -21,6 +21,7 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.CompileData.Mode
 
 public class Members {
 
@@ -406,15 +407,15 @@ public class Members {
 				'''#«variable.nameOfOffset»'''
 			}
 		]»
-		«IF data.operation !== null»
+		«IF data.mode === Mode::OPERATE»
 			«data.operateOn(ref)»
-		«ELSEIF data.isCopy»
+		«ELSEIF data.mode === Mode::COPY»
 			«IF variable.isArrayReference(indexes)»
 				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 			«ELSE»
 				«ref.copyTo(data)»
 			«ENDIF»
-		«ELSE»
+		«ELSEIF data.mode === Mode::POINT»
 			«data.pointTo(ref)»
 		«ENDIF»
 	'''
@@ -431,15 +432,15 @@ public class Members {
 				indexes.nameOfTmp(data.container)
 			}
 		]»
-		«IF data.operation !== null»
+		«IF data.mode === Mode::OPERATE»
 			«data.operateOn(ref)»
-		«ELSEIF data.isCopy»
+		«ELSEIF data.mode === Mode::COPY»
 			«IF variable.isArrayReference(indexes)»
 				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 			«ELSE»
 				«ref.copyTo(data)»
 			«ENDIF»
-		«ELSE»
+		«ELSEIF data.mode === Mode::POINT»
 			«data.pointTo(ref)»
 		«ENDIF»
 	'''
@@ -456,15 +457,15 @@ public class Members {
 				indexes.nameOfTmp(data.container)
 			}
 		]»
-		«IF data.operation !== null»
+		«IF data.mode === Mode::OPERATE»
 			«data.operateOn(ref)»
-		«ELSEIF data.isCopy»
+		«ELSEIF data.mode === Mode::COPY»
 			«IF variable.isArrayReference(indexes)»
 				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 			«ELSE»
 				«ref.copyTo(data)»
 			«ENDIF»
-		«ELSE»
+		«ELSEIF data.mode === Mode::POINT»
 			«data.pointTo(ref)»
 		«ENDIF»
 	'''
@@ -475,9 +476,9 @@ public class Members {
 			type = variable.typeOf
 			immediate = variable.nameOfConstant
 		]»
-		«IF data.operation !== null»
+		«IF data.mode === Mode::OPERATE»
 			«data.operateOn(const)»
-		«ELSEIF data.isCopy»
+		«ELSEIF data.mode === Mode::COPY»
 			«const.copyTo(data)»
 		«ENDIF»
 	'''
@@ -494,10 +495,10 @@ public class Members {
 					
 					if (param.type.isPrimitive && param.dimensionOf.isEmpty) {
 						absolute = param.nameOf
-						copy = true
+						mode = Mode::COPY
 					} else {
 						indirect = param.nameOf
-						copy = false
+						mode = Mode::POINT
 					}
 				])»
 				«val dimension = arg.dimensionOf»

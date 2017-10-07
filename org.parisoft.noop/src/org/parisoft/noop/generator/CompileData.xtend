@@ -26,6 +26,13 @@ class CompileData {
 		DECREMENT,
 		INCREMENT
 	}
+	
+	enum Mode {
+		COPY,
+		POINT,
+		OPERATE,
+		REFERENCE
+	}
 
 	@Accessors var String immediate // #a
 	@Accessors var String register // A, X or Y
@@ -36,7 +43,7 @@ class CompileData {
 	@Accessors var Operation operation // Ex.: ORA a
 	@Accessors var String container
 	@Accessors var NoopClass type
-	@Accessors var boolean copy = true
+	@Accessors var Mode mode = Mode::COPY
 	@Accessors var AllocData allocation
 
 	override toString() '''
@@ -50,7 +57,7 @@ class CompileData {
 			,operaion=«operation»
 			,container=«container»
 			,type=«type?.name»
-			,copy=«copy»
+			,mode=«mode»
 		}
 	'''
 
@@ -70,7 +77,7 @@ class CompileData {
 			operation = src.operation
 			container = src.container
 			type = src.type
-			copy = src.copy
+			mode = src.mode
 		]
 	}
 	

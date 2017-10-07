@@ -19,6 +19,7 @@ import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.CompileData.Mode
 
 class Statements {
 
@@ -211,10 +212,10 @@ class Statements {
 						
 						if (type.isPrimitive && statement.method.dimensionOf.isEmpty) {
 							absolute = method.nameOfReturn
-							copy = true							
+							mode = Mode::COPY
 						} else {
 							indirect = method.nameOfReturn
-							copy = false
+							mode = Mode::POINT
 						}
 					])»
 				«ELSEIF statement.value !== null»

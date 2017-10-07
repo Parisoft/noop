@@ -19,17 +19,12 @@ class Datas {
 		data.type.sizeOf
 	}
 
-	def isPointer(CompileData data) {
-		data.indirect !== null && !data.isCopy
-	}
-
 	def transferTo(CompileData src, CompileData dst) {
-		if (dst.operation !== null) {
-			dst.operateOn(src)
-		} else if (dst.isCopy) {
-			src.copyTo(dst)
-		} else {
-			dst.pointTo(src)
+		switch (dst.mode) {
+			case COPY: src.copyTo(dst)
+			case POINT: dst.pointTo(src)
+			case OPERATE: dst.operateOn(src)
+			default: ''''''
 		}
 	}
 
