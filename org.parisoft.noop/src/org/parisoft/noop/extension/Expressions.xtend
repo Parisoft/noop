@@ -970,17 +970,25 @@ class Expressions {
 				type = data.type
 				operation = binaryOperation
 			]»
-			«IF data.operation !== null»
-				PHA
-			«ENDIF» 
+«««			«IF data.operation !== null»
+«««				PHA
+«««			«ENDIF» 
 		«left.compile(lda)»
-		«right.compile(opr)»
+		«val rcomp = right.compile(opr)»
+			«IF rcomp.contains('''	LDA''')»
+				PHA
+			«ENDIF»
+		«rcomp»
+			«IF rcomp.contains('''	LDA''')»
+				PLA
+			«ENDIF»
 		«IF data.operation !== null»
-			«FOR i : 0 ..< data.sizeOf»
-				«noop»
-					STA «Members::TEMP_VAR_NAME1»«IF i > 0» + «i»«ENDIF»
+			«noop»
+				STA «Members::TEMP_VAR_NAME1»
+				«IF data.sizeOf > 1»
 					PLA
-			«ENDFOR»
+					STA «Members::TEMP_VAR_NAME1» + 1
+				«ENDIF»
 			«val tmp = new CompileData => [
 					container = data.container
 					type = data.type
