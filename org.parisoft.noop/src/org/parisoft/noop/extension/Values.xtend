@@ -59,12 +59,16 @@ class Values {
 	def List<Byte> toBytes(Object obj) {
 		switch (obj) {
 			Integer:
-				newArrayList(obj.bitwiseAnd(0xFF).byteValue, (obj >> 8).byteValue)
+				if (obj > TypeSystem::MAX_BYTE || obj < TypeSystem::MIN_SBYTE) {
+					newArrayList(obj.bitwiseAnd(0xFF).byteValue, (obj >> 8).byteValue)
+				} else {
+					newArrayList(obj.bitwiseAnd(0xFF).byteValue)
+				}
 			Boolean:
 				if (obj) {
-					newArrayList(1.byteValue)
-				} else {
 					newArrayList(0.byteValue)
+				} else {
+					newArrayList(1.byteValue)
 				}
 			String:
 				obj.bytes
@@ -80,7 +84,7 @@ class Values {
 			if (it instanceof ArrayLiteral) {
 				it.flatList
 			} else if (it instanceof StringLiteral) {
-				it.value.bytes.map[b | NoopFactory::eINSTANCE.createByteLiteral => [value = b.intValue]]
+				it.value.bytes.map[b|NoopFactory::eINSTANCE.createByteLiteral => [value = b.intValue]]
 			} else {
 				newArrayList(it)
 			}

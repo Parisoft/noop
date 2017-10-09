@@ -3,8 +3,10 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.List
 import java.util.concurrent.atomic.AtomicInteger
+import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.AllocData
 import org.parisoft.noop.generator.CompileData
+import org.parisoft.noop.generator.CompileData.Mode
 import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.ElseStatement
@@ -18,8 +20,8 @@ import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
 
+import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.CompileData.Mode
 
 class Statements {
 
@@ -28,6 +30,7 @@ class Statements {
 	@Inject extension Classes
 	@Inject extension Collections
 	@Inject extension Expressions
+	@Inject extension IQualifiedNameProvider
 
 	def isVoid(ReturnStatement ^return) {
 		^return === null || ^return.value === null || ^return.method.typeOf.isVoid
@@ -47,6 +50,34 @@ class Statements {
 
 	def nameOfLen(ReturnStatement ^return) {
 		'''«^return.getContainerOfType(Method).nameOf».ret.len'''.toString
+	}
+
+	def nameOf(ForeverStatement forever) {
+		'''«forever.fullyQualifiedName»@«forever.hashCode.toHexString»'''
+	}
+	
+	def nameOfEnd(ForeverStatement forever) {
+		'''«forever.nameOf»@foreverend'''
+	}
+
+	def nameOf(ForStatement forStatement) {
+		'''«forStatement.fullyQualifiedName»@«forStatement.hashCode.toHexString»'''
+	}
+	
+	def nameOfCondition(ForStatement forStatement) {
+		'''«forStatement.nameOf»@condition'''
+	}
+	
+	def nameOfEvaluation(ForStatement forStatement) {
+		'''«forStatement.nameOf»@evaluation'''
+	}
+	
+	def nameOfIteration(ForStatement forStatement) {
+		'''«forStatement.nameOf»@iteration'''
+	}
+	
+	def nameOfEnd(ForStatement forStatement) {
+		'''«forStatement.nameOf»@forend'''
 	}
 
 	def void prepare(Statement statement, AllocData data) {
@@ -178,7 +209,7 @@ class Statements {
 		return chunks + statement?.^if.alloc(data)
 	}
 
-	def compile(Statement statement, CompileData data) {
+	def String compile(Statement statement, CompileData data) {
 		switch (statement) {
 			Variable: '''
 				«IF statement.isROM»
@@ -202,6 +233,55 @@ class Statements {
 						type = statement.typeOf
 					])»
 				«ENDIF»
+			'''
+			ForStatement: '''
+				«val forCondition = statement.nameOfCondition»
+				«val forEnd = statement.nameOfEnd»
+				+«statement.nameOf»:
+				«FOR variable : statement.variables»
+					«variable.compile(new CompileData => [
+						container = data.container
+						operation = data.operation
+					])»
+				«ENDFOR»
+				-«forCondition»:
+				«IF statement.condition !== null»
+					«statement.condition.compile(new CompileData => [
+						container = data.container
+						operation = data.operation
+						type = statement.condition.typeOf
+						register = 'A'
+					])»
+						BNE +«forEnd»:
+				«ENDIF»
+				+«statement.nameOfIteration»:
+				«FOR stmt : statement.body.statements»
+					«stmt.compile(new CompileData => [
+						container = data.container
+						operation = data.operation
+					])»
+				«ENDFOR»
+				+«statement.nameOfEvaluation»:
+				«FOR expression : statement.expressions»
+					«expression.compile(new CompileData => [
+						container = data.container
+						operation = data.operation
+					])»
+				«ENDFOR»
+					JMP -«forCondition»:
+				+«forEnd»:
+			'''
+			ForeverStatement: '''
+				«val foreverLoop = statement.nameOf»
+				-«foreverLoop»:
+				«FOR stmt : statement.body.statements»
+					«stmt.compile(new CompileData => [
+						container = data.container
+						operation = data.operation
+					])»
+				«ENDFOR»
+					JMP -«foreverLoop»:
+				+«statement.nameOfEnd»:
 			'''
 			ReturnStatement: '''
 				«val method = statement.method»

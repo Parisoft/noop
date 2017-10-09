@@ -52,8 +52,6 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.PosIncExpression
-import org.parisoft.noop.noop.PosDecExpression
 import org.parisoft.noop.generator.CompileData.Mode
 
 class Expressions {
@@ -173,10 +171,6 @@ class Expressions {
 			DecExpression:
 				expression.typeOfValueOrInt
 			IncExpression:
-				expression.typeOfValueOrInt
-			PosDecExpression:
-				expression.typeOfValueOrInt
-			PosIncExpression:
 				expression.typeOfValueOrInt
 			ByteLiteral:
 				if (expression.value > TypeSystem::MAX_INT) {
@@ -327,10 +321,6 @@ class Expressions {
 					(expression.right.valueOf as Integer) + 1
 				DecExpression:
 					(expression.right.valueOf as Integer) - 1
-				PosIncExpression:
-					(expression.left.valueOf as Integer) + 1
-				PosDecExpression:
-					(expression.left.valueOf as Integer) - 1
 				ByteLiteral:
 					expression.value
 				BoolLiteral:
@@ -478,10 +468,6 @@ class Expressions {
 				expression.right.prepare(data)
 			IncExpression:
 				expression.right.prepare(data)
-			PosDecExpression:
-				expression.left.prepare(data)
-			PosIncExpression:
-				expression.left.prepare(data)
 			ArrayLiteral:
 				expression.typeOf.prepare(data)
 			NewInstance:
@@ -567,10 +553,6 @@ class Expressions {
 				expression.right.alloc(data)
 			IncExpression:
 				expression.right.alloc(data)
-			PosDecExpression:
-				expression.left.alloc(data)
-			PosIncExpression:
-				expression.left.alloc(data)
 			ArrayLiteral: {
 				val chunks = expression.values.map[alloc(data)].flatten.toList
 
@@ -698,9 +680,13 @@ class Expressions {
 			'''
 			OrExpression: '''«Operation::OR.compileBinary(expression.left, expression.right, data)»'''
 			AndExpression: '''«Operation::AND.compileBinary(expression.left, expression.right, data)»'''
-			AddExpression: '''
-				«Operation::ADDITION.compileBinary(expression.left, expression.right, data)»
-			'''
+			EqualsExpression: '''«Operation::COMPARE_EQ.compileBinary(expression.left, expression.right, data)»'''
+			DifferExpression: '''«Operation::COMPARE_NE.compileBinary(expression.left, expression.right, data)»'''
+			LtExpression: '''«Operation::COMPARE_LT.compileBinary(expression.left, expression.right, data)»'''
+			LeExpression: '''«Operation::COMPARE_GE.compileBinary(expression.right, expression.left, data)»'''
+			GtExpression: '''«Operation::COMPARE_LT.compileBinary(expression.right, expression.left, data)»'''
+			GeExpression: '''«Operation::COMPARE_GE.compileBinary(expression.left, expression.right, data)»'''
+			AddExpression: '''«Operation::ADDITION.compileBinary(expression.left, expression.right, data)»'''
 			SubExpression: '''«Operation::SUBTRACTION.compileBinary(expression.left, expression.right, data)»'''
 			BOrExpression: '''«Operation::BIT_OR.compileBinary(expression.left, expression.right, data)»'''
 			BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, data)»'''
@@ -712,10 +698,6 @@ class Expressions {
 			SigPosExpression: '''«expression.right.compile(data)»'''
 			DecExpression: '''«Operation::DECREMENT.compileInc(expression.right, data)»'''
 			IncExpression: '''«Operation::INCREMENT.compileInc(expression.right, data)»'''
-			PosDecExpression: '''«Operation::DECREMENT.compilePosInc(expression.left, data)»'''
-			PosIncExpression: '''
-				«Operation::INCREMENT.compilePosInc(expression.left, data)»
-			'''
 			ByteLiteral: '''
 				«IF data.relative !== null»
 					«val bytes = expression.valueOf.toBytes»
@@ -943,18 +925,7 @@ class Expressions {
 		«expression.compile(inc)»
 		«expression.compile(data)»
 	'''
-
-	private def compilePosInc(Operation incOperation, Expression left, CompileData data) '''
-		«val inc = new CompileData => [
-				container = data.container
-				type = left.typeOf
-				operation = incOperation
-			]»
-		«left.compile(data)»
-		;FIXME:
-		«inc.operateOn(data)»
-	'''
-
+	
 	private def compileBinary(Operation binaryOperation, Expression left, Expression right, CompileData data) '''
 		«val lda = new CompileData => [
 				container = data.container
