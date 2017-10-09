@@ -734,7 +734,7 @@ class Expressions {
 				«ENDIF»
 			'''
 			BoolLiteral: '''
-				«val boolAsByte = NoopFactory::eINSTANCE.createByteLiteral => [value = if (expression.value) 1 else 0]»
+				«val boolAsByte = NoopFactory::eINSTANCE.createByteLiteral => [value = if (expression.value) 0 else 1]»
 				«boolAsByte.compile(data)»
 			'''
 			StringLiteral: '''
@@ -976,13 +976,13 @@ class Expressions {
 		«IF data.mode === Mode::OPERATE»
 			«noop»
 				«FOR i : 0..< data.sizeOf»
-					STA «Members::TEMP_VAR_NAME1»«IF i > 0» + «i»«ENDIF»
+					STA «Members::TEMP_VAR_NAME2»«IF i > 0» + «i»«ENDIF»
 					PLA
 				«ENDFOR»
 			«val tmp = new CompileData => [
 					container = data.container
 					type = data.type
-					absolute = Members::TEMP_VAR_NAME1
+					absolute = Members::TEMP_VAR_NAME2
 				]»
 			«data.operateOn(tmp)»
 		«ELSEIF data.mode === Mode::COPY»
@@ -1016,13 +1016,13 @@ class Expressions {
 		«IF data.mode === Mode::OPERATE»
 			«FOR i : 0 ..< data.sizeOf»
 				«noop»
-					STA «Members::TEMP_VAR_NAME1»«IF i > 0» + «i»«ENDIF»
+					STA «Members::TEMP_VAR_NAME2»«IF i > 0» + «i»«ENDIF»
 					PLA
 			«ENDFOR»
 			«val tmp = new CompileData => [
 					container = data.container
 					type = data.type
-					absolute = Members::TEMP_VAR_NAME1
+					absolute = Members::TEMP_VAR_NAME2
 				]»
 			«data.operateOn(tmp)»
 		«ELSEIF data.mode === Mode::COPY»

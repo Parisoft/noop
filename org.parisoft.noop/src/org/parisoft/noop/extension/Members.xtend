@@ -28,6 +28,8 @@ public class Members {
 	public static val STATIC_PREFIX = '#'
 	public static val TEMP_VAR_NAME1 = 'billy'
 	public static val TEMP_VAR_NAME2 = 'jimmy'
+	public static val TRUE = '#TRUE'
+	public static val FALSE = '#FALSE'
 
 	static val UNDERLINE_CHAR = '_'.charAt(0)
 

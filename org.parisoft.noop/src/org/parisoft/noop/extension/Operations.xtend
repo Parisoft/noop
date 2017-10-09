@@ -3,6 +3,7 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.concurrent.atomic.AtomicInteger
 import org.parisoft.noop.generator.CompileData
+import java.lang.reflect.Member
 
 class Operations {
 
@@ -95,7 +96,7 @@ class Operations {
 			acc.bitShiftLeftIndirect(operand)
 		}
 	}
-	
+
 	def bitShiftRight(CompileData acc, CompileData operand) {
 		if (operand.immediate !== null) {
 			acc.bitShiftRightImmediate(operand)
@@ -105,7 +106,7 @@ class Operations {
 			acc.bitShiftRightIndirect(operand)
 		}
 	}
-	
+
 	def bitAnd(CompileData acc, CompileData operand) {
 		if (operand.immediate !== null) {
 			acc.operateImmediate('AND', operand)
@@ -170,8 +171,284 @@ class Operations {
 				ADC #$01
 		«ENDIF»
 	'''
+
+	private def compareEqualsImmediate(CompileData acc, CompileData operand) '''
+		«val comparisonIsTrue = labelForComparisonIsTrue»
+		«val comparisonIsFalse = labelForComparisonIsFalse»
+		«IF acc.sizeOf > 1»
+			«noop»
+				LDX «Members::TRUE»
+				CMP #<(«operand.immediate»)
+				BNE +«comparisonIsFalse»
+			«IF operand.sizeOf > 1»
+				«noop»
+					PLA
+					CMP #>(«operand.immediate»)
+					BEQ +«comparisonIsTrue»
+			«ELSE»
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					CMP «Members::TEMP_VAR_NAME1»
+					BEQ +«comparisonIsTrue»
+			«ENDIF»
+			+«comparisonIsFalse»
+				LDX «Members::FALSE»
+			+«comparisonIsTrue»
+				TXA
+		«ELSE»
+			«noop»
+				LDX «Members::TRUE»
+				CMP #«operand.immediate»
+				BEQ +«comparisonIsTrue»
+				LDX «Members::FALSE»
+			+«comparisonIsTrue»
+				TXA
+		«ENDIF»
+	'''
+
+	private def compareEqualsAbsolute(CompileData acc, CompileData operand) '''
+		«val comparisonIsTrue = labelForComparisonIsTrue»
+		«val comparisonIsFalse = labelForComparisonIsFalse»
+		«IF acc.sizeOf > 1»
+			«noop»
+				LDY «Members::TRUE»
+				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				BNE +«comparisonIsFalse»
+			«IF operand.sizeOf > 1»
+				«noop»
+					PLA
+					CMP «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+					BEQ +«comparisonIsTrue»
+			«ELSE»
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					CMP «Members::TEMP_VAR_NAME1»
+					BEQ +«comparisonIsTrue»
+			«ENDIF»
+			+«comparisonIsFalse»
+				LDY «Members::FALSE»
+			+«comparisonIsTrue»
+				TYA
+		«ELSE»
+			«noop»
+				LDY «Members::TRUE»
+				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				BEQ +«comparisonIsTrue»
+				LDY «Members::FALSE»
+			+«comparisonIsTrue»
+				TYA
+		«ENDIF»
+	'''
+
+	private def compareEqualsIndirect(CompileData acc, CompileData operand) '''
+		«val comparisonIsTrue = labelForComparisonIsTrue»
+		«val comparisonIsFalse = labelForComparisonIsFalse»
+		«IF acc.sizeOf > 1»
+			«noop»
+				LDX «Members::TRUE»
+				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
+				CMP «operand.indirect», Y
+				BNE +«comparisonIsFalse»
+			«IF operand.sizeOf > 1»
+				«noop»
+					PLA
+					CMP «operand.indirect», Y
+					BEQ +«comparisonIsTrue»
+			«ELSE»
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					CMP «Members::TEMP_VAR_NAME1»
+					BEQ +«comparisonIsTrue»
+			«ENDIF»
+			+«comparisonIsFalse»
+				LDX «Members::FALSE»
+			+«comparisonIsTrue»
+				TXA
+		«ELSE»
+			«noop»
+				LDX «Members::TRUE»
+				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
+				CMP «operand.indirect», Y
+				BEQ +«comparisonIsTrue»
+				LDX «Members::FALSE»
+			+«comparisonIsTrue»
+				TXA
+		«ENDIF»
+	'''
+
+	private def compareLessThanImmediate(CompileData acc, CompileData operand) '''
+		«val comparisonIsTrue = labelForComparisonIsTrue»
+		«val comparisonIsFalse = labelForComparisonIsFalse»
+		«IF acc.type.isSigned && operand.type.isSigned»
+			«noop»
+				LDX «Members::TRUE»
+			«IF acc.sizeOf > 1»
+				«noop»
+					CMP #<(«operand.immediate»)
+				«IF operand.sizeOf > 1»
+					«noop»
+						PLA
+						SBC #>(«operand.immediate»)
+				«ELSE»
+					«operand.loadMSB»
+						STA «Members::TEMP_VAR_NAME1»
+						PLA
+						SBC «Members::TEMP_VAR_NAME1»
+				«ENDIF»
+			«ELSE»
+				«noop»
+					SEC
+					SBC #«operand.immediate»
+			«ENDIF»
+			«noop»
+				BVC +«comparisonIsFalse»
+				EOR #$80
+				BMI +«comparisonIsTrue»
+		«ELSE»
+			«noop»
+				LDX «Members::TRUE»
+			«IF acc.type.isUnsigned && operand.type.isSigned»
+				«IF operand.sizeOf > 1»
+					«noop»
+						LDY #>(«operand.immediate»)
+						BMI +«comparisonIsFalse»
+				«ELSE»
+					«noop»
+						LDY #«operand.immediate»
+						BMI +«comparisonIsFalse»
+				«ENDIF»
+			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
+				«IF acc.sizeOf > 1»
+					«noop»
+						STA «Members::TEMP_VAR_NAME1»
+						PLA
+						BMI +«comparisonIsTrue»
+						PHA
+						LDA «Members::TEMP_VAR_NAME1»
+				«ELSE»
+					«noop»
+						TAY
+						BMI +«comparisonIsTrue»
+				«ENDIF»
+			«ENDIF»
+			«IF acc.sizeOf > 1»
+				«noop»
+					CMP #<(«operand.immediate»)
+				«IF operand.sizeOf > 1»
+					«noop»
+						PLA
+						SBC #>«operand.immediate»
+				«ELSE»
+					«operand.loadMSB»
+						STA «Members::TEMP_VAR_NAME1»
+						PLA
+						SBC «Members::TEMP_VAR_NAME1»
+				«ENDIF»
+			«ELSE»
+				«noop»
+					CMP #«operand.immediate»
+			«ENDIF»
+			«noop»
+				BCC +«comparisonIsTrue»
+			+«comparisonIsFalse»
+				LDX «Members::FALSE»
+			+«comparisonIsTrue»
+				TXA
+		«ENDIF»
+	'''
 	
-	private def compareEqualsImmediate(CompileData acc, CompileData operand)'''
+	private def compareLessThanAbsolute(CompileData acc, CompileData operand) '''
+		«val comparisonIsTrue = labelForComparisonIsTrue»
+		«val comparisonIsFalse = labelForComparisonIsFalse»
+		«IF acc.type.isSigned && operand.type.isSigned»
+			«noop»
+				LDY «Members::TRUE»
+				«IF operand.isIndexed»
+					LDX «operand.index»
+				«ENDIF»
+			«IF acc.sizeOf > 1»
+				«noop»
+					CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				«IF operand.sizeOf > 1»
+					«noop»
+						PLA
+						SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+				«ELSE»
+					«operand.loadMSB»
+						STA «Members::TEMP_VAR_NAME1»
+						PLA
+						SBC «Members::TEMP_VAR_NAME1»
+				«ENDIF»
+			«ELSE»
+				«noop»
+					SEC
+					SBC «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+			«ENDIF»
+			«noop»
+				BVC +«comparisonIsFalse»
+				EOR #$80
+				BMI +«comparisonIsTrue»
+		«ELSE»
+			«noop»
+				«IF operand.isIndexed»
+					LDX «operand.index»
+				«ENDIF»
+			«IF acc.type.isUnsigned && operand.type.isSigned»
+				«IF operand.sizeOf > 1»
+					«noop»
+						LDY «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+						BMI +«comparisonIsFalse»
+						LDY «Members::TRUE»
+				«ELSE»
+					«noop»
+						LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+						BMI +«comparisonIsFalse»
+						LDY «Members::TRUE»
+				«ENDIF»
+			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
+				«noop»
+					LDY «Members::TRUE»
+				«IF acc.sizeOf > 1»
+					«noop»
+						STA «Members::TEMP_VAR_NAME1»
+						PLA
+						BMI +«comparisonIsTrue»
+						PHA
+						LDA «Members::TEMP_VAR_NAME1»
+				«ELSE»
+					«noop»
+						PHA
+						PLA
+						BMI +«comparisonIsTrue»
+				«ENDIF»
+			«ELSE»
+				«noop»
+					LDY «Members::TRUE»
+			«ENDIF»
+			«noop»
+				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+			«IF acc.sizeOf > 1»
+				«IF operand.sizeOf > 1»
+					«noop»
+						PLA
+						SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+				«ELSE»
+					«operand.loadMSB»
+						STA «Members::TEMP_VAR_NAME1»
+						PLA
+						SBC «Members::TEMP_VAR_NAME1»
+				«ENDIF»
+			«ENDIF»
+			«noop»
+				BCC +«comparisonIsTrue»
+			+«comparisonIsFalse»
+				LDY «Members::FALSE»
+			+«comparisonIsTrue»
+				TYA
+		«ENDIF»
 	'''
 
 	private def bitShiftLeftImmediate(CompileData acc, CompileData operand) '''
@@ -202,7 +479,7 @@ class Operations {
 			+«shiftEnd»
 		«ENDIF»
 	'''
-	
+
 	private def bitShiftLeftAbsolute(CompileData acc, CompileData operand) '''
 		«IF acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
@@ -237,7 +514,7 @@ class Operations {
 			+«shiftEnd»
 		«ENDIF»
 	'''
-	
+
 	private def bitShiftLeftIndirect(CompileData acc, CompileData operand) '''
 		«IF acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
@@ -273,6 +550,7 @@ class Operations {
 				LDA «Members::TEMP_VAR_NAME1»
 		«ENDIF»
 	'''
+
 	private def bitShiftRightImmediate(CompileData acc, CompileData operand) '''
 		«IF acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
@@ -301,7 +579,7 @@ class Operations {
 			+«shiftEnd»
 		«ENDIF»
 	'''
-	
+
 	private def bitShiftRightAbsolute(CompileData acc, CompileData operand) '''
 		«IF acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
@@ -336,7 +614,7 @@ class Operations {
 			+«shiftEnd»
 		«ENDIF»
 	'''
-	
+
 	private def bitShiftRightIndirect(CompileData acc, CompileData operand) '''
 		«IF acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
@@ -587,10 +865,14 @@ class Operations {
 	private def labelForIncDone() '''incDone«labelCounter.andIncrement»:'''
 
 	private def labelForDecMSBSkip() '''decMSBSkip«labelCounter.andIncrement»:'''
-	
+
 	private def labelForShiftLoop() '''shiftLoop«labelCounter.andIncrement»:'''
-	
+
 	private def labelForShiftEnd() '''shiftEnd«labelCounter.andIncrement»:'''
+
+	private def labelForComparisonIsTrue() '''comparisonIsTrue«labelCounter.andIncrement»:'''
+
+	private def labelForComparisonIsFalse() '''comparisonIsFalse«labelCounter.andIncrement»:'''
 
 	private def noop() {
 	}
