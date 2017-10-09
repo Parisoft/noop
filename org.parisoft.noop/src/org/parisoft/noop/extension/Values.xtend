@@ -66,9 +66,9 @@ class Values {
 				}
 			Boolean:
 				if (obj) {
-					newArrayList(0.byteValue)
-				} else {
 					newArrayList(1.byteValue)
+				} else {
+					newArrayList(0.byteValue)
 				}
 			String:
 				obj.bytes

@@ -94,8 +94,8 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		; Constants
 		;----------------------------------------------------------------
-		«Members::TRUE» = 0
-		«Members::FALSE» = 1
+		«Members::TRUE» = 1
+		«Members::FALSE» = 0
 		«FOR cons : data.constants.sortBy[nameOfConstant]»
 			«cons.nameOfConstant» = «cons.valueOf.toString»
 		«ENDFOR»

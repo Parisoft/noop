@@ -22,6 +22,8 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.ContinueStatement
+import org.parisoft.noop.noop.BreakStatement
 
 class Statements {
 
@@ -31,6 +33,26 @@ class Statements {
 	@Inject extension Collections
 	@Inject extension Expressions
 	@Inject extension IQualifiedNameProvider
+
+	def getForContainer(Statement statement) {
+		var container = statement.eContainer
+
+		while (container !== null && !(container instanceof ForStatement || container instanceof ForeverStatement)) {
+			container = container.eContainer
+		}
+
+		return container
+	}
+
+	def IfStatement getIfContainer(IfStatement ifStatement) {
+		val elseContainer = ifStatement.getContainerOfType(ElseStatement)
+
+		if (elseContainer !== null) {
+			return elseContainer.getContainerOfType(IfStatement).ifContainer
+		}
+
+		return ifStatement
+	}
 
 	def isVoid(ReturnStatement ^return) {
 		^return === null || ^return.value === null || ^return.method.typeOf.isVoid
@@ -44,6 +66,18 @@ class Statements {
 		^return.getContainerOfType(Method)
 	}
 
+	def nameOf(IfStatement ifStatement) {
+		'''«ifStatement.fullyQualifiedName»@«ifStatement.hashCode.toHexString»'''
+	}
+
+	def nameOfCondition(IfStatement ifStatement) {
+		'''«ifStatement.nameOf»@condition'''
+	}
+
+	def nameOfEnd(IfStatement ifStatement) {
+		'''«ifStatement.nameOf»@endif'''
+	}
+
 	def nameOf(ReturnStatement ^return) {
 		'''«^return.getContainerOfType(Method).nameOf».ret'''.toString
 	}
@@ -55,7 +89,7 @@ class Statements {
 	def nameOf(ForeverStatement forever) {
 		'''«forever.fullyQualifiedName»@«forever.hashCode.toHexString»'''
 	}
-	
+
 	def nameOfEnd(ForeverStatement forever) {
 		'''«forever.nameOf»@foreverend'''
 	}
@@ -63,19 +97,19 @@ class Statements {
 	def nameOf(ForStatement forStatement) {
 		'''«forStatement.fullyQualifiedName»@«forStatement.hashCode.toHexString»'''
 	}
-	
+
 	def nameOfCondition(ForStatement forStatement) {
 		'''«forStatement.nameOf»@condition'''
 	}
-	
+
 	def nameOfEvaluation(ForStatement forStatement) {
 		'''«forStatement.nameOf»@evaluation'''
 	}
-	
+
 	def nameOfIteration(ForStatement forStatement) {
 		'''«forStatement.nameOf»@iteration'''
 	}
-	
+
 	def nameOfEnd(ForStatement forStatement) {
 		'''«forStatement.nameOf»@forend'''
 	}
@@ -234,6 +268,41 @@ class Statements {
 					])»
 				«ENDIF»
 			'''
+			IfStatement: '''
+				«val mainIf = statement.ifContainer»
+				«val endIf = mainIf.nameOfEnd»
+				+«statement.nameOfCondition»:
+				«statement.condition.compile(new CompileData => [
+					container = data.container
+					operation = data.operation
+					type = statement.condition.typeOf
+					register = 'A'
+				])»
+				«IF statement.^else !== null»
+					«noop»
+						BNE +«statement.nameOf»:
+					«statement.^else.compile(statement, new CompileData => [
+						container = data.container
+						operation = data.operation
+					])»
+				«ELSE»
+					«noop»
+						BEQ +«endIf»:
+				«ENDIF»
+				+«statement.nameOf»:
+				«FOR stmt : statement.body.statements»
+					«stmt.compile(new CompileData => [
+						container = data.container
+						operation = data.operation
+					])»
+				«ENDFOR»
+				«IF mainIf != statement»
+					«noop»
+						JMP +«endIf»:
+				«ELSE»
+					+«endIf»:
+				«ENDIF»
+			'''
 			ForStatement: '''
 				«val forCondition = statement.nameOfCondition»
 				«val forEnd = statement.nameOfEnd»
@@ -252,7 +321,7 @@ class Statements {
 						type = statement.condition.typeOf
 						register = 'A'
 					])»
-						BNE +«forEnd»:
+						BEQ +«forEnd»:
 				«ENDIF»
 				+«statement.nameOfIteration»:
 				«FOR stmt : statement.body.statements»
@@ -282,6 +351,26 @@ class Statements {
 				«ENDFOR»
 					JMP -«foreverLoop»:
 				+«statement.nameOfEnd»:
+			'''
+			ContinueStatement: '''
+				«val forContainer = statement.forContainer»
+					«IF forContainer !== null»
+						«IF forContainer instanceof ForStatement»
+							JMP +«forContainer.nameOfEvaluation»:
+						«ELSEIF forContainer instanceof ForeverStatement»
+							JMP -«(forContainer as ForeverStatement).nameOf»:
+						«ENDIF»
+					«ENDIF»
+			'''
+			BreakStatement: '''
+				«val forContainer = statement.forContainer»
+					«IF forContainer !== null»
+						«IF forContainer instanceof ForStatement»
+							JMP +«forContainer.nameOfEnd»:
+						«ELSEIF forContainer instanceof ForeverStatement»
+							JMP +«(forContainer as ForeverStatement).nameOfEnd»:
+						«ENDIF»
+					«ENDIF»
 			'''
 			ReturnStatement: '''
 				«val method = statement.method»
@@ -320,5 +409,20 @@ class Statements {
 			default:
 				''
 		}
+	}
+
+	def compile(ElseStatement elseStatement, IfStatement mainIf, CompileData data) '''
+		«IF elseStatement.^if !== null»
+			«elseStatement.^if.compile(data)»
+		«ELSEIF elseStatement.body !== null»
+			«FOR stmt : elseStatement.body.statements»
+				«stmt.compile(data)»
+			«ENDFOR»
+			«noop»
+				JMP +«mainIf.nameOfEnd»:
+		«ENDIF»
+	'''
+
+	private def noop() {
 	}
 }

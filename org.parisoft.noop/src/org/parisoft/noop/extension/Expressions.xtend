@@ -716,7 +716,7 @@ class Expressions {
 				«ENDIF»
 			'''
 			BoolLiteral: '''
-				«val boolAsByte = NoopFactory::eINSTANCE.createByteLiteral => [value = if (expression.value) 0 else 1]»
+				«val boolAsByte = NoopFactory::eINSTANCE.createByteLiteral => [value = if (expression.value) 1 else 0]»
 				«boolAsByte.compile(data)»
 			'''
 			StringLiteral: '''
@@ -929,13 +929,13 @@ class Expressions {
 	private def compileBinary(Operation binaryOperation, Expression left, Expression right, CompileData data) '''
 		«val lda = new CompileData => [
 				container = data.container
-				type = data.type
+				type = if (data.type.isBoolean) left.typeOf else data.type
 				register = 'A'
 				mode = Mode::COPY
 			]»
 		«val opr = new CompileData => [
 				container = data.container
-				type = data.type
+				type = if (data.type.isBoolean) left.typeOf else data.type
 				operation = binaryOperation
 				mode = Mode::OPERATE
 			]»

@@ -32,6 +32,8 @@ Statement:
 	IfStatement |
 	ForStatement |
 	ForeverStatement |
+	ContinueStatement |
+	BreakStatement |
 	AsmStatement) LF+;
 
 ReturnStatement:
@@ -52,6 +54,12 @@ ForStatement:
 
 ForeverStatement:
 	name='forever' body=Block;
+
+ContinueStatement:
+	name='continue';
+
+BreakStatement:
+	name='break';
 
 AsmStatement:
 	codes+=ASM_TO_ASM | (codes+=ASM_TO_VAR vars+=[Variable] (codes+=VAR_TO_VAR vars+=[Variable])* codes+=VAR_TO_ASM);

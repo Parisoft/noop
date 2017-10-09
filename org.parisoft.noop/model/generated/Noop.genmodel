@@ -74,6 +74,12 @@
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//ForeverStatement/name"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ForeverStatement/body"/>
     </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//ContinueStatement">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//ContinueStatement/name"/>
+    </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//BreakStatement">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//BreakStatement/name"/>
+    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//AsmStatement">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//AsmStatement/codes"/>
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//AsmStatement/vars"/>

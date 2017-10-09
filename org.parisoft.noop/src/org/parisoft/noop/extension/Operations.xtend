@@ -59,7 +59,7 @@ class Operations {
 			operand.operateIndirect('AND')
 		}
 	}
-	
+
 	def equals(CompileData acc, CompileData operand) {
 		if (operand.immediate !== null) {
 			acc.equalsImmediate(operand)
@@ -69,7 +69,7 @@ class Operations {
 			acc.equalsIndirect(operand)
 		}
 	}
-	
+
 	def notEquals(CompileData acc, CompileData operand) {
 		if (operand.immediate !== null) {
 			acc.notEqualsImmediate(operand)
@@ -79,7 +79,7 @@ class Operations {
 			acc.notEqualsIndirect(operand)
 		}
 	}
-	
+
 	def lessThan(CompileData acc, CompileData operand) {
 		if (operand.immediate !== null) {
 			acc.compareImmediate('BCC', 'BMI', operand)
@@ -89,7 +89,7 @@ class Operations {
 			acc.compareIndirect('BCC', 'BMI', operand)
 		}
 	}
-	
+
 	def greaterEqualsThan(CompileData acc, CompileData operand) {
 		if (operand.immediate !== null) {
 			acc.compareImmediate('BCS', 'BPL', operand)
@@ -430,6 +430,7 @@ class Operations {
 	'''
 
 	private def compareImmediate(CompileData acc, String ubranch, String sbranch, CompileData operand) '''
+		«val comparison = labelForComparison»
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 			LDX #«Members::TRUE»
@@ -453,32 +454,33 @@ class Operations {
 					SBC #«operand.immediate»
 			«ENDIF»
 			«noop»
-				BVC +«comparisonIsFalse»
+				BVC +«comparison»
 				EOR #$80
+			+«comparison»
 				«sbranch» +«comparisonIsTrue»
 		«ELSE»
 			«IF acc.type.isUnsigned && operand.type.isSigned»
 				«IF operand.sizeOf > 1»
 					«noop»
 						LDY #>(«operand.immediate»)
-						BMI +«comparisonIsFalse»
+						BMI  +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ELSE»
 					«noop»
 						LDY #«operand.immediate»
-						BMI +«comparisonIsFalse»
+						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
 			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
 				«IF acc.sizeOf > 1»
 					«noop»
 						STA «Members::TEMP_VAR_NAME1»
 						PLA
-						BMI +«comparisonIsTrue»
+						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						PHA
 						LDA «Members::TEMP_VAR_NAME1»
 				«ELSE»
 					«noop»
 						TAY
-						BMI +«comparisonIsTrue»
+						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
 			«ENDIF»
 			«IF acc.sizeOf > 1»
@@ -508,6 +510,7 @@ class Operations {
 	'''
 
 	private def compareAbsolute(CompileData acc, String ubranch, String sbranch, CompileData operand) '''
+		«val comparison = labelForComparison»
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«IF acc.type.isSigned && operand.type.isSigned»
@@ -535,8 +538,9 @@ class Operations {
 					SBC «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 			«ENDIF»
 			«noop»
-				BVC +«comparisonIsFalse»
+				BVC +«comparison»
 				EOR #$80
+			+«comparison»
 				«sbranch» +«comparisonIsTrue»
 		«ELSE»
 			«noop»
@@ -547,12 +551,12 @@ class Operations {
 				«IF operand.sizeOf > 1»
 					«noop»
 						LDY «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
-						BMI +«comparisonIsFalse»
+						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						LDY #«Members::TRUE»
 				«ELSE»
 					«noop»
 						LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-						BMI +«comparisonIsFalse»
+						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						LDY #«Members::TRUE»
 				«ENDIF»
 			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
@@ -562,14 +566,14 @@ class Operations {
 					«noop»
 						STA «Members::TEMP_VAR_NAME1»
 						PLA
-						BMI +«comparisonIsTrue»
+						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						PHA
 						LDA «Members::TEMP_VAR_NAME1»
 				«ELSE»
 					«noop»
 						PHA
 						PLA
-						BMI +«comparisonIsTrue»
+						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
 			«ELSE»
 				«noop»
@@ -599,6 +603,7 @@ class Operations {
 	'''
 
 	private def compareIndirect(CompileData acc, String ubranch, String sbranch, CompileData operand) '''
+		«val comparison = labelForComparison»
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«IF acc.type.isSigned && operand.type.isSigned»
@@ -625,8 +630,9 @@ class Operations {
 					SBC («operand.indirect»), Y
 			«ENDIF»
 			«noop»
-				BVC +«comparisonIsFalse»
+				BVC +«comparison»
 				EOR #$80
+			+«comparison»
 				«sbranch» +«comparisonIsTrue»
 		«ELSE»
 			«IF acc.type.isUnsigned && operand.type.isSigned»
@@ -640,7 +646,7 @@ class Operations {
 						«ENDIF»
 						PHA
 						LDA («operand.indirect»), Y
-						BMI +«comparisonIsFalse»
+						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						PLA
 						DEY
 						LDX #«Members::TRUE»
@@ -649,7 +655,7 @@ class Operations {
 						LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 						PHA
 						LDA («operand.indirect»), Y
-						BMI +«comparisonIsFalse»
+						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						PLA
 						LDX #«Members::TRUE»
 				«ENDIF»
@@ -660,14 +666,14 @@ class Operations {
 					«noop»
 						STA «Members::TEMP_VAR_NAME1»
 						PLA
-						BMI +«comparisonIsTrue»
+						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						PHA
 						LDA «Members::TEMP_VAR_NAME1»
 				«ELSE»
 					«noop»
 						PHA
 						PLA
-						BMI +«comparisonIsTrue»
+						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
 			«ELSE»
 				«noop»
@@ -1116,6 +1122,8 @@ class Operations {
 	private def labelForShiftLoop() '''shiftLoop«labelCounter.andIncrement»:'''
 
 	private def labelForShiftEnd() '''shiftEnd«labelCounter.andIncrement»:'''
+
+	private def labelForComparison() '''comparison«labelCounter.andIncrement»:'''
 
 	private def labelForComparisonIsTrue() '''comparisonIsTrue«labelCounter.andIncrement»:'''
 
