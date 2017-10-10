@@ -60,9 +60,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			MemberRef:
 				return scopeForMemberRef(context)
 			MemberSelection:
-				if (!context.isInstanceOf && !context.isCast) {
-					return scopeForMemberSelection(context)
-				}
+				return scopeForMemberSelection(context)
 		}
 
 		return super.getScope(context, eRef)
@@ -162,7 +160,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 	private def filterOverload(Iterable<Method> methods, List<Expression> args) {
 		methods.filter [ method |
-			method.params.size == args.size && args.forall[ arg |
+			method.params.size == args.size && args.forall [ arg |
 				val index = args.indexOf(arg)
 				val param = method.params.get(index)
 				arg.typeOf.isInstanceOf(param.typeOf)

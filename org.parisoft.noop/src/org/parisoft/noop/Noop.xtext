@@ -81,12 +81,15 @@ EqualityExpression returns Expression:
 	right=ComparisonExpression)*;
 
 ComparisonExpression returns Expression:
-	AddOrSubExpression
+	InheritsExpression
 	(({GtExpression.left=current} '>' |
 	{GeExpression.left=current} '>=' |
 	{LtExpression.left=current} '<' |
 	{LeExpression.left=current} '<=')
 	right=AddOrSubExpression)*;
+
+InheritsExpression returns Expression:
+	AddOrSubExpression ({InheritsExpression.left=current} 'inherits' type=[NoopClass|CID])?;
 
 AddOrSubExpression returns Expression:
 	MulOrDivExpression (({AddExpression.left=current} '+' | {SubExpression.left=current} '-')
@@ -120,12 +123,14 @@ DecExpression returns Expression:
 	IncExpression | {DecExpression} '--' right=DecExpression;
 
 IncExpression returns Expression:
-	SelectionExpression | {IncExpression} '++' right=IncExpression;
+	CastExpression | {IncExpression} '++' right=IncExpression;
+
+CastExpression returns Expression:
+	SelectionExpression ({CastExpression.left=current} 'as' type=[NoopClass|CID])?;
 
 SelectionExpression returns Expression:
 	TerminalExpression ({MemberSelection.receiver=current} '.'
-	((member=[Member] (hasArgs?='(' (args+=Expression (',' args+=Expression)*)? ')')?) indexes+=Index* |
-	((instanceOf?='instanceOf' | cast?='as') '(' type=[NoopClass|CID] ')')))*;
+	(member=[Member] (hasArgs?='(' (args+=Expression (',' args+=Expression)*)? ')')?) indexes+=Index* )*;
 
 TerminalExpression returns Expression:
 	{ByteLiteral} value=Byte |

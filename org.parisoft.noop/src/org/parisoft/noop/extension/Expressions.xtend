@@ -53,6 +53,9 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.generator.CompileData.Mode
+import org.parisoft.noop.noop.CastExpression
+import org.parisoft.noop.noop.InheritsExpression
+import org.parisoft.noop.noop.AssignmentType
 
 class Expressions {
 
@@ -86,10 +89,6 @@ class Expressions {
 	def isOnMemberSelectionOrReference(Expression expression) {
 		val container = expression.eContainer
 		container !== null && (container instanceof MemberSelection || container instanceof MemberRef)
-	}
-
-	def nameOfTmpReceiver(Expression expression, String containerName) {
-		'''«containerName».tmp«expression.typeOf.name»Rcv@«expression.hashCode.toHexString»'''.toString
 	}
 
 	def nameOfTmp(List<Index> indexes, String containerName) {
@@ -144,6 +143,8 @@ class Expressions {
 				expression.toBoolClass
 			LeExpression:
 				expression.toBoolClass
+			InheritsExpression:
+				expression.toBoolClass
 			AddExpression:
 				expression.typeOfValueOrInt
 			SubExpression:
@@ -172,6 +173,8 @@ class Expressions {
 				expression.typeOfValueOrInt
 			IncExpression:
 				expression.typeOfValueOrInt
+			CastExpression:
+				expression.type
 			ByteLiteral:
 				if (expression.value > TypeSystem::MAX_INT) {
 					expression.toUIntClass
@@ -203,13 +206,7 @@ class Expressions {
 			NewInstance:
 				expression.type
 			MemberSelection:
-				if (expression.isInstanceOf) {
-					expression.toBoolClass
-				} else if (expression.isCast) {
-					expression.type
-				} else {
-					expression.member.typeOf
-				}
+				expression.member.typeOf
 			MemberRef:
 				expression.member.typeOf
 		}
@@ -293,6 +290,8 @@ class Expressions {
 					(expression.left.valueOf as Integer) < (expression.right.valueOf as Integer)
 				LeExpression:
 					(expression.left.valueOf as Integer) <= (expression.right.valueOf as Integer)
+				InheritsExpression:
+					throw new NonConstantExpressionException(expression)
 				AddExpression:
 					(expression.left.valueOf as Integer) + (expression.right.valueOf as Integer)
 				SubExpression:
@@ -321,6 +320,8 @@ class Expressions {
 					(expression.right.valueOf as Integer) + 1
 				DecExpression:
 					(expression.right.valueOf as Integer) - 1
+				CastExpression:
+					expression.left.valueOf
 				ByteLiteral:
 					expression.value
 				BoolLiteral:
@@ -336,13 +337,7 @@ class Expressions {
 						expression.type.defaultValueOf
 					}
 				MemberSelection:
-					if (expression.isInstanceOf) {
-						throw new NonConstantExpressionException(expression)
-					} else if (expression.isCast) {
-						expression.receiver.valueOf
-					} else {
-						expression.member.valueOf
-					}
+					expression.member.valueOf
 				MemberRef:
 					expression.member.valueOf
 				default:
@@ -362,11 +357,7 @@ class Expressions {
 			ArrayLiteral:
 				expression.valueOf.dimensionOf
 			MemberSelection:
-				if (expression.isInstanceOf || expression.isCast) {
-					emptyList
-				} else {
-					expression.member.dimensionOf.subListFrom(expression.indexes.size)
-				}
+				expression.member.dimensionOf.subListFrom(expression.indexes.size)
 			MemberRef:
 				expression.member.dimensionOf.subListFrom(expression.indexes.size)
 			NewInstance:
@@ -424,6 +415,10 @@ class Expressions {
 				expression.left.prepare(data)
 				expression.right.prepare(data)
 			}
+			InheritsExpression: {
+				expression.left.prepare(data)
+				expression.type.prepare(data)
+			}
 			AddExpression: {
 				expression.left.prepare(data)
 				expression.right.prepare(data)
@@ -468,6 +463,8 @@ class Expressions {
 				expression.right.prepare(data)
 			IncExpression:
 				expression.right.prepare(data)
+			CastExpression:
+				expression.type.prepare(data)
 			ArrayLiteral:
 				expression.typeOf.prepare(data)
 			NewInstance:
@@ -483,9 +480,7 @@ class Expressions {
 			MemberSelection: {
 				expression.receiver.prepare(data)
 
-				if (expression.isInstanceOf || expression.isCast) {
-					expression.type.prepare(data)
-				} else if (expression.member instanceof Variable) {
+				if (expression.member instanceof Variable) {
 					(expression.member as Variable).prepare(data)
 				} else if (expression.member instanceof Method) {
 					(expression.member as Method).prepare(data)
@@ -525,6 +520,8 @@ class Expressions {
 				(expression.left.alloc(data) + expression.right.alloc(data)).toList
 			LeExpression:
 				(expression.left.alloc(data) + expression.right.alloc(data)).toList
+			InheritsExpression:
+				expression.left.alloc(data)
 			AddExpression:
 				(expression.left.alloc(data) + expression.right.alloc(data)).toList
 			SubExpression:
@@ -553,6 +550,8 @@ class Expressions {
 				expression.right.alloc(data)
 			IncExpression:
 				expression.right.alloc(data)
+			CastExpression:
+				expression.left.alloc(data)
 			ArrayLiteral: {
 				val chunks = expression.values.map[alloc(data)].flatten.toList
 
@@ -601,9 +600,7 @@ class Expressions {
 				val snapshot = data.snapshot
 				val chunks = newArrayList
 
-				if (expression.isInstanceOf || expression.isCast) {
-					chunks += expression.receiver.alloc(data)
-				} else if (expression.isMethodInvocation) {
+				if (expression.isMethodInvocation) {
 					val method = expression.member as Method
 
 					if (method.isDispose) {
@@ -624,7 +621,6 @@ class Expressions {
 
 					if (variable.isNonStatic) {
 						chunks += expression.receiver.alloc(data)
-						chunks += data.computePtr(expression.receiver.nameOfTmpReceiver(data.container))
 					}
 
 					if (expression.indexes.isNotEmpty) {
@@ -676,7 +672,53 @@ class Expressions {
 	def String compile(Expression expression, CompileData data) {
 		switch (expression) {
 			AssignmentExpression: '''
-				;TODO «expression»
+				«val ref = new CompileData => [
+					container = data.container
+					operation = data.operation
+					type = expression.left.typeOf
+					mode = Mode::REFERENCE
+				]»
+				«expression.left.compile(ref)»
+				«IF expression.assignment === AssignmentType::ASSIGN»
+					«expression.right.compile(ref => [mode = Mode::COPY])»
+				«ELSEIF expression.assignment === AssignmentType::ADD_ASSIGN»
+					«val add = NoopFactory::eINSTANCE.createAddExpression => [
+						left = expression.left
+						right = expression.right
+					]»
+					«add.compile(ref => [mode = Mode::COPY])»
+				«ELSEIF expression.assignment === AssignmentType::SUB_ASSIGN»
+					«val sub = NoopFactory::eINSTANCE.createSubExpression => [
+						left = expression.left
+						right = expression.right
+					]»
+					«sub.compile(ref => [mode = Mode::COPY])»
+				«ELSEIF expression.assignment === AssignmentType::BOR_ASSIGN»
+					«val bor = NoopFactory::eINSTANCE.createBOrExpression => [
+						left = expression.left
+						right = expression.right
+					]»
+					«bor.compile(ref => [mode = Mode::COPY])»
+				«ELSEIF expression.assignment === AssignmentType::BAN_ASSIGN»
+					«val ban = NoopFactory::eINSTANCE.createBAndExpression => [
+						left = expression.left
+						right = expression.right
+					]»
+					«ban.compile(ref => [mode = Mode::COPY])»
+				«ELSEIF expression.assignment === AssignmentType::BLS_ASSIGN»
+					«val bls = NoopFactory::eINSTANCE.createLShiftExpression => [
+						left = expression.left
+						right = expression.right
+					]»
+					«bls.compile(ref => [mode = Mode::COPY])»
+				«ELSEIF expression.assignment === AssignmentType::BRS_ASSIGN»
+					«val brs = NoopFactory::eINSTANCE.createRShiftExpression => [
+						left = expression.left
+						right = expression.right
+					]»
+					«brs.compile(ref => [mode = Mode::COPY])»
+				«ENDIF»
+				«ref.transferTo(data)»
 			'''
 			OrExpression: '''«Operation::OR.compileBinary(expression.left, expression.right, data)»'''
 			AndExpression: '''«Operation::AND.compileBinary(expression.left, expression.right, data)»'''
@@ -698,6 +740,8 @@ class Expressions {
 			SigPosExpression: '''«expression.right.compile(data)»'''
 			DecExpression: '''«Operation::DECREMENT.compileInc(expression.right, data)»'''
 			IncExpression: '''«Operation::INCREMENT.compileInc(expression.right, data)»'''
+			CastExpression: '''«expression.left.compile(data)»'''
+			InheritsExpression: ''';TODO: inherits'''
 			ByteLiteral: '''
 				«IF data.relative !== null»
 					«val bytes = expression.valueOf.toBytes»
@@ -728,6 +772,7 @@ class Expressions {
 							.db «expression.value.toBytes.join(', ', [toHex])»
 						«ENDIF»
 				«ELSEIF data.absolute !== null»
+					«data.pushAccIfOperating»
 					«val bytes = expression.value.bytes»
 						«IF data.isIndexed»
 							LDX «data.index»
@@ -736,7 +781,9 @@ class Expressions {
 							LDA #«bytes.get(i).toHex»
 							STA «data.absolute»«IF i > 0» + «i»«ENDIF»«IF data.isIndexed», X«ENDIF»
 						«ENDFOR»
+					«data.pullAccIfOperating»
 				«ELSEIF data.indirect !== null»
+					«data.pushAccIfOperating»
 					«val bytes = expression.value.bytes»
 						«IF data.isIndexed»
 							LDY «data.index»
@@ -750,6 +797,7 @@ class Expressions {
 							LDA #«bytes.get(i).toHex»
 							STA («data.indirect»), Y
 						«ENDFOR»
+					«data.pullAccIfOperating»
 				«ENDIF»
 			'''
 			ArrayLiteral: '''
@@ -760,6 +808,7 @@ class Expressions {
 					«val tmp = if (expression.isOnMemberSelectionOrReference) {
 						new CompileData => [
 							container = data.container
+							operation = data.operation
 							absolute = expression.nameOfTmp(data.container)
 							type = data.type
 						]
@@ -775,11 +824,12 @@ class Expressions {
 							«ELSEIF dst.indirect !== null && dst.index.startsWith('#')»
 								«dst.index = '''«dst.index» + «i * expression.sizeOf»'''»
 							«ELSEIF dst.indirect !== null && dst.isIndexed»
-								«noop»
+								«data.pushAccIfOperating»
 									CLC
 									LDA «dst.index»
 									ADC #«expression.sizeOf.byteValue.toHex»
 									STA «dst.index»
+								«data.pullAccIfOperating»
 							«ELSEIF dst.indirect !== null»
 								«dst.index = '''#«(i * expression.sizeOf).byteValue.toHex»'''»
 							«ENDIF»
@@ -819,12 +869,15 @@ class Expressions {
 					«val defaultByte = NoopFactory::eINSTANCE.createByteLiteral => [value = 0]»
 					«defaultByte.compile(data)»
 				«ELSE»
+					«data.pushAccIfOperating»
 					«val constructor = expression.nameOfConstructor»
 					«val receiver = new CompileData => [indirect = expression.nameOfReceiver]»
 					«IF expression.isOnMemberSelectionOrReference»
 						«val tmp = new CompileData => [absolute = expression.nameOfTmpVar(data.container)]»
 						«IF data.mode === Mode::POINT»
 							«data.pointTo(tmp)»
+						«ELSEIF data.mode == Mode::REFERENCE»
+							«tmp.referenceInto(data)»
 						«ENDIF»
 						«receiver.pointTo(tmp)»
 					«ELSE»
@@ -834,25 +887,25 @@ class Expressions {
 						JSR «constructor»
 					«FOR field : expression.constructor?.fields ?: emptyList»
 						«field.value.compile(new CompileData => [
+							container = constructor
+							operation = data.operation
 							indirect = receiver.indirect									
 							index = '''#«field.variable.nameOfOffset»'''
 							type = field.variable.typeOf
-							container = constructor
 						])»
 					«ENDFOR»
+					«data.pullAccIfOperating»
 				«ENDIF»	
 			'''
 			MemberSelection: '''
 				«val member = expression.member»
 				«val receiver = expression.receiver»
-				«IF expression.isInstanceOf»
-					«receiver.compile(data)»
-					;TODO: «receiver.typeOf.name».instanceOf(«expression.type»)
-				«ELSEIF expression.isCast»
-					«receiver.compile(data)»
-				«ELSEIF member.isStatic»
+				«IF member.isStatic»
 					«IF !(receiver instanceof NewInstance)»
-						«receiver.compile(new CompileData => [container = data.container])»
+						«receiver.compile(new CompileData => [
+							container = data.container
+							operation = data.operation
+						])»
 					«ENDIF»
 					«IF member instanceof Variable»
 						«IF member.isConstant»
@@ -866,20 +919,21 @@ class Expressions {
 					«ENDIF»
 				«ELSE»
 					«IF member instanceof Variable»
-						«val rcv = receiver.nameOfTmpReceiver(data.container)»
-						«receiver.compile(new CompileData => [
+						«val rcv = new CompileData => [
 							container = data.container
+							operation = data.operation
 							type = receiver.typeOf
-							indirect = rcv
-							mode = Mode::POINT
-						])»
+							mode = Mode::REFERENCE
+						]»
+						«receiver.compile(rcv)»
 						«member.compileIndirectReference(rcv, expression.indexes, data)»
 					«ELSEIF member instanceof Method»
 						«val method = member as Method»
 						«receiver.compile(new CompileData => [
 							container = data.container
-							type = receiver.typeOf
+							operation = data.operation
 							indirect = method.nameOfReceiver
+							type = receiver.typeOf
 							mode = Mode::POINT
 						])»
 						«method.compileInvocation(expression.args, data)»
@@ -890,9 +944,9 @@ class Expressions {
 				«val member = expression.member»
 				«IF member instanceof Variable»
 					«IF member.isField && member.isNonStatic»
-						«member.compileIndirectReference('''«data.container».rcv''', expression.indexes, data)»
+						«member.compilePointerReference('''«data.container».rcv''', expression.indexes, data)»
 					«ELSEIF member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)»
-						«member.compileIndirectReference(member.nameOf, expression.indexes, data)»
+						«member.compilePointerReference(member.nameOf, expression.indexes, data)»
 					«ELSEIF member.isConstant»
 						«member.compileConstantReference(data)»
 					«ELSEIF member.isStatic»
@@ -929,14 +983,15 @@ class Expressions {
 	private def compileBinary(Operation binaryOperation, Expression left, Expression right, CompileData data) '''
 		«val lda = new CompileData => [
 			container = data.container
+			operation = data.operation
 			type = if (data.type.isBoolean) left.typeOf else data.type
 			register = 'A'
 			mode = Mode::COPY
 		]»
 		«val opr = new CompileData => [
 			container = data.container
-			type = if (data.type.isBoolean) left.typeOf else data.type
 			operation = binaryOperation
+			type = if (data.type.isBoolean) left.typeOf else data.type
 			mode = Mode::OPERATE
 		]»
 			«IF data.operation !== null»
@@ -1018,6 +1073,7 @@ class Expressions {
 		«val method = expression.getContainerOfType(Method)»
 		«val instance = new CompileData => [
 			container = method.nameOf
+			operation = data.operation
 			type = expression.typeOf
 			indirect = method.nameOfReceiver
 		]»
@@ -1025,6 +1081,8 @@ class Expressions {
 			«instance.copyTo(data)»
 		«ELSEIF data.mode === Mode::POINT»
 			«data.pointTo(instance)»
+		«ELSEIF data.mode === Mode::REFERENCE»
+			«instance.referenceInto(data)»
 		«ENDIF»
 	'''
 

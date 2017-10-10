@@ -395,7 +395,55 @@ public class Members {
 		«ENDIF»
 	'''
 
-	def compileIndirectReference(Variable variable, String receiver, List<Index> indexes, CompileData data) '''
+	def compileIndirectReference(Variable variable, CompileData receiver, List<Index> indexes, CompileData data) '''
+		«IF indexes.isNotEmpty»
+			«variable.compileIndexes(indexes, data)»
+			«val tmpIndex = indexes.nameOfTmp(data.container)»
+			«IF receiver.index === null»
+				«receiver.index = tmpIndex»
+			«ELSEIF receiver.index.contains(STATIC_PREFIX)»
+				«data.pushAccIfOperating»
+					CLC
+					LDA «tmpIndex»
+					«FOR immediate : receiver.index.split(' + ')»
+						ADC «immediate»
+					«ENDFOR»
+					STA «tmpIndex»
+				«data.pullAccIfOperating»
+				«receiver.index = tmpIndex»
+			«ELSE»
+				«data.pushAccIfOperating»
+					CLC
+					LDA «tmpIndex»
+					ADC «receiver.index»
+					STA «tmpIndex»
+				«data.pullAccIfOperating»
+				«receiver.index = tmpIndex»
+			«ENDIF»
+		«ELSE»
+			«val tmpIndex = '''#«variable.nameOfOffset»'''»
+			«IF receiver.index === null»
+				«receiver.index = tmpIndex»
+			«ELSEIF receiver.index.contains(STATIC_PREFIX)»
+				«receiver.index = '''«receiver.index» + «tmpIndex»'''»
+			«ELSE»
+				«data.pushAccIfOperating»
+					CLC
+					LDA «tmpIndex»
+					ADC «receiver.index»
+					STA «tmpIndex»
+				«data.pullAccIfOperating»
+				«receiver.index = tmpIndex»
+			«ENDIF»
+		«ENDIF»
+		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«receiver.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+		«ELSE»
+			«receiver.transferTo(data)»
+		«ENDIF»
+	'''
+
+	def compilePointerReference(Variable variable, String receiver, List<Index> indexes, CompileData data) '''
 		«IF indexes.isNotEmpty»
 			«variable.compileIndexes(indexes, data)»
 		«ENDIF»
@@ -409,16 +457,10 @@ public class Members {
 				'''#«variable.nameOfOffset»'''
 			}
 		]»
-		«IF data.mode === Mode::OPERATE»
-			«data.operateOn(ref)»
-		«ELSEIF data.mode === Mode::COPY»
-			«IF variable.isArrayReference(indexes)»
-				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
-			«ELSE»
-				«ref.copyTo(data)»
-			«ENDIF»
-		«ELSEIF data.mode === Mode::POINT»
-			«data.pointTo(ref)»
+		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+		«ELSE»
+			«ref.transferTo(data)»
 		«ENDIF»
 	'''
 
@@ -434,16 +476,10 @@ public class Members {
 				indexes.nameOfTmp(data.container)
 			}
 		]»
-		«IF data.mode === Mode::OPERATE»
-			«data.operateOn(ref)»
-		«ELSEIF data.mode === Mode::COPY»
-			«IF variable.isArrayReference(indexes)»
-				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
-			«ELSE»
-				«ref.copyTo(data)»
-			«ENDIF»
-		«ELSEIF data.mode === Mode::POINT»
-			«data.pointTo(ref)»
+		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+		«ELSE»
+			«ref.transferTo(data)»
 		«ENDIF»
 	'''
 	
@@ -459,16 +495,10 @@ public class Members {
 				indexes.nameOfTmp(data.container)
 			}
 		]»
-		«IF data.mode === Mode::OPERATE»
-			«data.operateOn(ref)»
-		«ELSEIF data.mode === Mode::COPY»
-			«IF variable.isArrayReference(indexes)»
-				«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
-			«ELSE»
-				«ref.copyTo(data)»
-			«ENDIF»
-		«ELSEIF data.mode === Mode::POINT»
-			«data.pointTo(ref)»
+		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+		«ELSE»
+			«ref.transferTo(data)»
 		«ENDIF»
 	'''
 	
@@ -487,6 +517,7 @@ public class Members {
 
 	def compileInvocation(Method method, List<Expression> args, CompileData data) '''
 		«IF method.isNonDispose»
+			«data.pushAccIfOperating»
 			«val methodName = method.nameOf»
 			«FOR i : 0..< args.size»
 				«val param = method.params.get(i)»
@@ -512,6 +543,7 @@ public class Members {
 			«ENDFOR»
 			«noop»
 				JSR «method.nameOf»
+			«data.pullAccIfOperating»
 			«IF method.typeOf.isNonVoid»
 				«val ret = new CompileData => [
 					container = data.container
@@ -532,6 +564,7 @@ public class Members {
 		«val indexName = indexes.nameOfTmp(data.container)»
 		«val dimension = variable.dimensionOf»
 		«val sizeOfVar = variable.typeOf.sizeOf»
+		«data.pushAccIfOperating»
 		«IF dimension.size === 1 && sizeOfVar === 1»
 			«indexes.head.value.compile(new CompileData => [
 				container = data.container
@@ -547,6 +580,7 @@ public class Members {
 			«FOR i : 0..< indexes.size»
 				«indexes.get(i).value.compile(new CompileData => [
 					container = data.container
+					operation = data.operation
 					type = data.type.toByteClass
 					register = 'A'
 				])»
@@ -580,6 +614,7 @@ public class Members {
 				«ENDIF»
 				STA «indexName»
 		«ENDIF»
+		«data.pullAccIfOperating»
 	'''
 	
 	private def void noop() {

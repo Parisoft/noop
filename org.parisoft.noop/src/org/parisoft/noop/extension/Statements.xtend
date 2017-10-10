@@ -377,6 +377,7 @@ class Statements {
 				«IF statement.isNonVoid»
 					«statement.value.compile(new CompileData => [
 						container = method.nameOf
+						operation = data.operation
 						type = statement.method.typeOf
 						
 						if (type.isPrimitive && statement.method.dimensionOf.isEmpty) {
@@ -390,6 +391,7 @@ class Statements {
 				«ELSEIF statement.value !== null»
 					«statement.value.compile(new CompileData => [
 						container = method.nameOf
+						operation = data.operation
 						type = statement.value.typeOf
 					])»
 				«ENDIF»

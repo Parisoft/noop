@@ -24,7 +24,7 @@ class Datas {
 			case COPY: src.copyTo(dst)
 			case POINT: dst.pointTo(src)
 			case OPERATE: dst.operateOn(src)
-			default: ''''''
+			case REFERENCE: src.referenceInto(dst)
 		}
 	}
 
@@ -783,10 +783,30 @@ class Datas {
 			«ENDIF»
 			STA «ptr.indirect» + 1
 	'''
+	
+	def referenceInto(CompileData src, CompileData dst) {
+		dst.absolute = src.absolute
+		dst.indirect = src.indirect
+		dst.index = src.index
+	}
+	
+	def pushAccIfOperating(CompileData data)'''
+		«IF data.operation !== null»
+			«noop»
+				PHA
+		«ENDIF»
+	'''
+	
+	def pullAccIfOperating(CompileData data)'''
+		«IF data.operation !== null»
+			«noop»
+				PLA
+		«ENDIF»
+	'''
 
 	private def labelForCopyLoop() '''copyLoop«labelCounter.andIncrement»:'''
 
-	private def noop() {
+	private def void noop() {
 	}
 
 	def computePtr(AllocData data, String varName) {
