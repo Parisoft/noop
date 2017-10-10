@@ -15,7 +15,7 @@ class Operations {
 		switch (acc.operation) {
 			case OR: acc.or(operand)
 			case AND: acc.and(operand)
-			case COMPARE_EQ: acc.equals(operand)
+			case COMPARE_EQ: acc.isEquals(operand)
 			case COMPARE_NE: acc.notEquals(operand)
 			case COMPARE_LT: acc.lessThan(operand)
 			case COMPARE_GE: acc.greaterEqualsThan(operand)
@@ -60,7 +60,7 @@ class Operations {
 		}
 	}
 
-	def equals(CompileData acc, CompileData operand) {
+	def isEquals(CompileData acc, CompileData operand) {
 		if (operand.immediate !== null) {
 			acc.equalsImmediate(operand)
 		} else if (operand.absolute !== null) {

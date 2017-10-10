@@ -423,6 +423,6 @@ class Statements {
 		«ENDIF»
 	'''
 
-	private def noop() {
+	private def void noop() {
 	}
 }

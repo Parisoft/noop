@@ -925,25 +925,33 @@ class Expressions {
 		«expression.compile(inc)»
 		«expression.compile(data)»
 	'''
-	
+
 	private def compileBinary(Operation binaryOperation, Expression left, Expression right, CompileData data) '''
 		«val lda = new CompileData => [
-				container = data.container
-				type = if (data.type.isBoolean) left.typeOf else data.type
-				register = 'A'
-				mode = Mode::COPY
-			]»
+			container = data.container
+			type = if (data.type.isBoolean) left.typeOf else data.type
+			register = 'A'
+			mode = Mode::COPY
+		]»
 		«val opr = new CompileData => [
-				container = data.container
-				type = if (data.type.isBoolean) left.typeOf else data.type
-				operation = binaryOperation
-				mode = Mode::OPERATE
-			]»
+			container = data.container
+			type = if (data.type.isBoolean) left.typeOf else data.type
+			operation = binaryOperation
+			mode = Mode::OPERATE
+		]»
 			«IF data.operation !== null»
 				PHA
 			«ENDIF»
 		«left.compile(lda)»
+			«IF binaryOperation === Operation::AND»
+				BEQ +skipRightExpression@«right.hashCode.toHex»:
+			«ELSEIF binaryOperation === Operation::OR»
+				BNE +skipRightExpression@«right.hashCode.toHex»:
+			«ENDIF»		
 		«right.compile(opr)»
+		«IF binaryOperation === Operation::AND || binaryOperation === Operation::OR»
+			+skipRightExpression@«right.hashCode.toHex»:
+		«ENDIF»
 		«IF data.mode === Mode::OPERATE»
 			«noop»
 				«FOR i : 0..< data.sizeOf»
@@ -951,17 +959,17 @@ class Expressions {
 					PLA
 				«ENDFOR»
 			«val tmp = new CompileData => [
-					container = data.container
-					type = data.type
-					absolute = Members::TEMP_VAR_NAME2
-				]»
+				container = data.container
+				type = data.type
+				absolute = Members::TEMP_VAR_NAME2
+			]»
 			«data.operateOn(tmp)»
 		«ELSEIF data.mode === Mode::COPY»
 			«val res = new CompileData => [
-					container = data.container
-					type = data.type
-					register = 'A'
-				]»
+				container = data.container
+				type = data.type
+				register = 'A'
+			]»
 			«res.copyTo(data)»
 		«ENDIF»
 	'''
