@@ -926,7 +926,11 @@ class Expressions {
 							mode = Mode::REFERENCE
 						]»
 						«receiver.compile(rcv)»
-						«member.compileIndirectReference(rcv, expression.indexes, data)»
+						«IF rcv.absolute !== null»
+							«member.compileAbsoluteReference(rcv, expression.indexes, data)»
+						«ELSEIF rcv.indirect !== null»
+							«member.compileIndirectReference(rcv, expression.indexes, data)»
+						«ENDIF»
 					«ELSEIF member instanceof Method»
 						«val method = member as Method»
 						«receiver.compile(new CompileData => [

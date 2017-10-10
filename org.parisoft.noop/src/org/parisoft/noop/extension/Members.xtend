@@ -395,51 +395,91 @@ public class Members {
 		«ENDIF»
 	'''
 
-	def compileIndirectReference(Variable variable, CompileData receiver, List<Index> indexes, CompileData data) '''
+	def compileAbsoluteReference(Variable variable, CompileData receiver, List<Index> indexes, CompileData data) '''
+		«val ref = new CompileData => [
+			container = receiver.container
+			operation = receiver.operation
+			absolute = receiver.absolute
+			index = receiver.index
+			type = variable.typeOf
+		]»
 		«IF indexes.isNotEmpty»
 			«variable.compileIndexes(indexes, data)»
 			«val tmpIndex = indexes.nameOfTmp(data.container)»
-			«IF receiver.index === null»
-				«receiver.index = tmpIndex»
-			«ELSEIF receiver.index.contains(STATIC_PREFIX)»
+			«IF ref.index === null»
+				«ref.index = tmpIndex»
+			«ELSE»
 				«data.pushAccIfOperating»
 					CLC
 					LDA «tmpIndex»
-					«FOR immediate : receiver.index.split(' + ')»
+					ADC «ref.index»
+					STA «tmpIndex»
+				«data.pullAccIfOperating»
+				«ref.index = tmpIndex»
+			«ENDIF»
+		«ELSE»
+			«val tmpIndex = '''#«variable.nameOfOffset»'''»
+			«ref.absolute = '''«ref.absolute» + «tmpIndex»'''»
+		«ENDIF»
+		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+		«ELSE»
+			«ref.transferTo(data)»
+		«ENDIF»
+	'''
+	
+	def compileIndirectReference(Variable variable, CompileData receiver, List<Index> indexes, CompileData data) '''
+		«val ref = new CompileData => [
+			container = receiver.container
+			operation = receiver.operation
+			indirect = receiver.indirect
+			index = receiver.index
+			type = variable.typeOf
+		]»
+		«IF indexes.isNotEmpty»
+			«variable.compileIndexes(indexes, data)»
+			«val tmpIndex = indexes.nameOfTmp(data.container)»
+			«IF ref.index === null»
+				«ref.index = tmpIndex»
+			«ELSEIF ref.index.contains(STATIC_PREFIX)»
+				«data.pushAccIfOperating»
+					CLC
+					LDA «tmpIndex»
+					«FOR immediate : ref.index.split(' + ')»
 						ADC «immediate»
 					«ENDFOR»
 					STA «tmpIndex»
 				«data.pullAccIfOperating»
-				«receiver.index = tmpIndex»
+				«ref.index = tmpIndex»
 			«ELSE»
 				«data.pushAccIfOperating»
 					CLC
 					LDA «tmpIndex»
-					ADC «receiver.index»
+					ADC «ref.index»
 					STA «tmpIndex»
 				«data.pullAccIfOperating»
-				«receiver.index = tmpIndex»
+				«ref.index = tmpIndex»
 			«ENDIF»
 		«ELSE»
 			«val tmpIndex = '''#«variable.nameOfOffset»'''»
-			«IF receiver.index === null»
-				«receiver.index = tmpIndex»
-			«ELSEIF receiver.index.contains(STATIC_PREFIX)»
-				«receiver.index = '''«receiver.index» + «tmpIndex»'''»
+			«IF ref.index === null»
+				«ref.index = tmpIndex»
+			«ELSEIF ref.index.contains(STATIC_PREFIX)»
+				«ref.index = '''«ref.index» + «tmpIndex»'''»
 			«ELSE»
 				«data.pushAccIfOperating»
 					CLC
 					LDA «tmpIndex»
-					ADC «receiver.index»
+					ADC «ref.index»
 					STA «tmpIndex»
 				«data.pullAccIfOperating»
-				«receiver.index = tmpIndex»
+				«ref.index = tmpIndex»
 			«ENDIF»
 		«ENDIF»
 		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«receiver.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 		«ELSE»
-			«receiver.transferTo(data)»
+			«ref.transferTo(data)»
 		«ENDIF»
 	'''
 
