@@ -1,0 +1,6 @@
+Controller2 {
+	
+	#isPressed(Byte button) {
+		return button & Controllers.#status2 = button
+	}
+}

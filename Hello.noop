@@ -1,62 +1,70 @@
 Hello extends Game {
 	
-	#header : NESHeader{
-		mapper : NESHeader.#NROM,      
-		mirroring : NESHeader.#VERTICAL, //(H Scroll)
-		prgRomPages : 2, //2 x 16 = 32Kb
-		chrRomPages : 1  //1 x 08 = 08Kb
-	}
-	
-	#midScreenH : 14
-	#midScreenV : 14
-	#mainNameTable : PPUControl.#nameTableDefault
+	#MID_SCREEN_H : 14
+	#MID_SCREEN_V : 14
 	#palettes @PRG-ROM : [[$1D, $30, $30, $30], [$1D, $30, $30, $30], [$1D, $30, $30, $30], [$1D, $30, $30, $30]]
 	#tileSet1 @CHR-ROM : "file://graphics.nes"
 	#tileSet2 @CHR-ROM : "file://graphics.nes"
-	#ppu : PPU{}
 	ppuctrl : PPUControl{}.toByte
 	ppumask : PPUMask{}.toByte
-	
-	main() {
-		loadPalletes
-		clearScreen
-		
-		#ppu.setBgNameTable(#mainNameTable, #midScreenV, #midScreenH, ["Hello", "NOOP!"])
-		#ppu.waitVBlank
 
-		refreshPPU
-		
-		return gameLoop
-	}
-	
-	gameLoop() {
+	main() {
+		#loadPalletes()
+		#clearScreen()
+
+		PPU.#setBgNameTable(PPUControl.#NAME_TABLE_DEFAULT, #MID_SCREEN_V, #MID_SCREEN_H, ["Hello", "NOOP!"])
+		PPU.#waitVBlank
+
+		refreshPPU()
+
 		forever {
 			//game logic goes here
+			Controllers.#update
 		}
 	}
 	
 	nmi() {
-		loadPalletes
+		#loadPalletes()
+		
+	    if (Controller1.#isPressed(Button.#A)) {
+			PPU.#setBgNameTable(PPUControl.#NAME_TABLE_DEFAULT, 16, 20, ["A"])
+		} else if (Controller1.#isPressed(Button.#B)) {
+			PPU.#setBgNameTable(PPUControl.#NAME_TABLE_DEFAULT, 16, 20, ["B"])
+		} else if (Controller1.#isPressed(Button.#SELECT)) {
+			PPU.#setBgNameTable(PPUControl.#NAME_TABLE_DEFAULT, 16, 20, ["Select"])
+		} else if (Controller1.#isPressed(Button.#START)) {
+			PPU.#setBgNameTable(PPUControl.#NAME_TABLE_DEFAULT, 16, 20, ["Start"])
+		} else if (Controller1.#isPressed(Button.#UP)) {
+			PPU.#setBgNameTable(PPUControl.#NAME_TABLE_DEFAULT, 16, 20, ["Up"])
+		} else if (Controller1.#isPressed(Button.#DOWN)) {
+			PPU.#setBgNameTable(PPUControl.#NAME_TABLE_DEFAULT, 16, 20, ["Down"])
+		} else if (Controller1.#isPressed(Button.#LEFT)) {
+			PPU.#setBgNameTable(PPUControl.#NAME_TABLE_DEFAULT, 16, 20, ["Left"])
+		} else if (Controller1.#isPressed(Button.#RIGHT)) {
+			PPU.#setBgNameTable(PPUControl.#NAME_TABLE_DEFAULT, 16, 20, ["Right"])
+		} else {
+			PPU.#setBgNameTable(PPUControl.#NAME_TABLE_DEFAULT, 16, 20, ["      "])
+		}
 		
 		//NMI done		
-		refreshPPU
+		refreshPPU() 
 	}
 	
-	loadPalletes() {
-		#ppu.loadBgPalettes(#palettes)
-		#ppu.loadSpritesPalettes(#palettes)
+	#loadPalletes() {
+		PPU.#loadBgPalettes(#palettes)
+		PPU.#loadSpritesPalettes(#palettes)
 	}
 	
 	refreshPPU() {
-		#ppu.setPPUControl(ppuctrl)
-		#ppu.setPPUMask(ppumask)
-		#ppu.setScrolling(0, 0)
+		PPU.#setPPUControl(ppuctrl)
+		PPU.#setPPUMask(ppumask)
+		PPU.#setScrolling(0, 0)
 	}
 	
-	clearScreen() {
-		for(row : 0; row < PPU.#screenHeightTiles; ++row) {
-			for(col : 0; col < PPU.#screenWidthTiles; ++col) {
-				#ppu.setBgNameTableTile(#mainNameTable, row, col, 0)
+	#clearScreen() {
+		for(row : 0; row < PPU.#SCREEN_HEIGHT_TILES; ++row) {
+			for(col : 0; col < PPU.#SCREEN_WIDTH_TILES; ++col) {
+				PPU.#setBgNameTableTile(PPUControl.#NAME_TABLE_DEFAULT, row, col, 0)
 			}
 		}
 	}

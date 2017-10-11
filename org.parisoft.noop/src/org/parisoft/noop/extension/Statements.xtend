@@ -3,12 +3,13 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.List
 import java.util.concurrent.atomic.AtomicInteger
-import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.AllocData
 import org.parisoft.noop.generator.CompileData
 import org.parisoft.noop.generator.CompileData.Mode
 import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.noop.AsmStatement
+import org.parisoft.noop.noop.BreakStatement
+import org.parisoft.noop.noop.ContinueStatement
 import org.parisoft.noop.noop.ElseStatement
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.ForStatement
@@ -22,8 +23,6 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.ContinueStatement
-import org.parisoft.noop.noop.BreakStatement
 
 class Statements {
 
@@ -32,7 +31,6 @@ class Statements {
 	@Inject extension Classes
 	@Inject extension Collections
 	@Inject extension Expressions
-	@Inject extension IQualifiedNameProvider
 
 	def getForContainer(Statement statement) {
 		var container = statement.eContainer
@@ -67,7 +65,7 @@ class Statements {
 	}
 
 	def nameOf(IfStatement ifStatement) {
-		'''«ifStatement.fullyQualifiedName»@«ifStatement.hashCode.toHexString»'''
+		'''«IF ifStatement.eContainer instanceof ElseStatement»elseif«ELSE»if«ENDIF»@«ifStatement.hashCode.toHexString»'''
 	}
 
 	def nameOfCondition(IfStatement ifStatement) {
@@ -75,7 +73,23 @@ class Statements {
 	}
 
 	def nameOfEnd(IfStatement ifStatement) {
-		'''«ifStatement.nameOf»@endif'''
+		'''«ifStatement.nameOf»@end'''
+	}
+
+	def nameOf(ElseStatement elseStatement) {
+		if (elseStatement.^if !== null) {
+			elseStatement.^if.nameOf
+		} else {
+			'''else@«elseStatement.hashCode.toHexString»'''
+		}
+	}
+	
+	def nameOfCondition(ElseStatement elseStatement) {
+		if (elseStatement.^if !== null) {
+			elseStatement.^if.nameOfCondition
+		} else {
+			elseStatement.nameOf
+		}
 	}
 
 	def nameOf(ReturnStatement ^return) {
@@ -87,15 +101,15 @@ class Statements {
 	}
 
 	def nameOf(ForeverStatement forever) {
-		'''«forever.fullyQualifiedName»@«forever.hashCode.toHexString»'''
+		'''forever@«forever.hashCode.toHexString»'''
 	}
 
 	def nameOfEnd(ForeverStatement forever) {
-		'''«forever.nameOf»@foreverend'''
+		'''«forever.nameOf»@end'''
 	}
 
 	def nameOf(ForStatement forStatement) {
-		'''«forStatement.fullyQualifiedName»@«forStatement.hashCode.toHexString»'''
+		'''for@«forStatement.hashCode.toHexString»'''
 	}
 
 	def nameOfCondition(ForStatement forStatement) {
@@ -111,7 +125,7 @@ class Statements {
 	}
 
 	def nameOfEnd(ForStatement forStatement) {
-		'''«forStatement.nameOf»@forend'''
+		'''«forStatement.nameOf»@end'''
 	}
 
 	def void prepare(Statement statement, AllocData data) {
@@ -282,17 +296,8 @@ class Statements {
 					type = statement.condition.typeOf
 					register = 'A'
 				])»
-				«IF statement.^else !== null»
-					«noop»
-						BNE +«statement.nameOf»:
-					«statement.^else.compile(statement, new CompileData => [
-						container = data.container
-						operation = data.operation
-					])»
-				«ELSE»
-					«noop»
-						BEQ +«endIf»:
-				«ENDIF»
+					BNE +«statement.nameOf»:
+					JMP +«IF statement.^else !== null»«statement.^else.nameOfCondition»«ELSE»«endIf»«ENDIF»:
 				+«statement.nameOf»:
 				«FOR stmt : statement.body.statements»
 					«stmt.compile(new CompileData => [
@@ -300,10 +305,12 @@ class Statements {
 						operation = data.operation
 					])»
 				«ENDFOR»
-				«IF mainIf != statement»
+				«IF statement.^else !== null»
 					«noop»
 						JMP +«endIf»:
-				«ELSE»
+					«statement.^else.compile(data)»
+				«ENDIF»
+				«IF mainIf == statement»
 					+«endIf»:
 				«ENDIF»
 			'''
@@ -417,15 +424,14 @@ class Statements {
 		}
 	}
 
-	def compile(ElseStatement elseStatement, IfStatement mainIf, CompileData data) '''
+	def compile(ElseStatement elseStatement, CompileData data) '''
 		«IF elseStatement.^if !== null»
 			«elseStatement.^if.compile(data)»
-		«ELSEIF elseStatement.body !== null»
-			«FOR stmt : elseStatement.body.statements»
+		«ELSE»
+			+«elseStatement.nameOf»:
+			«FOR stmt : elseStatement.body?.statements»
 				«stmt.compile(data)»
 			«ENDFOR»
-			«noop»
-				JMP +«mainIf.nameOfEnd»:
 		«ENDIF»
 	'''
 
