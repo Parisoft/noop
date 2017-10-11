@@ -63,6 +63,7 @@ class Datas {
 	'''
 
 	private def copyImmediateToAbsolute(CompileData src, CompileData dst) '''
+		«dst.pushAccIfOperating»
 		«IF dst.isIndexed»
 			«noop»
 				LDX «dst.index»
@@ -80,10 +81,11 @@ class Datas {
 			«noop»
 				STA «dst.absolute» + 1«IF dst.isIndexed», X«ENDIF»
 		«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyImmediateToIndirect(CompileData src, CompileData dst) '''
-		«noop»
+		«dst.pushAccIfOperating»
 			LDY «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
 			LDA #<(«src.immediate»)
 			STA («dst.indirect»), Y
@@ -98,9 +100,11 @@ class Datas {
 				INY
 				STA («dst.indirect»), Y
 		«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyImmediateToRegister(CompileData src, CompileData dst) '''
+		«dst.pushAccIfOperating»
 		«IF dst.sizeOf > 1»
 			«IF src.sizeOf > 1»
 				«noop»
@@ -115,9 +119,11 @@ class Datas {
 			«noop»
 				LDA #«src.immediate»
 		«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyAbsoluteToAbsolute(CompileData src, CompileData dst) '''
+		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
 			«noop»
 				«IF src.isIndexed»
@@ -180,9 +186,11 @@ class Datas {
 					BNE -«copyLoop»
 			«ENDIF»
 		«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyAbsoluteToIndirect(CompileData src, CompileData dst) '''
+		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
 			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
 				«IF src.isIndexed»
@@ -254,9 +262,11 @@ class Datas {
 					BNE -«copyLoop»
 			«ENDIF»
 		«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyAbsoluteToRegister(CompileData src, CompileData dst) '''
+		«dst.pushAccIfOperating»
 		«IF src.isIndexed»
 			«noop»
 				LDX «src.index»
@@ -273,9 +283,11 @@ class Datas {
 		«ENDIF»
 		«noop»
 			LDA «src.absolute»«IF src.isIndexed», X«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyIndirectToAbsolute(CompileData src, CompileData dst) '''
+		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
 			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
 				«IF src.isIndexed»
@@ -343,9 +355,11 @@ class Datas {
 					BNE -«copyLoop»
 			«ENDIF»
 		«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyIndirectToIndirect(CompileData src, CompileData dst) '''
+		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
 			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
 				LDX «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
@@ -412,9 +426,11 @@ class Datas {
 					BNE -«copyLoop»
 			«ENDIF»
 		«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyIndirectToRegister(CompileData src, CompileData dst) '''
+		«dst.pushAccIfOperating»
 		«IF dst.sizeOf > 1»
 			«IF src.sizeOf > 1»
 				«noop»
@@ -439,6 +455,7 @@ class Datas {
 		«ENDIF»
 		«noop»
 			LDA («src.indirect»), Y
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyRegisterToAbsolute(CompileData src, CompileData dst) '''
@@ -748,9 +765,13 @@ class Datas {
 
 	def pointTo(CompileData ptr, CompileData src) '''
 		«IF src.absolute !== null && ptr.indirect !== null»
+			«ptr.pushAccIfOperating»
 			«ptr.pointIndirectToAbsolute(src)»
+			«ptr.pullAccIfOperating»
 		«ELSEIF src.indirect !== null && ptr.indirect !== null»
+			«ptr.pushAccIfOperating»
 			«ptr.pointIndirectToIndirect(src)»
+			«ptr.pullAccIfOperating»
 		«ENDIF»
 	'''
 

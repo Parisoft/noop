@@ -4,6 +4,7 @@
 package org.parisoft.noop.generator
 
 import com.google.inject.Inject
+import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
@@ -13,12 +14,11 @@ import org.eclipse.xtext.resource.IResourceDescriptions
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.^extension.Statements
 import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopPackage
-import org.parisoft.noop.^extension.Statements
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Generates code from your model files on save.
@@ -51,9 +51,22 @@ class NoopGenerator extends AbstractGenerator {
 		
 		val data = gameImpl.prepare
 		gameImpl.alloc(data)
-		val content = data.compile
+		val content = data.compile.optimize
+		
+		new ASM('''«gameImpl.name».asm''', content)
+	}
+	
+	private def optimize(CharSequence code) {
+		val lines = code.toString.split(System::lineSeparator)
+		val builder = new StringBuilder
 
-		new ASM('''«gameImpl.name».asm''', content.toString)
+		lines.forEach[line, i|
+			if (!(line == '	PLA' && lines.get(i + 1) == '	PHA' || line == '	PHA' && lines.get(i - 1) == '	PLA')) {
+				builder.append(line).append(System::lineSeparator)
+			}
+		]
+		
+		builder.toString
 	}
 
 	private def gameClass(Resource resource) {

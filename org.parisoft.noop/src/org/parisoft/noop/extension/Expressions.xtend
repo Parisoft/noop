@@ -483,6 +483,7 @@ class Expressions {
 				if (expression.member instanceof Variable) {
 					(expression.member as Variable).prepare(data)
 				} else if (expression.member instanceof Method) {
+					expression.args.forEach[prepare(data)]
 					(expression.member as Method).prepare(data)
 				}
 
@@ -492,6 +493,7 @@ class Expressions {
 				if (expression.member instanceof Variable) {
 					(expression.member as Variable).prepare(data)
 				} else if (expression.member instanceof Method) {
+					expression.args.forEach[prepare(data)]
 					(expression.member as Method).prepare(data)
 				}
 
@@ -869,11 +871,16 @@ class Expressions {
 					«val defaultByte = NoopFactory::eINSTANCE.createByteLiteral => [value = 0]»
 					«defaultByte.compile(data)»
 				«ELSE»
-					«data.pushAccIfOperating»
 					«val constructor = expression.nameOfConstructor»
-					«val receiver = new CompileData => [indirect = expression.nameOfReceiver]»
+					«val receiver = new CompileData => [
+						operation = data.operation
+						indirect = expression.nameOfReceiver
+					]»
 					«IF expression.isOnMemberSelectionOrReference»
-						«val tmp = new CompileData => [absolute = expression.nameOfTmpVar(data.container)]»
+						«val tmp = new CompileData => [
+							operation = data.operation
+							absolute = expression.nameOfTmpVar(data.container)
+						]»
 						«IF data.mode === Mode::POINT»
 							«data.pointTo(tmp)»
 						«ELSEIF data.mode == Mode::REFERENCE»
@@ -883,7 +890,7 @@ class Expressions {
 					«ELSE»
 						«receiver.pointTo(data)»
 					«ENDIF»
-					«noop»
+					«data.pushAccIfOperating»
 						JSR «constructor»
 					«FOR field : expression.constructor?.fields ?: emptyList»
 						«field.value.compile(new CompileData => [
@@ -961,8 +968,14 @@ class Expressions {
 				«ELSEIF member instanceof Method»
 					«val method = member as Method»
 					«IF method.isNonStatic»
-						«val outerReceiver = new CompileData => [indirect = '''«data.container».rcv''']»
-						«val innerReceiver = new CompileData => [indirect = method.nameOfReceiver]»
+						«val outerReceiver = new CompileData => [
+							operation = data.operation
+							indirect = '''«data.container».rcv'''
+						]»
+						«val innerReceiver = new CompileData => [
+							operation = data.operation
+							indirect = method.nameOfReceiver
+						]»
 						«innerReceiver.pointTo(outerReceiver)»
 					«ENDIF»
 					«method.compileInvocation(expression.args, data)»

@@ -233,14 +233,18 @@ class Statements {
 	}
 
 	def alloc(ElseStatement statement, AllocData data) {
+		if (statement.^if !== null) {
+			return statement.^if.alloc(data)
+		}
+
 		val snapshot = data.snapshot
 		val chunks = statement.body.statements.map[alloc(data)].flatten
 
 		chunks.disoverlap(data.container)
-
 		data.restoreTo(snapshot)
 
-		return chunks + statement?.^if.alloc(data)
+		return chunks
+
 	}
 
 	def String compile(Statement statement, CompileData data) {
