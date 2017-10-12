@@ -112,7 +112,6 @@ class Datas {
 	'''
 
 	private def copyImmediateToRegister(CompileData src, CompileData dst) '''
-		«dst.pushAccIfOperating»
 		«IF dst.sizeOf > 1»
 			«IF src.sizeOf > 1»
 				«noop»
@@ -127,7 +126,6 @@ class Datas {
 			«noop»
 				LDA #«src.immediate»
 		«ENDIF»
-		«dst.pullAccIfOperating»
 	'''
 	
 	private def copyAbsoluteToAbsolute(CompileData src, CompileData dst) '''
@@ -274,7 +272,6 @@ class Datas {
 	'''
 
 	private def copyAbsoluteToRegister(CompileData src, CompileData dst) '''
-		«dst.pushAccIfOperating»
 		«IF src.isIndexed»
 			«noop»
 				LDX «src.index»
@@ -291,7 +288,6 @@ class Datas {
 		«ENDIF»
 		«noop»
 			LDA «src.absolute»«IF src.isIndexed», X«ENDIF»
-		«dst.pullAccIfOperating»
 	'''
 
 	private def copyIndirectToAbsolute(CompileData src, CompileData dst) '''
@@ -438,7 +434,6 @@ class Datas {
 	'''
 
 	private def copyIndirectToRegister(CompileData src, CompileData dst) '''
-		«dst.pushAccIfOperating»
 		«IF dst.sizeOf > 1»
 			«IF src.sizeOf > 1»
 				«noop»
@@ -463,7 +458,6 @@ class Datas {
 		«ENDIF»
 		«noop»
 			LDA («src.indirect»), Y
-		«dst.pullAccIfOperating»
 	'''
 
 	private def copyRegisterToAbsolute(CompileData src, CompileData dst) '''
