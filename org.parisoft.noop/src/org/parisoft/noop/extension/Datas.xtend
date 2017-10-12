@@ -36,6 +36,8 @@ class Datas {
 				«src.copyImmediateToIndirect(dst)»
 			«ELSEIF dst.register !== null»
 				«src.copyImmediateToRegister(dst)»
+			«ELSEIF dst.relative !== null»
+				«src.branchImmediateToRelative(dst)»
 			«ENDIF»
 		«ELSEIF src.absolute !== null»
 			«IF dst.absolute !== null»
@@ -44,6 +46,8 @@ class Datas {
 				«src.copyAbsoluteToIndirect(dst)»
 			«ELSEIF dst.register !== null»
 				«src.copyAbsoluteToRegister(dst)»
+			«ELSEIF dst.relative !== null»
+				«src.branchAbsoluteToRelative(dst)»
 			«ENDIF»
 		«ELSEIF src.indirect !== null»
 			«IF dst.absolute !== null»
@@ -52,12 +56,16 @@ class Datas {
 				«src.copyIndirectToIndirect(dst)»
 			«ELSEIF dst.register !== null»
 				«src.copyIndirectToRegister(dst)»
+			«ELSEIF dst.relative !== null»
+				«src.branchIndirectToRelative(dst)»
 			«ENDIF»
 		«ELSEIF src.register !== null»
 			«IF dst.absolute !== null»
 				«src.copyRegisterToAbsolute(dst)»
 			«ELSEIF dst.indirect !== null»
 				«src.copyRegisterToIndirect(dst)»
+			«ELSEIF dst.relative !== null»
+				«src.branchRegisterToRelative(dst)»
 			«ENDIF»
 		«ENDIF»
 	'''
@@ -121,7 +129,7 @@ class Datas {
 		«ENDIF»
 		«dst.pullAccIfOperating»
 	'''
-
+	
 	private def copyAbsoluteToAbsolute(CompileData src, CompileData dst) '''
 		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
@@ -499,6 +507,36 @@ class Datas {
 		«ENDIF»
 	'''
 
+	private def branchImmediateToRelative(CompileData src, CompileData dst)'''
+		«dst.pushAccIfOperating»
+			LDA #«src.immediate»
+			BNE +«dst.relative»:
+		«dst.pullAccIfOperating»
+	'''
+	
+	private def branchAbsoluteToRelative(CompileData src, CompileData dst)'''
+		«dst.pushAccIfOperating»
+			«IF src.isIndexed»
+				LDX «src.index»
+			«ENDIF»
+			LDA «src.absolute»«IF src.isIndexed», X«ENDIF»
+			BNE +«dst.relative»:
+		«dst.pullAccIfOperating»
+	'''
+	
+	private def branchIndirectToRelative(CompileData src, CompileData dst)'''
+		«dst.pushAccIfOperating»
+			LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
+			LDA («src.indirect»), Y
+			BNE +«dst.relative»:
+		«dst.pullAccIfOperating»
+	'''
+	
+	private def branchRegisterToRelative(CompileData src, CompileData dst)'''
+		«noop»
+			BNE +«dst.relative»:
+	'''
+
 	def copyArrayTo(CompileData src, CompileData dst, int len) '''
 		«IF src.absolute !== null && dst.absolute !== null»
 			«src.copyArrayAbsoluteToAbsoulte(dst, len)»
@@ -512,6 +550,7 @@ class Datas {
 	'''
 
 	private def copyArrayAbsoluteToAbsoulte(CompileData src, CompileData dst, int len) '''
+		«dst.pushAccIfOperating»
 		«val bytes = len * dst.sizeOf»
 		«IF bytes < loopThreshold»
 			«noop»
@@ -568,9 +607,11 @@ class Datas {
 					BNE -«copyLoop»
 			«ENDIF»
 		«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyArrayAbsoluteToIndirect(CompileData src, CompileData dst, int len) '''
+		«dst.pushAccIfOperating»
 		«val bytes = len * dst.sizeOf»
 		«IF bytes < loopThreshold»
 			«noop»
@@ -632,9 +673,11 @@ class Datas {
 					BNE -«copyLoop»
 			«ENDIF»
 		«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyArrayIndirectToAbsolute(CompileData src, CompileData dst, int len) '''
+		«dst.pushAccIfOperating»
 		«val bytes = len * dst.sizeOf»
 		«IF bytes < loopThreshold»
 			«noop»
@@ -696,9 +739,11 @@ class Datas {
 					BNE -«copyLoop»
 			«ENDIF»
 		«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	private def copyArrayIndirectToIndirect(CompileData src, CompileData dst, int len) '''
+		«dst.pushAccIfOperating»
 		«val bytes = len * dst.sizeOf»
 		«IF bytes < loopThreshold»
 			«noop»
@@ -755,6 +800,7 @@ class Datas {
 					BNE -«copyLoop»
 			«ENDIF»
 		«ENDIF»
+		«dst.pullAccIfOperating»
 	'''
 
 	def fillArrayWith(CompileData array, CompileData identity, int len) '''

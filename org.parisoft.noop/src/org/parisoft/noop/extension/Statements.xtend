@@ -266,7 +266,7 @@ class Statements {
 			Variable: '''
 				«IF statement.isROM»
 					«statement.value.compile(data => [
-						relative = statement.nameOfStatic
+						db = statement.nameOfStatic
 						type = statement.typeOf
 					])»
 				«ELSEIF data.absolute !== null»
@@ -294,9 +294,8 @@ class Statements {
 					container = data.container
 					operation = data.operation
 					type = statement.condition.typeOf
-					register = 'A'
+					relative = statement.nameOf.toString
 				])»
-					BNE +«statement.nameOf»:
 					JMP +«IF statement.^else !== null»«statement.^else.nameOfCondition»«ELSE»«endIf»«ENDIF»:
 				+«statement.nameOf»:
 				«FOR stmt : statement.body.statements»
@@ -316,6 +315,7 @@ class Statements {
 			'''
 			ForStatement: '''
 				«val forCondition = statement.nameOfCondition»
+				«val forIteration = statement.nameOfIteration»
 				«val forEnd = statement.nameOfEnd»
 				+«statement.nameOf»:
 				«FOR variable : statement.variables»
@@ -330,11 +330,11 @@ class Statements {
 						container = data.container
 						operation = data.operation
 						type = statement.condition.typeOf
-						register = 'A'
+						relative = forIteration.toString
 					])»
-						BEQ +«forEnd»:
+						JMP +«forEnd»:
 				«ENDIF»
-				+«statement.nameOfIteration»:
+				+«forIteration»:
 				«FOR stmt : statement.body.statements»
 					«stmt.compile(new CompileData => [
 						container = data.container

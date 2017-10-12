@@ -745,7 +745,7 @@ class Expressions {
 			CastExpression: '''«expression.left.compile(data)»'''
 			InheritsExpression: ''';TODO: inherits'''
 			ByteLiteral: '''
-				«IF data.relative !== null»
+				«IF data.db !== null»
 					«val bytes = expression.valueOf.toBytes»
 					«data.relative»:
 						«IF data.sizeOf == 1»
@@ -766,8 +766,8 @@ class Expressions {
 				«boolAsByte.compile(data)»
 			'''
 			StringLiteral: '''
-				«IF data.relative !== null»
-					«data.relative»:
+				«IF data.db !== null»
+					«data.db»:
 						«IF expression.value.startsWith(FILE_URI)»
 							.incbin "«expression.value.substring(FILE_URI.length)»"
 						«ELSE»
@@ -803,8 +803,8 @@ class Expressions {
 				«ENDIF»
 			'''
 			ArrayLiteral: '''
-				«IF data.relative !== null»
-					«data.relative»:
+				«IF data.db !== null»
+					«data.db»:
 						.db «expression.valueOf.toBytes.join(', ', [toHex])»
 				«ELSE»
 					«val tmp = if (expression.isOnMemberSelectionOrReference) {
@@ -1008,6 +1008,7 @@ class Expressions {
 		«val opr = new CompileData => [
 			container = data.container
 			operation = binaryOperation
+			relative = data.relative
 			type = if (data.type.isBoolean) left.typeOf else data.type
 			mode = Mode::OPERATE
 		]»
@@ -1036,7 +1037,7 @@ class Expressions {
 				absolute = Members::TEMP_VAR_NAME2
 			]»
 			«data.operateOn(tmp)»
-		«ELSEIF data.mode === Mode::COPY»
+		«ELSEIF data.mode === Mode::COPY && data.relative === null»
 			«val res = new CompileData => [
 				container = data.container
 				type = data.type

@@ -62,21 +62,21 @@ class Operations {
 
 	def isEquals(CompileData acc, CompileData operand) {
 		if (operand.immediate !== null) {
-			acc.equalsImmediate(operand)
+			acc.equalsImmediate(false, operand)
 		} else if (operand.absolute !== null) {
-			acc.equalsAbsolute(operand)
+			acc.equalsAbsolute(false, operand)
 		} else if (operand.indirect !== null) {
-			acc.equalsIndirect(operand)
+			acc.equalsIndirect(false, operand)
 		}
 	}
 
 	def notEquals(CompileData acc, CompileData operand) {
 		if (operand.immediate !== null) {
-			acc.notEqualsImmediate(operand)
+			acc.equalsImmediate(true, operand)
 		} else if (operand.absolute !== null) {
-			acc.notEqualsAbsolute(operand)
+			acc.equalsAbsolute(true, operand)
 		} else if (operand.indirect !== null) {
-			acc.notEqualsIndirect(operand)
+			acc.equalsIndirect(true, operand)
 		}
 	}
 
@@ -215,225 +215,166 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def equalsImmediate(CompileData acc, CompileData operand) '''
+	private def equalsImmediate(CompileData acc, boolean diff, CompileData operand) '''
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
+		«val comparisonEnd = labelForComparisonEnd»
 		«IF acc.sizeOf > 1»
 			«noop»
-				LDX #«Members::TRUE»
 				CMP #<(«operand.immediate»)
-				BNE +«comparisonIsFalse»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 			«IF operand.sizeOf > 1»
 				«noop»
 					PLA
 					CMP #>(«operand.immediate»)
-					BEQ +«comparisonIsTrue»
 			«ELSE»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					CMP «Members::TEMP_VAR_NAME1»
-					BEQ +«comparisonIsTrue»
 			«ENDIF»
-			+«comparisonIsFalse»
-				LDX #«Members::FALSE»
-			+«comparisonIsTrue»
-				TXA
+			«IF acc.relative === null»
+				«noop»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
+				+«comparisonIsFalse»
+					LDA #«Members::FALSE»
+					JMP +«comparisonEnd»
+				+«comparisonIsTrue»
+					LDA #«Members::TRUE»
+				+«comparisonEnd»
+			«ELSE»
+				«noop»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+				+«comparisonIsFalse»
+			«ENDIF»
 		«ELSE»
 			«noop»
-				LDX #«Members::TRUE»
 				CMP #«operand.immediate»
-				BEQ +«comparisonIsTrue»
-				LDX #«Members::FALSE»
-			+«comparisonIsTrue»
-				TXA
+			«IF acc.relative === null»
+				«noop»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
+					LDA #«Members::FALSE»
+					JMP +«comparisonEnd»
+				+«comparisonIsTrue»
+					LDA #«Members::TRUE»
+				+«comparisonEnd»
+			«ELSE»
+				«noop»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+			«ENDIF»
 		«ENDIF»
 	'''
 
-	private def equalsAbsolute(CompileData acc, CompileData operand) '''
+	private def equalsAbsolute(CompileData acc, boolean diff, CompileData operand) '''
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
+		«val comparisonEnd = labelForComparisonEnd»
 			«IF operand.isIndexed»
 				LDX «operand.index»
 			«ENDIF»
-			LDY #«Members::TRUE»
 		«IF acc.sizeOf > 1»
 			«noop»
 				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-				BNE +«comparisonIsFalse»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 			«IF operand.sizeOf > 1»
 				«noop»
 					PLA
 					CMP «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
-					BEQ +«comparisonIsTrue»
 			«ELSE»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					CMP «Members::TEMP_VAR_NAME1»
-					BEQ +«comparisonIsTrue»
 			«ENDIF»
-			+«comparisonIsFalse»
-				LDY #«Members::FALSE»
-			+«comparisonIsTrue»
-				TYA
+			«IF acc.relative === null»
+				«noop»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
+				+«comparisonIsFalse»
+					LDA #«Members::FALSE»
+					JMP +«comparisonEnd»
+				+«comparisonIsTrue»
+					LDA #«Members::TRUE»
+				+«comparisonEnd»
+			«ELSE»
+				«noop»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+				+«comparisonIsFalse»
+			«ENDIF»
 		«ELSE»
 			«noop»
 				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-				BEQ +«comparisonIsTrue»
-				LDY #«Members::FALSE»
-			+«comparisonIsTrue»
-				TYA
+			«IF acc.relative === null»
+				«noop»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
+					LDA #«Members::FALSE»
+					JMP +«comparisonEnd»
+				+«comparisonIsTrue»
+					LDA #«Members::TRUE»
+				+«comparisonEnd»
+			«ELSE»
+				«noop»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+			«ENDIF»
 		«ENDIF»
 	'''
 
-	private def equalsIndirect(CompileData acc, CompileData operand) '''
+	private def equalsIndirect(CompileData acc, boolean diff, CompileData operand) '''
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
-			LDX #«Members::TRUE»
+		«val comparisonEnd = labelForComparisonEnd»
 			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 		«IF acc.sizeOf > 1»
 			«noop»
 				CMP «operand.indirect», Y
-				BNE +«comparisonIsFalse»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 			«IF operand.sizeOf > 1»
 				«noop»
 					PLA
 					CMP «operand.indirect», Y
-					BEQ +«comparisonIsTrue»
 			«ELSE»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					CMP «Members::TEMP_VAR_NAME1»
-					BEQ +«comparisonIsTrue»
 			«ENDIF»
-			+«comparisonIsFalse»
-				LDX #«Members::FALSE»
-			+«comparisonIsTrue»
-				TXA
-		«ELSE»
-			«noop»
-				CMP «operand.indirect», Y
-				BEQ +«comparisonIsTrue»
-				LDX #«Members::FALSE»
-			+«comparisonIsTrue»
-				TXA
-		«ENDIF»
-	'''
-
-	private def notEqualsImmediate(CompileData acc, CompileData operand) '''
-		«val comparisonIsTrue = labelForComparisonIsTrue»
-		«val comparisonIsFalse = labelForComparisonIsFalse»
-		«IF acc.sizeOf > 1»
-			«noop»
-				LDX #«Members::TRUE»
-				CMP #<(«operand.immediate»)
-				BNE +«comparisonIsTrue»
-			«IF operand.sizeOf > 1»
+			«IF acc.relative === null»
 				«noop»
-					PLA
-					CMP #>(«operand.immediate»)
-					BNE +«comparisonIsTrue»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
+				+«comparisonIsFalse»
+					LDA #«Members::FALSE»
+					JMP +«comparisonEnd»
+				+«comparisonIsTrue»
+					LDA #«Members::TRUE»
+				+«comparisonEnd»
 			«ELSE»
-				«operand.loadMSB»
-					STA «Members::TEMP_VAR_NAME1»
-					PLA
-					CMP «Members::TEMP_VAR_NAME1»
-					BNE +«comparisonIsTrue»
-			«ENDIF»
-			+«comparisonIsFalse»
-				LDX #«Members::FALSE»
-			+«comparisonIsTrue»
-				TXA
-		«ELSE»
-			«noop»
-				LDX #«Members::TRUE»
-				CMP #«operand.immediate»
-				BNE +«comparisonIsTrue»
-				LDX #«Members::FALSE»
-			+«comparisonIsTrue»
-				TXA
-		«ENDIF»
-	'''
-
-	private def notEqualsAbsolute(CompileData acc, CompileData operand) '''
-		«val comparisonIsTrue = labelForComparisonIsTrue»
-		«val comparisonIsFalse = labelForComparisonIsFalse»
-			«IF operand.isIndexed»
-				LDX «operand.index»
-			«ENDIF»
-			LDY #«Members::TRUE»
-		«IF acc.sizeOf > 1»
-			«noop»
-				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-				BNE +«comparisonIsTrue»
-			«IF operand.sizeOf > 1»
 				«noop»
-					PLA
-					CMP «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
-					BNE +«comparisonIsTrue»
-			«ELSE»
-				«operand.loadMSB»
-					STA «Members::TEMP_VAR_NAME1»
-					PLA
-					CMP «Members::TEMP_VAR_NAME1»
-					BNE +«comparisonIsTrue»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+				+«comparisonIsFalse»
 			«ENDIF»
-			+«comparisonIsFalse»
-				LDY #«Members::FALSE»
-			+«comparisonIsTrue»
-				TYA
-		«ELSE»
-			«noop»
-				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-				BNE +«comparisonIsTrue»
-				LDY #«Members::FALSE»
-			+«comparisonIsTrue»
-				TYA
-		«ENDIF»
-	'''
-
-	private def notEqualsIndirect(CompileData acc, CompileData operand) '''
-		«val comparisonIsTrue = labelForComparisonIsTrue»
-		«val comparisonIsFalse = labelForComparisonIsFalse»
-			LDX #«Members::TRUE»
-			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
-		«IF acc.sizeOf > 1»
-			«noop»
-				CMP («operand.indirect»), Y
-				BNE +«comparisonIsTrue»
-			«IF operand.sizeOf > 1»
-				«noop»
-					PLA
-					CMP («operand.indirect»), Y
-					BNE +«comparisonIsTrue»
-			«ELSE»
-				«operand.loadMSB»
-					STA «Members::TEMP_VAR_NAME1»
-					PLA
-					CMP «Members::TEMP_VAR_NAME1»
-					BNE +«comparisonIsTrue»
-			«ENDIF»
-			+«comparisonIsFalse»
-				LDX #«Members::FALSE»
-			+«comparisonIsTrue»
-				TXA
 		«ELSE»
 			«noop»
 				CMP («operand.indirect»), Y
-				BNE +«comparisonIsTrue»
-				LDX #«Members::FALSE»
-			+«comparisonIsTrue»
-				TXA
+			«IF acc.relative === null»
+				«noop»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
+					LDA #«Members::FALSE»
+					JMP +«comparisonEnd»
+				+«comparisonIsTrue»
+					LDA #«Members::TRUE»
+				+«comparisonEnd»
+			«ELSE»
+				«noop»
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+			«ENDIF»
 		«ENDIF»
 	'''
 
 	private def compareImmediate(CompileData acc, String ubranch, String sbranch, CompileData operand) '''
+		«var branch = ubranch»
 		«val comparison = labelForComparison»
+		«val comparisonEnd = labelForComparisonEnd»
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
-			LDX #«Members::TRUE»
 		«IF acc.type.isSigned && operand.type.isSigned»
 			«IF acc.sizeOf > 1»
 				«noop»
@@ -453,11 +394,10 @@ class Operations {
 					SEC
 					SBC #«operand.immediate»
 			«ENDIF»
-			«noop»
+			«branch = sbranch»
 				BVC +«comparison»
 				EOR #$80
 			+«comparison»
-				«sbranch» +«comparisonIsTrue»
 		«ELSE»
 			«IF acc.type.isUnsigned && operand.type.isSigned»
 				«IF operand.sizeOf > 1»
@@ -500,22 +440,31 @@ class Operations {
 				«noop»
 					CMP #«operand.immediate»
 			«ENDIF»
-			«noop»
-				«ubranch» +«comparisonIsTrue»
 		«ENDIF»
-		+«comparisonIsFalse»
-			LDX #«Members::FALSE»
-		+«comparisonIsTrue»
-			TXA
+		«IF acc.relative === null»
+			«noop»
+				«branch» +«comparisonIsTrue»
+			+«comparisonIsFalse»
+				LDA #«Members::FALSE»
+				JMP +«comparisonEnd»
+			+«comparisonIsTrue»
+				LDA #«Members::TRUE»
+			+«comparisonEnd»
+		«ELSE»
+			«noop»
+				«branch» +«acc.relative»:
+			+«comparisonIsFalse»
+		«ENDIF»
 	'''
 
 	private def compareAbsolute(CompileData acc, String ubranch, String sbranch, CompileData operand) '''
+		«var branch = ubranch»
 		«val comparison = labelForComparison»
+		«val comparisonEnd = labelForComparisonEnd»
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«IF acc.type.isSigned && operand.type.isSigned»
 			«noop»
-				LDY #«Members::TRUE»
 				«IF operand.isIndexed»
 					LDX «operand.index»
 				«ENDIF»
@@ -537,11 +486,10 @@ class Operations {
 					SEC
 					SBC «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 			«ENDIF»
-			«noop»
+			«branch = sbranch»
 				BVC +«comparison»
 				EOR #$80
 			+«comparison»
-				«sbranch» +«comparisonIsTrue»
 		«ELSE»
 			«noop»
 				«IF operand.isIndexed»
@@ -552,16 +500,12 @@ class Operations {
 					«noop»
 						LDY «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
 						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
-						LDY #«Members::TRUE»
 				«ELSE»
 					«noop»
 						LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
-						LDY #«Members::TRUE»
 				«ENDIF»
 			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
-				«noop»
-					LDY #«Members::TRUE»
 				«IF acc.sizeOf > 1»
 					«noop»
 						STA «Members::TEMP_VAR_NAME1»
@@ -575,9 +519,6 @@ class Operations {
 						PLA
 						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
-			«ELSE»
-				«noop»
-					LDY #«Members::TRUE»
 			«ENDIF»
 			«noop»
 				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
@@ -593,22 +534,31 @@ class Operations {
 						SBC «Members::TEMP_VAR_NAME1»
 				«ENDIF»
 			«ENDIF»
-			«noop»
-				«ubranch» +«comparisonIsTrue»
 		«ENDIF»
-		+«comparisonIsFalse»
-			LDY #«Members::FALSE»
-		+«comparisonIsTrue»
-			TYA
+		«IF acc.relative === null»
+			«noop»
+				«branch» +«comparisonIsTrue»
+			+«comparisonIsFalse»
+				LDA #«Members::FALSE»
+				JMP +«comparisonEnd»
+			+«comparisonIsTrue»
+				LDA #«Members::TRUE»
+			+«comparisonEnd»
+		«ELSE»
+			«noop»
+				«branch» +«acc.relative»:
+			+«comparisonIsFalse»
+		«ENDIF»
 	'''
 
 	private def compareIndirect(CompileData acc, String ubranch, String sbranch, CompileData operand) '''
+		«var branch = ubranch»
 		«val comparison = labelForComparison»
+		«val comparisonEnd = labelForComparisonEnd»
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«IF acc.type.isSigned && operand.type.isSigned»
 			«noop»
-				LDX #«Members::TRUE»
 				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 			«IF acc.sizeOf > 1»
 				«noop»
@@ -629,11 +579,10 @@ class Operations {
 					SEC
 					SBC («operand.indirect»), Y
 			«ENDIF»
-			«noop»
+			«branch = sbranch»
 				BVC +«comparison»
 				EOR #$80
 			+«comparison»
-				«sbranch» +«comparisonIsTrue»
 		«ELSE»
 			«IF acc.type.isUnsigned && operand.type.isSigned»
 				«IF operand.sizeOf > 1»
@@ -649,7 +598,6 @@ class Operations {
 						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						PLA
 						DEY
-						LDX #«Members::TRUE»
 				«ELSE»
 					«noop»
 						LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
@@ -657,11 +605,8 @@ class Operations {
 						LDA («operand.indirect»), Y
 						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						PLA
-						LDX #«Members::TRUE»
 				«ENDIF»
 			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
-				«noop»
-					LDX #«Members::TRUE»
 				«IF acc.sizeOf > 1»
 					«noop»
 						STA «Members::TEMP_VAR_NAME1»
@@ -677,7 +622,6 @@ class Operations {
 				«ENDIF»
 			«ELSE»
 				«noop»
-					LDX #«Members::TRUE»
 					LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 			«ENDIF»
 			«noop»
@@ -694,13 +638,21 @@ class Operations {
 						PLA
 						SBC «Members::TEMP_VAR_NAME1»
 				«ENDIF»
-				«noop»
-					«ubranch» +«comparisonIsTrue»
 			«ENDIF»
-			+«comparisonIsFalse»
-				LDX #«Members::FALSE»
-			+«comparisonIsTrue»
-				TXA
+			«IF acc.relative === null»
+				«noop»
+					«branch» +«comparisonIsTrue»
+				+«comparisonIsFalse»
+					LDA #«Members::FALSE»
+					JMP +«comparisonEnd»
+				+«comparisonIsTrue»
+					LDA #«Members::TRUE»
+				+«comparisonEnd»
+			«ELSE»
+				«noop»
+					«branch» +«acc.relative»:
+				+«comparisonIsFalse»
+			«ENDIF»
 		«ENDIF»
 	'''
 
@@ -1128,6 +1080,8 @@ class Operations {
 	private def labelForComparisonIsTrue() '''comparisonIsTrue«labelCounter.andIncrement»:'''
 
 	private def labelForComparisonIsFalse() '''comparisonIsFalse«labelCounter.andIncrement»:'''
+
+	private def labelForComparisonEnd() '''comparisonEnd«labelCounter.andIncrement»:'''
 
 	private def noop() {
 	}

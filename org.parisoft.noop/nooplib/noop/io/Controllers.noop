@@ -8,14 +8,12 @@ Controllers {
 		!	STA $4016 !
 		!	LDA #$00  !
 		!	STA $4016 !
+		!	STA ?#status1? ; reset player1    !
+		!	STA ?#status2? ; reset player2    !
 		!+getA1:                              !
 		!	LDA $4016     ; player 1 - A      !
 	    !	AND #%00000001                    !
-	    !	BNE +setA1:                       !
-	    !	LDA #%11111110                    !
-	    !   AND ?#status1?                    !
-	    !	STA ?#status1?                    !
-	    !	JMP +getB1:                       !
+	    !	BEQ +getB1:                       !
 	    !+setA1:                              !
 	    !	LDA #%00000001                    !
 	    !	ORA ?#status1?                    !
@@ -23,11 +21,7 @@ Controllers {
 	    !+getB1:                              !
 		!	LDA $4016     ; player 1 - B      !
 	    !	AND #%00000001                    !
-	    !	BNE +setB1:                       !
-	    !	LDA #%11111101                    !
-	    !   AND ?#status1?                    !
-	    !	STA ?#status1?                    !
-	    !	JMP +getSelect1:                  !
+	    !	BEQ +getSelect1:                  !
 	    !+setB1:                              !
 	    !	LDA #%00000010                    !
 	    !	ORA ?#status1?                    !
@@ -35,11 +29,7 @@ Controllers {
 	    !+getSelect1:                         !
 		!	LDA $4016     ; player 1 - Select !
 	    !	AND #%00000001                    !
-	    !	BNE +setSelect1:                  !
-	    !	LDA #%11111011                    !
-	    !   AND ?#status1?                    !
-	    !	STA ?#status1?                    !
-	    !	JMP +getStart1:                   !
+	    !	BEQ +getStart1:                   !
 	    !+setSelect1:                         !
 	    !	LDA #%00000100                    !
 	    !	ORA ?#status1?                    !
@@ -47,11 +37,7 @@ Controllers {
 	    !+getStart1:                          !
 		!	LDA $4016     ; player 1 - Start  !
 	    !	AND #%00000001                    !
-	    !	BNE +setStart1:                   !
-	    !	LDA #%11110111                    !
-	    !   AND ?#status1?                    !
-	    !	STA ?#status1?                    !
-	    !	JMP +getUp1:                      !
+	    !	BEQ +getUp1:                      !
 	    !+setStart1:                          !
 	    !	LDA #%00001000                    !
 	    !	ORA ?#status1?                    !
@@ -59,11 +45,7 @@ Controllers {
 	    !+getUp1:                             !
 		!	LDA $4016     ; player 1 - Up     !
 	    !	AND #%00000001                    !
-	    !	BNE +setUp1:                      !
-	    !	LDA #%11101111                    !
-	    !   AND ?#status1?                    !
-	    !	STA ?#status1?                    !
-	    !	JMP +getDown1:                    !
+	    !	BEQ +getDown1:                    !
 	    !+setUp1:                             !
 	    !	LDA #%00010000                    !
 	    !	ORA ?#status1?                    !
@@ -71,11 +53,7 @@ Controllers {
 	    !+getDown1:                           !
 		!	LDA $4016     ; player 1 - Down   !
 	    !	AND #%00000001                    !
-	    !	BNE +setDown1:                    !
-	    !	LDA #%11011111                    !
-	    !   AND ?#status1?                    !
-	    !	STA ?#status1?                    !
-	    !	JMP +getLeft1:                    !
+	    !	BEQ +getLeft1:                    !
 	    !+setDown1:                           !
 	    !	LDA #%00100000                    !
 	    !	ORA ?#status1?                    !
@@ -83,11 +61,7 @@ Controllers {
 	    !+getLeft1:                           !
 		!	LDA $4016     ; player 1 - Left   !
 	    !	AND #%00000001                    !
-	    !	BNE +setLeft1:                    !
-	    !	LDA #%10111111                    !
-	    !   AND ?#status1?                    !
-	    !	STA ?#status1?                    !
-	    !	JMP +getRight1:                   !
+	    !	BEQ +getRight1:                   !
 	    !+setLeft1:                           !
 	    !	LDA #%01000000                    !
 	    !	ORA ?#status1?                    !
@@ -95,11 +69,7 @@ Controllers {
 	    !+getRight1:                          !
 		!	LDA $4016     ; player 1 - Right  !
 	    !	AND #%00000001                    !
-	    !	BNE +setRight1:                   !
-	    !	LDA #%01111111                    !
-	    !   AND ?#status1?                    !
-	    !	STA ?#status1?                    !
-	    !	JMP +getA2:                       !
+	    !	BEQ +getA2:                       !
 	    !+setRight1:                          !
 	    !	LDA #%10000000                    !
 	    !	ORA ?#status1?                    !
@@ -107,11 +77,7 @@ Controllers {
         !+getA2:                              !
 		!	LDA $4017     ; player 2 - A      !
 	    !	AND #%00000001                    !
-	    !	BNE +setA2:                       !
-	    !	LDA #%11111110                    !
-	    !   AND ?#status2?                    !
-	    !	STA ?#status2?                    !
-	    !	JMP +getB2:                       !
+	    !	BEQ +getB2:                       !
 	    !+setA2:                              !
 	    !	LDA #%00000001                    !
 	    !	ORA ?#status2?                    !
@@ -119,11 +85,7 @@ Controllers {
 	    !+getB2:                              !
 		!	LDA $4017     ; player 2 - B      !
 	    !	AND #%00000001                    !
-	    !	BNE +setB2:                       !
-	    !	LDA #%11111101                    !
-	    !   AND ?#status2?                    !
-	    !	STA ?#status2?                    !
-	    !	JMP +getSelect2:                  !
+	    !	BEQ +getSelect2:                  !
 	    !+setB2:                              !
 	    !	LDA #%00000010                    !
 	    !	ORA ?#status2?                    !
@@ -131,11 +93,7 @@ Controllers {
 	    !+getSelect2:                         !
 		!	LDA $4017     ; player 2 - Select !
 	    !	AND #%00000001                    !
-	    !	BNE +setSelect2:                  !
-	    !	LDA #%11111011                    !
-	    !   AND ?#status2?                    !
-	    !	STA ?#status2?                    !
-	    !	JMP +getStart2:                   !
+	    !	BEQ +getStart2:                   !
 	    !+setSelect2:                         !
 	    !	LDA #%00000100                    !
 	    !	ORA ?#status2?                    !
@@ -143,11 +101,7 @@ Controllers {
 	    !+getStart2:                          !
 		!	LDA $4017     ; player 2 - Start  !
 	    !	AND #%00000001                    !
-	    !	BNE +setStart2:                   !
-	    !	LDA #%11110111                    !
-	    !   AND ?#status2?                    !
-	    !	STA ?#status2?                    !
-	    !	JMP +getUp2:                      !
+	    !	BEQ +getUp2:                      !
 	    !+setStart2:                          !
 	    !	LDA #%00001000                    !
 	    !	ORA ?#status2?                    !
@@ -155,11 +109,7 @@ Controllers {
 	    !+getUp2:                             !
 		!	LDA $4017     ; player 2 - Up     !
 	    !	AND #%00000001                    !
-	    !	BNE +setUp2:                      !
-	    !	LDA #%11101111                    !
-	    !   AND ?#status2?                    !
-	    !	STA ?#status2?                    !
-	    !	JMP +getDown2:                    !
+	    !	BEQ +getDown2:                    !
 	    !+setUp2:                             !
 	    !	LDA #%00010000                    !
 	    !	ORA ?#status2?                    !
@@ -167,11 +117,7 @@ Controllers {
 	    !+getDown2:                           !
 		!	LDA $4017     ; player 2 - Down   !
 	    !	AND #%00000001                    !
-	    !	BNE +setDown2:                    !
-	    !	LDA #%11011111                    !
-	    !   AND ?#status2?                    !
-	    !	STA ?#status2?                    !
-	    !	JMP +getLeft2:                    !
+	    !	BEQ +getLeft2:                    !
 	    !+setDown2:                           !
 	    !	LDA #%00100000                    !
 	    !	ORA ?#status2?                    !
@@ -179,11 +125,7 @@ Controllers {
 	    !+getLeft2:                           !
 		!	LDA $4017     ; player 2 - Left   !
 	    !	AND #%00000001                    !
-	    !	BNE +setLeft2:                    !
-	    !	LDA #%10111111                    !
-	    !   AND ?#status2?                    !
-	    !	STA ?#status2?                    !
-	    !	JMP +getRight2:                   !
+	    !	BEQ +getRight2:                   !
 	    !+setLeft2:                           !
 	    !	LDA #%01000000                    !
 	    !	ORA ?#status2?                    !
@@ -191,14 +133,11 @@ Controllers {
 	    !+getRight2:                          !
 		!	LDA $4017     ; player 2 - Right  !
 	    !	AND #%00000001                    !
-	    !	BNE +setRight2:                   !
-	    !	LDA #%01111111                    !
-	    !   AND ?#status2?                    !
-	    !	STA ?#status2?                    !
-	    !	RTS                               !
+	    !	BEQ +end:                         !
 	    !+setRight2:                          !
 	    !	LDA #%10000000                    !
 	    !	ORA ?#status2?                    !
 	    !	STA ?#status2?                    !
+	    !+end:                                !
 	}
 }
