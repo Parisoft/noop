@@ -151,7 +151,7 @@ class Datas {
 					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).byteValue.toHex»'''»
+			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).toHex»'''»
 			«val copyLoop = labelForCopyLoop»
 			«IF src.isIndexed && dst.isIndexed»
 				«noop»
@@ -227,7 +227,7 @@ class Datas {
 					«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).byteValue.toHex»'''»
+			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).toHex»'''»
 			«val copyLoop = labelForCopyLoop»
 			«IF src.isIndexed && dst.isIndexed»
 				«noop»
@@ -318,7 +318,7 @@ class Datas {
 					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).byteValue.toHex»'''»
+			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).toHex»'''»
 			«val copyLoop = labelForCopyLoop»
 			«IF src.isIndexed && dst.isIndexed»
 				«noop»
@@ -389,7 +389,7 @@ class Datas {
 					«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).byteValue.toHex»'''»
+			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).toHex»'''»
 			«val copyLoop = labelForCopyLoop»
 			«IF src.isIndexed && dst.isIndexed»
 				«noop»
@@ -560,7 +560,7 @@ class Datas {
 					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val limit = '''#«bytes.byteValue.toHex»'''»
+			«val limit = '''#«bytes.toHex»'''»
 			«val copyLoop = labelForCopyLoop»
 			«IF src.isIndexed && dst.isIndexed»
 				«noop»
@@ -626,7 +626,7 @@ class Datas {
 					«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val limit = '''#«bytes.byteValue.toHex»'''»
+			«val limit = '''#«bytes.toHex»'''»
 			«val copyLoop = labelForCopyLoop»
 			«IF src.isIndexed && dst.isIndexed»
 				«noop»
@@ -692,7 +692,7 @@ class Datas {
 					«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val limit = '''#«bytes.byteValue.toHex»'''»
+			«val limit = '''#«bytes.toHex»'''»
 			«val copyLoop = labelForCopyLoop»
 			«IF src.isIndexed && dst.isIndexed»
 				«noop»
@@ -753,7 +753,7 @@ class Datas {
 					«ENDIF»
 			«ENDFOR»
 		«ELSE»
-			«val limit = '''#«bytes.byteValue.toHex»'''»
+			«val limit = '''#«bytes.toHex»'''»
 			«val copyLoop = labelForCopyLoop»
 			«IF src.isIndexed && dst.isIndexed»
 				«noop»

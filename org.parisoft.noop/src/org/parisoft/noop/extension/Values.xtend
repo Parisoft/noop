@@ -56,22 +56,22 @@ class Values {
 		}
 	}
 
-	def List<Byte> toBytes(Object obj) {
+	def List<Integer> toBytes(Object obj) {
 		switch (obj) {
 			Integer:
 				if (obj > TypeSystem::MAX_BYTE || obj < TypeSystem::MIN_SBYTE) {
-					newArrayList(obj.bitwiseAnd(0xFF).byteValue, (obj >> 8).byteValue)
+					newArrayList(obj.bitwiseAnd(0xFF), (obj >> 8))
 				} else {
-					newArrayList(obj.bitwiseAnd(0xFF).byteValue)
+					newArrayList(obj.bitwiseAnd(0xFF))
 				}
 			Boolean:
 				if (obj) {
-					newArrayList(1.byteValue)
+					newArrayList(1)
 				} else {
-					newArrayList(0.byteValue)
+					newArrayList(0)
 				}
 			String:
-				obj.bytes
+				obj.bytes.map[intValue]
 			List<?>:
 				obj.map[toBytes].flatten.toList
 			default:
@@ -91,8 +91,6 @@ class Values {
 		].flatten.toList
 	}
 
-	def toHex(Byte b) '''$«IF b < 0x10»0«ENDIF»«Integer::toHexString(b).toUpperCase»'''
-
-	def toHex(Integer i) '''$«IF i < 0x10 || i < 0x1000»0«ENDIF»«Integer::toHexString(i).toUpperCase»'''
+	def toHex(Integer i) '''$«IF i < 0x10 || (i > 0xFF && i < 0x1000)»0«ENDIF»«Integer::toHexString(i).toUpperCase»'''
 
 }

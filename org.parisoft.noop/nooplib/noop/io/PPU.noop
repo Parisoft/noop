@@ -213,6 +213,20 @@ PPU {
     	!	;TODO PPU.#setBgAttributeTable(Byte nameTableIndex, Byte[][] attributeTable) !
     }
     
+    #setSpriteTile(Byte spriteNumber, Byte x, Byte y, Byte tile, Byte options) {
+		!	ASL ?spriteNumber? !
+		!	ASL ?spriteNumber? !
+		!	LDX ?spriteNumber? !
+		!	LDA ?y?            !
+		!	STA $0200, X       !
+		!	LDA ?x?            !
+		!	STA $0203, X       !
+		!	LDA ?tile?         !
+		!	STA $0201, X       !
+		!	LDA ?options?      !
+		!	STA $0202, X       !
+	}
+    
     #setPPUControl(PPUControl ppuctrl) {
     	setPPUControl(ppuctrl.toByte)
     }

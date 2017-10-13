@@ -577,7 +577,7 @@ public class Members {
 				«val dimension = arg.dimensionOf»
 				«FOR dim : 0..< dimension.size»
 				«noop»
-					LDA #«dimension.get(dim).byteValue.toHex»
+					LDA #«dimension.get(dim).toHex»
 					STA «param.nameOfLen(methodName, dim)»
 				«ENDFOR»
 			«ENDFOR»
@@ -626,7 +626,7 @@ public class Members {
 				])»
 					«FOR len : (i + 1)..< dimension.size»
 						STA «Members::TEMP_VAR_NAME1»
-						LDA «IF variable.isParameter»«variable.nameOfLen(len)»«ELSE»#«dimension.get(len).byteValue.toHex»«ENDIF»
+						LDA «IF variable.isParameter»«variable.nameOfLen(len)»«ELSE»#«dimension.get(len).toHex»«ENDIF»
 						STA «Members::TEMP_VAR_NAME2»
 						LDA #$00
 						mult8x8to8
@@ -644,7 +644,7 @@ public class Members {
 			«noop»
 				«IF sizeOfVar > 1»
 					STA «Members::TEMP_VAR_NAME1»
-					LDA #«sizeOfVar.byteValue.toHex»
+					LDA #«sizeOfVar.toHex»
 					STA «Members::TEMP_VAR_NAME2»
 					LDA #$00
 					mult8x8to8

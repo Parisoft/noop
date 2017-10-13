@@ -8,6 +8,7 @@ import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.exception.NonConstantMemberException
 import org.parisoft.noop.generator.AllocData
 import org.parisoft.noop.generator.CompileData
+import org.parisoft.noop.generator.CompileData.Mode
 import org.parisoft.noop.generator.CompileData.Operation
 import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.generator.NoopInstance
@@ -15,10 +16,12 @@ import org.parisoft.noop.noop.AddExpression
 import org.parisoft.noop.noop.AndExpression
 import org.parisoft.noop.noop.ArrayLiteral
 import org.parisoft.noop.noop.AssignmentExpression
+import org.parisoft.noop.noop.AssignmentType
 import org.parisoft.noop.noop.BAndExpression
 import org.parisoft.noop.noop.BOrExpression
 import org.parisoft.noop.noop.BoolLiteral
 import org.parisoft.noop.noop.ByteLiteral
+import org.parisoft.noop.noop.CastExpression
 import org.parisoft.noop.noop.DecExpression
 import org.parisoft.noop.noop.DifferExpression
 import org.parisoft.noop.noop.DivExpression
@@ -29,6 +32,7 @@ import org.parisoft.noop.noop.GeExpression
 import org.parisoft.noop.noop.GtExpression
 import org.parisoft.noop.noop.IncExpression
 import org.parisoft.noop.noop.Index
+import org.parisoft.noop.noop.InheritsExpression
 import org.parisoft.noop.noop.LShiftExpression
 import org.parisoft.noop.noop.LeExpression
 import org.parisoft.noop.noop.LtExpression
@@ -52,10 +56,6 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.CompileData.Mode
-import org.parisoft.noop.noop.CastExpression
-import org.parisoft.noop.noop.InheritsExpression
-import org.parisoft.noop.noop.AssignmentType
 
 class Expressions {
 
@@ -775,7 +775,7 @@ class Expressions {
 						«ENDIF»
 				«ELSEIF data.absolute !== null»
 					«data.pushAccIfOperating»
-					«val bytes = expression.value.bytes»
+					«val bytes = expression.value.bytes.map[intValue]»
 						«IF data.isIndexed»
 							LDX «data.index»
 						«ENDIF»
@@ -786,7 +786,7 @@ class Expressions {
 					«data.pullAccIfOperating»
 				«ELSEIF data.indirect !== null»
 					«data.pushAccIfOperating»
-					«val bytes = expression.value.bytes»
+					«val bytes = expression.value.bytes.map[intValue]»
 						«IF data.isIndexed»
 							LDY «data.index»
 						«ELSE»
@@ -805,7 +805,13 @@ class Expressions {
 			ArrayLiteral: '''
 				«IF data.db !== null»
 					«data.db»:
-						.db «expression.valueOf.toBytes.join(', ', [toHex])»
+					«val bytes = expression.valueOf.toBytes»
+					«val chunks = (bytes.size / 32).max(1) + if (bytes.size > 32 && bytes.size % 32 != 0) 1 else 0»
+						«FOR i : 0..< chunks»
+							«val from = i * 32»
+							«val to = (from + 32).min(bytes.size)»
+							.db «bytes.subList(from, to).join(', ', [toHex])»
+						«ENDFOR»
 				«ELSE»
 					«val tmp = if (expression.isOnMemberSelectionOrReference) {
 						new CompileData => [
@@ -829,11 +835,11 @@ class Expressions {
 								«data.pushAccIfOperating»
 									CLC
 									LDA «dst.index»
-									ADC #«expression.sizeOf.byteValue.toHex»
+									ADC #«expression.sizeOf.toHex»
 									STA «dst.index»
 								«data.pullAccIfOperating»
 							«ELSEIF dst.indirect !== null»
-								«dst.index = '''#«(i * expression.sizeOf).byteValue.toHex»'''»
+								«dst.index = '''#«(i * expression.sizeOf).toHex»'''»
 							«ENDIF»
 						«ENDIF»
 						«elements.get(i).compile(dst)»
