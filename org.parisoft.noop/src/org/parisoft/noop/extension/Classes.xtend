@@ -264,8 +264,11 @@ class Classes {
 		if (noopClass.isGame) {
 			data.statics.forEach[alloc(data)]
 
+			val chunks = noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
+			data.ptrCounter.set(chunks.filter[hi < 0x0200].maxBy[hi].hi)
+			data.varCounter.set(chunks.filter[hi > 0x0200].maxBy[hi].hi)
+			
 			noopClass.allMethodsBottomUp.findFirst[reset].alloc(data)
-			noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
 		}
 	}
 

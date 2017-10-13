@@ -29,7 +29,7 @@ class MemChunk implements Comparable<MemChunk> {
 	def nonZP() {
 		!isZP
 	}
-	
+
 	def isNonDisposed() {
 		!isDisposed
 	}
@@ -37,7 +37,7 @@ class MemChunk implements Comparable<MemChunk> {
 	def overlap(MemChunk other) {
 		this.lo <= other.hi && this.hi >= other.lo
 	}
-	
+
 	def deltaFrom(MemChunk other) {
 		other.hi - this.lo + 1
 	}
@@ -49,7 +49,7 @@ class MemChunk implements Comparable<MemChunk> {
 
 		return delta
 	}
-	
+
 	def void shiftTo(int delta) {
 		this.lo += delta
 		this.hi += delta
@@ -75,5 +75,5 @@ class MemChunk implements Comparable<MemChunk> {
 			tmp:«tmp»
 		}
 	'''
-	
+
 }
