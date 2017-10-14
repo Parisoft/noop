@@ -144,7 +144,7 @@ class NoopGenerator extends AbstractGenerator {
 			.db «(data.header.fieldValue('prgRomPages') as Integer).toHexString» ;number of 16KB PRG-ROM pages
 			.db «(data.header.fieldValue('chrRomPages') as Integer).toHexString» ;number of 8KB CHR-ROM pages
 			.db «(data.header.fieldValue('mapper') as Integer).toHexString» | «(data.header.fieldValue('mirroring') as Integer).toHexString»
-			.dsb 9, $00 ;clear the remaining bytes
+			.dsb 9, $00 ;clear the remaining bytes to 16
 			
 		;----------------------------------------------------------------
 		; PRG-ROM Bank(s)
