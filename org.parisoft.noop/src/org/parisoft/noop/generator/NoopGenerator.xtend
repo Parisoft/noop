@@ -48,24 +48,31 @@ class NoopGenerator extends AbstractGenerator {
 		if (gameImpl === null) {
 			return null
 		}
-		
+
 		val data = gameImpl.prepare
 		gameImpl.alloc(data)
 		val content = data.compile.optimize
-		
+
 		new ASM('''«gameImpl.name».asm''', content)
 	}
-	
+
 	private def optimize(CharSequence code) {
 		val lines = code.toString.split(System::lineSeparator)
 		val builder = new StringBuilder
 
-		lines.forEach[line, i|
-			if (!(line == '	PLA' && lines.get(i + 1) == '	PHA' || line == '	PHA' && lines.get(i - 1) == '	PLA')) {
+		lines.forEach [ line, i |
+			val pushPull = line == '\tPHA' && lines.get(i - 1) == '\tPLA'
+			val pullPush = line == '\tPLA' && lines.get(i + 1) == '\tPHA'
+			val rtsAfterJsr = line.startsWith('\tRTS') && lines.get(i - 1).startsWith('\tJSR')
+			val jsrBeforeRts = line.startsWith('\tJSR') && lines.get(i + 1).startsWith('\tRTS')
+
+			if (jsrBeforeRts) {
+				builder.append('''	JMP «line.substring(4)»''').append(System::lineSeparator)
+			} else if (!(pushPull || pullPush || rtsAfterJsr)) {
 				builder.append(line).append(System::lineSeparator)
 			}
 		]
-		
+
 		builder.toString
 	}
 
@@ -213,11 +220,11 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def fieldValue(NewInstance instance, String fieldname) {
-		instance?.constructor?.fields.findFirst[
+		instance?.constructor?.fields.findFirst [
 			variable.name == fieldname
-		].value.valueOf ?: instance.type.allFieldsBottomUp.findFirst[
+		].value.valueOf ?: instance.type.allFieldsBottomUp.findFirst [
 			name == fieldname
 		].valueOf
-			
+
 	}
 }
