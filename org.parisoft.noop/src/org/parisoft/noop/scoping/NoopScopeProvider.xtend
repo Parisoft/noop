@@ -135,8 +135,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		} else if (receiver instanceof NewInstance && (receiver as NewInstance).constructor === null) {
 			if (selection.hasArgs) {
 				Scopes.scopeFor(
-					type.declaredFields.filter[static] + type.declaredMethods.filter[static].filterOverload(selection.args),
-					Scopes.scopeFor(type.allFieldsBottomUp.filter[static] + type.allMethodsBottomUp.filter[static].filterOverload(selection.args))
+					type.declaredMethods.filter[static].filterOverload(selection.args) + type.declaredFields.filter[static],
+					Scopes.scopeFor(type.allMethodsBottomUp.filter[static].filterOverload(selection.args) + type.allFieldsBottomUp.filter[static])
 				)
 			} else {
 				Scopes.scopeFor(
@@ -151,8 +151,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			)
 		} else {
 			Scopes.scopeFor(
-				type.declaredFields + type.declaredMethods,
-				Scopes.scopeFor(type.allFieldsBottomUp + type.allMethodsBottomUp)
+				type.declaredMethods + type.declaredFields,
+				Scopes.scopeFor(type.allMethodsBottomUp + type.allFieldsBottomUp)
 			)
 		}
 	}
@@ -170,7 +170,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			method.params.size == args.size && args.forall [ arg |
 				val index = args.indexOf(arg)
 				val param = method.params.get(index)
-				arg.typeOf.isInstanceOf(param.typeOf)
+				arg.typeOf.isInstanceOf(param.typeOf) && arg.dimensionOf.size === param.dimensionOf.size
 			]
 		]
 	}
