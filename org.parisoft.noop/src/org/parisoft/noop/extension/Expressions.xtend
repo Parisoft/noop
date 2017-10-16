@@ -60,8 +60,6 @@ import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 
 class Expressions {
 
-	static val FILE_URI = 'file://'
-
 	@Inject extension Datas
 	@Inject extension Values
 	@Inject extension Classes
@@ -770,8 +768,8 @@ class Expressions {
 				StringLiteral: '''
 					«IF data.db !== null»
 						«data.db»:
-							«IF expression.value.startsWith(FILE_URI)»
-								.incbin "«expression.value.substring(FILE_URI.length)»"
+							«IF expression.value.startsWith(Members::FILE_SCHEMA)»
+								.incbin "«expression.value.substring(Members::FILE_SCHEMA.length)»"
 							«ELSE»
 								.db «expression.value.toBytes.join(', ', [toHex])»
 							«ENDIF»

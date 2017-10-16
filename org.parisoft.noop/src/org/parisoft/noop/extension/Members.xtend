@@ -30,6 +30,7 @@ public class Members {
 	public static val TEMP_VAR_NAME2 = 'jimmy'
 	public static val TRUE = 'TRUE'
 	public static val FALSE = 'FALSE'
+	public static val FILE_SCHEMA = 'file://'
 
 	static val UNDERLINE_CHAR = '_'.charAt(0)
 
@@ -102,13 +103,25 @@ public class Members {
 	def isNonROM(Variable variable) {
 		!variable.isROM
 	}
+	
+	def isFileInclude(Variable variable) {
+		variable.name.toLowerCase.startsWith(FILE_SCHEMA)
+	}
+	
+	def isDMC(Variable variable) {
+		variable.isFileInclude && variable.name.toLowerCase.endsWith('.dmc')
+	}
+	
+	def isNonDMC(Variable variable) {
+		!variable.isDMC
+	}
 
-	def isMain(Method method) {
-		method.containingClass.isGame && method.name == 'main' && method.params.isEmpty
+	def isIrq(Method method) {
+		method.containingClass.isGame && method.name == '''«STATIC_PREFIX»irq'''.toString && method.params.isEmpty
 	}
 
 	def isNmi(Method method) {
-		method.containingClass.isGame && method.name == 'nmi' && method.params.isEmpty
+		method.containingClass.isGame && method.name == '''«STATIC_PREFIX»nmi'''.toString && method.params.isEmpty
 	}
 	
 	def isReset(Method method) {
@@ -350,7 +363,7 @@ public class Members {
 				INX
 				BNE -clrMem:
 
-			; Instantiate all static variables, including the game itself
+			; Instantiate all static variables
 			«val resetMethod = method.nameOf»
 			«FOR staticVar : data.allocation.statics»
 				«staticVar.compile(new CompileData => [container = resetMethod])»

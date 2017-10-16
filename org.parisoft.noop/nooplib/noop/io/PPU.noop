@@ -9,6 +9,11 @@ PPU {
     $NAME_TABLE_BOTTOM_LEFT : PPUControl.$NAME_TABLE_BOTTOM_LEFT
     $NAME_TABLE_BOTTOM_RIGHT : PPUControl.$NAME_TABLE_BOTTOM_RIGHT
     
+    $control : PPUControl.$DEFAULT
+    $mask : PPUMask.$DEFAULT
+    $scrollX : 0
+    $scrollY : 0
+    
     $loadBgPalettes(Byte[][] palettes) {
     	!	LDA $2002             ; read PPU status to reset the high/low latch !
     	!	LDA #$3F                                                            !
@@ -41,7 +46,7 @@ PPU {
     	!	BNE -loop:                                                       !
     }
     
-    $setBgNameTable(Byte index, Byte row, Byte col, Byte[][] nameTable) {
+    $drawBackground(Byte bgPosition, Byte row, Byte col, Byte[][] nameTable) {
     	i : 0
     	j : 0
     	addr : Int
@@ -71,7 +76,7 @@ PPU {
     	!	STA ?addr?+1                   !
     	!	                               !
     	!+if0:                             !
-    	!	LDX ?index?                    !
+    	!	LDX ?bgPosition?               !
     	!	CPX #?$NAME_TABLE_DEFAULT?     !
     	!	BNE +elseif0:                  !
     	!	CLC                            !
@@ -149,7 +154,7 @@ PPU {
     	!+for0end:                         !
     }
 
-	$setBgNameTableTile(Byte index, Byte row, Byte col, Byte tile) {
+	$drawBackgroundTile(Byte bgPosition, Byte row, Byte col, Byte tile) {
 		i : Int
     	!	; i = row * 32                 !
     	!	LDA ?row?                      !
@@ -181,7 +186,7 @@ PPU {
     	!	LDA $2002                      !
     	!	                               !
     	!+if0:                             !
-    	!	LDX ?index?                    !
+    	!	LDX ?bgPosition?               !
     	!	CPX #?$NAME_TABLE_DEFAULT?     !
     	!	BNE +elseif0:                  !
     	!	LDA #$20                       !
@@ -209,11 +214,11 @@ PPU {
     	!	STA $2007                      !
     }
     
-    $setBgAttributeTable(Byte nameTableIndex, Byte[][] attributeTable) {
-    	!	;TODO PPU.#setBgAttributeTable(Byte nameTableIndex, Byte[][] attributeTable) !
+    $configureBackground(Byte bgPosition, Byte[][] attributeTable) {
+    	!	;TODO configureBackground(Byte bgPosition, Byte[][] attributeTable) !
     }
     
-    $setSpriteTile(Byte spriteNumber, Byte x, Byte y, Byte tile, Byte options) {
+    $drawSpriteTile(Byte spriteNumber, Byte x, Byte y, Byte tile, Byte options) {
 		!	ASL ?spriteNumber? !
 		!	ASL ?spriteNumber? !
 		!	LDX ?spriteNumber? !
@@ -227,32 +232,18 @@ PPU {
 		!	STA $0202, X       !
 	}
     
-    $setPPUControl(PPUControl ppuctrl) {
-    	setPPUControl(ppuctrl.toByte)
-    }
-    
-    $setPPUControl(Byte ppuctrl) {
-    	!	LDA ?ppuctrl? !
-    	!	STA $2000     !
-    }
-    
-    $setPPUMask(PPUMask ppumask) {
-    	setPPUMask(ppumask.toByte)
-    }
-    
-    $setPPUMask(Byte ppumask) {
-    	!	LDA ?ppumask? !
-    	!	STA $2001     !
-    }
-    
-    $setScrolling(Byte x, Byte y) {
-    	!	LDA #$00  !
-    	!	STA $2006 !
-    	!	STA $2006 !
-    	!	LDA ?x?   !
-    	!	STA $2005 !
-    	!	LDA ?y?   !
-    	!	STA $2005 !
+    $update() {
+    	!	LDA ?$control? !
+    	!	STA $2000      !
+    	!	LDA ?$mask?    !
+    	!	STA $2001      !
+    	!	LDA #$00       !
+    	!	STA $2006      !
+    	!	STA $2006      !
+    	!	LDA ?$scrollX? !
+    	!	STA $2005      !
+    	!	LDA ?$scrollY? !
+    	!	STA $2005      !
     }
     
     $waitVBlank() {

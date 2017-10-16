@@ -1,4 +1,17 @@
-/* Controls the rendering of sprites and backgrounds, as well as colour effects. */
+/* <p>Controls the rendering of sprites and backgrounds, as well as colour effects.</p>
+       7  bit  0                                                              <br>
+       ---- ----                                                              <br>
+       BGRs bMmG                                                              <br>
+       |||| ||||                                                              <br>
+       |||| |||+- Greyscale (0: normal color, 1: produce a greyscale display) <br>
+       |||| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide  <br>
+       |||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide     <br>
+       |||| +---- 1: Show background                                          <br>
+       |||+------ 1: Show sprites                                             <br>
+       ||+------- Emphasize red*                                              <br>
+       |+-------- Emphasize green*                                            <br>
+       +--------- Emphasize blue*                                             <br>
+       * NTSC colors. PAL and Dendy swaps green and red                       <br>*/
 PPUMask {
 	
 	$GREYSCALE_OFF : 0b00000000
@@ -25,39 +38,5 @@ PPUMask {
 	$EMPHASIZE_BLUE_OFF : 0b00000000
 	$EMPHASIZE_BLUE_ON : 0b10000000
 	
-	/* Greyscale (false: normal color, true: produce a greyscale display) */
-	greyscale : $GREYSCALE_OFF
-	
-	/* true: Show background in leftmost 8 pixels of screen, false: Hide */
-	showBackgroundPixelsOnLeftSide : $SHOW_BACKGROUND_PIXELS_ON_LEFT_SIDE_ON
-	
-	/* true: Show sprites in leftmost 8 pixels of screen, false: Hide */
-	showSpritesPixelsOnLeftSide : $SHOW_SPRITES_PIXELS_ON_LEFT_SIDE_ON
-	
-	showBackground : $SHOW_BACKGROUND_ON
-	
-	showSprites : $SHOW_SPRITES_ON
-	
-	emphasizeRed : $EMPHASIZE_RED_OFF
-	
-	emphasizeGreen : $EMPHASIZE_GREEN_OFF
-	
-	emphasizeBlue : $EMPHASIZE_BLUE_OFF
-	
-	/* 7  bit  0                                                              <br>
-       ---- ----                                                              <br>
-       BGRs bMmG                                                              <br>
-       |||| ||||                                                              <br>
-       |||| |||+- Greyscale (0: normal color, 1: produce a greyscale display) <br>
-       |||| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide  <br>
-       |||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide     <br>
-       |||| +---- 1: Show background                                          <br>
-       |||+------ 1: Show sprites                                             <br>
-       ||+------- Emphasize red*                                              <br>
-       |+-------- Emphasize green*                                            <br>
-       +--------- Emphasize blue*                                             <br>
-       * NTSC colors. PAL and Dendy swaps green and red                       <br>*/
-	toByte() {
-		return greyscale | showBackgroundPixelsOnLeftSide | showSpritesPixelsOnLeftSide | showBackground | showSprites | emphasizeRed | emphasizeGreen | emphasizeBlue
-	}
+	$DEFAULT : $GREYSCALE_OFF | $SHOW_BACKGROUND_PIXELS_ON_LEFT_SIDE_ON | $SHOW_SPRITES_PIXELS_ON_LEFT_SIDE_ON | $SHOW_BACKGROUND_ON |$SHOW_SPRITES_ON | $EMPHASIZE_RED_OFF | $EMPHASIZE_GREEN_OFF | $EMPHASIZE_BLUE_OFF
 }

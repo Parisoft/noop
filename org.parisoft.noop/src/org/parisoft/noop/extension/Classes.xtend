@@ -2,18 +2,17 @@ package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
 import java.util.Collection
+import java.util.Map
+import java.util.NoSuchElementException
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.AllocData
 import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
-import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import java.util.Map
-import java.util.NoSuchElementException
 
 class Classes {
 
@@ -219,17 +218,8 @@ class Classes {
 	}
 
 	def prepare(NoopClass gameImplClass) {
-		val gameInstance = gameImplClass.allFieldsBottomUp.findFirst[name == '''«Members::STATIC_PREFIX»instance'''.toString]
-		gameInstance.value = NoopFactory::eINSTANCE.createNewInstance => [type = gameImplClass]
-
-		val mainInvocation = NoopFactory::eINSTANCE.createMemberSelect => [
-			receiver = NoopFactory::eINSTANCE.createMemberRef => [member = gameInstance]
-			member = gameImplClass.allMethodsBottomUp.findFirst[main]
-		]
-
 		val data = new AllocData
 
-		gameImplClass.allMethodsBottomUp.findFirst[reset].body.statements += mainInvocation
 		gameImplClass.prepare(data)
 
 		classeSizeCache.get.clear
@@ -257,6 +247,7 @@ class Classes {
 			if (noopClass.isGame) {
 				noopClass.allMethodsBottomUp.findFirst[reset].prepare(data)
 				noopClass.allMethodsBottomUp.findFirst[nmi].prepare(data)
+				noopClass.allMethodsBottomUp.findFirst[irq].prepare(data)
 			}
 		}
 	}
@@ -266,17 +257,29 @@ class Classes {
 			data.statics.forEach[alloc(data)]
 
 			val chunks = noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
-
+			
 			try {
-				data.ptrCounter.set(chunks.filter[hi < 0x0200].maxBy[hi].hi)
+				data.ptrCounter.set(chunks.filter[hi < 0x0200].maxBy[hi].hi + 1)
 			} catch (NoSuchElementException e) {
 			}
 
 			try {
-				data.varCounter.set(chunks.filter[hi > 0x0200].maxBy[hi].hi)
+				data.varCounter.set(chunks.filter[hi > 0x0200].maxBy[hi].hi + 1)
+			} catch (NoSuchElementException e) {
+			}
+			
+			chunks += noopClass.allMethodsBottomUp.findFirst[irq].alloc(data)
+
+			try {
+				data.ptrCounter.set(chunks.filter[hi < 0x0200].maxBy[hi].hi + 1)
 			} catch (NoSuchElementException e) {
 			}
 
+			try {
+				data.varCounter.set(chunks.filter[hi > 0x0200].maxBy[hi].hi + 1)
+			} catch (NoSuchElementException e) {
+			}
+			
 			noopClass.allMethodsBottomUp.findFirst[reset].alloc(data)
 		}
 	}

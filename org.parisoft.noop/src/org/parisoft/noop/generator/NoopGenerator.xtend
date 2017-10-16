@@ -19,6 +19,8 @@ import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopPackage
+import org.parisoft.noop.^extension.Values
+import org.parisoft.noop.^extension.Collections
 
 /**
  * Generates code from your model files on save.
@@ -29,8 +31,9 @@ class NoopGenerator extends AbstractGenerator {
 
 	@Inject extension Classes
 	@Inject extension Members
-	@Inject extension Expressions
 	@Inject extension Statements
+	@Inject extension Collections
+	@Inject extension Expressions
 	@Inject extension IQualifiedNameProvider
 	@Inject IResourceDescriptions descriptions
 
@@ -112,7 +115,7 @@ class NoopGenerator extends AbstractGenerator {
 			
 		«ENDFOR»
 		;----------------------------------------------------------------
-		; Constants
+		; Constant variables
 		;----------------------------------------------------------------
 		«Members::TRUE» = 1
 		«Members::FALSE» = 0
@@ -121,7 +124,7 @@ class NoopGenerator extends AbstractGenerator {
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
-		; Statics
+		; Static variables
 		;----------------------------------------------------------------
 		«val varStartAddr = data.resetVarCounter»
 		«FOR statik : data.statics»
@@ -129,7 +132,7 @@ class NoopGenerator extends AbstractGenerator {
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
-		; Variables
+		; Local variables
 		;----------------------------------------------------------------
 		«Members::TEMP_VAR_NAME1» = $0000
 		«Members::TEMP_VAR_NAME2» = $0002
@@ -158,7 +161,7 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 			.base $10000 - («(data.header.fieldValue('prgRomPages') as Integer).toHexString» * $4000) 
 		
-		«FOR rom : data.prgRoms»
+		«FOR rom : data.prgRoms.filter[nonDMC]»
 			«rom.compile(new CompileData)»
 		«ENDFOR»
 		
@@ -186,6 +189,15 @@ class NoopGenerator extends AbstractGenerator {
 			«constructor.compile(null)»
 			
 		«ENDFOR»
+		«val dmcList = data.prgRoms.filter[DMC].toList»
+		«IF dmcList.isNotEmpty»
+			;-- DMC sound data-----------------------------------------------
+				.org $C000
+			«FOR dmcRom : dmcList»
+				«dmcRom.compile(new CompileData)»
+			«ENDFOR»
+		«ENDIF»
+		
 		;----------------------------------------------------------------
 		; Interrupt vectors
 		;----------------------------------------------------------------
@@ -193,7 +205,7 @@ class NoopGenerator extends AbstractGenerator {
 		
 		 	.dw «data.methods.findFirst[nmi].nameOf»
 		 	.dw «data.methods.findFirst[reset].nameOf»
-		 	.dw 0 ; IRQ
+		 	.dw «data.methods.findFirst[irq].nameOf»
 		
 		;----------------------------------------------------------------
 		; CHR-ROM bank(s)
