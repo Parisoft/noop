@@ -1,6 +1,6 @@
 Controller1 {
 	
-	#isPressed(Byte button) {
-		return button & Controllers.#status1 = button
+	$isPressed(Byte button) {
+		return (button & Controllers.$status1) as Bool
 	}
 }

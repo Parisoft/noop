@@ -1,15 +1,15 @@
 PPU {
     
-    #SCREEN_WIDTH_PX : 256
-    #SCREEN_HEIGHT_PX : 240
-    #SCREEN_WIDTH_TILES : 32
-    #SCREEN_HEIGHT_TILES : 30
-    #NAME_TABLE_DEFAULT : PPUControl.#NAME_TABLE_DEFAULT
-    #NAME_TABLE_TOP_RIGHT : PPUControl.#NAME_TABLE_TOP_RIGHT
-    #NAME_TABLE_BOTTOM_LEFT : PPUControl.#NAME_TABLE_BOTTOM_LEFT
-    #NAME_TABLE_BOTTOM_RIGHT : PPUControl.#NAME_TABLE_BOTTOM_RIGHT
+    $SCREEN_WIDTH_PX : 256
+    $SCREEN_HEIGHT_PX : 240
+    $SCREEN_WIDTH_TILES : 32
+    $SCREEN_HEIGHT_TILES : 30
+    $NAME_TABLE_DEFAULT : PPUControl.$NAME_TABLE_DEFAULT
+    $NAME_TABLE_TOP_RIGHT : PPUControl.$NAME_TABLE_TOP_RIGHT
+    $NAME_TABLE_BOTTOM_LEFT : PPUControl.$NAME_TABLE_BOTTOM_LEFT
+    $NAME_TABLE_BOTTOM_RIGHT : PPUControl.$NAME_TABLE_BOTTOM_RIGHT
     
-    #loadBgPalettes(Byte[][] palettes) {
+    $loadBgPalettes(Byte[][] palettes) {
     	!	LDA $2002             ; read PPU status to reset the high/low latch !
     	!	LDA #$3F                                                            !
     	!	STA $2006             ; write the high byte of $3F00 address        !
@@ -25,7 +25,7 @@ PPU {
     	!	BNE -loop:                                                          !
     }
     
-    #loadSpritesPalettes(Byte[][] palettes) {
+    $loadSpritesPalettes(Byte[][] palettes) {
     	!	LDA $2002	       ; read PPU status to reset the high/low latch !
     	!	LDA #$3F                                                         !
     	!	STA $2006	       ; write the high byte of $3F00 address        !
@@ -41,7 +41,7 @@ PPU {
     	!	BNE -loop:                                                       !
     }
     
-    #setBgNameTable(Byte index, Byte row, Byte col, Byte[][] nameTable) {
+    $setBgNameTable(Byte index, Byte row, Byte col, Byte[][] nameTable) {
     	i : 0
     	j : 0
     	addr : Int
@@ -72,19 +72,19 @@ PPU {
     	!	                               !
     	!+if0:                             !
     	!	LDX ?index?                    !
-    	!	CPX #?#NAME_TABLE_DEFAULT?     !
+    	!	CPX #?$NAME_TABLE_DEFAULT?     !
     	!	BNE +elseif0:                  !
     	!	CLC                            !
     	!	ADC #$20                       !
     	!	JMP +endif0:                   !
     	!+elseif0:                         !
-    	!	CPX #?#NAME_TABLE_TOP_RIGHT?   !
+    	!	CPX #?$NAME_TABLE_TOP_RIGHT?   !
     	!	BNE +elseif1:                  !
     	!	CLC                            !
     	!	ADC #$24                       !
     	!	JMP +endif0:                   !
     	!+elseif1:                         !
-    	!	CPX #?#NAME_TABLE_BOTTOM_LEFT? !
+    	!	CPX #?$NAME_TABLE_BOTTOM_LEFT? !
     	!	BNE +else0:                    !
     	!	CLC                            !
     	!	ADC #$28                       !
@@ -136,7 +136,7 @@ PPU {
     	!++for0increment:                  !
     	!	CLC                            !
     	!	LDA ?addr?+0                   !
-    	!	ADC #?#SCREEN_WIDTH_TILES?     !
+    	!	ADC #?$SCREEN_WIDTH_TILES?     !
     	!	STA ?addr?+0                   !
     	!	BCC +++for0increment:          !
     	!	LDA ?addr?+1                   !
@@ -149,9 +149,9 @@ PPU {
     	!+for0end:                         !
     }
 
-	#setBgNameTableTile(Byte index, Byte row, Byte col, Byte tile) {
+	$setBgNameTableTile(Byte index, Byte row, Byte col, Byte tile) {
 		i : Int
-    	!; i = row * 32                    !
+    	!	; i = row * 32                 !
     	!	LDA ?row?                      !
     	!	STA ?i?+0                      !
     	!	LDA #$00                       !
@@ -182,17 +182,17 @@ PPU {
     	!	                               !
     	!+if0:                             !
     	!	LDX ?index?                    !
-    	!	CPX #?#NAME_TABLE_DEFAULT?     !
+    	!	CPX #?$NAME_TABLE_DEFAULT?     !
     	!	BNE +elseif0:                  !
     	!	LDA #$20                       !
     	!	JMP +endif0:                   !
     	!+elseif0:                         !
-    	!	CPX #?#NAME_TABLE_TOP_RIGHT?   !
+    	!	CPX #?$NAME_TABLE_TOP_RIGHT?   !
     	!	BNE +elseif1:                  !
     	!	LDA #$24                       !
     	!	JMP +endif0:                   !
     	!+elseif1:                         !
-    	!	CPX #?#NAME_TABLE_BOTTOM_LEFT? !
+    	!	CPX #?$NAME_TABLE_BOTTOM_LEFT? !
     	!	BNE +else0:                    !
     	!	LDA #$28                       !
     	!	JMP +endif0:                   !
@@ -209,11 +209,11 @@ PPU {
     	!	STA $2007                      !
     }
     
-    #setBgAttributeTable(Byte nameTableIndex, Byte[][] attributeTable) {
+    $setBgAttributeTable(Byte nameTableIndex, Byte[][] attributeTable) {
     	!	;TODO PPU.#setBgAttributeTable(Byte nameTableIndex, Byte[][] attributeTable) !
     }
     
-    #setSpriteTile(Byte spriteNumber, Byte x, Byte y, Byte tile, Byte options) {
+    $setSpriteTile(Byte spriteNumber, Byte x, Byte y, Byte tile, Byte options) {
 		!	ASL ?spriteNumber? !
 		!	ASL ?spriteNumber? !
 		!	LDX ?spriteNumber? !
@@ -227,25 +227,25 @@ PPU {
 		!	STA $0202, X       !
 	}
     
-    #setPPUControl(PPUControl ppuctrl) {
+    $setPPUControl(PPUControl ppuctrl) {
     	setPPUControl(ppuctrl.toByte)
     }
     
-    #setPPUControl(Byte ppuctrl) {
+    $setPPUControl(Byte ppuctrl) {
     	!	LDA ?ppuctrl? !
     	!	STA $2000     !
     }
     
-    #setPPUMask(PPUMask ppumask) {
+    $setPPUMask(PPUMask ppumask) {
     	setPPUMask(ppumask.toByte)
     }
     
-    #setPPUMask(Byte ppumask) {
+    $setPPUMask(Byte ppumask) {
     	!	LDA ?ppumask? !
     	!	STA $2001     !
     }
     
-    #setScrolling(Byte x, Byte y) {
+    $setScrolling(Byte x, Byte y) {
     	!	LDA #$00  !
     	!	STA $2006 !
     	!	STA $2006 !
@@ -255,7 +255,7 @@ PPU {
     	!	STA $2005 !
     }
     
-    #waitVBlank() {
+    $waitVBlank() {
     	!-loop:       !
 		!	BIT $2002 !
 		!	BPL -loop !

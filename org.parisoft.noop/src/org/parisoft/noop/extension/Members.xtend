@@ -8,11 +8,11 @@ import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
 import org.parisoft.noop.generator.AllocData
 import org.parisoft.noop.generator.CompileData
+import org.parisoft.noop.generator.CompileData.Mode
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.Index
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberRef
-import org.parisoft.noop.noop.MemberSelection
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.ReturnStatement
@@ -21,11 +21,11 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.CompileData.Mode
+import org.parisoft.noop.noop.MemberSelect
 
 public class Members {
 
-	public static val STATIC_PREFIX = '#'
+	public static val STATIC_PREFIX = '$'
 	public static val TEMP_VAR_NAME1 = 'billy'
 	public static val TEMP_VAR_NAME2 = 'jimmy'
 	public static val TRUE = 'TRUE'
@@ -47,14 +47,22 @@ public class Members {
 	val allocating = new HashSet<Member>
 
 	def isAccessibleFrom(Member member, EObject context) {
-		val contextClass = if (context instanceof MemberSelection) context.receiver.typeOf else context.containingClass
+		val contextClass = if (context instanceof MemberSelect) {
+				context.receiver.typeOf
+			} else {
+				context.containingClass
+			} 
 		val memberClass = member.containingClass
 
 		contextClass == memberClass || contextClass.isSubclassOf(memberClass)
 	}
 
 	def isStatic(Member member) {
-		member.name.startsWith(STATIC_PREFIX)
+		try {
+			member.name.startsWith(STATIC_PREFIX)
+		} catch (Error e) {
+			e.printStackTrace			
+		}
 	}
 
 	def isNonStatic(Member member) {
@@ -104,7 +112,7 @@ public class Members {
 	}
 	
 	def isReset(Method method) {
-		method.containingClass.isGame && method.name == '#reset' && method.params.isEmpty
+		method.containingClass.isGame && method.name == '''«STATIC_PREFIX»reset'''.toString && method.params.isEmpty
 	}
 	
 	def isDispose(Method method) {

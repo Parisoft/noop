@@ -13,6 +13,7 @@ import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import java.util.Map
+import java.util.NoSuchElementException
 
 class Classes {
 
@@ -56,7 +57,7 @@ class Classes {
 		classes.map [
 			classHierarchy
 		].reduce [ h1, h2 |
-			h1.removeIf[c1 | !h2.exists[c2 | c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString]]
+			h1.removeIf[c1|!h2.exists[c2|c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString]]
 			h1
 		]?.head ?: TypeSystem::TYPE_VOID
 	}
@@ -170,7 +171,7 @@ class Classes {
 			default: false
 		}
 	}
-	
+
 	def isUnsigned(NoopClass c) {
 		!c.isSigned
 	}
@@ -221,7 +222,7 @@ class Classes {
 		val gameInstance = gameImplClass.allFieldsBottomUp.findFirst[name == '''«Members::STATIC_PREFIX»instance'''.toString]
 		gameInstance.value = NoopFactory::eINSTANCE.createNewInstance => [type = gameImplClass]
 
-		val mainInvocation = NoopFactory::eINSTANCE.createMemberSelection => [
+		val mainInvocation = NoopFactory::eINSTANCE.createMemberSelect => [
 			receiver = NoopFactory::eINSTANCE.createMemberRef => [member = gameInstance]
 			member = gameImplClass.allMethodsBottomUp.findFirst[main]
 		]
@@ -265,9 +266,17 @@ class Classes {
 			data.statics.forEach[alloc(data)]
 
 			val chunks = noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
-			data.ptrCounter.set(chunks.filter[hi < 0x0200].maxBy[hi].hi)
-			data.varCounter.set(chunks.filter[hi > 0x0200].maxBy[hi].hi)
-			
+
+			try {
+				data.ptrCounter.set(chunks.filter[hi < 0x0200].maxBy[hi].hi)
+			} catch (NoSuchElementException e) {
+			}
+
+			try {
+				data.varCounter.set(chunks.filter[hi > 0x0200].maxBy[hi].hi)
+			} catch (NoSuchElementException e) {
+			}
+
 			noopClass.allMethodsBottomUp.findFirst[reset].alloc(data)
 		}
 	}

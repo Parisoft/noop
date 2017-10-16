@@ -16,7 +16,7 @@ import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.Block
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.MemberRef
-import org.parisoft.noop.noop.MemberSelection
+import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
@@ -59,8 +59,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 				}
 			MemberRef:
 				return scopeForMemberRef(context)
-			MemberSelection:
-				return scopeForMemberSelection(context)
+			MemberSelect:
+				return scopeForMemberSelect(context)
 		}
 
 		return super.getScope(context, eRef)
@@ -126,7 +126,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		}
 	}
 
-	protected def scopeForMemberSelection(MemberSelection selection) {
+	protected def scopeForMemberSelect(MemberSelect selection) {
 		val receiver = selection.receiver
 		val type = receiver.typeOf
 

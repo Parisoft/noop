@@ -15,10 +15,10 @@ class Values {
 
 		var value = 0;
 
-		if (string.startsWith("$")) {
-			value = Integer.parseInt(string.substring(1), 16)
-		} else if (string.startsWith("%")) {
-			value = Integer.parseInt(string.substring(1), 2)
+		if (string.startsWith("0x")) {
+			value = Integer.parseInt(string.substring(2), 16)
+		} else if (string.startsWith("0b")) {
+			value = Integer.parseInt(string.substring(2), 2)
 		} else if (string.startsWith("'") && string.endsWith("'")) {
 			value = string.charAt(1)
 		} else {

@@ -1,17 +1,17 @@
 INESHeader {
 
-	#NROM : 0
-	#MMC1 : 1
-	#UNROM : 2
-	#CNROM : 3
-	#MMC3 : 4
-	#MMC5 : 5
+	$NROM : 0
+	$MMC1 : 1
+	$UNROM : 2
+	$CNROM : 3
+	$MMC3 : 4
+	$MMC5 : 5
 	
-	#HORIZONTAL : 0
-	#VERTICAL : 1
-	#FOUR_SCREEN : %1000
+	$HORIZONTAL : 0
+	$VERTICAL : 1
+	$FOUR_SCREEN : 0b1000
 
-	mapper : #NROM
+	mapper : $NROM
 	
 	prgRomPages : 2
 	
@@ -20,5 +20,5 @@ INESHeader {
 	/* 0: Horizontal (Vertical scrolling) <br>
 	   1: Vertical (Horizontal scrolling) <br>
 	   8: Four screen <br> */
-	mirroring : #VERTICAL
+	mirroring : $VERTICAL
 }

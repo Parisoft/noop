@@ -129,8 +129,8 @@ CastExpression returns Expression:
 	SelectionExpression ({CastExpression.left=current} 'as' type=[NoopClass|CID])?;
 
 SelectionExpression returns Expression:
-	TerminalExpression ({MemberSelection.receiver=current} '.'
-	(member=[Member] (hasArgs?='(' (args+=Expression (',' args+=Expression)*)? ')')?) indexes+=Index* )*;
+	TerminalExpression ({MemberSelect.receiver=current} '.'
+	member=[Member] (hasArgs?='(' (args+=Expression (',' args+=Expression)*)? ')')? indexes+=Index*)*;
 
 TerminalExpression returns Expression:
 	{ByteLiteral} value=Byte |
@@ -179,16 +179,16 @@ terminal CHA returns ecore::EChar:
 	"'" (('\\' .) | !('\\' | "'")) "'";
 
 terminal HEX returns ecore::EInt:
-	'$' ('0'..'9' | 'A'..'F')+;
+	'0x' ('0'..'9' | 'A'..'F')+;
 
 terminal BIN returns ecore::EInt:
-	'%' ('0' | '1')+;
+	'0b' ('0' | '1')+;
 
 terminal BOOL returns ecore::EBoolean:
 	'true' | 'false';
 
 terminal ID:
-	('a'..'z' | '_' | '#') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
+	('a'..'z' | '_' | '$') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
 
 terminal CID:
 	('A'..'Z') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;

@@ -1,15 +1,15 @@
 Game {
 
-	#header : INESHeader{
-		mapper : INESHeader.#NROM,
-		mirroring : INESHeader.#VERTICAL, //(H Scroll)
+	$header : INESHeader{
+		mapper : INESHeader.$NROM,
+		mirroring : INESHeader.$VERTICAL, //(H Scroll)
 		prgRomPages : 2, //2 x 16 = 32Kb
 		chrRomPages : 1  //1 x 08 = 08Kb
 	}
 	
-	#instance : Game{}
+	$instance : Game{}
 	
-	#reset() {
+	$reset() {
 	}
 	
 	main() {

@@ -10,7 +10,7 @@ import org.eclipse.xtext.resource.XtextResource
 import org.eclipse.xtext.util.CancelIndicator
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.MemberRef
-import org.parisoft.noop.noop.MemberSelection
+import org.parisoft.noop.noop.MemberSelect
 
 @Singleton
 class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalculator {
@@ -51,12 +51,13 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 						if (name.startsWith(Members::STATIC_PREFIX)) {
 							acceptor.addPosition(node.offset, name.length, NoopHighlightingConfiguration.STRING_ID)
 						}
-					} else if (node.semanticElement instanceof MemberSelection) {
-						val selection = node.semanticElement as MemberSelection
+					} else if (node.semanticElement instanceof MemberSelect) {
+						val selection = node.semanticElement as MemberSelect
 						val name = selection.member?.name ?: ''
 
 						if (name.startsWith(Members::STATIC_PREFIX)) {
-							acceptor.addPosition(node.offset + node.text.trim.indexOf(Members::STATIC_PREFIX), name.length, NoopHighlightingConfiguration.STRING_ID)
+							acceptor.addPosition(node.offset + node.text.trim.indexOf(Members::STATIC_PREFIX), name.length,
+								NoopHighlightingConfiguration.STRING_ID)
 						}
 					}
 			}

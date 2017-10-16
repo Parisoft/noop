@@ -37,7 +37,6 @@ import org.parisoft.noop.noop.LShiftExpression
 import org.parisoft.noop.noop.LeExpression
 import org.parisoft.noop.noop.LtExpression
 import org.parisoft.noop.noop.MemberRef
-import org.parisoft.noop.noop.MemberSelection
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.MulExpression
 import org.parisoft.noop.noop.NewInstance
@@ -56,6 +55,7 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.MemberSelect
 
 class Expressions {
 
@@ -70,7 +70,7 @@ class Expressions {
 	@Inject extension TypeSystem
 	@Inject extension Collections
 
-	def isMethodInvocation(MemberSelection selection) {
+	def isMethodInvocation(MemberSelect selection) {
 		try {
 			selection.member instanceof Method
 		} catch (Error e) {
@@ -88,7 +88,7 @@ class Expressions {
 
 	def isOnMemberSelectionOrReference(Expression expression) {
 		val container = expression.eContainer
-		container !== null && (container instanceof MemberSelection || container instanceof MemberRef)
+		container !== null && (container instanceof MemberSelect || container instanceof MemberRef)
 	}
 
 	def nameOfTmp(List<Index> indexes, String containerName) {
@@ -205,7 +205,7 @@ class Expressions {
 				expression.containingClass.superClassOrObject
 			NewInstance:
 				expression.type
-			MemberSelection:
+			MemberSelect:
 				expression.member.typeOf
 			MemberRef:
 				expression.member.typeOf
@@ -336,7 +336,7 @@ class Expressions {
 					} else {
 						expression.type.defaultValueOf
 					}
-				MemberSelection:
+				MemberSelect:
 					expression.member.valueOf
 				MemberRef:
 					expression.member.valueOf
@@ -356,7 +356,7 @@ class Expressions {
 		switch (expression) {
 			ArrayLiteral:
 				expression.valueOf.dimensionOf
-			MemberSelection:
+			MemberSelect:
 				expression.member.dimensionOf.subListFrom(expression.indexes.size)
 			MemberRef:
 				expression.member.dimensionOf.subListFrom(expression.indexes.size)
@@ -477,7 +477,7 @@ class Expressions {
 						expression.fieldsInitializedOnContructor.forEach[prepare(data)]
 					}
 				}
-			MemberSelection: {
+			MemberSelect: {
 				expression.receiver.prepare(data)
 
 				if (expression.member instanceof Variable) {
@@ -598,7 +598,7 @@ class Expressions {
 
 				return chunks
 			}
-			MemberSelection: {
+			MemberSelect: {
 				val snapshot = data.snapshot
 				val chunks = newArrayList
 
@@ -910,7 +910,7 @@ class Expressions {
 					«data.pullAccIfOperating»
 				«ENDIF»	
 			'''
-			MemberSelection: '''
+			MemberSelect: '''
 				«val member = expression.member»
 				«val receiver = expression.receiver»
 				«IF member.isStatic»
@@ -955,7 +955,7 @@ class Expressions {
 						])»
 						«method.compileInvocation(expression.args, data)»
 					«ENDIF»
-				«ENDIF»				
+				«ENDIF»
 			'''
 			MemberRef: '''
 				«val member = expression.member»

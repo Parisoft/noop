@@ -252,7 +252,7 @@
         containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
   </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="MemberSelection" eSuperTypes="#//Expression">
+  <eClassifiers xsi:type="ecore:EClass" name="MemberSelect" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="receiver" eType="#//Expression"
         containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="member" eType="#//Member"/>
