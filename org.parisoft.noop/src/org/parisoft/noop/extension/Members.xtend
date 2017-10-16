@@ -163,7 +163,7 @@ public class Members {
 	def valueOf(Member member) {
 		switch (member) {
 			Variable: member.valueOf
-			Method: member.valueOf
+			Method: throw new NonConstantMemberException
 		}
 	}
 
@@ -181,10 +181,6 @@ public class Members {
 		}
 	}
 
-	def valueOf(Method method) {
-		throw new NonConstantMemberException
-	}
-	
 	def lenOfArrayReference(Variable variable, List<Index> indexes) {
 		variable.dimensionOf.drop(indexes.size).reduce[d1, d2| d1 * d2]
 	}
@@ -403,6 +399,27 @@ public class Members {
 		«ENDIF»
 	'''
 
+	def compileConstant(Member member) {
+		switch (member) {
+			Variable: member.compileConstant
+			Method: throw new NonConstantMemberException
+		}
+	}
+
+	def compileConstant(Variable variable) {
+		if (variable.isNonConstant) {
+			throw new NonConstantMemberException
+		}
+		
+		if (running.add(variable)) {
+			try {
+				return variable.nameOfConstant
+			} finally {
+				running.remove(variable)
+			}
+		}
+	}
+
 	def compileAbsoluteReference(Variable variable, CompileData receiver, List<Index> indexes, CompileData data) '''
 		«val ref = new CompileData => [
 			container = receiver.container
@@ -432,7 +449,7 @@ public class Members {
 		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
 			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 		«ELSE»
-			«ref.transferTo(data)»
+			«ref.resolveTo(data)»
 		«ENDIF»
 	'''
 	
@@ -487,7 +504,7 @@ public class Members {
 		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
 			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 		«ELSE»
-			«ref.transferTo(data)»
+			«ref.resolveTo(data)»
 		«ENDIF»
 	'''
 
@@ -508,7 +525,7 @@ public class Members {
 		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
 			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 		«ELSE»
-			«ref.transferTo(data)»
+			«ref.resolveTo(data)»
 		«ENDIF»
 	'''
 
@@ -527,7 +544,7 @@ public class Members {
 		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
 			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 		«ELSE»
-			«ref.transferTo(data)»
+			«ref.resolveTo(data)»
 		«ENDIF»
 	'''
 	
@@ -546,7 +563,7 @@ public class Members {
 		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
 			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
 		«ELSE»
-			«ref.transferTo(data)»
+			«ref.resolveTo(data)»
 		«ENDIF»
 	'''
 	
@@ -603,7 +620,7 @@ public class Members {
 						indirect = method.nameOfReturn
 					}
 				]»
-				«ret.transferTo(data)»
+				«ret.resolveTo(data)»
 			«ENDIF»
 		«ENDIF»
 	'''

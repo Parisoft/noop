@@ -249,7 +249,7 @@ class Operations {
 			«ENDIF»
 		«ELSE»
 			«noop»
-				CMP #«operand.immediate»
+				CMP #(«operand.immediate»)
 			«IF acc.relative === null»
 				«noop»
 					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
@@ -392,7 +392,7 @@ class Operations {
 			«ELSE»
 				«noop»
 					SEC
-					SBC #«operand.immediate»
+					SBC #(«operand.immediate»)
 			«ENDIF»
 			«branch = sbranch»
 				BVC +«comparison»
@@ -406,7 +406,7 @@ class Operations {
 						BMI  +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ELSE»
 					«noop»
-						LDY #«operand.immediate»
+						LDY #(«operand.immediate»)
 						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
 			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
@@ -438,7 +438,7 @@ class Operations {
 				«ENDIF»
 			«ELSE»
 				«noop»
-					CMP #«operand.immediate»
+					CMP #(«operand.immediate»)
 			«ENDIF»
 		«ENDIF»
 		«IF acc.relative === null»
@@ -662,7 +662,7 @@ class Operations {
 			«val shiftEnd = labelForShiftEnd»
 				STA «Members::TEMP_VAR_NAME1»
 				PLA
-				LDX #«operand.immediate»
+				LDX #(«operand.immediate»)
 				BEQ +«shiftEnd»
 			-«shiftLoop»
 				ASL «Members::TEMP_VAR_NAME1»
@@ -675,7 +675,7 @@ class Operations {
 		«ELSE»
 			«val labelLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
-				LDX #«operand.immediate»
+				LDX #(«operand.immediate»)
 				BEQ +«shiftEnd»
 			-«labelLoop»
 				ASL A
@@ -762,7 +762,7 @@ class Operations {
 			«val shiftEnd = labelForShiftEnd»
 				STA «Members::TEMP_VAR_NAME1»
 				PLA
-				LDX #«operand.immediate»
+				LDX #(«operand.immediate»)
 				BEQ +«shiftEnd»
 			-«shiftLoop»
 				LSR A
@@ -775,7 +775,7 @@ class Operations {
 		«ELSE»
 			«val labelLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
-				LDX #«operand.immediate»
+				LDX #(«operand.immediate»)
 				BEQ +«shiftEnd»
 			-«labelLoop»
 				LSR A
@@ -921,7 +921,7 @@ class Operations {
 
 	private def operateImmediate(CompileData operand, String instruction) '''
 		«noop»
-			«instruction» #«operand.immediate»
+			«instruction» #(«operand.immediate»)
 	'''
 
 	private def operateImmediate(CompileData acc, String instruction, CompileData operand) '''
@@ -954,7 +954,7 @@ class Operations {
 				«IF clear !== null»
 					«clear»
 				«ENDIF»
-				«instruction» #«operand.immediate»
+				«instruction» #(«operand.immediate»)
 		«ENDIF»
 	'''
 
@@ -1039,7 +1039,7 @@ class Operations {
 		«IF data.type.isSigned»
 			«noop»
 				«IF data.immediate !== null»
-					LDA #«data.immediate»
+					LDA #(«data.immediate»)
 				«ELSEIF data.absolute !== null»
 					LDA «data.absolute»«IF data.isIndexed», X«ENDIF»
 				«ELSEIF data.indirect !== null»
@@ -1083,6 +1083,6 @@ class Operations {
 
 	private def labelForComparisonEnd() '''comparisonEnd«labelCounter.andIncrement»:'''
 
-	private def noop() {
+	private def void noop() {
 	}
 }

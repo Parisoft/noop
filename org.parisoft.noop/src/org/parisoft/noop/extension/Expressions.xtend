@@ -56,6 +56,7 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.noop.MemberSelect
+import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 
 class Expressions {
 
@@ -260,8 +261,6 @@ class Expressions {
 	def Object valueOf(Expression expression) {
 		try {
 			switch (expression) {
-				AssignmentExpression:
-					expression.right.valueOf
 				OrExpression:
 					(expression.left.valueOf as Boolean) || (expression.right.valueOf as Boolean)
 				AndExpression:
@@ -290,8 +289,6 @@ class Expressions {
 					(expression.left.valueOf as Integer) < (expression.right.valueOf as Integer)
 				LeExpression:
 					(expression.left.valueOf as Integer) <= (expression.right.valueOf as Integer)
-				InheritsExpression:
-					throw new NonConstantExpressionException(expression)
 				AddExpression:
 					(expression.left.valueOf as Integer) + (expression.right.valueOf as Integer)
 				SubExpression:
@@ -316,10 +313,6 @@ class Expressions {
 					-(expression.right.valueOf as Integer)
 				SigPosExpression:
 					(expression.right.valueOf as Integer)
-				IncExpression:
-					(expression.right.valueOf as Integer) + 1
-				DecExpression:
-					(expression.right.valueOf as Integer) - 1
 				CastExpression:
 					expression.left.valueOf
 				ByteLiteral:
@@ -341,8 +334,6 @@ class Expressions {
 				MemberRef:
 					expression.member.valueOf
 				default:
-//			    This: 
-//			    Super:
 					throw new NonConstantExpressionException(expression)
 			}
 		} catch (NonConstantMemberException e) {
@@ -672,323 +663,388 @@ class Expressions {
 	}
 
 	def String compile(Expression expression, CompileData data) {
-		switch (expression) {
-			AssignmentExpression: '''
-				«val ref = new CompileData => [
-					container = data.container
-					operation = data.operation
-					type = expression.left.typeOf
-					mode = Mode::REFERENCE
-				]»
-				«expression.left.compile(ref)»
-				«IF expression.assignment === AssignmentType::ASSIGN»
-					«expression.right.compile(ref => [mode = Mode::COPY])»
-				«ELSEIF expression.assignment === AssignmentType::ADD_ASSIGN»
-					«val add = NoopFactory::eINSTANCE.createAddExpression => [
-						left = expression.left
-						right = expression.right
+		try {
+			val value = new CompileData => [
+				container = data?.container
+				operation = data?.operation
+				type = data?.type
+				immediate = expression.compileConstant
+			]
+			value.resolveTo(data)?.toString
+		} catch (NonConstantExpressionException e) {
+			switch (expression) {
+				AssignmentExpression: '''
+					«val ref = new CompileData => [
+						container = data.container
+						operation = data.operation
+						type = expression.left.typeOf
+						mode = Mode::REFERENCE
 					]»
-					«add.compile(ref => [mode = Mode::COPY])»
-				«ELSEIF expression.assignment === AssignmentType::SUB_ASSIGN»
-					«val sub = NoopFactory::eINSTANCE.createSubExpression => [
-						left = expression.left
-						right = expression.right
-					]»
-					«sub.compile(ref => [mode = Mode::COPY])»
-				«ELSEIF expression.assignment === AssignmentType::BOR_ASSIGN»
-					«val bor = NoopFactory::eINSTANCE.createBOrExpression => [
-						left = expression.left
-						right = expression.right
-					]»
-					«bor.compile(ref => [mode = Mode::COPY])»
-				«ELSEIF expression.assignment === AssignmentType::BAN_ASSIGN»
-					«val ban = NoopFactory::eINSTANCE.createBAndExpression => [
-						left = expression.left
-						right = expression.right
-					]»
-					«ban.compile(ref => [mode = Mode::COPY])»
-				«ELSEIF expression.assignment === AssignmentType::BLS_ASSIGN»
-					«val bls = NoopFactory::eINSTANCE.createLShiftExpression => [
-						left = expression.left
-						right = expression.right
-					]»
-					«bls.compile(ref => [mode = Mode::COPY])»
-				«ELSEIF expression.assignment === AssignmentType::BRS_ASSIGN»
-					«val brs = NoopFactory::eINSTANCE.createRShiftExpression => [
-						left = expression.left
-						right = expression.right
-					]»
-					«brs.compile(ref => [mode = Mode::COPY])»
-				«ENDIF»
-				«ref.transferTo(data)»
-			'''
-			OrExpression: '''«Operation::OR.compileBinary(expression.left, expression.right, data)»'''
-			AndExpression: '''«Operation::AND.compileBinary(expression.left, expression.right, data)»'''
-			EqualsExpression: '''«Operation::COMPARE_EQ.compileBinary(expression.left, expression.right, data)»'''
-			DifferExpression: '''«Operation::COMPARE_NE.compileBinary(expression.left, expression.right, data)»'''
-			LtExpression: '''«Operation::COMPARE_LT.compileBinary(expression.left, expression.right, data)»'''
-			LeExpression: '''«Operation::COMPARE_GE.compileBinary(expression.right, expression.left, data)»'''
-			GtExpression: '''«Operation::COMPARE_LT.compileBinary(expression.right, expression.left, data)»'''
-			GeExpression: '''«Operation::COMPARE_GE.compileBinary(expression.left, expression.right, data)»'''
-			AddExpression: '''«Operation::ADDITION.compileBinary(expression.left, expression.right, data)»'''
-			SubExpression: '''«Operation::SUBTRACTION.compileBinary(expression.left, expression.right, data)»'''
-			BOrExpression: '''«Operation::BIT_OR.compileBinary(expression.left, expression.right, data)»'''
-			BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, data)»'''
-			LShiftExpression: '''«Operation::BIT_SHIFT_LEFT.compileBinary(expression.left, expression.right, data)»'''
-			RShiftExpression: '''«Operation::BIT_SHIFT_RIGHT.compileBinary(expression.left, expression.right, data)»'''
-			EorExpression: '''«Operation::BIT_EXCLUSIVE_OR.compileUnary(expression.right, data)»'''
-			NotExpression: '''«Operation::NEGATION.compileUnary(expression.right, data)»'''
-			SigNegExpression: '''«Operation::SIGNUM.compileUnary(expression.right, data)»'''
-			SigPosExpression: '''«expression.right.compile(data)»'''
-			DecExpression: '''«Operation::DECREMENT.compileInc(expression.right, data)»'''
-			IncExpression: '''«Operation::INCREMENT.compileInc(expression.right, data)»'''
-			CastExpression: '''«expression.left.compile(data)»'''
-			InheritsExpression: ''';TODO: inherits'''
-			ByteLiteral: '''
-				«IF data.db !== null»
-					«val bytes = expression.valueOf.toBytes»
-					«data.relative»:
-						«IF data.sizeOf == 1»
-							.db «bytes.head.toHex»
-						«ELSE»
-							.db «bytes.join(' ', [toHex])»
-						«ENDIF»
-				«ELSE»
-					«val src = new CompileData => [
+					«expression.left.compile(ref)»
+					«IF expression.assignment === AssignmentType::ASSIGN»
+						«expression.right.compile(ref => [mode = Mode::COPY])»
+					«ELSEIF expression.assignment === AssignmentType::ADD_ASSIGN»
+						«val add = NoopFactory::eINSTANCE.createAddExpression => [
+							left = expression.left
+							right = expression.right
+						]»
+						«add.compile(ref => [mode = Mode::COPY])»
+					«ELSEIF expression.assignment === AssignmentType::SUB_ASSIGN»
+						«val sub = NoopFactory::eINSTANCE.createSubExpression => [
+							left = expression.left
+							right = expression.right
+						]»
+						«sub.compile(ref => [mode = Mode::COPY])»
+					«ELSEIF expression.assignment === AssignmentType::BOR_ASSIGN»
+						«val bor = NoopFactory::eINSTANCE.createBOrExpression => [
+							left = expression.left
+							right = expression.right
+						]»
+						«bor.compile(ref => [mode = Mode::COPY])»
+					«ELSEIF expression.assignment === AssignmentType::BAN_ASSIGN»
+						«val ban = NoopFactory::eINSTANCE.createBAndExpression => [
+							left = expression.left
+							right = expression.right
+						]»
+						«ban.compile(ref => [mode = Mode::COPY])»
+					«ELSEIF expression.assignment === AssignmentType::BLS_ASSIGN»
+						«val bls = NoopFactory::eINSTANCE.createLShiftExpression => [
+							left = expression.left
+							right = expression.right
+						]»
+						«bls.compile(ref => [mode = Mode::COPY])»
+					«ELSEIF expression.assignment === AssignmentType::BRS_ASSIGN»
+						«val brs = NoopFactory::eINSTANCE.createRShiftExpression => [
+							left = expression.left
+							right = expression.right
+						]»
+						«brs.compile(ref => [mode = Mode::COPY])»
+					«ENDIF»
+					«ref.resolveTo(data)»
+				'''
+				OrExpression: '''«Operation::OR.compileBinary(expression.left, expression.right, data)»'''
+				AndExpression: '''«Operation::AND.compileBinary(expression.left, expression.right, data)»'''
+				EqualsExpression: '''«Operation::COMPARE_EQ.compileBinary(expression.left, expression.right, data)»'''
+				DifferExpression: '''«Operation::COMPARE_NE.compileBinary(expression.left, expression.right, data)»'''
+				LtExpression: '''«Operation::COMPARE_LT.compileBinary(expression.left, expression.right, data)»'''
+				LeExpression: '''«Operation::COMPARE_GE.compileBinary(expression.right, expression.left, data)»'''
+				GtExpression: '''«Operation::COMPARE_LT.compileBinary(expression.right, expression.left, data)»'''
+				GeExpression: '''«Operation::COMPARE_GE.compileBinary(expression.left, expression.right, data)»'''
+				AddExpression: '''«Operation::ADDITION.compileBinary(expression.left, expression.right, data)»'''
+				SubExpression: '''«Operation::SUBTRACTION.compileBinary(expression.left, expression.right, data)»'''
+				MulExpression: '''«Operation::MULTIPLICATION.compileBinary(expression.left, expression.right, data)»'''
+				DivExpression: '''«Operation::DIVISION.compileBinary(expression.left, expression.right, data)»'''
+				BOrExpression: '''«Operation::BIT_OR.compileBinary(expression.left, expression.right, data)»'''
+				BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, data)»'''
+				LShiftExpression: '''«Operation::BIT_SHIFT_LEFT.compileBinary(expression.left, expression.right, data)»'''
+				RShiftExpression: '''«Operation::BIT_SHIFT_RIGHT.compileBinary(expression.left, expression.right, data)»'''
+				EorExpression: '''«Operation::BIT_EXCLUSIVE_OR.compileUnary(expression.right, data)»'''
+				NotExpression: '''«Operation::NEGATION.compileUnary(expression.right, data)»'''
+				SigNegExpression: '''«Operation::SIGNUM.compileUnary(expression.right, data)»'''
+				SigPosExpression: '''«expression.right.compile(data)»'''
+				DecExpression: '''«Operation::DECREMENT.compileInc(expression.right, data)»'''
+				IncExpression: '''«Operation::INCREMENT.compileInc(expression.right, data)»'''
+				CastExpression: '''«expression.left.compile(data)»'''
+				InheritsExpression: ''';TODO: inherits'''
+				ByteLiteral: '''
+					«IF data.db !== null»
+						«val bytes = expression.valueOf.toBytes»
+						«data.relative»:
+							«IF data.sizeOf == 1»
+								.db «bytes.head.toHex»
+							«ELSE»
+								.db «bytes.join(' ', [toHex])»
+							«ENDIF»
+					«ELSE»
+						«val src = new CompileData => [
 						type = expression.typeOf
 						immediate = expression.value.toHex.toString
 					]»
-					«src.transferTo(data)»
-				«ENDIF»
-			'''
-			BoolLiteral: '''
-				«val boolAsByte = NoopFactory::eINSTANCE.createByteLiteral => [value = if (expression.value) 1 else 0]»
-				«boolAsByte.compile(data)»
-			'''
-			StringLiteral: '''
-				«IF data.db !== null»
-					«data.db»:
-						«IF expression.value.startsWith(FILE_URI)»
-							.incbin "«expression.value.substring(FILE_URI.length)»"
-						«ELSE»
-							.db «expression.value.toBytes.join(', ', [toHex])»
-						«ENDIF»
-				«ELSEIF data.absolute !== null»
-					«data.pushAccIfOperating»
-					«val bytes = expression.value.bytes.map[intValue]»
-						«IF data.isIndexed»
-							LDX «data.index»
-						«ENDIF»
-						«FOR i : 0 ..< bytes.size»
-							LDA #«bytes.get(i).toHex»
-							STA «data.absolute»«IF i > 0» + «i»«ENDIF»«IF data.isIndexed», X«ENDIF»
-						«ENDFOR»
-					«data.pullAccIfOperating»
-				«ELSEIF data.indirect !== null»
-					«data.pushAccIfOperating»
-					«val bytes = expression.value.bytes.map[intValue]»
-						«IF data.isIndexed»
-							LDY «data.index»
-						«ELSE»
-							LDY #$00
-						«ENDIF»
-						«FOR i : 0 ..< bytes.size»
+						«src.resolveTo(data)»
+					«ENDIF»
+				'''
+				BoolLiteral: '''
+					«val boolAsByte = NoopFactory::eINSTANCE.createByteLiteral => [value = if (expression.value) 1 else 0]»
+					«boolAsByte.compile(data)»
+				'''
+				StringLiteral: '''
+					«IF data.db !== null»
+						«data.db»:
+							«IF expression.value.startsWith(FILE_URI)»
+								.incbin "«expression.value.substring(FILE_URI.length)»"
+							«ELSE»
+								.db «expression.value.toBytes.join(', ', [toHex])»
+							«ENDIF»
+					«ELSEIF data.absolute !== null»
+						«data.pushAccIfOperating»
+						«val bytes = expression.value.bytes.map[intValue]»
+							«IF data.isIndexed»
+								LDX «data.index»
+							«ENDIF»
+							«FOR i : 0 ..< bytes.size»
+								LDA #«bytes.get(i).toHex»
+								STA «data.absolute»«IF i > 0» + «i»«ENDIF»«IF data.isIndexed», X«ENDIF»
+							«ENDFOR»
+						«data.pullAccIfOperating»
+					«ELSEIF data.indirect !== null»
+						«data.pushAccIfOperating»
+						«val bytes = expression.value.bytes.map[intValue]»
+							«IF data.isIndexed»
+								LDY «data.index»
+							«ELSE»
+								LDY #$00
+							«ENDIF»
+							«FOR i : 0 ..< bytes.size»
+								«IF i > 0»
+									INY
+								«ENDIF»
+								LDA #«bytes.get(i).toHex»
+								STA («data.indirect»), Y
+							«ENDFOR»
+						«data.pullAccIfOperating»
+					«ENDIF»
+				'''
+				ArrayLiteral: '''
+					«IF data.db !== null»
+						«data.db»:
+						«val bytes = expression.valueOf.toBytes»
+						«val chunks = (bytes.size / 32).max(1) + if (bytes.size > 32 && bytes.size % 32 != 0) 1 else 0»
+							«FOR i : 0..< chunks»
+								«val from = i * 32»
+								«val to = (from + 32).min(bytes.size)»
+								.db «bytes.subList(from, to).join(', ', [toHex])»
+							«ENDFOR»
+					«ELSE»
+						«val tmp = if (expression.isOnMemberSelectionOrReference) {
+									new CompileData => [
+											container = data.container
+											operation = data.operation
+											absolute = expression.nameOfTmp(data.container)
+											type = data.type
+										]
+									} else {
+										data.clone
+									}
+						»
+						«val elements = expression.flatList»
+						«FOR i : 0 ..< elements.size»
+							«val dst = tmp.clone»
 							«IF i > 0»
-								INY
+								«IF dst.absolute !== null»
+									«dst.absolute = '''«dst.absolute» + «i * expression.sizeOf»'''»
+								«ELSEIF dst.indirect !== null && dst.index.startsWith('#')»
+									«dst.index = '''«dst.index» + «i * expression.sizeOf»'''»
+								«ELSEIF dst.indirect !== null && dst.isIndexed»
+									«data.pushAccIfOperating»
+										CLC
+										LDA «dst.index»
+										ADC #«expression.sizeOf.toHex»
+										STA «dst.index»
+									«data.pullAccIfOperating»
+								«ELSEIF dst.indirect !== null»
+									«dst.index = '''#«(i * expression.sizeOf).toHex»'''»
+								«ENDIF»
 							«ENDIF»
-							LDA #«bytes.get(i).toHex»
-							STA («data.indirect»), Y
+							«elements.get(i).compile(dst)»
 						«ENDFOR»
-					«data.pullAccIfOperating»
-				«ENDIF»
-			'''
-			ArrayLiteral: '''
-				«IF data.db !== null»
-					«data.db»:
-					«val bytes = expression.valueOf.toBytes»
-					«val chunks = (bytes.size / 32).max(1) + if (bytes.size > 32 && bytes.size % 32 != 0) 1 else 0»
-						«FOR i : 0..< chunks»
-							«val from = i * 32»
-							«val to = (from + 32).min(bytes.size)»
-							.db «bytes.subList(from, to).join(', ', [toHex])»
-						«ENDFOR»
-				«ELSE»
-					«val tmp = if (expression.isOnMemberSelectionOrReference) {
-						new CompileData => [
-							container = data.container
-							operation = data.operation
-							absolute = expression.nameOfTmp(data.container)
-							type = data.type
-						]
-					} else {
-						data.clone
-					}»
-					«val elements = expression.flatList»
-					«FOR i : 0 ..< elements.size»
-						«val dst = tmp.clone»
-						«IF i > 0»
-							«IF dst.absolute !== null»
-								«dst.absolute = '''«dst.absolute» + «i * expression.sizeOf»'''»
-							«ELSEIF dst.indirect !== null && dst.index.startsWith('#')»
-								«dst.index = '''«dst.index» + «i * expression.sizeOf»'''»
-							«ELSEIF dst.indirect !== null && dst.isIndexed»
-								«data.pushAccIfOperating»
-									CLC
-									LDA «dst.index»
-									ADC #«expression.sizeOf.toHex»
-									STA «dst.index»
-								«data.pullAccIfOperating»
-							«ELSEIF dst.indirect !== null»
-								«dst.index = '''#«(i * expression.sizeOf).toHex»'''»
-							«ENDIF»
-						«ENDIF»
-						«elements.get(i).compile(dst)»
-					«ENDFOR»
-					«IF expression.isOnMemberSelectionOrReference && data.mode === Mode::POINT»
-						«data.pointTo(tmp)»
-					«ENDIF»
-				«ENDIF»
-			'''
-			This: '''
-				«expression.compileSelfReference(data)»
-			'''
-			Super: '''
-				«expression.compileSelfReference(data)»
-			'''
-			NewInstance: '''
-				«IF data === null»
-					«val constructor = expression.nameOfConstructor»
-					«val receiver = expression.nameOfReceiver»
-					«constructor»:
-						LDY #$00
-						LDA #«expression.type.asmName»
-						STA («receiver»), Y
-					«FOR field : expression.fieldsInitializedOnContructor»
-						«field.compile(new CompileData => [
-							container = constructor
-							indirect = receiver
-						])»
-					«ENDFOR»
-					«noop»
-						RTS
-				«ELSEIF expression.dimension.isNotEmpty»
-					TODO: compile array constructor call
-				«ELSEIF expression.type.isPrimitive»
-					«val defaultByte = NoopFactory::eINSTANCE.createByteLiteral => [value = 0]»
-					«defaultByte.compile(data)»
-				«ELSE»
-					«val constructor = expression.nameOfConstructor»
-					«val receiver = new CompileData => [
-						operation = data.operation
-						indirect = expression.nameOfReceiver
-					]»
-					«IF expression.isOnMemberSelectionOrReference»
-						«val tmp = new CompileData => [
-							operation = data.operation
-							absolute = expression.nameOfTmpVar(data.container)
-						]»
-						«IF data.mode === Mode::POINT»
+						«IF expression.isOnMemberSelectionOrReference && data.mode === Mode::POINT»
 							«data.pointTo(tmp)»
-						«ELSEIF data.mode == Mode::REFERENCE»
-							«tmp.referenceInto(data)»
 						«ENDIF»
-						«receiver.pointTo(tmp)»
+					«ENDIF»
+				'''
+				This: '''
+					«expression.compileSelfReference(data)»
+				'''
+				Super: '''
+					«expression.compileSelfReference(data)»
+				'''
+				NewInstance: '''
+					«IF data === null»
+						«val constructor = expression.nameOfConstructor»
+						«val receiver = expression.nameOfReceiver»
+						«constructor»:
+							LDY #$00
+							LDA #«expression.type.asmName»
+							STA («receiver»), Y
+						«FOR field : expression.fieldsInitializedOnContructor»
+							«field.compile(new CompileData => [
+								container = constructor
+								indirect = receiver
+							])»
+						«ENDFOR»
+						«noop»
+							RTS
+					«ELSEIF expression.dimension.isNotEmpty»
+						TODO: compile array constructor call
+					«ELSEIF expression.type.isPrimitive»
+						«val defaultByte = NoopFactory::eINSTANCE.createByteLiteral => [value = 0]»
+						«defaultByte.compile(data)»
 					«ELSE»
-						«receiver.pointTo(data)»
-					«ENDIF»
-					«data.pushAccIfOperating»
-						JSR «constructor»
-					«FOR field : expression.constructor?.fields ?: emptyList»
-						«field.value.compile(new CompileData => [
-							container = constructor
+						«val constructor = expression.nameOfConstructor»
+						«val receiver = new CompileData => [
 							operation = data.operation
-							indirect = receiver.indirect									
-							index = '''#«field.variable.nameOfOffset»'''
-							type = field.variable.typeOf
-						])»
-					«ENDFOR»
-					«data.pullAccIfOperating»
-				«ENDIF»	
-			'''
-			MemberSelect: '''
-				«val member = expression.member»
-				«val receiver = expression.receiver»
-				«IF member.isStatic»
-					«IF !(receiver instanceof NewInstance)»
-						«receiver.compile(new CompileData => [
-							container = data.container
-							operation = data.operation
-						])»
-					«ENDIF»
-					«IF member instanceof Variable»
-						«IF member.isConstant»
-							«member.compileConstantReference(data)»
+							indirect = expression.nameOfReceiver
+						]»
+						«IF expression.isOnMemberSelectionOrReference»
+							«val tmp = new CompileData => [
+								operation = data.operation
+								absolute = expression.nameOfTmpVar(data.container)
+							]»
+							«IF data.mode === Mode::POINT»
+								«data.pointTo(tmp)»
+							«ELSEIF data.mode == Mode::REFERENCE»
+								«tmp.referenceInto(data)»
+							«ENDIF»
+							«receiver.pointTo(tmp)»
 						«ELSE»
-							«member.compileStaticReference(expression.indexes, data)»
+							«receiver.pointTo(data)»
 						«ENDIF»
-					«ELSEIF member instanceof Method»
-						«val method = member as Method»
-						«method.compileInvocation(expression.args, data)»
-					«ENDIF»
-				«ELSE»
-					«IF member instanceof Variable»
-						«val rcv = new CompileData => [
-							container = data.container
-							operation = data.operation
-							type = receiver.typeOf
-							mode = Mode::REFERENCE
-						]»
-						«receiver.compile(rcv)»
-						«IF rcv.absolute !== null»
-							«member.compileAbsoluteReference(rcv, expression.indexes, data)»
-						«ELSEIF rcv.indirect !== null»
-							«member.compileIndirectReference(rcv, expression.indexes, data)»
+						«data.pushAccIfOperating»
+							JSR «constructor»
+						«FOR field : expression.constructor?.fields ?: emptyList»
+							«field.value.compile(new CompileData => [
+								container = constructor
+								operation = data.operation
+								indirect = receiver.indirect									
+								index = '''#«field.variable.nameOfOffset»'''
+								type = field.variable.typeOf
+							])»
+						«ENDFOR»
+						«data.pullAccIfOperating»
+					«ENDIF»	
+				'''
+				MemberSelect: '''
+					«val member = expression.member»
+					«val receiver = expression.receiver»
+					«IF member.isStatic»
+						«IF !(receiver instanceof NewInstance)»
+							«receiver.compile(new CompileData => [
+								container = data.container
+								operation = data.operation
+							])»
 						«ENDIF»
-					«ELSEIF member instanceof Method»
-						«val method = member as Method»
-						«receiver.compile(new CompileData => [
-							container = data.container
-							operation = data.operation
-							indirect = method.nameOfReceiver
-							type = receiver.typeOf
-							mode = Mode::POINT
-						])»
-						«method.compileInvocation(expression.args, data)»
-					«ENDIF»
-				«ENDIF»
-			'''
-			MemberRef: '''
-				«val member = expression.member»
-				«IF member instanceof Variable»
-					«IF member.isField && member.isNonStatic»
-						«member.compilePointerReference('''«data.container».rcv''', expression.indexes, data)»
-					«ELSEIF member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)»
-						«member.compilePointerReference(member.nameOf, expression.indexes, data)»
-					«ELSEIF member.isConstant»
-						«member.compileConstantReference(data)»
-					«ELSEIF member.isStatic»
-						«member.compileStaticReference(expression.indexes, data)»
+						«IF member instanceof Variable»
+							«IF member.isConstant»
+								«member.compileConstantReference(data)»
+							«ELSE»
+								«member.compileStaticReference(expression.indexes, data)»
+							«ENDIF»
+						«ELSEIF member instanceof Method»
+							«val method = member as Method»
+							«method.compileInvocation(expression.args, data)»
+						«ENDIF»
 					«ELSE»
-						«member.compileLocalReference(expression.indexes, data)»
+						«IF member instanceof Variable»
+							«val rcv = new CompileData => [
+								container = data.container
+								operation = data.operation
+								type = receiver.typeOf
+								mode = Mode::REFERENCE
+							]»
+							«receiver.compile(rcv)»
+							«IF rcv.absolute !== null»
+								«member.compileAbsoluteReference(rcv, expression.indexes, data)»
+							«ELSEIF rcv.indirect !== null»
+								«member.compileIndirectReference(rcv, expression.indexes, data)»
+							«ENDIF»
+						«ELSEIF member instanceof Method»
+							«val method = member as Method»
+							«receiver.compile(new CompileData => [
+								container = data.container
+								operation = data.operation
+								indirect = method.nameOfReceiver
+								type = receiver.typeOf
+								mode = Mode::POINT
+							])»
+							«method.compileInvocation(expression.args, data)»
+						«ENDIF»
 					«ENDIF»
-				«ELSEIF member instanceof Method»
-					«val method = member as Method»
-					«IF method.isNonStatic»
-						«val outerReceiver = new CompileData => [
-							operation = data.operation
-							indirect = '''«data.container».rcv'''
-						]»
-						«val innerReceiver = new CompileData => [
-							operation = data.operation
-							indirect = method.nameOfReceiver
-						]»
-						«innerReceiver.pointTo(outerReceiver)»
-					«ENDIF»
-					«method.compileInvocation(expression.args, data)»
-				«ENDIF»					
-			'''
-			default:
-				''
+				'''
+				MemberRef: '''
+					«val member = expression.member»
+					«IF member instanceof Variable»
+						«IF member.isField && member.isNonStatic»
+							«member.compilePointerReference('''«data.container».rcv''', expression.indexes, data)»
+						«ELSEIF member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)»
+							«member.compilePointerReference(member.nameOf, expression.indexes, data)»
+						«ELSEIF member.isConstant»
+							«member.compileConstantReference(data)»
+						«ELSEIF member.isStatic»
+							«member.compileStaticReference(expression.indexes, data)»
+						«ELSE»
+							«member.compileLocalReference(expression.indexes, data)»
+						«ENDIF»
+					«ELSEIF member instanceof Method»
+						«val method = member as Method»
+						«IF method.isNonStatic»
+							«val outerReceiver = new CompileData => [
+								operation = data.operation
+								indirect = '''«data.container».rcv'''
+							]»
+							«val innerReceiver = new CompileData => [
+								operation = data.operation
+								indirect = method.nameOfReceiver
+							]»
+							«innerReceiver.pointTo(outerReceiver)»
+						«ENDIF»
+						«method.compileInvocation(expression.args, data)»
+					«ENDIF»					
+				'''
+				default:
+					''
+			}
+		}
+	}
+	
+	private def String compileConstant(Expression expression) {
+		val text = NodeModelUtils.findActualNodeFor(expression)?.text?.trim ?: ''
+		val wrapped = text.startsWith('(') && text.endsWith(')')
+		
+		try {
+			switch (expression) {
+				OrExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» || «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				AndExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» && «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				EqualsExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» == «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				DifferExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» != «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				GtExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» > «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				GeExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» >= «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				LtExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» < «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				LeExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» <= «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				AddExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» + «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				SubExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» - «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				MulExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» * «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				DivExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» / «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				BOrExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» | «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				BAndExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» & «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				LShiftExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» << «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				RShiftExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» >> «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				EorExpression:'''«IF wrapped»(«ENDIF»~«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				NotExpression:'''«IF wrapped»(«ENDIF»!«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				SigNegExpression:'''«IF wrapped»(«ENDIF»-«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				SigPosExpression:'''«IF wrapped»(«ENDIF»+«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				CastExpression:
+					expression.left.compileConstant
+				ByteLiteral:
+					expression.value.toString
+				BoolLiteral:
+					expression.value.toString.toUpperCase
+				NewInstance:
+					if (expression.type.isPrimitive) {
+						expression.type.defaultValueOf.toString.toUpperCase
+					} else {
+						throw new NonConstantExpressionException(expression)
+					}
+				MemberSelect:
+					expression.member.compileConstant
+				MemberRef:
+					expression.member.compileConstant
+				default:
+					throw new NonConstantExpressionException(expression)
+			}
+		} catch (NonConstantMemberException e) {
+			throw new NonConstantExpressionException(expression)
+		} catch (ClassCastException e) {
+			throw new InvalidExpressionException(expression)
 		}
 	}
 
@@ -1005,19 +1061,19 @@ class Expressions {
 
 	private def compileBinary(Operation binaryOperation, Expression left, Expression right, CompileData data) '''
 		«val lda = new CompileData => [
-			container = data.container
-			operation = data.operation
-			type = if (data.type.isBoolean) left.typeOf else data.type
-			register = 'A'
-			mode = Mode::COPY
-		]»
+					container = data.container
+					operation = data.operation
+					type = if (data.type.isBoolean) left.typeOf else data.type
+					register = 'A'
+					mode = Mode::COPY
+				]»
 		«val opr = new CompileData => [
-			container = data.container
-			operation = binaryOperation
-			relative = data.relative
-			type = if (data.type.isBoolean) left.typeOf else data.type
-			mode = Mode::OPERATE
-		]»
+					container = data.container
+					operation = binaryOperation
+					relative = data.relative
+					type = if (data.type.isBoolean) left.typeOf else data.type
+					mode = Mode::OPERATE
+				]»
 			«IF data.operation !== null»
 				PHA
 			«ENDIF»
@@ -1038,17 +1094,17 @@ class Expressions {
 					PLA
 				«ENDFOR»
 			«val tmp = new CompileData => [
-				container = data.container
-				type = data.type
-				absolute = Members::TEMP_VAR_NAME2
-			]»
+						container = data.container
+						type = data.type
+						absolute = Members::TEMP_VAR_NAME2
+					]»
 			«data.operateOn(tmp)»
 		«ELSEIF data.mode === Mode::COPY && data.relative === null»
 			«val res = new CompileData => [
-				container = data.container
-				type = data.type
-				register = 'A'
-			]»
+						container = data.container
+						type = data.type
+						register = 'A'
+					]»
 			«res.copyTo(data)»
 		«ENDIF»
 	'''

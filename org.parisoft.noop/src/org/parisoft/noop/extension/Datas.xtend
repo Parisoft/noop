@@ -19,7 +19,7 @@ class Datas {
 		data.type.sizeOf
 	}
 
-	def transferTo(CompileData src, CompileData dst) {
+	def resolveTo(CompileData src, CompileData dst) {
 		switch (dst.mode) {
 			case COPY: src.copyTo(dst)
 			case POINT: dst.pointTo(src)
@@ -72,23 +72,15 @@ class Datas {
 
 	private def copyImmediateToAbsolute(CompileData src, CompileData dst) '''
 		«dst.pushAccIfOperating»
-		«IF dst.isIndexed»
-			«noop»
+			«IF dst.isIndexed»
 				LDX «dst.index»
-		«ENDIF»
-		«noop»
+			«ENDIF»
 			LDA #<(«src.immediate»)
 			STA «dst.absolute»«IF dst.isIndexed», X«ENDIF»
-		«IF dst.sizeOf > 1»
-			«IF src.sizeOf > 1»
-				«noop»
-					LDA #>(«src.immediate»)
-			«ELSE»
-				«src.loadMSBFromAcc»
-			«ENDIF»
-			«noop»
+			«IF dst.sizeOf > 1»
+				LDA #>(«src.immediate»)
 				STA «dst.absolute» + 1«IF dst.isIndexed», X«ENDIF»
-		«ENDIF»
+			«ENDIF»
 		«dst.pullAccIfOperating»
 	'''
 
@@ -97,37 +89,26 @@ class Datas {
 			LDY «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
 			LDA #<(«src.immediate»)
 			STA («dst.indirect»), Y
-		«IF dst.sizeOf > 1»
-			«IF src.sizeOf > 1»
-				«noop»
-					LDA #>(«src.immediate»)
-			«ELSE»
-				«src.loadMSBFromAcc»
-			«ENDIF»
-			«noop»
+			«IF dst.sizeOf > 1»
+				LDA #>(«src.immediate»)
 				INY
 				STA («dst.indirect»), Y
-		«ENDIF»
+			«ENDIF»
 		«dst.pullAccIfOperating»
 	'''
 
 	private def copyImmediateToRegister(CompileData src, CompileData dst) '''
 		«IF dst.sizeOf > 1»
-			«IF src.sizeOf > 1»
-				«noop»
-					LDA #>(«src.immediate»)
-			«ELSE»
-				«src.loadMSB»
-			«ENDIF»
 			«noop»
+				LDA #>(«src.immediate»)
 				PHA
 				LDA #<(«src.immediate»)
 		«ELSE»
 			«noop»
-				LDA #«src.immediate»
+				LDA #(«src.immediate»)
 		«ENDIF»
 	'''
-	
+
 	private def copyAbsoluteToAbsolute(CompileData src, CompileData dst) '''
 		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
@@ -501,14 +482,14 @@ class Datas {
 		«ENDIF»
 	'''
 
-	private def branchImmediateToRelative(CompileData src, CompileData dst)'''
+	private def branchImmediateToRelative(CompileData src, CompileData dst) '''
 		«dst.pushAccIfOperating»
-			LDA #«src.immediate»
+			LDA #(«src.immediate»)
 			BNE +«dst.relative»:
 		«dst.pullAccIfOperating»
 	'''
-	
-	private def branchAbsoluteToRelative(CompileData src, CompileData dst)'''
+
+	private def branchAbsoluteToRelative(CompileData src, CompileData dst) '''
 		«dst.pushAccIfOperating»
 			«IF src.isIndexed»
 				LDX «src.index»
@@ -517,16 +498,16 @@ class Datas {
 			BNE +«dst.relative»:
 		«dst.pullAccIfOperating»
 	'''
-	
-	private def branchIndirectToRelative(CompileData src, CompileData dst)'''
+
+	private def branchIndirectToRelative(CompileData src, CompileData dst) '''
 		«dst.pushAccIfOperating»
 			LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
 			LDA («src.indirect»), Y
 			BNE +«dst.relative»:
 		«dst.pullAccIfOperating»
 	'''
-	
-	private def branchRegisterToRelative(CompileData src, CompileData dst)'''
+
+	private def branchRegisterToRelative(CompileData src, CompileData dst) '''
 		«noop»
 			BNE +«dst.relative»:
 	'''
@@ -844,21 +825,21 @@ class Datas {
 			«ENDIF»
 			STA «ptr.indirect» + 1
 	'''
-	
+
 	def referenceInto(CompileData src, CompileData dst) {
 		dst.absolute = src.absolute
 		dst.indirect = src.indirect
 		dst.index = src.index
 	}
-	
-	def pushAccIfOperating(CompileData data)'''
+
+	def pushAccIfOperating(CompileData data) '''
 		«IF data.operation !== null»
 			«noop»
 				PHA
 		«ENDIF»
 	'''
-	
-	def pullAccIfOperating(CompileData data)'''
+
+	def pullAccIfOperating(CompileData data) '''
 		«IF data.operation !== null»
 			«noop»
 				PLA
