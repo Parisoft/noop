@@ -11,18 +11,18 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="storage" eType="#//Storage"
         containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dimension" unique="false"
+        upperBound="-1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Storage">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="type" eType="#//StorageType"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="bank" eType="#//Expression"
+    <eStructuralFeatures xsi:type="ecore:EReference" name="location" eType="#//Expression"
         containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Variable" eSuperTypes="#//Member #//Statement">
     <eStructuralFeatures xsi:type="ecore:EReference" name="value" eType="#//Expression"
         containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//NoopClass"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dimension" unique="false"
-        upperBound="-1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Method" eSuperTypes="#//Member">
     <eStructuralFeatures xsi:type="ecore:EReference" name="params" upperBound="-1"
@@ -114,6 +114,7 @@
   <eClassifiers xsi:type="ecore:EEnum" name="StorageType">
     <eLiterals name="PRGROM" literal="@PRG-ROM"/>
     <eLiterals name="CHRROM" value="1" literal="@CHR-ROM"/>
+    <eLiterals name="RAM" value="2" literal="@RAM"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="AssignmentExpression" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"

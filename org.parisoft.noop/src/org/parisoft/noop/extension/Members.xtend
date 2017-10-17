@@ -13,6 +13,7 @@ import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.Index
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberRef
+import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.ReturnStatement
@@ -21,7 +22,6 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.MemberSelect
 
 public class Members {
 
@@ -97,7 +97,11 @@ public class Members {
 	}
 
 	def isROM(Variable variable) {
-		variable.storage !== null
+		switch(variable.storage?.type) {
+			case CHRROM: true
+			case PRGROM: true
+			default: false	
+		}
 	}
 
 	def isNonROM(Variable variable) {
@@ -223,6 +227,13 @@ public class Members {
 		] ?: 1)
 	}
 
+	def nameOf(Member member) {
+		switch (member) {
+			Variable: member.nameOf
+			Method: member.nameOf
+		}
+	}
+
 	def nameOf(Variable variable) {
 		variable.nameOf(variable.getContainerOfType(Method)?.nameOf)
 	}
@@ -276,25 +287,21 @@ public class Members {
 	def dispose(Member member, AllocData data) {
 		if (member instanceof Variable) {
 			if (member.isNonStatic && member.isNonField && member.isNonParameter) { // TODO check for non for/forEach/while variables
-				val pointers = data.pointers.get(member.nameOf)
+				val allChunks = data.pointers.get(member.nameOf) + data.variables.get(member.nameOf)
 				
-				if (pointers !== null) {
-					pointers.forEach[disposed = true]
+				data.counters.forEach[counter, page|
+					val chunks = allChunks.filter[hi < (page + 1) * 256]
+					val last = chunks.last
 					
-					if (pointers.last.hi === data.ptrCounter.get + 1) {
-						data.ptrCounter.set(pointers.last.lo)
+					if (last.hi + 1 === counter.get) {
+						if (last.lo < (page + 1) * 256) {
+							counter.set(last.lo)
+						} else {
+							data.resetCounter(page)
+							data.counters.get(page - 1).set(last.lo)
+						}
 					}
-				}
-				
-				val variables = data.variables.get(member.nameOf)
-
-				if (variables !== null) {
-					variables.forEach[disposed = true]
-					
-					if (variables.last.hi === data.varCounter.get - 1) {
-						data.varCounter.set(variables.last.lo)
-					}
-				}				
+				]
 			}
 		}
 	}

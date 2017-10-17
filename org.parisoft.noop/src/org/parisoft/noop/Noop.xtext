@@ -11,16 +11,16 @@ Member:
 	(Variable | Method) LF+;
 
 Storage:
-	type=StorageType ('[' bank=Expression ']')?;
+	type=StorageType ('[' location=Expression ']')?;
 
 Variable:
 	name=ID storage=Storage? ':' value=Expression;
 
 Parameter returns Variable:
-	type=[NoopClass|CID] (dimension+='[' ']')* name=ID;
+	type=[NoopClass|CID] (dimension+='[' ']')* name=ID storage=Storage?;
 
 Method:
-	name=ID '(' (params+=Parameter (',' params+=Parameter)*)? ')' storage=Storage? body=Block;
+	name=ID '(' (params+=Parameter (',' params+=Parameter)*)? ')' (dimension+='[' ']')* storage=Storage? body=Block;
 
 Block:
 	{Block} '{' LF* statements+=Statement* '}';
@@ -158,7 +158,7 @@ enum AssignmentType:
 	BAN_ASSIGN='&=' | BLS_ASSIGN='<<=' | BRS_ASSIGN='>>=';
 
 enum StorageType:
-	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM';
+	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM' | RAM='@RAM';
 
 terminal ASM_TO_VAR:
 	'!' !('!' | '?')* '?';

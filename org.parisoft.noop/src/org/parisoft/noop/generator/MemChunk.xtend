@@ -10,16 +10,14 @@ class MemChunk implements Comparable<MemChunk> {
 	@Accessors var boolean disposed = false
 	@Accessors var boolean tmp = false
 
-	new(String variable, int addr) {
-		this.variable = variable
-		this.lo = addr
-		this.hi = lo + 1
-	}
-
 	new(String variable, int addr, int size) {
 		this.variable = variable
 		this.lo = addr
 		this.hi = addr + size - 1
+	}
+
+	def getPage() {
+		lo / 256
 	}
 
 	def isZP() {

@@ -8,6 +8,10 @@ import org.parisoft.noop.generator.MemChunk
 
 class Datas {
 
+	public static val int PTR_PAGE = 0
+	public static val int SND_PAGE = 3
+	public static val int VAR_PAGE = 4
+
 	@Inject extension Values
 	@Inject extension Classes
 	@Inject extension Operations
@@ -852,27 +856,23 @@ class Datas {
 	}
 
 	def computePtr(AllocData data, String varName) {
-		data.pointers.compute(varName, [ name, value |
-			var chunks = value
-
-			if (chunks === null) {
-				chunks = newArrayList(data.chunkForPtr(name))
-			} else if (data.ptrCounter.get < chunks.last.hi) {
-				data.ptrCounter.set(chunks.last.hi + 1)
-			}
-
-			return chunks
-		])
+		computeVar(data, varName, PTR_PAGE, 2)
 	}
 
 	def computeVar(AllocData data, String varName, int size) {
-		data.variables.compute(varName, [ name, value |
+		computeVar(data, varName, VAR_PAGE, size)
+	}
+
+	def computeVar(AllocData data, String varName, int page, int size) {
+		val chunksByVarName = if (page === PTR_PAGE) data.pointers else data.variables
+
+		chunksByVarName.compute(varName, [ name, value |
 			var chunks = value
 
 			if (chunks === null) {
-				chunks = newArrayList(data.chunkForVar(name, size))
-			} else if (data.varCounter.get < chunks.last.hi) {
-				data.varCounter.set(chunks.last.hi + 1)
+				chunks = newArrayList(data.chunkFor(page, name, size))
+			} else if (data.counters.get(page).get < chunks.last.hi) {
+				data.counters.get(page).set(chunks.last.hi + 1)
 			}
 
 			return chunks
@@ -885,9 +885,9 @@ class Datas {
 				var chunks = value
 
 				if (chunks === null) {
-					chunks = newArrayList(data.chunkForVar(name, size) => [tmp = true])
-				} else if (data.varCounter.get < chunks.last.hi) {
-					data.varCounter.set(chunks.last.hi + 1)
+					chunks = newArrayList(data.chunkFor(VAR_PAGE, name, size) => [tmp = true])
+				} else if (data.counters.get(VAR_PAGE).get < chunks.last.hi) {
+					data.counters.get(VAR_PAGE).set(chunks.last.hi + 1)
 				}
 
 				return chunks
@@ -897,9 +897,9 @@ class Datas {
 				var chunks = value
 
 				if (chunks === null) {
-					chunks = newArrayList(data.chunkForZP(name, size) => [tmp = true])
-				} else if (data.ptrCounter.get < chunks.last.hi) {
-					data.ptrCounter.set(chunks.last.hi + 1)
+					chunks = newArrayList(data.chunkFor(PTR_PAGE, name, size) => [tmp = true])
+				} else if (data.counters.get(PTR_PAGE).get < chunks.last.hi) {
+					data.counters.get(PTR_PAGE).set(chunks.last.hi + 1)
 				}
 
 				return chunks

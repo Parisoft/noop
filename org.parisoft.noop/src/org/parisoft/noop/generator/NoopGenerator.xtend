@@ -12,6 +12,8 @@ import org.eclipse.xtext.generator.IGeneratorContext
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.eclipse.xtext.resource.IResourceDescriptions
 import org.parisoft.noop.^extension.Classes
+import org.parisoft.noop.^extension.Collections
+import org.parisoft.noop.^extension.Datas
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.Statements
@@ -19,8 +21,6 @@ import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopPackage
-import org.parisoft.noop.^extension.Values
-import org.parisoft.noop.^extension.Collections
 
 /**
  * Generates code from your model files on save.
@@ -126,9 +126,13 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		; Static variables
 		;----------------------------------------------------------------
-		«val varStartAddr = data.resetVarCounter»
-		«FOR statik : data.statics»
-			«statik.nameOfStatic» = «data.varCounter.getAndAdd(statik.sizeOf).toHexString(4)»
+		«FOR page : 0..< data.counters.size»
+			«val counter = data.counters.get(page)»
+			«counter.set(page * 256)»
+			«val staticVars = data.statics.filter[storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE === page]»
+			«FOR staticVar : staticVars»
+				«staticVar.nameOfStatic» = «counter.getAndAdd(staticVar.sizeOf).toHexString(4)»
+			«ENDFOR»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
@@ -136,13 +140,9 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		«Members::TEMP_VAR_NAME1» = $0000
 		«Members::TEMP_VAR_NAME2» = $0002
-		«FOR chunk : data.pointers.values.flatten.sort»
-			«chunk.shiftTo(4)»
-			«chunk.variable» = «chunk.lo.toHexString(4)»
-		«ENDFOR»
-		
-		«val delta = data.varCounter.get - varStartAddr»
-		«FOR chunk : data.variables.values.flatten.sort»
+		«{data.counters.get(Datas::PTR_PAGE).addAndGet(4) ''}»
+		«FOR chunk : data.pointers.values.flatten.sort + data.variables.values.flatten.sort»
+			«val delta = data.counters.get(chunk.page).get - chunk.page * 256»
 			«chunk.shiftTo(delta)»
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»

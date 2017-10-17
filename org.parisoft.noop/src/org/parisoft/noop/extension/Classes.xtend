@@ -257,29 +257,23 @@ class Classes {
 			data.statics.forEach[alloc(data)]
 
 			val chunks = noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
-			
-			try {
-				data.ptrCounter.set(chunks.filter[hi < 0x0200].maxBy[hi].hi + 1)
-			} catch (NoSuchElementException e) {
-			}
 
-			try {
-				data.varCounter.set(chunks.filter[hi > 0x0200].maxBy[hi].hi + 1)
-			} catch (NoSuchElementException e) {
-			}
-			
+			data.counters.forEach [ counter, page |
+				try {
+					counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
+				} catch (NoSuchElementException e) {
+				}
+			]
+
 			chunks += noopClass.allMethodsBottomUp.findFirst[irq].alloc(data)
 
-			try {
-				data.ptrCounter.set(chunks.filter[hi < 0x0200].maxBy[hi].hi + 1)
-			} catch (NoSuchElementException e) {
-			}
+			data.counters.forEach [ counter, page |
+				try {
+					counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
+				} catch (NoSuchElementException e) {
+				}
+			]
 
-			try {
-				data.varCounter.set(chunks.filter[hi > 0x0200].maxBy[hi].hi + 1)
-			} catch (NoSuchElementException e) {
-			}
-			
 			noopClass.allMethodsBottomUp.findFirst[reset].alloc(data)
 		}
 	}

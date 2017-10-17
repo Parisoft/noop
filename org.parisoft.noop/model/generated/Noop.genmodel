@@ -20,6 +20,7 @@
     <genEnums typeSafeEnumCompatible="false" ecoreEnum="Noop.ecore#//StorageType">
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/PRGROM"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/CHRROM"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/RAM"/>
     </genEnums>
     <genClasses ecoreClass="Noop.ecore#//NoopClass">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//NoopClass/name"/>
@@ -29,15 +30,15 @@
     <genClasses ecoreClass="Noop.ecore#//Member">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//Member/name"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Member/storage"/>
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//Member/dimension"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//Storage">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//Storage/type"/>
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Storage/bank"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Storage/location"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//Variable">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Variable/value"/>
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//Variable/type"/>
-      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//Variable/dimension"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//Method">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//Method/params"/>

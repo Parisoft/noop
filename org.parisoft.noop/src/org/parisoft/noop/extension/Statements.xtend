@@ -177,18 +177,15 @@ class Statements {
 				val name = statement.nameOf(data.container)
 				val chunks = newArrayList
 
-				if (statement.isParameter) {
-					if (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty) {
-						chunks += data.computePtr(name)
+				if (statement.isParameter && (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty)) {
+					chunks += data.computePtr(name)
 
-						for (i : 0 ..< statement.dimensionOf.size) {
-							chunks += data.computeVar(statement.nameOfLen(data.container, i), 1)
-						}
-					} else {
-						chunks += data.computeVar(name, statement.sizeOf)
+					for (i : 0 ..< statement.dimensionOf.size) {
+						chunks += data.computeVar(statement.nameOfLen(data.container, i), 1)
 					}
 				} else if (statement.isNonStatic) {
-					chunks += data.computeVar(name, statement.sizeOf)
+					val page = statement?.storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE
+					chunks += data.computeVar(name, page, statement.sizeOf)
 				}
 
 				return (chunks + statement?.value.alloc(data)).filterNull.toList
@@ -409,9 +406,9 @@ class Statements {
 			'''
 			AsmStatement:
 				if (statement.vars.isEmpty) {
-					statement.codes.join('', [substring(1, it.length - 1)])
+					statement.codes.join('', [substring(1, length - 1)])
 				} else {
-					val i = new AtomicInteger(0)
+					val i = new AtomicInteger
 
 					statement.codes.reduce [ c1, c2 |
 						c1.substring(1, c1.length - 1) + statement.vars.get(i.andIncrement).nameOf + c2.substring(1, c2.length - 1)
