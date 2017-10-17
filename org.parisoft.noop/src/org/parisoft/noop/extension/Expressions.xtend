@@ -343,6 +343,8 @@ class Expressions {
 
 	def dimensionOf(Expression expression) {
 		switch (expression) {
+			StringLiteral:
+				expression.valueOf.dimensionOf
 			ArrayLiteral:
 				expression.valueOf.dimensionOf
 			MemberSelect:
@@ -769,7 +771,7 @@ class Expressions {
 					«IF data.db !== null»
 						«data.db»:
 							«IF expression.value.startsWith(Members::FILE_SCHEMA)»
-								.incbin "«expression.value.substring(Members::FILE_SCHEMA.length)»"
+								«IF expression.value.endsWith('.asm')».include«ELSE».incbin«ENDIF» "«expression.value.substring(Members::FILE_SCHEMA.length)»"
 							«ELSE»
 								.db «expression.value.toBytes.join(', ', [toHex])»
 							«ENDIF»
