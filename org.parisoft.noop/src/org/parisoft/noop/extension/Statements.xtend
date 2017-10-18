@@ -411,7 +411,12 @@ class Statements {
 					val i = new AtomicInteger
 
 					statement.codes.reduce [ c1, c2 |
-						c1.substring(1, c1.length - 1) + statement.vars.get(i.andIncrement).nameOf + c2.substring(1, c2.length - 1)
+						val c1Ini = if (c1.startsWith('!') || c1.startsWith('?')) 1 else 0
+						val c1End = if (c1.endsWith('!') || c1.endsWith('?')) c1.length - 1 else c1.length
+						val c2Ini = if (c2.startsWith('!') || c2.startsWith('?')) 1 else 0
+						val c2End = if (c2.endsWith('!') || c2.endsWith('?')) c2.length - 1 else c2.length
+						
+						c1.substring(c1Ini, c1End) + statement.vars.get(i.andIncrement).nameOf + c2.substring(c2Ini, c2End)
 					]
 				}
 			Expression:

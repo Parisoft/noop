@@ -119,8 +119,10 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		«Members::TRUE» = 1
 		«Members::FALSE» = 0
-		«FOR cons : data.constants.sortBy[nameOfConstant]»
-			«cons.nameOfConstant» = «cons.valueOf.toString»
+		«Members::FT_DPCM_OFF» = $C000
+		«Members::FT_DPCM_PTR» = («Members::FT_DPCM_OFF»&$3fff)>>6
+		«FOR cons : data.constants»
+			«cons.nameOfConstant» = «cons.value.compileConstant»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
@@ -138,9 +140,8 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		; Local variables
 		;----------------------------------------------------------------
-		«Members::TEMP_VAR_NAME1» = $0000
-		«Members::TEMP_VAR_NAME2» = $0002
-		«{data.counters.get(Datas::PTR_PAGE).addAndGet(4) ''}»
+		«Members::TEMP_VAR_NAME1» = «data.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
+		«Members::TEMP_VAR_NAME2» = «data.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
 		«FOR chunk : data.pointers.values.flatten.sort + data.variables.values.flatten.sort»
 			«val delta = data.counters.get(chunk.page).get - chunk.page * 256»
 			«chunk.shiftTo(delta)»
@@ -192,7 +193,7 @@ class NoopGenerator extends AbstractGenerator {
 		«val dmcList = data.prgRoms.filter[DMC].toList»
 		«IF dmcList.isNotEmpty»
 			;-- DMC sound data-----------------------------------------------
-				.org $C000
+				.org «Members::FT_DPCM_OFF»
 			«FOR dmcRom : dmcList»
 				«dmcRom.compile(new CompileData)»
 			«ENDFOR»

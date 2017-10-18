@@ -90,6 +90,18 @@ class Expressions {
 		container !== null && (container instanceof MemberSelect || container instanceof MemberRef)
 	}
 
+	def isFileInclude(StringLiteral string) {
+		string.value.toLowerCase.startsWith(Members::FILE_SCHEMA)
+	}
+	
+	def isAsmFile(StringLiteral string) {
+		string.isFileInclude && string.value.toLowerCase.endsWith(Members::FILE_ASM_EXTENSION)
+	}
+	
+	def isDmcFile(StringLiteral string) {
+		string.isFileInclude && string.value.toLowerCase.endsWith(Members::FILE_DMC_EXTENSION)
+	}
+
 	def nameOfTmp(List<Index> indexes, String containerName) {
 		'''«containerName».idx@«indexes.hashCode.toHexString»'''.toString
 	}
@@ -770,8 +782,8 @@ class Expressions {
 				StringLiteral: '''
 					«IF data.db !== null»
 						«data.db»:
-							«IF expression.value.startsWith(Members::FILE_SCHEMA)»
-								«IF expression.value.endsWith('.asm')».include«ELSE».incbin«ENDIF» "«expression.value.substring(Members::FILE_SCHEMA.length)»"
+							«IF expression.value.toLowerCase.startsWith(Members::FILE_SCHEMA)»
+								«IF expression.isAsmFile».include«ELSE».incbin«ENDIF» "«expression.value.substring(Members::FILE_SCHEMA.length)»"
 							«ELSE»
 								.db «expression.value.toBytes.join(', ', [toHex])»
 							«ENDIF»
@@ -996,7 +1008,7 @@ class Expressions {
 		}
 	}
 	
-	private def String compileConstant(Expression expression) {
+	def String compileConstant(Expression expression) {
 		val text = NodeModelUtils.findActualNodeFor(expression)?.text?.trim ?: ''
 		val wrapped = text.startsWith('(') && text.endsWith(')')
 		

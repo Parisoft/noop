@@ -22,15 +22,20 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.StringLiteral
 
 public class Members {
 
 	public static val STATIC_PREFIX = '$'
 	public static val TEMP_VAR_NAME1 = 'billy'
 	public static val TEMP_VAR_NAME2 = 'jimmy'
+	public static val FT_DPCM_OFF = 'FT_DPCM_OFF'
+	public static val FT_DPCM_PTR = 'FT_DPCM_PTR'
 	public static val TRUE = 'TRUE'
 	public static val FALSE = 'FALSE'
 	public static val FILE_SCHEMA = 'file://'
+	public static val FILE_ASM_EXTENSION = '.asm'
+	public static val FILE_DMC_EXTENSION = '.dmc'
 
 	static val UNDERLINE_CHAR = '_'.charAt(0)
 
@@ -108,12 +113,14 @@ public class Members {
 		!variable.isROM
 	}
 	
-	def isFileInclude(Variable variable) {
-		variable.name.toLowerCase.startsWith(FILE_SCHEMA)
-	}
-	
 	def isDMC(Variable variable) {
-		variable.isFileInclude && variable.name.toLowerCase.endsWith('.dmc')
+		val expr = variable.value
+		
+		if (expr instanceof StringLiteral) {
+			expr.isDmcFile
+		} else {
+			false
+		}
 	}
 	
 	def isNonDMC(Variable variable) {
