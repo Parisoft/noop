@@ -1,6 +1,4 @@
-Controller1 {
-	
-	$status : 0
+Controller1 extends Controllers {
 	
 	$update() {
 		mask : 1
@@ -8,49 +6,49 @@ Controller1 {
 		!	STA $4016  !
 		!	LDA #$00   !
 		!	STA $4016  !
-		!  	LDX #0        !
-		!-loop1:          !
-		!	LDA $4016     !
-		!	AND #1        !
-		!	BEQ +next1:   !
-		!	TXA           !
-		!	ORA ?mask?    !
-		!	TAX           !
-		!+next1:          !
-		!	ASL ?mask?    !
-		!	BNE -loop1:   !
-		!	STX ?$status? !
+		!  	LDX #0          !
+		!-loop1:            !
+		!	LDA $4016       !
+		!	AND #1          !
+		!	BEQ +next1:     !
+		!	TXA             !
+		!	ORA ?mask?      !
+		!	TAX             !
+		!+next1:            !
+		!	ASL ?mask?      !
+		!	BNE -loop1:     !
+		!	STX ?_$status1? !
 	}
 	
 	$pressedA() {
-		return (0b00000001 & $status) as Bool
+		return (_$A & _$status1) as Bool
 	}
 	
 	$pressedB() {
-		return (0b00000010 & $status) as Bool
+		return (_$B & _$status1) as Bool
 	}
 	
 	$pressedSelect() {
-		return (0b00000100 & $status) as Bool
+		return (_$SELECT & _$status1) as Bool
 	}
 	
 	$pressedStart() {
-		return (0b00001000 & $status) as Bool
+		return (_$START & _$status1) as Bool
 	}
 	
 	$pressedUp() {
-		return (0b00010000 & $status) as Bool
+		return (_$UP & _$status1) as Bool
 	}
 	
 	$pressedDown() {
-		return (0b00100000 & $status) as Bool
+		return (_$DOWN & _$status1) as Bool
 	}
 	
 	$pressedLeft() {
-		return (0b01000000 & $status) as Bool
+		return (_$LEFT & _$status1) as Bool
 	}
 	
 	$pressedRight() {
-		return (0b10000000 & $status) as Bool
+		return (_$RIGHT & _$status1) as Bool
 	}
 }

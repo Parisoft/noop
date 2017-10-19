@@ -38,8 +38,6 @@ public class Members {
 	public static val FILE_ASM_EXTENSION = '.asm'
 	public static val FILE_DMC_EXTENSION = '.dmc'
 
-	static val UNDERLINE_CHAR = '_'.charAt(0)
-
 	@Inject extension Datas
 	@Inject extension Values
 	@Inject extension Classes
@@ -104,7 +102,7 @@ public class Members {
 
 	def isConstant(Variable variable) {
 		variable.isStatic && variable.name.chars.skip(1).allMatch[val c = it as char
-							c.isUpperCase || c.isDigit || c === UNDERLINE_CHAR
+							c.isUpperCase || c.isDigit || c === PRIVATE_PREFIX.charAt(0) || c === STATIC_PREFIX.charAt(0)
 						]
 	}
 

@@ -1,0 +1,1425 @@
+/* 
+ * <p>FamiTone2 audio library v1.15 by Shiru 04'17</p>
+ * 
+ * <h2>About</h2>
+ * 
+ * <p>FamiTone2 is an audio library for NES/Famicom. It is designed to provide 
+ * easy way of adding music and sound effects into homebrew games and demos. </p>
+ * 
+ * <p>It supports all standard channels of 2A03: two pulse, triangle, noise, and DPCM. Expansion sound chips are not supported.</p>
+ * 
+ * <p>The main concept of the library is to have very minimalistic set of features that is sufficient to create music and sound effects 
+ * with the level of quality comparable with that of the most old commercial NES games. It is in no way a direct replacement of FamiTracker 
+ * player, it only supports a very limited subset of its features in order to reduce CPU load and memory use. That's the whole point of having 
+ * a separate library, so if you need more features, you should stick to the native FamiTracker's driver instead.
+ * 
+ * <h2>How to create music</h2>
+ * 
+ * <p>You can create music in FamiTracker version 0.3.6 or above, or with 
+ * Musetracker. The music should met these requirements:</p> 
+ * <ul>
+ * <li>Allowed notes are C-1..D-6, Note Cut (rest note)</li>
+ * <li>Only Volume, Arpeggio, and Pitch sequences (no Pitch for noise
+ *   channel) supported</li>
+ * <li>All instruments should have a volume envelope assigned</li>
+ * <li>Only the loop part of sequence is supported, release part is not supported</li>
+ * <li>Pitch envelope accumulate the offset at conversion time only, thus
+ *   it can't go further -64..63, and can't accumulate the offset with loop</li>
+ * <li>Only first step of Duty envelope for pulse and noise channels is used,
+ *   there is no Duty sequence</li>
+ * <li>64 instruments max</li>
+ * <li>No volume column support</li>
+ * <li>Tempo is set with the global setting, speed can be changed with effect
+ *   Fxx (1..21)</li>
+ * <li>Bxx effect for looping without an intro, does not support forward
+ *   references</li>
+ * <li>D00 effect to cut patterns early</li>
+ * <li>No effects other than listed above are supported</li>
+ * <li>Up to 17 sub songs in a file, they will share instruments and pattern
+ *   data</li>
+ * </ul>
+ * 
+ * <p>You can use DPCM samples, there are limitations too:</p>
+ * 
+ * <ul>
+ * <li>Up to 63 samples with total size of ~16K</li>
+ * <li>Only samples assigned to the instrument 0 are supported,</li>
+ * <li>Note range the same as for normal instruments, C-1..D-6, instrument
+ *   number is ignored</li>
+ * <li>You can add samples that aren't used in the music to use them as sound
+ *   effects</li>
+ * </ul>
+ * 
+ * <p>You can create all music for your game in a single FTM file using the 
+ * multi song feature, this will save memory. If allowed number of 
+ * instruments or sub songs is not enough, you can split the music into few 
+ * files. The library allows to change music data sets at runtime.</p>
+ * 
+ * <p>After you have made the music, you need to export it in a text format 
+ * supported by the FamiTone2 converter: text2data available at 
+ * <a href="https://shiru.untergrund.net/code.shtml">Shiru's page</a>.</p> 
+ * 
+ * <p>In FamiTracker 0.4.2 or above you can use built-in text exporter, it is 
+ * located in File\Export text. This export option is also available from 
+ * the command line (FamiTracker music.ftm -export music.txt). This allows 
+ * seamless integration of music conversion into your build process. The 
+ * old text format exported with TextExporter.dll plug-in is also 
+ * supported, but not recommended to use.</p> 
+ * 
+ * <p>In Musetracker you can just save it in needed format with LCtrl+LShift+S 
+ * (by default).</p> 
+ * 
+ * <p>Now you can use text2data tool (text2data music.txt) to convert the 
+ * exported text into assembly file with music data. If you don't use DPCM, 
+ * you'll get one *.asm file as the result. If you use DPCM, there will be 
+ * an extra *.dmc file with sample data.</p> 
+ * 
+ * <p>text2data outputs data in NESASM format by default, you must use -asm6 
+ * option to get output in ASM6 format.</p> 
+ * 
+ * <h2>How to create sound effects</h2>
+ * 
+ * <p>Sound effects could be created in FamiTracker or Musetracker as well. 
+ * Effects can use all sound channels except DPCM, so the effects are multi 
+ * channel. Put every effect into a separate sub song using the multi song 
+ * feature. Unlike music, you can use most of the FamiTracker features for 
+ * effects, except the sweep. Every effect should be finished with silence, 
+ * and C00 command put to the last row of the effect.</p>
+ * 
+ * <p>Once all effects done, export them as a NSF file and use the nsf2data
+ * converter (nsf2data sounds.nsf). You'll get *.asm file with the effects
+ * data.</p> 
+ * 
+ * <p>There is a major limitation: one effect can't be larger than 255 bytes 
+ * after conversion. FamiTracker effects like slides could increase the 
+ * size greatly, so use them carefully. The converter will report size of 
+ * each effect, and warn you if an effect is too large.</p> 
+ * 
+ * <p>In addition to these sound effects, you can play any sample,meither used 
+ * or not used in the music, from the current DPCM bank. It will have 
+ * priority over samples in the music, overriding them.</p> 
+ *  
+ * <h2>How to play Music</h2>
+ * 
+ * <ol>
+ * <li>Invoke <b>$openMusic()</b> to load your music</li>
+ * <li>Invoke <b>$playMusic()</b> to start playing your music</li>
+ * <li>Invoke <b>$update()</b> every TV frame, usually in the end of the NMI handler</li>
+ * <li>Invoke <b>$pauseMusic()</b> to pause your playing music</li>
+ * <li>Invoke <b>$resumeMusic()</b> to resume your paused music</li>
+ * <li>Invoke <b>$stopMusic()</b> to stop playing your music</li>
+ * </ol>
+ * 
+ * <h2>How to play Sound Effects (SFX):</h2>
+ * 
+ * <ol>
+ * <li>Invoke <b>$openSfx()</b> to load yours SFXs</li>
+ * <li>Invoke <b>$playSfx()</b> to play your effect</li>
+ * <li>Invoke <b>$update()</b> every TV frame, usually in the end of the NMI handler</li>
+ * </ol>
+ * 
+ * <h2>How to play DPCM/DCM/DMC samples</h2>
+ * <ol>
+ * <li>Invoke <b>$playDcmSample()</b> to play your sample with high priority</li>
+ * <li>Invoke <b>$update()</b> every TV frame, usually in the end of the NMI handler</li>
+ * </ol>
+ * 
+ * <h2>Note:</h2>
+ * <p>This class is indented to be used in a multi region game as it contains code for both NTSC and PAL-M regions.<br>
+ * If your game is release under a single region, you can use <b>FamiTone2PALM</b> or <b>FamiTone2NTSC</b> to save some ROM space.</p>
+ * 
+ * <p>Many thanks to Shiru who's brought to life this awesome library.</p> */
+FamiTone2 {
+
+	_$FT_BASE_ADR 		: 0x0300 
+	_$FT_SFX_STREAMS 	: 4	
+	
+	_$FT_DPCM_ENABLE 	: 1	
+	_$FT_SFX_ENABLE 	: 1
+	_$FT_THREAD 		: 1
+	
+	_$FT_PAL_SUPPORT 	: 1	
+	_$FT_NTSC_SUPPORT 	: 1
+	_$FT_PITCH_FIX 		: 1
+	
+	// zero page variables	
+	
+	_$ftTempPtr @RAM[0] 	: Int
+	_$ftTempVar1 @RAM[0] 	: Byte
+	_$FT_TEMP_SIZE 			: 3
+	
+	// envelope structure offsets, 5 bytes per envelope, grouped by variable type
+
+	_$FT_ENVELOPES_ALL		: 3+3+3+2	// 3 for the pulse and triangle channels, 2 for the noise channel
+	_$FT_ENV_STRUCT_SIZE	: 5
+	
+	_$FT_ENV_VALUE		: _$FT_BASE_ADR+0*_$FT_ENVELOPES_ALL
+	_$FT_ENV_REPEAT		: _$FT_BASE_ADR+1*_$FT_ENVELOPES_ALL
+	_$FT_ENV_ADR_L		: _$FT_BASE_ADR+2*_$FT_ENVELOPES_ALL
+	_$FT_ENV_ADR_H		: _$FT_BASE_ADR+3*_$FT_ENVELOPES_ALL
+	_$FT_ENV_PTR		: _$FT_BASE_ADR+4*_$FT_ENVELOPES_ALL
+	
+	
+	// channel structure offsets, 7 bytes per channel
+	
+	_$FT_CHANNELS_ALL		: 5
+	_$FT_CHN_STRUCT_SIZE	: 9
+	
+	_$FT_CHN_PTR_L		: _$FT_BASE_ADR+0*_$FT_CHANNELS_ALL
+	_$FT_CHN_PTR_H		: _$FT_BASE_ADR+1*_$FT_CHANNELS_ALL
+	_$FT_CHN_NOTE		: _$FT_BASE_ADR+2*_$FT_CHANNELS_ALL
+	_$FT_CHN_INSTRUMENT	: _$FT_BASE_ADR+3*_$FT_CHANNELS_ALL
+	_$FT_CHN_REPEAT		: _$FT_BASE_ADR+4*_$FT_CHANNELS_ALL
+	_$FT_CHN_RETURN_L	: _$FT_BASE_ADR+5*_$FT_CHANNELS_ALL
+	_$FT_CHN_RETURN_H	: _$FT_BASE_ADR+6*_$FT_CHANNELS_ALL
+	_$FT_CHN_REF_LEN	: _$FT_BASE_ADR+7*_$FT_CHANNELS_ALL
+	_$FT_CHN_DUTY		: _$FT_BASE_ADR+8*_$FT_CHANNELS_ALL
+	
+	
+	// variables and aliases
+	
+	_$FT_ENVELOPES		: _$FT_BASE_ADR
+	_$FT_CH1_ENVS		: _$FT_ENVELOPES+0
+	_$FT_CH2_ENVS		: _$FT_ENVELOPES+3
+	_$FT_CH3_ENVS		: _$FT_ENVELOPES+6
+	_$FT_CH4_ENVS		: _$FT_ENVELOPES+9
+	
+	_$FT_CHANNELS		: _$FT_ENVELOPES+_$FT_ENVELOPES_ALL*_$FT_ENV_STRUCT_SIZE
+	_$FT_CH1_VARS		: _$FT_CHANNELS+0
+	_$FT_CH2_VARS		: _$FT_CHANNELS+1
+	_$FT_CH3_VARS		: _$FT_CHANNELS+2
+	_$FT_CH4_VARS		: _$FT_CHANNELS+3
+	_$FT_CH5_VARS		: _$FT_CHANNELS+4
+	
+	
+	_$FT_CH1_NOTE		: _$FT_CH1_VARS+(_$FT_CHN_NOTE & 0xFF)//<($FT_CHN_NOTE)
+	_$FT_CH2_NOTE		: _$FT_CH2_VARS+(_$FT_CHN_NOTE & 0xFF)//<($FT_CHN_NOTE)
+	_$FT_CH3_NOTE		: _$FT_CH3_VARS+(_$FT_CHN_NOTE & 0xFF)//<($FT_CHN_NOTE)
+	_$FT_CH4_NOTE		: _$FT_CH4_VARS+(_$FT_CHN_NOTE & 0xFF)//<($FT_CHN_NOTE)
+	_$FT_CH5_NOTE		: _$FT_CH5_VARS+(_$FT_CHN_NOTE & 0xFF)//<($FT_CHN_NOTE)
+	
+	_$FT_CH1_INSTRUMENT	: _$FT_CH1_VARS+(_$FT_CHN_INSTRUMENT & 0xFF)//<($FT_CHN_INSTRUMENT)
+	_$FT_CH2_INSTRUMENT	: _$FT_CH2_VARS+(_$FT_CHN_INSTRUMENT & 0xFF)//<($FT_CHN_INSTRUMENT)
+	_$FT_CH3_INSTRUMENT	: _$FT_CH3_VARS+(_$FT_CHN_INSTRUMENT & 0xFF)//<($FT_CHN_INSTRUMENT)
+	_$FT_CH4_INSTRUMENT	: _$FT_CH4_VARS+(_$FT_CHN_INSTRUMENT & 0xFF)//<($FT_CHN_INSTRUMENT)
+	_$FT_CH5_INSTRUMENT	: _$FT_CH5_VARS+(_$FT_CHN_INSTRUMENT & 0xFF)//<($FT_CHN_INSTRUMENT)
+	
+	_$FT_CH1_DUTY		: _$FT_CH1_VARS+(_$FT_CHN_DUTY & 0xFF)//<($FT_CHN_DUTY)
+	_$FT_CH2_DUTY		: _$FT_CH2_VARS+(_$FT_CHN_DUTY & 0xFF)//<($FT_CHN_DUTY)
+	_$FT_CH3_DUTY		: _$FT_CH3_VARS+(_$FT_CHN_DUTY & 0xFF)//<($FT_CHN_DUTY)
+	_$FT_CH4_DUTY		: _$FT_CH4_VARS+(_$FT_CHN_DUTY & 0xFF)//<($FT_CHN_DUTY)
+	_$FT_CH5_DUTY		: _$FT_CH5_VARS+(_$FT_CHN_DUTY & 0xFF)//<($FT_CHN_DUTY)
+	
+	_$FT_CH1_VOLUME		: _$FT_CH1_ENVS+(_$FT_ENV_VALUE & 0xFF)+0//<($FT_ENV_VALUE)+0
+	_$FT_CH2_VOLUME		: _$FT_CH2_ENVS+(_$FT_ENV_VALUE & 0xFF)+0//<($FT_ENV_VALUE)+0
+	_$FT_CH3_VOLUME		: _$FT_CH3_ENVS+(_$FT_ENV_VALUE & 0xFF)+0//<($FT_ENV_VALUE)+0
+	_$FT_CH4_VOLUME		: _$FT_CH4_ENVS+(_$FT_ENV_VALUE & 0xFF)+0//<($FT_ENV_VALUE)+0
+	
+	_$FT_CH1_NOTE_OFF	: _$FT_CH1_ENVS+(_$FT_ENV_VALUE & 0xFF)+1//<($FT_ENV_VALUE)+1
+	_$FT_CH2_NOTE_OFF	: _$FT_CH2_ENVS+(_$FT_ENV_VALUE & 0xFF)+1//<($FT_ENV_VALUE)+1
+	_$FT_CH3_NOTE_OFF	: _$FT_CH3_ENVS+(_$FT_ENV_VALUE & 0xFF)+1//<($FT_ENV_VALUE)+1
+	_$FT_CH4_NOTE_OFF	: _$FT_CH4_ENVS+(_$FT_ENV_VALUE & 0xFF)+1//<($FT_ENV_VALUE)+1
+	
+	_$FT_CH1_PITCH_OFF	: _$FT_CH1_ENVS+(_$FT_ENV_VALUE & 0xFF)+2//<(FT_ENV_VALUE)+2
+	_$FT_CH2_PITCH_OFF	: _$FT_CH2_ENVS+(_$FT_ENV_VALUE & 0xFF)+2//<(FT_ENV_VALUE)+2
+	_$FT_CH3_PITCH_OFF	: _$FT_CH3_ENVS+(_$FT_ENV_VALUE & 0xFF)+2//<(FT_ENV_VALUE)+2
+	
+	
+	_$FT_VARS			: _$FT_CHANNELS+_$FT_CHANNELS_ALL*_$FT_CHN_STRUCT_SIZE
+	
+	_$FT_PAL_ADJUST		: _$FT_VARS+0
+	_$FT_SONG_LIST_L	: _$FT_VARS+1
+	_$FT_SONG_LIST_H	: _$FT_VARS+2
+	_$FT_INSTRUMENT_L 	: _$FT_VARS+3
+	_$FT_INSTRUMENT_H 	: _$FT_VARS+4
+	_$FT_TEMPO_STEP_L	: _$FT_VARS+5
+	_$FT_TEMPO_STEP_H	: _$FT_VARS+6
+	_$FT_TEMPO_ACC_L	: _$FT_VARS+7
+	_$FT_TEMPO_ACC_H	: _$FT_VARS+8
+	_$FT_SONG_SPEED		: _$FT_CH5_INSTRUMENT
+	_$FT_PULSE1_PREV	: _$FT_CH3_DUTY
+	_$FT_PULSE2_PREV	: _$FT_CH5_DUTY
+	_$FT_DPCM_LIST_L	: _$FT_VARS+9
+	_$FT_DPCM_LIST_H	: _$FT_VARS+10
+	_$FT_DPCM_EFFECT  	: _$FT_VARS+11
+	_$FT_OUT_BUF		: _$FT_VARS+12	//11 bytes
+	
+	
+	// sound effect stream variables, 2 bytes and 15 bytes per stream
+	// when sound effects are disabled, this memory is not used
+	
+	_$FT_SFX_ADR_L		: _$FT_VARS+23
+	_$FT_SFX_ADR_H		: _$FT_VARS+24
+	_$FT_SFX_BASE_ADR	: _$FT_VARS+25
+	
+	_$FT_SFX_STRUCT_SIZE	: 15
+	_$FT_SFX_REPEAT		: _$FT_SFX_BASE_ADR+0
+	_$FT_SFX_PTR_L		: _$FT_SFX_BASE_ADR+1
+	_$FT_SFX_PTR_H		: _$FT_SFX_BASE_ADR+2
+	_$FT_SFX_OFF		: _$FT_SFX_BASE_ADR+3
+	_$FT_SFX_BUF		: _$FT_SFX_BASE_ADR+4	//11 bytes
+	
+	_$FT_BASE_SIZE 		: _$FT_SFX_BUF+11-_$FT_BASE_ADR
+	
+	// aliases for sound effect channels to use in user calls
+	
+	/* Channel 0 to play SFXs on <i>$playSfx()</i> */
+	$FT_SFX_CH0			: _$FT_SFX_STRUCT_SIZE*0
+	/* Channel 1 to play SFXs on <i>$playSfx()</i> */
+	$FT_SFX_CH1			: _$FT_SFX_STRUCT_SIZE*1
+	/* Channel 2 to play SFXs on <i>$playSfx()</i> */
+	$FT_SFX_CH2			: _$FT_SFX_STRUCT_SIZE*2
+	/* Channel 3 to play SFXs on <i>$playSfx()</i> */
+	$FT_SFX_CH3			: _$FT_SFX_STRUCT_SIZE*3
+	
+	
+	// aliases for the APU registers
+	
+	_$APU_PL1_VOL	: 0x04000
+	_$APU_PL1_SWEEP	: 0x04001
+	_$APU_PL1_LO	: 0x04002
+	_$APU_PL1_HI	: 0x04003
+	_$APU_PL2_VOL	: 0x04004
+	_$APU_PL2_SWEEP	: 0x04005
+	_$APU_PL2_LO	: 0x04006
+	_$APU_PL2_HI	: 0x04007
+	_$APU_TRI_LINEAR	: 0x04008
+	_$APU_TRI_LO		: 0x0400A
+	_$APU_TRI_HI		: 0x0400B
+	_$APU_NOISE_VOL	: 0x0400C
+	_$APU_NOISE_LO	: 0x0400E
+	_$APU_NOISE_HI	: 0x0400F
+	_$APU_DMC_FREQ	: 0x04010
+	_$APU_DMC_RAW	: 0x04011
+	_$APU_DMC_START	: 0x04012
+	_$APU_DMC_LEN	: 0x04013
+	_$APU_SND_CHN	: 0x04015
+	
+	
+	// aliases for the APU registers in the output buffer
+	
+	_$FT_MR_PULSE1_V	: _$FT_OUT_BUF
+	_$FT_MR_PULSE1_L	: _$FT_OUT_BUF+1
+	_$FT_MR_PULSE1_H	: _$FT_OUT_BUF+2
+	_$FT_MR_PULSE2_V	: _$FT_OUT_BUF+3
+	_$FT_MR_PULSE2_L	: _$FT_OUT_BUF+4
+	_$FT_MR_PULSE2_H	: _$FT_OUT_BUF+5
+	_$FT_MR_TRI_V		: _$FT_OUT_BUF+6
+	_$FT_MR_TRI_L		: _$FT_OUT_BUF+7
+	_$FT_MR_TRI_H		: _$FT_OUT_BUF+8
+	_$FT_MR_NOISE_V		: _$FT_OUT_BUF+9
+	_$FT_MR_NOISE_F		: _$FT_OUT_BUF+10
+	
+	/* NTSC region */
+	$NTSC : 64
+	/* PAL-M region */
+	$PALM : 0
+	
+	/*
+	 * <p>Open a music file for further play</p>
+	 * 
+	 * <h2>Example</h2>
+	 * <code>
+	 * $someMusics @PRG-ROM : "file://some-musics.asm"<br>
+	 * <br>
+	 * // somewhere in the code<br>
+	 * FamiTone2.$openMusic(FamiTone2.$NTSC, $someMusics)<br>
+	 * ...<br>
+	 * FamiTone2.$playMusic(0) // plays the 1st track in the recent opened music file<br>
+	 * </code>
+	 * 
+	 * <h2>Parameters</h2>
+	 * <ul>
+	 * <li><b>region</b>: choose between PAL-M (a zero value) and NTSC (non zero value)</li>
+	 * <li><b>music</b>: the music file to be opened</li>
+	 * </ul>	 */
+	$openMusic(Byte region, Byte[] music) {
+		!	LDA ?music?             ;store music data pointer for further use                    !
+		!	STA ?_$FT_SONG_LIST_L?                                                                !
+		!	STA ?_$ftTempPtr?                                                                     !
+		!	LDA ?music? + 1                                                                      !
+		!	STA ?_$FT_SONG_LIST_H?                                                                !
+		!	STA ?_$ftTempPtr? + 1                                                                 !
+		!	LDA ?region?                                                                           !
+		!                                                                                        !
+		!	.ifdef ?_$FT_PITCH_FIX?                                                               !
+		!	tax						;set SZ flags for A                                          !
+		!	beq @pal                                                                             !
+		!	lda #64                                                                              !
+		!@pal:                                                                                   !
+		!	.else                                                                                !
+		!	.ifdef ?_$FT_PAL_SUPPORT?                                                             !
+		!	lda #0                                                                               !
+		!	.endif                                                                               !
+		!	.ifdef ?_$FT_NTSC_SUPPORT?                                                            !
+		!	lda #64                                                                              !
+		!	.endif                                                                               !
+		!	.endif                                                                               !
+		!	sta ?_$FT_PAL_ADJUST?                                                                 !
+		!                                                                                        !
+		!	;initialize channels and envelopes                                                   !
+		$stopMusic()
+		!                                                                                        !
+		!	ldy #1                                                                               !
+		!	lda (?_$ftTempPtr?),y		;get instrument list address                             !
+		!	sta ?_$FT_INSTRUMENT_L?                                                                  !
+		!	iny                                                                                  !
+		!	lda (?_$ftTempPtr?),y                                                                  !
+		!	sta ?_$FT_INSTRUMENT_H?                                                                  !
+		!	iny                                                                                  !
+		!	lda (?_$ftTempPtr?),y		;get sample list address                                     !
+		!	sta ?_$FT_DPCM_LIST_L?                                                                   !
+		!	iny                                                                                  !
+		!	lda (?_$ftTempPtr?),y                                                                  !
+		!	sta ?_$FT_DPCM_LIST_H?                                                                   !
+		!                                                                                        !
+		!	lda #$ff				;previous pulse period MSB, to not write it when not changed !
+		!	sta ?_$FT_PULSE1_PREV?                                                                   !
+		!	sta ?_$FT_PULSE2_PREV?                                                                   !
+		!                                                                                        !
+		!	lda #$0f				;enable channels, stop DMC                                   !
+		!	sta ?_$APU_SND_CHN?                                                                      !
+		!	lda #$80				;disable triangle length counter                             !
+		!	sta ?_$APU_TRI_LINEAR?                                                                   !
+		!	lda #$00				;load noise length                                           !
+		!	sta ?_$APU_NOISE_HI?                                                                     !
+		!                                                                                        !
+		!	lda #$30				;volumes to 0                                                !
+		!	sta ?_$APU_PL1_VOL?                                                                      !
+		!	sta ?_$APU_PL2_VOL?                                                                      !
+		!	sta ?_$APU_NOISE_VOL?                                                                    !
+		!	lda #$08				;no sweep                                                    !
+		!	sta ?_$APU_PL1_SWEEP?                                                                    !
+		!	sta ?_$APU_PL2_SWEEP?                                                                    !
+		!                                                                                        !
+		$stopMusic()
+	}
+
+	/*
+	 * <p>Stops the music currently playing, if any</p>
+	 * 
+	 * <h2>Example</h2>
+	 * <code>
+	 * $someMusics @PRG-ROM : "file://some-musics.asm"<br>
+	 * <br>
+	 * // somewhere in the code<br>
+	 * FamiTone2.$openMusic(FamiTone2.$NTSC, $someMusics)<br>
+	 * ...<br>
+	 * FamiTone2.$playMusic(0) // plays the 1st track in the recent opened music file<br>
+	 * ...<br>
+	 * FamiTone2.$stopMusic() // stops the playing music
+	 * </code>	*/
+	$stopMusic() {
+		!	lda #0                                                                  !
+		!	sta ?_$FT_SONG_SPEED?		;stop music, reset pause flag                   !
+		!	sta ?_$FT_DPCM_EFFECT?		;no DPCM effect playing                         !
+		!                                                                           !
+		!	ldx #<(?_$FT_CHANNELS?)	;initialize channel structures                      !
+		!                                                                           !
+		!@set_channels:                                                             !
+		!                                                                           !
+		!	lda #0                                                                  !
+		!	sta ?_$FT_CHN_REPEAT?,x                                                     !
+		!	sta ?_$FT_CHN_INSTRUMENT?,x                                                 !
+		!	sta ?_$FT_CHN_NOTE?,x                                                       !
+		!	sta ?_$FT_CHN_REF_LEN?,x                                                    !
+		!	lda #$30                                                                !
+		!	sta ?_$FT_CHN_DUTY?,x                                                       !
+		!                                                                           !
+		!	inx						;next channel                                   !
+		!	cpx #<(?_$FT_CHANNELS?) + ?_$FT_CHANNELS_ALL?                                     !
+		!	bne @set_channels                                                       !
+		!                                                                           !
+		!	ldx #<(?_$FT_ENVELOPES?)	;initialize all envelopes to the dummy envelope !
+		!                                                                           !
+		!@set_envelopes:                                                            !
+		!                                                                           !
+		!	lda #<(?$_FT2DummyEnvelope?)                                              !
+		!	sta ?_$FT_ENV_ADR_L?,x                                                      !
+		!	lda #>(?$_FT2DummyEnvelope?)                                               !
+		!	sta ?_$FT_ENV_ADR_H?,x                                                      !
+		!	lda #0                                                                  !
+		!	sta ?_$FT_ENV_REPEAT?,x                                                     !
+		!	sta ?_$FT_ENV_VALUE?,x                                                      !
+		!	inx                                                                     !
+		!	cpx #<(?_$FT_ENVELOPES?) + ?_$FT_ENVELOPES_ALL?                                   !
+		!                                                                           !
+		!	bne @set_envelopes                                                      !
+		!                                                                           !
+		$stopDcmSample()
+	}
+	
+	/*
+	 * <p>Play a music</p>
+	 * 
+	 * <h2>Example</h2>
+	 * <code>
+	 * $someMusics @PRG-ROM : "file://some-musics.asm"<br>
+	 * <br>
+	 * // somewhere in the code<br>
+	 * FamiTone2.$openMusic(FamiTone2.$NTSC, $someMusics)<br>
+	 * ...<br>
+	 * FamiTone2.$playMusic(0) // plays the 1st track in the recent opened music file<br>
+	 * </code>
+	 * 
+	 * <h2>Parameters</h2>
+	 * <ul>
+	 * <li><b>track</b>: song number to play</li>
+	 * </ul>	 */
+	$playMusic(Byte track) {
+		!	LDA ?track?                                                           !
+		!	ldx ?_$FT_SONG_LIST_L?                                                    !
+		!	stx ?_$ftTempPtr? + 0                                                    !
+		!	ldx ?_$FT_SONG_LIST_H?                                                    !
+		!	stx ?_$ftTempPtr? + 1                                                    !
+		!                                                                         !
+		!	ldy #0                                                                !
+		!	cmp (?_$ftTempPtr?),y		;check if there is such sub song              !
+		!	bcs @skip                                                             !
+		!                                                                         !
+		!	asl a					;multiply song number by 14                   !
+		!	sta ?_$ftTempPtr? + 0		;use pointer LSB as temp variable             !
+		!	asl a                                                                 !
+		!	tax                                                                   !
+		!	asl a                                                                 !
+		!	adc ?_$ftTempPtr? + 0                                                    !
+		!	stx ?_$ftTempPtr? + 0                                                    !
+		!	adc ?_$ftTempPtr? + 0                                                    !
+		!	adc #5					;add offset                                   !
+		!	tay                                                                   !
+		!                                                                         !
+		!	lda ?_$FT_SONG_LIST_L?		;restore pointer LSB                          !
+		!	sta ?_$ftTempPtr? + 0                                                    !
+		!                                                                         !
+		!	;stop music, initialize channels and envelopes                        !
+		$stopMusic()
+		!                                                                         !
+		!	ldx #<(?_$FT_CHANNELS?)	;initialize channel structures                    !
+		!                                                                         !
+		!@set_channels:                                                           !
+		!                                                                         !
+		!	lda (?_$ftTempPtr?),y		;read channel pointers                        !
+		!	sta ?_$FT_CHN_PTR_L?,x                                                    !
+		!	iny                                                                   !
+		!	lda (?_$ftTempPtr?),y                                                   !
+		!	sta ?_$FT_CHN_PTR_H?,x                                                    !
+		!	iny                                                                   !
+		!                                                                         !
+		!	lda #0                                                                !
+		!	sta ?_$FT_CHN_REPEAT?,x                                                   !
+		!	sta ?_$FT_CHN_INSTRUMENT?,x                                               !
+		!	sta ?_$FT_CHN_NOTE?,x                                                     !
+		!	sta ?_$FT_CHN_REF_LEN?,x                                                  !
+		!	lda #$30                                                              !
+		!	sta ?_$FT_CHN_DUTY?,x                                                     !
+		!                                                                         !
+		!	inx						;next channel                                 !
+		!	cpx #<(?_$FT_CHANNELS?) + ?_$FT_CHANNELS_ALL?                                   !
+		!	bne @set_channels                                                     !
+		!                                                                         !
+		!                                                                         !
+		!	lda ?_$FT_PAL_ADJUST?		;read tempo for PAL or NTSC                   !
+		!	beq @pal                                                              !
+		!	iny                                                                   !
+		!	iny                                                                   !
+		!@pal:                                                                    !
+		!                                                                         !
+		!	lda (?_$ftTempPtr?),y		;read the tempo step                          !
+		!	sta ?_$FT_TEMPO_STEP_L?                                                   !
+		!	iny                                                                   !
+		!	lda (?_$ftTempPtr?),y                                                   !
+		!	sta ?_$FT_TEMPO_STEP_H?                                                   !
+		!                                                                         !
+		!                                                                         !
+		!	lda #0					;reset tempo accumulator                      !
+		!	sta ?_$FT_TEMPO_ACC_L?                                                    !
+		!	lda #6					;default speed                                !
+		!	sta ?_$FT_TEMPO_ACC_H?                                                    !
+		!	sta ?_$FT_SONG_SPEED?		;apply default speed, this also enables music !
+		!                                                                         !
+		!@skip:                                                                   !
+	}
+	
+	/*
+	 * <p>Pause the playing music</p>
+	 * 
+	 * <h2>Example</h2>
+	 * <code>
+	 * $someMusics @PRG-ROM : "file://some-musics.asm"<br>
+	 * <br>
+	 * // somewhere in the code<br>
+	 * FamiTone2.$openMusic(FamiTone2.$NTSC, $someMusics)<br>
+	 * ...<br>
+	 * FamiTone2.$playMusic(0) // plays the 1st track in the recent opened music file<br>
+	 * ...<br>
+	 * FamiTone2.$pauseMusic() // pause the playing music 
+	 * </code> */
+	$pauseMusic() {
+		$stopDcmSample()
+		!	lda #0				;mute sound           !
+		!	sta ?_$FT_CH1_VOLUME?                         !
+		!	sta ?_$FT_CH2_VOLUME?                         !
+		!	sta ?_$FT_CH3_VOLUME?                         !
+		!	sta ?_$FT_CH4_VOLUME?                         !
+		!	lda ?_$FT_SONG_SPEED?	;set pause flag       !
+		!	ora #$80                                  !
+		!	bne @done                                 !
+		!@unpause:                                    !
+		!	lda ?_$FT_SONG_SPEED?	;reset pause flag     !
+		!	and #$7f                                  !
+		!@done:                                       !
+		!	sta ?_$FT_SONG_SPEED?                         !
+	}
+	
+	/*
+	 * <p>Resume the paused music</p>
+	 * 
+	 * <h2>Example</h2>
+	 * <code>
+	 * $someMusics @PRG-ROM : "file://some-musics.asm"<br>
+	 * <br>
+	 * // somewhere in the code<br>
+	 * FamiTone2.$openMusic(FamiTone2.$NTSC, $someMusics)<br>
+	 * ...<br>
+	 * FamiTone2.$playMusic(0) // plays the 1st track in the recent opened music file<br>
+	 * ...<br>
+	 * FamiTone2.$pauseMusic() // pause the playing music<br>
+	 * ...<br>
+	 * FamiTone2.$resumeMusic() // resume the paused music 	 
+	 * </code> */
+	$resumeMusic() {
+		!	lda ?_$FT_SONG_SPEED?	;reset pause flag     !
+		!	and #$7f                                  !
+		!@done:                                       !
+		!	sta ?_$FT_SONG_SPEED?                         !
+	}
+	
+	/*
+	 * <p>Update FamiTone2 state, should be called every NMI</p>
+	 * 
+	 * <h2>Example</h2>
+	 * <code>
+	 * $nmi() {<br>
+	 * &nbsp; &nbsp; // some draw stuff<br>
+	 * &nbsp; &nbsp; ...<br>
+	 * &nbsp; &nbsp; // NMI is done<br>
+	 * &nbsp; &nbsp; PPU.$update()<br>
+	 * &nbsp; &nbsp; FamiTone2.$update()<br>
+	 * }
+	 * </code>	 */
+	$update() {
+		!	.ifdef ?_$FT_THREAD?                                                                                  !
+		!	lda ?_$ftTempPtr? + 0                                                                                 !
+		!	pha                                                                                               !
+		!	lda ?_$ftTempPtr? + 1                                                                                 !
+		!	pha                                                                                               !
+		!	.endif                                                                                            !
+		!                                                                                                     !
+		!	lda ?_$FT_SONG_SPEED?		;speed 0 means that no music is playing currently                         !
+		!	bmi @pause				;bit 7 set is the pause flag                                              !
+		!	bne @update                                                                                       !
+		!@pause:                                                                                              !
+		!	jmp @update_sound                                                                                 !
+		!                                                                                                     !
+		!@update:                                                                                             !
+		!                                                                                                     !
+		!	clc						;update frame counter that considers speed, tempo, and PAL/NTSC           !
+		!	lda ?_$FT_TEMPO_ACC_L?                                                                                !
+		!	adc ?_$FT_TEMPO_STEP_L?                                                                               !
+		!	sta ?_$FT_TEMPO_ACC_L?                                                                                !
+		!	lda ?_$FT_TEMPO_ACC_H?                                                                                !
+		!	adc ?_$FT_TEMPO_STEP_H?                                                                               !
+		!	cmp ?_$FT_SONG_SPEED?                                                                                 !
+		!	bcs @update_row			;overflow, row update is needed                                           !
+		!	sta ?_$FT_TEMPO_ACC_H?		;no row update, skip to the envelopes update                              !
+		!	jmp @update_envelopes                                                                             !
+		!                                                                                                     !
+		!@update_row:                                                                                         !
+		!                                                                                                     !
+		!	sec                                                                                               !
+		!	sbc ?_$FT_SONG_SPEED?                                                                                 !
+		!	sta ?_$FT_TEMPO_ACC_H?                                                                                !
+		!                                                                                                     !
+		!                                                                                                     !
+		!	ldx #<(?_$FT_CH1_VARS?)	;process channel 1                                                            !
+		$_FT2ChannelUpdate()
+		!	bcc @no_new_note1                                                                                 !
+		!	ldx #<(?_$FT_CH1_ENVS?)                                                                               !
+		!	lda ?_$FT_CH1_INSTRUMENT?                                                                             !
+		$_FT2SetInstrument()
+		!	sta ?_$FT_CH1_DUTY?                                                                                   !
+		!@no_new_note1:                                                                                       !
+		!                                                                                                     !
+		!	ldx #<(?_$FT_CH2_VARS?)	;process channel 2                                                            !
+		$_FT2ChannelUpdate()
+		!	bcc @no_new_note2                                                                                 !
+		!	ldx #<(?_$FT_CH2_ENVS?)                                                                               !
+		!	lda ?_$FT_CH2_INSTRUMENT?                                                                             !
+		$_FT2SetInstrument()
+		!	sta ?_$FT_CH2_DUTY?                                                                                   !
+		!@no_new_note2:                                                                                       !
+		!                                                                                                     !
+		!	ldx #<(?_$FT_CH3_VARS?)	;process channel 3                                                            !
+		$_FT2ChannelUpdate()
+		!	bcc @no_new_note3                                                                                 !
+		!	ldx #<(?_$FT_CH3_ENVS?)                                                                               !
+		!	lda ?_$FT_CH3_INSTRUMENT?                                                                             !
+		$_FT2SetInstrument()
+		!@no_new_note3:                                                                                       !
+		!                                                                                                     !
+		!	ldx #<(?_$FT_CH4_VARS?)	;process channel 4                                                            !
+		$_FT2ChannelUpdate()
+		!	bcc @no_new_note4                                                                                 !
+		!	ldx #<(?_$FT_CH4_ENVS?)                                                                               !
+		!	lda ?_$FT_CH4_INSTRUMENT?                                                                             !
+		$_FT2SetInstrument()
+		!	sta ?_$FT_CH4_DUTY?                                                                                   !
+		!@no_new_note4:                                                                                       !
+		!                                                                                                     !
+		!	.ifdef ?_$FT_DPCM_ENABLE?                                                                             !
+		!                                                                                                     !
+		!	ldx #<(?_$FT_CH5_VARS?)	;process channel 5                                                            !
+		$_FT2ChannelUpdate()
+		!	bcc @no_new_note5                                                                                 !
+		!	lda ?_$FT_CH5_NOTE?                                                                                   !
+		!	bne @play_sample                                                                                  !
+		$stopDcmSample()
+		!	bne @no_new_note5		;A is non-zero after FamiToneSampleStop                                   !
+		!@play_sample:                                                                                        !
+		$_FamiToneSamplePlayM()
+		!@no_new_note5:                                                                                       !
+		!                                                                                                     !
+		!	.endif                                                                                            !
+		!                                                                                                     !
+		!                                                                                                     !
+		!@update_envelopes:                                                                                   !
+		!                                                                                                     !
+		!	ldx #<(?_$FT_ENVELOPES?)	;process 11 envelopes                                                     !
+		!                                                                                                     !
+		!@env_process:                                                                                        !
+		!                                                                                                     !
+		!	lda ?_$FT_ENV_REPEAT?,x		;check envelope repeat counter                                            !
+		!	beq @env_read			;if it is zero, process envelope                                          !
+		!	dec ?_$FT_ENV_REPEAT?,x		;otherwise decrement the counter                                          !
+		!	bne @env_next                                                                                     !
+		!                                                                                                     !
+		!@env_read:                                                                                           !
+		!                                                                                                     !
+		!	lda ?_$FT_ENV_ADR_L?,x		;load envelope data address into temp                                     !
+		!	sta ?_$ftTempPtr? + 0                                                                                !
+		!	lda ?_$FT_ENV_ADR_H?,x                                                                                !
+		!	sta ?_$ftTempPtr? + 1                                                                                !
+		!	ldy ?_$FT_ENV_PTR?,x		;load envelope pointer                                                    !
+		!                                                                                                     !
+		!@env_read_value:                                                                                     !
+		!                                                                                                     !
+		!	lda (?_$ftTempPtr?),y		;read a byte of the envelope data                                         !
+		!	bpl @env_special		;values below 128 used as a special code, loop or repeat                  !
+		!	clc						;values above 128 are output value+192 (output values are signed -63..64) !
+		!	adc #256-192                                                                                      !
+		!	sta ?_$FT_ENV_VALUE?,x		;store the output value                                                   !
+		!	iny						;advance the pointer                                                      !
+		!	bne @env_next_store_ptr ;bra                                                                      !
+		!                                                                                                     !
+		!@env_special:                                                                                        !
+		!                                                                                                     !
+		!	bne @env_set_repeat		;zero is the loop point, non-zero values used for the repeat counter      !
+		!	iny						;advance the pointer                                                      !
+		!	lda (?_$ftTempPtr?),y		;read loop position                                                       !
+		!	tay						;use loop position                                                        !
+		!	jmp @env_read_value		;read next byte of the envelope                                           !
+		!                                                                                                     !
+		!@env_set_repeat:                                                                                     !
+		!                                                                                                     !
+		!	iny                                                                                               !
+		!	sta ?_$FT_ENV_REPEAT?,x		;store the repeat counter value                                           !
+		!                                                                                                     !
+		!@env_next_store_ptr:                                                                                 !
+		!                                                                                                     !
+		!	tya						;store the envelope pointer                                               !
+		!	sta ?_$FT_ENV_PTR?,x                                                                                  !
+		!                                                                                                     !
+		!@env_next:                                                                                           !
+		!                                                                                                     !
+		!	inx						;next envelope                                                            !
+		!                                                                                                     !
+		!	cpx #<(?_$FT_ENVELOPES?) + ?_$FT_ENVELOPES_ALL?                                                             !
+		!	bne @env_process                                                                                  !
+		!                                                                                                     !
+		!                                                                                                     !
+		!@update_sound:                                                                                       !
+		!                                                                                                     !
+		!	;convert envelope and channel output data into APU register values in the output buffer           !
+		!                                                                                                     !
+		!	lda ?_$FT_CH1_NOTE?                                                                                   !
+		!	beq @ch1cut                                                                                       !
+		!	clc                                                                                               !
+		!	adc ?_$FT_CH1_NOTE_OFF?                                                                               !
+		!	.ifdef ?_$FT_PITCH_FIX?                                                                               !
+		!	ora ?_$FT_PAL_ADJUST?                                                                                 !
+		!	.endif                                                                                            !
+		!	tax                                                                                               !
+		!	lda ?_$FT_CH1_PITCH_OFF?                                                                              !
+		!	tay                                                                                               !
+		!	adc ?$_FT2NoteTableLSB?,x                                                                            !
+		!	sta ?_$FT_MR_PULSE1_L?                                                                                !
+		!	tya						;sign extension for the pitch offset                                      !
+		!	ora #$7f                                                                                          !
+		!	bmi @ch1sign                                                                                      !
+		!	lda #0                                                                                            !
+		!@ch1sign:                                                                                            !
+		!	adc ?$_FT2NoteTableMSB?,x                                                                            !
+		!                                                                                                     !
+		!	.ifndef ?_$FT_SFX_ENABLE?                                                                             !
+		!	cmp ?_$FT_PULSE1_PREV?                                                                                !
+		!	beq @ch1prev                                                                                      !
+		!	sta ?_$FT_PULSE1_PREV?                                                                                !
+		!	.endif                                                                                            !
+		!                                                                                                     !
+		!	sta ?_$FT_MR_PULSE1_H?                                                                                !
+		!@ch1prev:                                                                                            !
+		!	lda ?_$FT_CH1_VOLUME?                                                                                 !
+		!@ch1cut:                                                                                             !
+		!	ora ?_$FT_CH1_DUTY?                                                                                   !
+		!	sta ?_$FT_MR_PULSE1_V?                                                                                !
+		!                                                                                                     !
+		!                                                                                                     !
+		!	lda ?_$FT_CH2_NOTE?                                                                                   !
+		!	beq @ch2cut                                                                                       !
+		!	clc                                                                                               !
+		!	adc ?_$FT_CH2_NOTE_OFF?                                                                               !
+		!	.ifdef ?_$FT_PITCH_FIX?                                                                               !
+		!	ora ?_$FT_PAL_ADJUST?                                                                                 !
+		!	.endif                                                                                            !
+		!	tax                                                                                               !
+		!	lda ?_$FT_CH2_PITCH_OFF?                                                                              !
+		!	tay                                                                                               !
+		!	adc ?$_FT2NoteTableLSB?,x                                                                            !
+		!	sta ?_$FT_MR_PULSE2_L?                                                                                !
+		!	tya                                                                                               !
+		!	ora #$7f                                                                                          !
+		!	bmi @ch2sign                                                                                      !
+		!	lda #0                                                                                            !
+		!@ch2sign:                                                                                            !
+		!	adc ?$_FT2NoteTableMSB?,x                                                                            !
+		!                                                                                                     !
+		!	.ifndef ?_$FT_SFX_ENABLE?                                                                             !
+		!	cmp ?_$FT_PULSE2_PREV?                                                                                !
+		!	beq @ch2prev                                                                                      !
+		!	sta ?_$FT_PULSE2_PREV?                                                                                !
+		!	.endif                                                                                            !
+		!                                                                                                     !
+		!	sta ?_$FT_MR_PULSE2_H?                                                                                !
+		!@ch2prev:                                                                                            !
+		!	lda ?_$FT_CH2_VOLUME?                                                                                 !
+		!@ch2cut:                                                                                             !
+		!	ora ?_$FT_CH2_DUTY?                                                                                   !
+		!	sta ?_$FT_MR_PULSE2_V?                                                                                !
+		!                                                                                                     !
+		!                                                                                                     !
+		!	lda ?_$FT_CH3_NOTE?                                                                                   !
+		!	beq @ch3cut                                                                                       !
+		!	clc                                                                                               !
+		!	adc ?_$FT_CH3_NOTE_OFF?                                                                               !
+		!	.ifdef ?_$FT_PITCH_FIX?                                                                               !
+		!	ora ?_$FT_PAL_ADJUST?                                                                                 !
+		!	.endif                                                                                            !
+		!	tax                                                                                               !
+		!	lda ?_$FT_CH3_PITCH_OFF?                                                                              !
+		!	tay                                                                                               !
+		!	adc ?$_FT2NoteTableLSB?,x                                                                            !
+		!	sta ?_$FT_MR_TRI_L?                                                                                   !
+		!	tya                                                                                               !
+		!	ora #$7f                                                                                          !
+		!	bmi @ch3sign                                                                                      !
+		!	lda #0                                                                                            !
+		!@ch3sign:                                                                                            !
+		!	adc ?$_FT2NoteTableMSB?,x                                                                            !
+		!	sta ?_$FT_MR_TRI_H?                                                                                   !
+		!	lda ?_$FT_CH3_VOLUME?                                                                                 !
+		!@ch3cut:                                                                                             !
+		!	ora #$80                                                                                          !
+		!	sta ?_$FT_MR_TRI_V?                                                                                   !
+		!                                                                                                     !
+		!                                                                                                     !
+		!	lda ?_$FT_CH4_NOTE?                                                                                   !
+		!	beq @ch4cut                                                                                       !
+		!	clc                                                                                               !
+		!	adc ?_$FT_CH4_NOTE_OFF?                                                                               !
+		!	and #$0f                                                                                          !
+		!	eor #$0f                                                                                          !
+		!	sta ?_$ftTempVar1?                                                                                 !
+		!	lda ?_$FT_CH4_DUTY?                                                                                   !
+		!	asl a                                                                                             !
+		!	and #$80                                                                                          !
+		!	ora ?_$ftTempVar1?                                                                                 !
+		!	sta ?_$FT_MR_NOISE_F?                                                                                 !
+		!	lda ?_$FT_CH4_VOLUME?                                                                                 !
+		!@ch4cut:                                                                                             !
+		!	ora #$f0                                                                                          !
+		!	sta ?_$FT_MR_NOISE_V?                                                                                 !
+		!                                                                                                     !
+		!                                                                                                     !
+		!	.ifdef ?_$FT_SFX_ENABLE?                                                                              !
+		!                                                                                                     !
+		!	;process all sound effect streams                                                                 !
+		!                                                                                                     !
+		!	.if ?_$FT_SFX_STREAMS?>0                                                                              !
+		!	ldx #?$FT_SFX_CH0?                                                                                   !
+		$_FT2SfxUpdate()
+		!	.endif                                                                                            !
+		!	.if ?_$FT_SFX_STREAMS?>1                                                                              !
+		!	ldx #?$FT_SFX_CH1?                                                                                   !
+		$_FT2SfxUpdate()
+		!	.endif                                                                                            !
+		!	.if ?_$FT_SFX_STREAMS?>2                                                                              !
+		!	ldx #?$FT_SFX_CH2?                                                                                   !
+		$_FT2SfxUpdate()
+		!	.endif                                                                                            !
+		!	.if ?_$FT_SFX_STREAMS?>3                                                                              !
+		!	ldx #?$FT_SFX_CH3?                                                                                   !
+		$_FT2SfxUpdate()
+		!	.endif                                                                                            !
+		!                                                                                                     !
+		!                                                                                                     !
+		!	;send data from the output buffer to the APU                                                      !
+		!                                                                                                     !
+		!	lda ?_$FT_OUT_BUF?		;pulse 1 volume                                                               !
+		!	sta ?_$APU_PL1_VOL?                                                                                   !
+		!	lda ?_$FT_OUT_BUF?+1	;pulse 1 period LSB                                                           !
+		!	sta ?_$APU_PL1_LO?                                                                                    !
+		!	lda ?_$FT_OUT_BUF?+2	;pulse 1 period MSB, only applied when changed                                !
+		!	cmp ?_$FT_PULSE1_PREV?                                                                                !
+		!	beq @no_pulse1_upd                                                                                !
+		!	sta ?_$FT_PULSE1_PREV?                                                                                !
+		!	sta ?_$APU_PL1_HI?                                                                                    !
+		!@no_pulse1_upd:                                                                                      !
+		!                                                                                                     !
+		!	lda ?_$FT_OUT_BUF?+3	;pulse 2 volume                                                               !
+		!	sta ?_$APU_PL2_VOL?                                                                                   !
+		!	lda ?_$FT_OUT_BUF?+4	;pulse 2 period LSB                                                           !
+		!	sta ?_$APU_PL2_LO?                                                                                    !
+		!	lda ?_$FT_OUT_BUF?+5	;pulse 2 period MSB, only applied when changed                                !
+		!	cmp ?_$FT_PULSE2_PREV?                                                                                !
+		!	beq @no_pulse2_upd                                                                                !
+		!	sta ?_$FT_PULSE2_PREV?                                                                                !
+		!	sta ?_$APU_PL2_HI?                                                                                    !
+		!@no_pulse2_upd:                                                                                      !
+		!                                                                                                     !
+		!	lda ?_$FT_OUT_BUF?+6	;triangle volume (plays or not)                                               !
+		!	sta ?_$APU_TRI_LINEAR?                                                                                !
+		!	lda ?_$FT_OUT_BUF?+7	;triangle period LSB                                                          !
+		!	sta ?_$APU_TRI_LO?                                                                                    !
+		!	lda ?_$FT_OUT_BUF?+8	;triangle period MSB                                                          !
+		!	sta ?_$APU_TRI_HI?                                                                                    !
+		!                                                                                                     !
+		!	lda ?_$FT_OUT_BUF?+9	;noise volume                                                                 !
+		!	sta ?_$APU_NOISE_VOL?                                                                                 !
+		!	lda ?_$FT_OUT_BUF?+10	;noise period                                                                 !
+		!	sta ?_$APU_NOISE_LO?                                                                                  !
+		!                                                                                                     !
+		!	.endif                                                                                            !
+		!                                                                                                     !
+		!	.ifdef ?_$FT_THREAD?                                                                                  !
+		!	pla                                                                                               !
+		!	sta ?_$ftTempPtr? + 1                                                                                 !
+		!	pla                                                                                               !
+		!	sta ?_$ftTempPtr? + 0                                                                                 !
+		!	.endif                                                                                            !
+	}
+	
+	/*
+	;internal routine, sets up envelopes of a channel according to current instrument
+	;in X envelope group offset, A instrument number
+	*/
+	$_FT2SetInstrument() {
+		!	asl a					;instrument number is pre multiplied by 4     !
+		!	tay                                                                   !
+		!	lda ?_$FT_INSTRUMENT_H?                                                   !
+		!	adc #0					;use carry to extend range for 64 instruments !
+		!	sta ?_$ftTempPtr? + 1                                                    !
+		!	lda ?_$FT_INSTRUMENT_L?                                                   !
+		!	sta ?_$ftTempPtr? + 0                                                    !
+		!                                                                         !
+		!	lda (?_$ftTempPtr?),y		;duty cycle                                   !
+		!	sta ?_$ftTempVar1?                                                     !
+		!	iny                                                                   !
+		!                                                                         !
+		!	lda (?_$ftTempPtr?),y		;instrument pointer LSB                       !
+		!	sta ?_$FT_ENV_ADR_L?,x                                                    !
+		!	iny                                                                   !
+		!	lda (?_$ftTempPtr?),y		;instrument pointer MSB                       !
+		!	iny                                                                   !
+		!	sta ?_$FT_ENV_ADR_H?,x                                                    !
+		!	inx						;next envelope                                !
+		!                                                                         !
+		!	lda (?_$ftTempPtr?),y		;instrument pointer LSB                       !
+		!	sta ?_$FT_ENV_ADR_L?,x                                                    !
+		!	iny                                                                   !
+		!	lda (?_$ftTempPtr?),y		;instrument pointer MSB                       !
+		!	sta ?_$FT_ENV_ADR_H?,x                                                    !
+		!                                                                         !
+		!	lda #0                                                                !
+		!	sta ?_$FT_ENV_REPEAT?-1,x	;reset env1 repeat counter                    !
+		!	sta ?_$FT_ENV_PTR?-1,x		;reset env1 pointer                           !
+		!	sta ?_$FT_ENV_REPEAT?,x		;reset env2 repeat counter                    !
+		!	sta ?_$FT_ENV_PTR?,x		;reset env2 pointer                           !
+		!                                                                         !
+		!	cpx #<(?_$FT_CH4_ENVS?)	;noise channel has only two envelopes             !
+		!	bcs @no_pitch                                                         !
+		!                                                                         !
+		!	inx						;next envelope                                !
+		!	iny                                                                   !
+		!	sta ?_$FT_ENV_REPEAT?,x		;reset env3 repeat counter                    !
+		!	sta ?_$FT_ENV_PTR?,x		;reset env3 pointer                           !
+		!	lda (?_$ftTempPtr?),y		;instrument pointer LSB                       !
+		!	sta ?_$FT_ENV_ADR_L?,x                                                    !
+		!	iny                                                                   !
+		!	lda (?_$ftTempPtr?),y		;instrument pointer MSB                       !
+		!	sta ?_$FT_ENV_ADR_H?,x                                                    !
+		!                                                                         !
+		!@no_pitch:                                                               !
+		!	lda ?_$ftTempVar1?                                                     !
+	}
+	
+	/*
+	;internal routine, parses channel note data
+	*/
+	$_FT2ChannelUpdate() {
+		!	lda ?_$FT_CHN_REPEAT?,x		;check repeat counter                                 !
+		!	beq @no_repeat                                                                !
+		!	dec ?_$FT_CHN_REPEAT?,x		;decrease repeat counter                              !
+		!	clc						;no new note                                          !
+		!	rts                                                                           !
+		!                                                                                 !
+		!@no_repeat:                                                                      !
+		!	lda ?_$FT_CHN_PTR_L?,x		;load channel pointer into temp                       !
+		!	sta ?_$ftTempPtr? + 0                                                            !
+		!	lda ?_$FT_CHN_PTR_H?,x                                                            !
+		!	sta ?_$ftTempPtr? + 1                                                            !
+		!@no_repeat_r:                                                                    !
+		!	ldy #0                                                                        !
+		!                                                                                 !
+		!@read_byte:                                                                      !
+		!	lda (?_$ftTempPtr?),y		;read byte of the channel                             !
+		!                                                                                 !
+		!	inc ?_$ftTempPtr? + 0		;advance pointer                                      !
+		!	bne @no_inc_ptr1                                                              !
+		!	inc ?_$ftTempPtr? + 1                                                            !
+		!@no_inc_ptr1:                                                                    !
+		!                                                                                 !
+		!	ora #0                                                                        !
+		!	bmi @special_code		;bit 7 0=note 1=special code                          !
+		!                                                                                 !
+		!	lsr a					;bit 0 set means the note is followed by an empty row !
+		!	bcc @no_empty_row                                                             !
+		!	inc ?_$FT_CHN_REPEAT?,x		;set repeat counter to 1                              !
+		!@no_empty_row:                                                                   !
+		!	sta ?_$FT_CHN_NOTE?,x		;store note code                                      !
+		!	sec						;new note flag is set                                 !
+		!	bcs @done ;bra                                                                !
+		!                                                                                 !
+		!@special_code:                                                                   !
+		!	and #$7f                                                                      !
+		!	lsr a                                                                         !
+		!	bcs @set_empty_rows                                                           !
+		!	asl a                                                                         !
+		!	asl a                                                                         !
+		!	sta ?_$FT_CHN_INSTRUMENT?,x	;store instrument number*4                            !
+		!	bcc @read_byte ;bra                                                           !
+		!                                                                                 !
+		!@set_empty_rows:                                                                 !
+		!	cmp #$3d                                                                      !
+		!	bcc @set_repeat                                                               !
+		!	beq @set_speed                                                                !
+		!	cmp #$3e                                                                      !
+		!	beq @set_loop                                                                 !
+		!                                                                                 !
+		!@set_reference:                                                                  !
+		!	clc						;remember return address+3                            !
+		!	lda ?_$ftTempPtr? + 0                                                            !
+		!	adc #3                                                                        !
+		!	sta ?_$FT_CHN_RETURN_L?,x                                                         !
+		!	lda ?_$ftTempPtr? + 1                                                            !
+		!	adc #0                                                                        !
+		!	sta ?_$FT_CHN_RETURN_H?,x                                                         !
+		!	lda (?_$ftTempPtr?),y		;read length of the reference (how many rows)         !
+		!	sta ?_$FT_CHN_REF_LEN?,x                                                          !
+		!	iny                                                                           !
+		!	lda (?_$ftTempPtr?),y		;read 16-bit absolute address of the reference        !
+		!	sta ?_$ftTempVar1?		;remember in temp                                     !
+		!	iny                                                                           !
+		!	lda (?_$ftTempPtr?),y                                                           !
+		!	sta ?_$ftTempPtr? + 1                                                            !
+		!	lda ?_$ftTempVar1?                                                             !
+		!	sta ?_$ftTempPtr? + 0                                                            !
+		!	ldy #0                                                                        !
+		!	jmp @read_byte                                                                !
+		!                                                                                 !
+		!@set_speed:                                                                      !
+		!	lda (?_$ftTempPtr?),y                                                           !
+		!	sta ?_$FT_SONG_SPEED?                                                             !
+		!	inc ?_$ftTempPtr? + 0		;advance pointer after reading the speed value        !
+		!	bne @read_byte                                                                !
+		!	inc ?_$ftTempPtr? + 1                                                            !
+		!	bne @read_byte ;bra                                                           !
+		!                                                                                 !
+		!@set_loop:                                                                       !
+		!	lda (?_$ftTempPtr?),y                                                           !
+		!	sta ?_$ftTempVar1?                                                             !
+		!	iny                                                                           !
+		!	lda (?_$ftTempPtr?),y                                                           !
+		!	sta ?_$ftTempPtr? + 1                                                            !
+		!	lda ?_$ftTempVar1?                                                             !
+		!	sta ?_$ftTempPtr? + 0                                                            !
+		!	dey                                                                           !
+		!	jmp @read_byte                                                                !
+		!                                                                                 !
+		!@set_repeat:                                                                     !
+		!	sta ?_$FT_CHN_REPEAT?,x		;set up repeat counter, carry is clear, no new note   !
+		!                                                                                 !
+		!@done:                                                                           !
+		!	lda ?_$FT_CHN_REF_LEN?,x	;check reference row counter                          !
+		!	beq @no_ref				;if it is zero, there is no reference                 !
+		!	dec ?_$FT_CHN_REF_LEN?,x	;decrease row counter                                 !
+		!	bne @no_ref                                                                   !
+		!                                                                                 !
+		!	lda ?_$FT_CHN_RETURN_L?,x	;end of a reference, return to previous pointer       !
+		!	sta ?_$FT_CHN_PTR_L?,x                                                            !
+		!	lda ?_$FT_CHN_RETURN_H?,x                                                         !
+		!	sta ?_$FT_CHN_PTR_H?,x                                                            !
+		!	rts                                                                           !
+		!                                                                                 !
+		!@no_ref:                                                                         !
+		!	lda ?_$ftTempPtr? + 0                                                            !
+		!	sta ?_$FT_CHN_PTR_L?,x                                                            !
+		!	lda ?_$ftTempPtr? + 1                                                            !
+		!	sta ?_$FT_CHN_PTR_H?,x                                                            !
+	}
+	
+	
+	/*
+	 * <p>Stop DPCM/DMC/DCM sample if it plays</p>
+	 */
+	$stopDcmSample() {
+		!	lda #%00001111  !
+		!	sta ?_$APU_SND_CHN? !
+	}
+	
+	/*
+	;------------------------------------------------------------------------------
+	; play DPCM sample, used by music player, could be used externally
+	; in: A is number of a sample, 1..63
+	;------------------------------------------------------------------------------
+	*/
+	$_FamiToneSamplePlayM() {		//;for music (low priority)
+		!	ldx ?_$FT_DPCM_EFFECT? !
+		!	BNE @continue      !
+		$_FT2SamplePlay()
+		!	RTS                !
+		!@continue:            !
+		!	tax                !
+		!	lda ?_$APU_SND_CHN?    !
+		!	and #16            !
+		!	beq @not_busy      !
+		!	rts                !
+		!                      !
+		!@not_busy:            !
+		!	sta ?_$FT_DPCM_EFFECT? !
+		!	txa                !
+		$_FT2SamplePlay()
+	}
+
+	/*
+	 * <p>Play a DPCM/DMC/DCM sample with higher priority, for sound effects</p>
+	 * <p><b>Warning</b>: don't forget that active DPCM sound conflicts with $2002 and
+	 * controllers polling. You should poll controllers three times in a row, 
+	 * then use matching result. </p>
+	 * 
+	 * <h2>Example</h2>
+	 * <code>
+	 * $someSamplesFile @PRG-ROM : "file://some-samples.asm"<br>
+	 * $someSamplesData @PRG-ROM : "file://some-samples.dcm"<br>
+	 * <br>
+	 * // somewhere in the code<br>
+	 * FamiTone2.$openMusic(FamiTone2.$NTSC, $someSamplesFile)<br>
+	 * ...<br>
+	 * FamiTone2.$playDmcSample(0) // plays the 1st sample<br>
+	 * </code>
+	 *
+	 * <h2>Parameters</h2>
+	 * <ul>
+	 * <li><b>sample</b>: the number of sample to play</li>
+	 * </ul>	 */
+	$playDcmSample(Byte sample) {
+		!	LDA ?sample?       !
+		!	ldx #1             !
+		!	stx ?_$FT_DPCM_EFFECT? !
+		$_FT2SamplePlay()
+	}
+	
+	$_FT2SamplePlay() {
+		!	sta ?_$ftTempPtr?		;sample number*3, offset in the sample table  !
+		!	asl a                                                             !
+		!	clc                                                               !
+		!	adc ?_$ftTempPtr?                                                     !
+		!	                                                                  !
+		!	adc ?_$FT_DPCM_LIST_L?                                                !
+		!	sta ?_$ftTempPtr? + 0                                                !
+		!	lda #0                                                            !
+		!	adc ?_$FT_DPCM_LIST_H?                                                !
+		!	sta ?_$ftTempPtr? + 1                                                !
+		!                                                                     !
+		!	lda #%00001111			;stop DPCM                                !
+		!	sta ?_$APU_SND_CHN?                                                   !
+		!                                                                     !
+		!	ldy #0                                                            !
+		!	lda (?_$ftTempPtr?),y		;sample offset                            !
+		!	sta ?_$APU_DMC_START?                                                 !
+		!	iny                                                               !
+		!	lda (?_$ftTempPtr?),y		;sample length                            !
+		!	sta ?_$APU_DMC_LEN?                                                   !
+		!	iny                                                               !
+		!	lda (?_$ftTempPtr?),y		;pitch and loop                           !
+		!	sta ?_$APU_DMC_FREQ?                                                  !
+		!                                                                     !
+		!	lda #32					;reset DAC counter                        !
+		!	sta ?_$APU_DMC_RAW?                                                   !
+		!	lda #%00011111			;start DMC                                !
+		!	sta ?_$APU_SND_CHN?                                                   !
+	}
+	
+	/*
+	 * <p>Open a SFX file for further playing</p>
+	 * 
+	 * <h2>Example</h2>
+	 * <code>
+	 * $someEffects @PRG-ROM : "file://some-effects.asm"<br>
+	 * <br>
+	 * // somewhere in the code<br>
+	 * FamiTone2.$openSfx($someEffects)<br>
+	 * ...<br>
+	 * FamiTone2.$playSfx(0, FamiTone2.$FT_SFX_CH0) // plays the 1st effect on channel 0<br>
+	 * </code>
+	 * 
+	 * <h2>Parameters</h2>
+	 * <ul>
+	 * <li><b>sfx</b>: the file with effects to open</li>
+	 * </ul> */
+	$openSfx(Byte[] sfx) {
+		!	LDX ?sfx? + 0 !
+		!	stx ?_$ftTempPtr? + 0                                                  !
+		!	LDY ?sfx? + 1 !
+		!	sty ?_$ftTempPtr? + 1                                                  !
+		!	                                                                    !
+		!	ldy #0                                                              !
+		!	                                                                    !
+		!	.ifdef ?_$FT_PITCH_FIX?                                                 !
+		!                                                                       !
+		!	lda ?_$FT_PAL_ADJUST?		;add 2 to the sound list pointer for PAL    !
+		!	bne @ntsc                                                           !
+		!	iny                                                                 !
+		!	iny                                                                 !
+		!@ntsc:                                                                 !
+		!                                                                       !
+		!	.endif                                                              !
+		!	                                                                    !
+		!	lda (?_$ftTempPtr?),y		;read and store pointer to the effects list !
+		!	sta ?_$FT_SFX_ADR_L?                                                    !
+		!	iny                                                                 !
+		!	lda (?_$ftTempPtr?),y                                                 !
+		!	sta ?_$FT_SFX_ADR_H?                                                    !
+		!                                                                       !
+		!	ldx #?$FT_SFX_CH0?			;init all the streams                       !
+		!                                                                       !
+		!@set_channels:                                                         !
+		$_FT2SfxClearChannel()
+		!	txa                                                                 !
+		!	clc                                                                 !
+		!	adc #?_$FT_SFX_STRUCT_SIZE?                                             !
+		!	tax                                                                 !
+		!	cpx #?_$FT_SFX_STRUCT_SIZE?*?_$FT_SFX_STREAMS?                              !
+		!	bne @set_channels                                                   !
+	}
+	
+	/*
+	;internal routine, clears output buffer of a sound effect
+	;in: A is 0
+	;    X is offset of sound effect stream
+	*/
+	$_FT2SfxClearChannel() {
+		!	lda #0                                         !
+		!	sta ?_$FT_SFX_PTR_H?,x		;this stops the effect !
+		!	sta ?_$FT_SFX_REPEAT?,x                            !
+		!	sta ?_$FT_SFX_OFF?,x                               !
+		!	sta ?_$FT_SFX_BUF?+6,x		;mute triangle         !
+		!	lda #$30                                       !
+		!	sta ?_$FT_SFX_BUF?+0,x		;mute pulse1           !
+		!	sta ?_$FT_SFX_BUF?+3,x		;mute pulse2           !
+		!	sta ?_$FT_SFX_BUF?+9,x		;mute noise            !
+	}
+	
+	/*
+	 * <p>Play a Sound Effect (SFX)</p>
+	 * 
+	 * <h2>Example</h2>
+	 * <code>
+	 * $someEffects @PRG-ROM : "file://some-effects.asm"<br>
+	 * <br>
+	 * // somewhere in the code<br>
+	 * FamiTone2.$openSfx($someEffects)<br>
+	 * ...<br>
+	 * FamiTone2.$playSfx(0, FamiTone2.$FT_SFX_CH0) // plays the 1st effect on channel 0<br>
+	 * </code>
+	 * 
+	 * <h2>Parameters</h2>
+	 * <ul>
+	 * <li><b>number</b>: the number of the effect to play</li>
+	 * <li><b>channel</b>: the channel offset for playing. Choose one of FamiTone2.$ST_SFX_CH0 .. FamiTone2.$ST_SFX_CH3</li>
+	 * </ul> */
+	$playSfx(Byte number, Byte channel) {
+		!	LDX ?channel? !
+		!	LDA ?number?  !
+		!	asl a					;get offset in the effects list      !
+		!	tay                                                          !
+		!                                                                !
+		!	;stops the effect if it plays        !
+		$_FT2SfxClearChannel()
+		!                                                                !
+		!	lda ?_$FT_SFX_ADR_L?                                             !
+		!	sta ?_$ftTempPtr? + 0                                           !
+		!	lda ?_$FT_SFX_ADR_H?                                             !
+		!	sta ?_$ftTempPtr? + 1                                           !
+		!                                                                !
+		!	lda (?_$ftTempPtr?),y		;read effect pointer from the table  !
+		!	sta ?_$FT_SFX_PTR_L?,x		;store it                            !
+		!	iny                                                          !
+		!	lda (?_$ftTempPtr?),y                                          !
+		!	sta ?_$FT_SFX_PTR_H?,x		;this write enables the effect       !
+	}
+	
+	/*
+	;internal routine, update one sound effect stream
+	;in: X is offset of sound effect stream
+	*/
+	$_FT2SfxUpdate() {
+		!	lda ?_$FT_SFX_REPEAT?,x		;check if repeat counter is not zero                           !
+		!	beq @no_repeat                                                                         !
+		!	dec ?_$FT_SFX_REPEAT?,x		;decrement and return                                          !
+		!	bne @update_buf			;just mix with output buffer                                   !
+		!                                                                                          !
+		!@no_repeat:                                                                               !
+		!	lda ?_$FT_SFX_PTR_H?,x		;check if MSB of the pointer is not zero                       !
+		!	bne @sfx_active                                                                        !
+		!	rts						;return otherwise, no active effect                            !
+		!                                                                                          !
+		!@sfx_active:                                                                              !
+		!	sta ?_$ftTempPtr? + 1		;load effect pointer into temp                                 !
+		!	lda ?_$FT_SFX_PTR_L?,x                                                                     !
+		!	sta ?_$ftTempPtr? + 0                                                                     !
+		!	ldy ?_$FT_SFX_OFF?,x                                                                       !
+		!	clc                                                                                    !
+		!                                                                                          !
+		!@read_byte:                                                                               !
+		!	lda (?_$ftTempPtr?),y		;read byte of effect                                           !
+		!	bmi @get_data			;if bit 7 is set, it is a register write                       !
+		!	beq @eof                                                                               !
+		!	iny                                                                                    !
+		!	sta ?_$FT_SFX_REPEAT?,x		;if bit 7 is reset, it is number of repeats                    !
+		!	tya                                                                                    !
+		!	sta ?_$FT_SFX_OFF?,x                                                                       !
+		!	jmp @update_buf                                                                        !
+		!                                                                                          !
+		!@get_data:                                                                                !
+		!	iny                                                                                    !
+		!	stx ?_$ftTempVar1?		;it is a register write                                        !
+		!	adc ?_$ftTempVar1?		;get offset in the effect output buffer                        !
+		!	tax                                                                                    !
+		!	lda (?_$ftTempPtr?),y		;read value                                                    !
+		!	iny                                                                                    !
+		!	sta ?_$FT_SFX_BUF?-128,x	;store into output buffer                                      !
+		!	ldx ?_$ftTempVar1?                                                                      !
+		!	jmp @read_byte			;and read next byte                                            !
+		!                                                                                          !
+		!@eof:                                                                                     !
+		!	sta ?_$FT_SFX_PTR_H?,x		;mark channel as inactive                                      !
+		!                                                                                          !
+		!@update_buf:                                                                              !
+		!                                                                                          !
+		!	lda ?_$FT_OUT_BUF?			;compare effect output buffer with main output buffer          !
+		!	and #$0f				;if volume of pulse 1 of effect is higher than that of the     !
+		!	sta ?_$ftTempVar1?		;main buffer, overwrite the main buffer value with the new one !
+		!	lda ?_$FT_SFX_BUF?+0,x                                                                     !
+		!	and #$0f                                                                               !
+		!	cmp ?_$ftTempVar1?                                                                      !
+		!	bcc @no_pulse1                                                                         !
+		!	lda ?_$FT_SFX_BUF?+0,x                                                                     !
+		!	sta ?_$FT_OUT_BUF?+0                                                                       !
+		!	lda ?_$FT_SFX_BUF?+1,x                                                                     !
+		!	sta ?_$FT_OUT_BUF?+1                                                                       !
+		!	lda ?_$FT_SFX_BUF?+2,x                                                                     !
+		!	sta ?_$FT_OUT_BUF?+2                                                                       !
+		!@no_pulse1:                                                                               !
+		!                                                                                          !
+		!	lda ?_$FT_OUT_BUF?+3		;same for pulse 2                                              !
+		!	and #$0f                                                                               !
+		!	sta ?_$ftTempVar1?                                                                      !
+		!	lda ?_$FT_SFX_BUF?+3,x                                                                     !
+		!	and #$0f                                                                               !
+		!	cmp ?_$ftTempVar1?                                                                      !
+		!	bcc @no_pulse2                                                                         !
+		!	lda ?_$FT_SFX_BUF?+3,x                                                                     !
+		!	sta ?_$FT_OUT_BUF?+3                                                                       !
+		!	lda ?_$FT_SFX_BUF?+4,x                                                                     !
+		!	sta ?_$FT_OUT_BUF?+4                                                                       !
+		!	lda ?_$FT_SFX_BUF?+5,x                                                                     !
+		!	sta ?_$FT_OUT_BUF?+5                                                                       !
+		!@no_pulse2:                                                                               !
+		!                                                                                          !
+		!	lda ?_$FT_SFX_BUF?+6,x		;overwrite triangle of main output buffer if it is active      !
+		!	beq @no_triangle                                                                       !
+		!	sta ?_$FT_OUT_BUF?+6                                                                       !
+		!	lda ?_$FT_SFX_BUF?+7,x                                                                     !
+		!	sta ?_$FT_OUT_BUF?+7                                                                       !
+		!	lda ?_$FT_SFX_BUF?+8,x                                                                     !
+		!	sta ?_$FT_OUT_BUF?+8                                                                       !
+		!@no_triangle:                                                                             !
+		!                                                                                          !
+		!	lda ?_$FT_OUT_BUF?+9		;same as for pulse 1 and 2, but for noise                      !
+		!	and #$0f                                                                               !
+		!	sta ?_$ftTempVar1?                                                                      !
+		!	lda ?_$FT_SFX_BUF?+9,x                                                                     !
+		!	and #$0f                                                                               !
+		!	cmp ?_$ftTempVar1?                                                                      !
+		!	bcc @no_noise                                                                          !
+		!	lda ?_$FT_SFX_BUF?+9,x                                                                     !
+		!	sta ?_$FT_OUT_BUF?+9                                                                       !
+		!	lda ?_$FT_SFX_BUF?+10,x                                                                    !
+		!	sta ?_$FT_OUT_BUF?+10                                                                      !
+		!@no_noise:                                                                                !
+	}
+	
+	$_FT2DummyEnvelope @PRG-ROM : [0xC0, 0x00, 0x00]
+	
+	$_FT2NoteTableLSB @PRG-ROM : [
+		 [0x00, 0x33, 0xDA, 0x86, 0x36, 0xEB, 0xA5, 0x62, 0x23, 0xE7, 0xAF, 0x7A, 0x48, 0x19, 0xEC, 0xC2],
+		 [0x9A, 0x75, 0x52, 0x30, 0x11, 0xF3, 0xD7, 0xBC, 0xA3, 0x8C, 0x75, 0x60, 0x4C, 0x3A, 0x28, 0x17],
+		 [0x08, 0xF9, 0xEB, 0xDD, 0xD1, 0xC5, 0xBA, 0xAF, 0xA5, 0x9C, 0x93, 0x8B, 0x83, 0x7C, 0x75, 0x6E],
+		 [0x68, 0x62, 0x5C, 0x57, 0x52, 0x4D, 0x49, 0x45, 0x41, 0x3D, 0x3A, 0x36, 0x33, 0x30, 0x2D, 0x2B],
+		 [0x00, 0xAD, 0x4D, 0xF2, 0x9D, 0x4C, 0x00, 0xB8, 0x74, 0x34, 0xF7, 0xBE, 0x88, 0x56, 0x26, 0xF8],
+		 [0xCE, 0xA5, 0x7F, 0x5B, 0x39, 0x19, 0xFB, 0xDE, 0xC3, 0xAA, 0x92, 0x7B, 0x66, 0x52, 0x3F, 0x2D],
+		 [0x1C, 0x0C, 0xFD, 0xEE, 0xE1, 0xD4, 0xC8, 0xBD, 0xB2, 0xA8, 0x9F, 0x96, 0x8D, 0x85, 0x7E, 0x76],
+		 [0x70, 0x69, 0x63, 0x5E, 0x58, 0x53, 0x4F, 0x4A, 0x46, 0x42, 0x3E, 0x3A, 0x37, 0x34, 0x31, 0x2E]
+	 ]
+
+	$_FT2NoteTableMSB @PRG-ROM : [
+		 [0x00, 0x06, 0x05, 0x05, 0x05, 0x04, 0x04, 0x04, 0x04, 0x03, 0x03, 0x03, 0x03, 0x03, 0x02, 0x02],
+		 [0x02, 0x02, 0x02, 0x02, 0x02, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01],
+		 [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+		 [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+		 [0x00, 0x06, 0x06, 0x05, 0x05, 0x05, 0x05, 0x04, 0x04, 0x04, 0x03, 0x03, 0x03, 0x03, 0x03, 0x02],
+		 [0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01],
+		 [0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+		 [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+	 ]
+}

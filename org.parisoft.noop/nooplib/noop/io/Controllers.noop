@@ -1,41 +1,44 @@
 Controllers {
+
+	_$A : 0b00000001
+	_$B : 0b00000010
+	_$SELECT : 0b00000100
+	_$START : 0b00001000
+	_$UP : 0b00010000
+	_$DOWN : 0b00100000
+	_$LEFT : 0b01000000
+	_$RIGHT : 0b10000000
 	
+	_$status1 : 0
+	_$status2 : 0
+		
 	$update() {
-		status : 0
 		mask : 1
 		!	LDA #$01   !
 		!	STA $4016  !
 		!	LDA #$00   !
 		!	STA $4016  !
 
-		!	;controller 1 !
-		!  	LDX #0        !
-		!-loop1:          !
-		!	LDA $4016     !
-		!	AND #1        !
-		!	BEQ +next1:   !
-		!	TXA           !
-		!	ORA ?mask?    !
-		!	TAX           !
-		!+next1:          !
-		!	ASL ?mask?    !
-		!	BNE -loop1:   !
-		!	STX ?status?  !
-		Controller1.$status := status
-
-		!	;controller 2 !
-		!  	LDX #0        !
-		!-loop2:          !
-		!	LDA $4017     !
-		!	AND #1        !
-		!	BEQ +next2:   !
-		!	TXA           !
-		!	ORA ?mask?    !
-		!	TAX           !
-		!+next2:          !
-		!	ASL ?mask?    !
-		!	BNE -loop2:   !
-		!	STX ?status?  !
-		Controller2.$status := status
+		!  	TAX             !
+		!	TAY             !
+		!-ctrlr1:           !
+		!	LDA $4016       !
+		!	AND #1          !
+		!	BEQ +ctrlr2:    !
+		!	TXA             !
+		!	ORA ?mask?      !
+		!	TAX             !
+		!+ctrlr2:           !
+		!	LDA $4017       !
+		!	AND #1          !
+		!	BEQ +next:      !
+		!	TYA             !
+		!	ORA ?mask?      !
+		!	TAY             !
+		!+next:             !
+		!	ASL ?mask?      !
+		!	BNE -ctrlr1:    !
+		!	STX ?_$status1? !
+		!	STY ?_$status2? !
 	}
 }
