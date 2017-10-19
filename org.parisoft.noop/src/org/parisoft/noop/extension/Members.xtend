@@ -27,6 +27,7 @@ import org.parisoft.noop.noop.StringLiteral
 public class Members {
 
 	public static val STATIC_PREFIX = '$'
+	public static val PRIVATE_PREFIX = '_'
 	public static val TEMP_VAR_NAME1 = 'billy'
 	public static val TEMP_VAR_NAME2 = 'jimmy'
 	public static val FT_DPCM_OFF = 'FT_DPCM_OFF'
@@ -53,26 +54,36 @@ public class Members {
 	val allocating = new HashSet<Member>
 
 	def isAccessibleFrom(Member member, EObject context) {
-		val contextClass = if (context instanceof MemberSelect) {
-				context.receiver.typeOf
-			} else {
-				context.containingClass
-			} 
-		val memberClass = member.containingClass
-
-		contextClass == memberClass || contextClass.isSubclassOf(memberClass)
+		if (context instanceof MemberSelect) {
+			val receiverClass = context.receiver.typeOf
+			member.containingClass.isSubclassOf(receiverClass) && (context.containingClass.isSubclassOf(receiverClass) || member.isPublic)
+		} else {
+			context.containingClass.isSubclassOf(member.containingClass)
+		} 
 	}
 
 	def isStatic(Member member) {
-		try {
-			member.name.startsWith(STATIC_PREFIX)
-		} catch (Error e) {
-			e.printStackTrace			
+		if (member === null || member.name === null) {
+			false
+		} else {
+			member.name.startsWith(STATIC_PREFIX) || (member.name.startsWith(PRIVATE_PREFIX) &&  member.name.charAt(1) === STATIC_PREFIX.charAt(0))
 		}
 	}
 
 	def isNonStatic(Member member) {
 		!member.isStatic
+	}
+	
+	def isPrivate(Member member) {
+		if (member === null || member.name === null) {
+			false
+		} else {
+			member.name.startsWith(PRIVATE_PREFIX) || (member.name.startsWith(STATIC_PREFIX) &&  member.name.charAt(1) === PRIVATE_PREFIX.charAt(0))
+		}
+	}
+	
+	def isPublic(Member member) {
+		!member.isPrivate
 	}
 
 	def isParameter(Variable variable) {

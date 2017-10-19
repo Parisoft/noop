@@ -146,13 +146,13 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			}
 		} else if (selection.hasArgs) {
 			Scopes.scopeFor(
-				type.declaredMethods.filterOverload(selection.args) + type.declaredFields,
-				Scopes.scopeFor(type.allMethodsBottomUp.filterOverload(selection.args) + type.allFieldsBottomUp)
+				type.declaredMethods.filter[nonStatic].filterOverload(selection.args) + type.declaredFields.filter[nonStatic],
+				Scopes.scopeFor(type.allMethodsBottomUp.filter[nonStatic].filterOverload(selection.args) + type.allFieldsBottomUp.filter[nonStatic])
 			)
 		} else {
 			Scopes.scopeFor(
-				type.declaredMethods + type.declaredFields,
-				Scopes.scopeFor(type.allMethodsBottomUp + type.allFieldsBottomUp)
+				type.declaredMethods.filter[nonStatic] + type.declaredFields.filter[nonStatic],
+				Scopes.scopeFor(type.allMethodsBottomUp.filter[nonStatic] + type.allFieldsBottomUp.filter[nonStatic])
 			)
 		}
 	}

@@ -11,9 +11,14 @@ import org.eclipse.xtext.util.CancelIndicator
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelect
+import com.google.inject.Inject
+import org.parisoft.noop.noop.Variable
+import org.parisoft.noop.noop.Method
 
 @Singleton
 class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalculator {
+
+	@Inject extension Members
 
 	override provideHighlightingFor(XtextResource resource, IHighlightedPositionAcceptor acceptor, CancelIndicator cancelIndicator) {
 		val root = resource.getParseResult().getRootNode()
@@ -32,14 +37,10 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 					val container = grammarElement.eContainer
 
 					if (rule.name == 'ID' && container instanceof Assignment && (container as Assignment).feature == 'name') {
-						val parent = node.parent
-
-						if (parent !== null && parent.grammarElement instanceof RuleCall) {
-							rule = (parent.grammarElement as RuleCall).rule
-
-							if ((rule.name == 'Variable' || rule.name == 'Method') && node.text.startsWith(Members::STATIC_PREFIX)) {
-								acceptor.addPosition(node.offset, node.length, NoopHighlightingConfiguration.STRING_ID)
-							}
+						val element = node.semanticElement
+						
+						if ((element instanceof Variable && (element as Variable).isStatic) || (element instanceof Method && (element as Method).isStatic)) {
+							acceptor.addPosition(node.offset, node.length, NoopHighlightingConfiguration.STRING_ID)
 						}
 					}
 				}
@@ -48,14 +49,14 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 						val ref = node.semanticElement as MemberRef
 						val name = ref.member?.name ?: ''
 
-						if (name.startsWith(Members::STATIC_PREFIX)) {
+						if (ref.member.isStatic) {
 							acceptor.addPosition(node.offset, name.length, NoopHighlightingConfiguration.STRING_ID)
 						}
 					} else if (node.semanticElement instanceof MemberSelect) {
 						val selection = node.semanticElement as MemberSelect
 						val name = selection.member?.name ?: ''
 
-						if (name.startsWith(Members::STATIC_PREFIX)) {
+						if (selection.member.isStatic) {
 							acceptor.addPosition(node.offset + node.text.trim.indexOf(Members::STATIC_PREFIX), name.length,
 								NoopHighlightingConfiguration.STRING_ID)
 						}

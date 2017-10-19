@@ -1,143 +1,41 @@
 Controllers {
 	
-	$status1 : 0
-	$status2 : 0
-	
 	$update() {
-		!	LDA #$01  !
-		!	STA $4016 !
-		!	LDA #$00  !
-		!	STA $4016 !
-		!	STA ?$status1? ; reset player1    !
-		!	STA ?$status2? ; reset player2    !
-		!+getA1:                              !
-		!	LDA $4016     ; player 1 - A      !
-	    !	AND #%00000001                    !
-	    !	BEQ +getB1:                       !
-	    !+setA1:                              !
-	    !	LDA #%00000001                    !
-	    !	ORA ?$status1?                    !
-	    !	STA ?$status1?                    !
-	    !+getB1:                              !
-		!	LDA $4016     ; player 1 - B      !
-	    !	AND #%00000001                    !
-	    !	BEQ +getSelect1:                  !
-	    !+setB1:                              !
-	    !	LDA #%00000010                    !
-	    !	ORA ?$status1?                    !
-	    !	STA ?$status1?                    !
-	    !+getSelect1:                         !
-		!	LDA $4016     ; player 1 - Select !
-	    !	AND #%00000001                    !
-	    !	BEQ +getStart1:                   !
-	    !+setSelect1:                         !
-	    !	LDA #%00000100                    !
-	    !	ORA ?$status1?                    !
-	    !	STA ?$status1?                    !
-	    !+getStart1:                          !
-		!	LDA $4016     ; player 1 - Start  !
-	    !	AND #%00000001                    !
-	    !	BEQ +getUp1:                      !
-	    !+setStart1:                          !
-	    !	LDA #%00001000                    !
-	    !	ORA ?$status1?                    !
-	    !	STA ?$status1?                    !
-	    !+getUp1:                             !
-		!	LDA $4016     ; player 1 - Up     !
-	    !	AND #%00000001                    !
-	    !	BEQ +getDown1:                    !
-	    !+setUp1:                             !
-	    !	LDA #%00010000                    !
-	    !	ORA ?$status1?                    !
-	    !	STA ?$status1?                    !
-	    !+getDown1:                           !
-		!	LDA $4016     ; player 1 - Down   !
-	    !	AND #%00000001                    !
-	    !	BEQ +getLeft1:                    !
-	    !+setDown1:                           !
-	    !	LDA #%00100000                    !
-	    !	ORA ?$status1?                    !
-	    !	STA ?$status1?                    !
-	    !+getLeft1:                           !
-		!	LDA $4016     ; player 1 - Left   !
-	    !	AND #%00000001                    !
-	    !	BEQ +getRight1:                   !
-	    !+setLeft1:                           !
-	    !	LDA #%01000000                    !
-	    !	ORA ?$status1?                    !
-	    !	STA ?$status1?                    !
-	    !+getRight1:                          !
-		!	LDA $4016     ; player 1 - Right  !
-	    !	AND #%00000001                    !
-	    !	BEQ +getA2:                       !
-	    !+setRight1:                          !
-	    !	LDA #%10000000                    !
-	    !	ORA ?$status1?                    !
-	    !	STA ?$status1?                    !
-        !+getA2:                              !
-		!	LDA $4017     ; player 2 - A      !
-	    !	AND #%00000001                    !
-	    !	BEQ +getB2:                       !
-	    !+setA2:                              !
-	    !	LDA #%00000001                    !
-	    !	ORA ?$status2?                    !
-	    !	STA ?$status2?                    !
-	    !+getB2:                              !
-		!	LDA $4017     ; player 2 - B      !
-	    !	AND #%00000001                    !
-	    !	BEQ +getSelect2:                  !
-	    !+setB2:                              !
-	    !	LDA #%00000010                    !
-	    !	ORA ?$status2?                    !
-	    !	STA ?$status2?                    !
-	    !+getSelect2:                         !
-		!	LDA $4017     ; player 2 - Select !
-	    !	AND #%00000001                    !
-	    !	BEQ +getStart2:                   !
-	    !+setSelect2:                         !
-	    !	LDA #%00000100                    !
-	    !	ORA ?$status2?                    !
-	    !	STA ?$status2?                    !
-	    !+getStart2:                          !
-		!	LDA $4017     ; player 2 - Start  !
-	    !	AND #%00000001                    !
-	    !	BEQ +getUp2:                      !
-	    !+setStart2:                          !
-	    !	LDA #%00001000                    !
-	    !	ORA ?$status2?                    !
-	    !	STA ?$status2?                    !
-	    !+getUp2:                             !
-		!	LDA $4017     ; player 2 - Up     !
-	    !	AND #%00000001                    !
-	    !	BEQ +getDown2:                    !
-	    !+setUp2:                             !
-	    !	LDA #%00010000                    !
-	    !	ORA ?$status2?                    !
-	    !	STA ?$status2?                    !
-	    !+getDown2:                           !
-		!	LDA $4017     ; player 2 - Down   !
-	    !	AND #%00000001                    !
-	    !	BEQ +getLeft2:                    !
-	    !+setDown2:                           !
-	    !	LDA #%00100000                    !
-	    !	ORA ?$status2?                    !
-	    !	STA ?$status2?                    !
-	    !+getLeft2:                           !
-		!	LDA $4017     ; player 2 - Left   !
-	    !	AND #%00000001                    !
-	    !	BEQ +getRight2:                   !
-	    !+setLeft2:                           !
-	    !	LDA #%01000000                    !
-	    !	ORA ?$status2?                    !
-	    !	STA ?$status2?                    !
-	    !+getRight2:                          !
-		!	LDA $4017     ; player 2 - Right  !
-	    !	AND #%00000001                    !
-	    !	BEQ +end:                         !
-	    !+setRight2:                          !
-	    !	LDA #%10000000                    !
-	    !	ORA ?$status2?                    !
-	    !	STA ?$status2?                    !
-	    !+end:                                !
+		status : 0
+		mask : 1
+		!	LDA #$01   !
+		!	STA $4016  !
+		!	LDA #$00   !
+		!	STA $4016  !
+
+		!	;controller 1 !
+		!  	LDX #0        !
+		!-loop1:          !
+		!	LDA $4016     !
+		!	AND #1        !
+		!	BEQ +next1:   !
+		!	TXA           !
+		!	ORA ?mask?    !
+		!	TAX           !
+		!+next1:          !
+		!	ASL ?mask?    !
+		!	BNE -loop1:   !
+		!	STX ?status?  !
+		Controller1.$status := status
+
+		!	;controller 2 !
+		!  	LDX #0        !
+		!-loop2:          !
+		!	LDA $4017     !
+		!	AND #1        !
+		!	BEQ +next2:   !
+		!	TXA           !
+		!	ORA ?mask?    !
+		!	TAX           !
+		!+next2:          !
+		!	ASL ?mask?    !
+		!	BNE -loop2:   !
+		!	STX ?status?  !
+		Controller2.$status := status
 	}
 }
