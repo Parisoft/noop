@@ -74,7 +74,10 @@ OrExpression returns Expression:
 	AndExpression ({OrExpression.left=current} 'or' right=AndExpression)*;
 
 AndExpression returns Expression:
-	EqualityExpression ({AndExpression.left=current} 'and' right=EqualityExpression)*;
+	BitwiseExpression ({AndExpression.left=current} 'and' right=BitwiseExpression)*;
+
+BitwiseExpression returns Expression:
+	EqualityExpression (({BOrExpression.left=current} '|' | {BAndExpression.left=current} '&') right=EqualityExpression)*;
 
 EqualityExpression returns Expression:
 	ComparisonExpression (({EqualsExpression.left=current} '=' | {DifferExpression.left=current} '#')
@@ -89,22 +92,18 @@ ComparisonExpression returns Expression:
 	right=AddOrSubExpression)*;
 
 InheritsExpression returns Expression:
-	AddOrSubExpression ({InheritsExpression.left=current} 'inherits' type=[NoopClass|CID])?;
+	ShiftExpression ({InheritsExpression.left=current} 'inherits' type=[NoopClass|CID])?;
+
+ShiftExpression returns Expression:
+	AddOrSubExpression (({LShiftExpression.left=current} '<<' | {RShiftExpression.left=current} '>>')
+	right=AddOrSubExpression)*;
 
 AddOrSubExpression returns Expression:
 	MulOrDivExpression (({AddExpression.left=current} '+' | {SubExpression.left=current} '-')
 	right=MulOrDivExpression)*;
 
 MulOrDivExpression returns Expression:
-	BitwiseExpression (({MulExpression.left=current} '*' | {DivExpression.left=current} '/')
-	right=BitwiseExpression)*;
-
-BitwiseExpression returns Expression:
-	EorExpression
-	(({BOrExpression.left=current} '|' |
-	{BAndExpression.left=current} '&' |
-	{LShiftExpression.left=current} '<<' |
-	{RShiftExpression.left=current} '>>')
+	EorExpression (({MulExpression.left=current} '*' | {DivExpression.left=current} '/')
 	right=EorExpression)*;
 
 EorExpression returns Expression:
@@ -188,8 +187,7 @@ terminal BOOL returns ecore::EBoolean:
 	'true' | 'false';
 
 terminal ID:
-	(('a'..'z')('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*) | (('_'|'$')('$')?('a'..'z' | 'A'..'Z' | '_' | '0'..'9')+) ;//  ('a'..'z' | '_' | '$') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
-
+	(('a'..'z') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*) | (('_' | '$') ('$')? ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')+); //  ('a'..'z' | '_' | '$') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
 terminal CID:
 	('A'..'Z') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
 

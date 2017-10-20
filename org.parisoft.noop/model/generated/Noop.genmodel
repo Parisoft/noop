@@ -109,6 +109,14 @@
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//AndExpression/left"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//AndExpression/right"/>
     </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//BOrExpression">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BOrExpression/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BOrExpression/right"/>
+    </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//BAndExpression">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BAndExpression/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BAndExpression/right"/>
+    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//EqualsExpression">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//EqualsExpression/left"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//EqualsExpression/right"/>
@@ -137,6 +145,14 @@
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//InheritsExpression/left"/>
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//InheritsExpression/type"/>
     </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//LShiftExpression">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//LShiftExpression/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//LShiftExpression/right"/>
+    </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//RShiftExpression">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//RShiftExpression/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//RShiftExpression/right"/>
+    </genClasses>
     <genClasses ecoreClass="Noop.ecore#//AddExpression">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//AddExpression/left"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//AddExpression/right"/>
@@ -152,22 +168,6 @@
     <genClasses ecoreClass="Noop.ecore#//DivExpression">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//DivExpression/left"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//DivExpression/right"/>
-    </genClasses>
-    <genClasses ecoreClass="Noop.ecore#//BOrExpression">
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BOrExpression/left"/>
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BOrExpression/right"/>
-    </genClasses>
-    <genClasses ecoreClass="Noop.ecore#//BAndExpression">
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BAndExpression/left"/>
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BAndExpression/right"/>
-    </genClasses>
-    <genClasses ecoreClass="Noop.ecore#//LShiftExpression">
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//LShiftExpression/left"/>
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//LShiftExpression/right"/>
-    </genClasses>
-    <genClasses ecoreClass="Noop.ecore#//RShiftExpression">
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//RShiftExpression/left"/>
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//RShiftExpression/right"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//EorExpression">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//EorExpression/right"/>
