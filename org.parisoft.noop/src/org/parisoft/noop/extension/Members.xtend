@@ -54,9 +54,9 @@ public class Members {
 	def isAccessibleFrom(Member member, EObject context) {
 		if (context instanceof MemberSelect) {
 			val receiverClass = context.receiver.typeOf
-			member.containingClass.isSubclassOf(receiverClass) && (context.containingClass.isSubclassOf(receiverClass) || member.isPublic)
+			member.containerClass.isSubclassOf(receiverClass) && (context.containerClass.isSubclassOf(receiverClass) || member.isPublic)
 		} else {
-			context.containingClass.isSubclassOf(member.containingClass)
+			context.containerClass.isSubclassOf(member.containerClass)
 		} 
 	}
 
@@ -137,15 +137,15 @@ public class Members {
 	}
 
 	def isIrq(Method method) {
-		method.containingClass.isGame && method.name == '''«STATIC_PREFIX»irq'''.toString && method.params.isEmpty
+		method.containerClass.isGame && method.name == '''«STATIC_PREFIX»irq'''.toString && method.params.isEmpty
 	}
 
 	def isNmi(Method method) {
-		method.containingClass.isGame && method.name == '''«STATIC_PREFIX»nmi'''.toString && method.params.isEmpty
+		method.containerClass.isGame && method.name == '''«STATIC_PREFIX»nmi'''.toString && method.params.isEmpty
 	}
 	
 	def isReset(Method method) {
-		method.containingClass.isGame && method.name == '''«STATIC_PREFIX»reset'''.toString && method.params.isEmpty
+		method.containerClass.isGame && method.name == '''«STATIC_PREFIX»reset'''.toString && method.params.isEmpty
 	}
 	
 	def isDispose(Method method) {
@@ -265,7 +265,7 @@ public class Members {
 	}
 
 	def nameOfStatic(Variable variable) {
-		'''«variable.containingClass.name».«variable.name»'''.toString
+		'''«variable.containerClass.name».«variable.name»'''.toString
 	}
 
 	def nameOfConstant(Variable variable) {

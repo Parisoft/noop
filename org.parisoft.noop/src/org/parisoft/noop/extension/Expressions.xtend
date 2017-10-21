@@ -93,11 +93,11 @@ class Expressions {
 	def isFileInclude(StringLiteral string) {
 		string.value.toLowerCase.startsWith(Members::FILE_SCHEMA)
 	}
-	
+
 	def isAsmFile(StringLiteral string) {
 		string.isFileInclude && string.value.toLowerCase.endsWith(Members::FILE_ASM_EXTENSION)
 	}
-	
+
 	def isDmcFile(StringLiteral string) {
 		string.isFileInclude && string.value.toLowerCase.endsWith(Members::FILE_DMC_EXTENSION)
 	}
@@ -211,9 +211,9 @@ class Expressions {
 			StringLiteral:
 				expression.toByteClass
 			This:
-				expression.containingClass
+				expression.containerClass
 			Super:
-				expression.containingClass.superClassOrObject
+				expression.containerClass.superClassOrObject
 			NewInstance:
 				expression.type
 			MemberSelect:
@@ -466,8 +466,10 @@ class Expressions {
 				expression.right.prepare(data)
 			IncExpression:
 				expression.right.prepare(data)
-			CastExpression:
+			CastExpression: {
 				expression.type.prepare(data)
+				expression.left.prepare(data)
+			}
 			ArrayLiteral:
 				expression.typeOf.prepare(data)
 			NewInstance:
@@ -1007,33 +1009,33 @@ class Expressions {
 			}
 		}
 	}
-	
+
 	def String compileConstant(Expression expression) {
 		val text = NodeModelUtils.findActualNodeFor(expression)?.text?.trim ?: ''
 		val wrapped = text.startsWith('(') && text.endsWith(')')
-		
+
 		try {
 			switch (expression) {
 				OrExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» || «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				AndExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» && «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				EqualsExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» == «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				DifferExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» != «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				GtExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» > «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				GeExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» >= «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				LtExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» < «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				LeExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» <= «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				AddExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» + «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				SubExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» - «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				MulExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» * «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				DivExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» / «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				BOrExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» | «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				BAndExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» & «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				LShiftExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» << «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				RShiftExpression:'''«IF wrapped»(«ENDIF»«expression.left.compileConstant» >> «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				EorExpression:'''«IF wrapped»(«ENDIF»~«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				NotExpression:'''«IF wrapped»(«ENDIF»!«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				SigNegExpression:'''«IF wrapped»(«ENDIF»-«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				SigPosExpression:'''«IF wrapped»(«ENDIF»+«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				AndExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» && «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				EqualsExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» == «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				DifferExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» != «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				GtExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» > «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				GeExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» >= «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				LtExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» < «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				LeExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» <= «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				AddExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» + «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				SubExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» - «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				MulExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» * «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				DivExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» / «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				BOrExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» | «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				BAndExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» & «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				LShiftExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» << «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				RShiftExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» >> «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				EorExpression: '''«IF wrapped»(«ENDIF»~«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				NotExpression: '''«IF wrapped»(«ENDIF»!«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				SigNegExpression: '''«IF wrapped»(«ENDIF»-«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				SigPosExpression: '''«IF wrapped»(«ENDIF»+«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				CastExpression:
 					expression.left.compileConstant
 				ByteLiteral:

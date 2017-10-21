@@ -148,6 +148,7 @@ class Statements {
 			IfStatement: {
 				statement.condition.prepare(data)
 				statement.body.statements.forEach[prepare(data)]
+				statement.^else?.prepare(data)
 			}
 			ForStatement: {
 				statement.variables.forEach[prepare(data)]
@@ -168,6 +169,14 @@ class Statements {
 			Expression: {
 				statement.prepare(data)
 			}
+		}
+	}
+	
+	def prepare(ElseStatement elseStatement, AllocData data) {
+		if (elseStatement.^if !== null) {
+			elseStatement.^if.prepare(data)
+		} else if (elseStatement.body !== null) {
+			elseStatement.body.statements.forEach[prepare(data)]
 		}
 	}
 

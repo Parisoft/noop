@@ -24,7 +24,7 @@ class Classes {
 	@Inject extension TypeSystem
 	@Inject extension IQualifiedNameProvider
 
-	def classHierarchy(NoopClass c) {
+	def superClasses(NoopClass c) {
 		val visited = <NoopClass>newArrayList()
 		var current = c
 
@@ -36,12 +36,12 @@ class Classes {
 		visited
 	}
 
-	def containingClass(EObject e) {
+	def containerClass(EObject e) {
 		e.getContainerOfType(NoopClass)
 	}
 
 	def isSubclassOf(NoopClass c1, NoopClass c2) {
-		c1.classHierarchy.contains(c2)
+		c1.superClasses.contains(c2)
 	}
 
 	def getSuperClassOrObject(NoopClass c) {
@@ -54,7 +54,7 @@ class Classes {
 
 	def merge(Collection<NoopClass> classes) {
 		classes.map [
-			classHierarchy
+			superClasses
 		].reduce [ h1, h2 |
 			h1.removeIf[c1|!h2.exists[c2|c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString]]
 			h1
@@ -70,19 +70,19 @@ class Classes {
 	}
 
 	def allFieldsBottomUp(NoopClass c) {
-		c.classHierarchy.map[members].flatten.filter(Variable)
+		c.superClasses.map[members].flatten.filter(Variable)
 	}
 
 	def allMethodsBottomUp(NoopClass c) {
-		c.classHierarchy.map[members].flatten.filter(Method)
+		c.superClasses.map[members].flatten.filter(Method)
 	}
 
 	def allFieldsTopDown(NoopClass c) {
-		c.classHierarchy.reverse.map[members].flatten.filter(Variable)
+		c.superClasses.reverse.map[members].flatten.filter(Variable)
 	}
 
 	def allMethodsTopDown(NoopClass c) {
-		c.classHierarchy.reverse.map[members].flatten.filter(Method)
+		c.superClasses.reverse.map[members].flatten.filter(Method)
 	}
 
 	def isInstanceOf(NoopClass c1, NoopClass c2) {
@@ -92,12 +92,12 @@ class Classes {
 
 		val className = c2.fullyQualifiedName
 
-		return c1.classHierarchy.exists[it.fullyQualifiedName == className]
+		return c1.superClasses.exists[it.fullyQualifiedName == className]
 	}
 
 	def isNumeric(NoopClass c) {
 		try {
-			c.classHierarchy.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_INT]
+			c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_INT]
 		} catch (Exception exception) {
 			false
 		}
@@ -125,7 +125,7 @@ class Classes {
 
 	def isPrimitive(NoopClass c) {
 		try {
-			c.classHierarchy.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_PRIMITIVE]
+			c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_PRIMITIVE]
 		} catch (Exception exception) {
 			false
 		}
@@ -137,7 +137,7 @@ class Classes {
 
 	def isGame(NoopClass c) {
 		try {
-			c.classHierarchy.exists [
+			c.superClasses.exists [
 				it.fullyQualifiedName.toString == TypeSystem::LIB_GAME
 			]
 		} catch (Exception exception) {
@@ -151,7 +151,7 @@ class Classes {
 
 	def isINESHeader(NoopClass c) {
 		try {
-			c.classHierarchy.exists [
+			c.superClasses.exists [
 				it.fullyQualifiedName.toString == TypeSystem::LIB_NES_HEADER
 			]
 		} catch (Exception exception) {
@@ -224,7 +224,7 @@ class Classes {
 
 		classeSizeCache.get.clear
 
-		data.classes += data.classes.map[classHierarchy].flatten.toSet
+		data.classes += data.classes.map[superClasses].flatten.toSet
 		data.classes.forEach [ class1 |
 			if (class1.isPrimitive) {
 				classeSizeCache.get.put(class1, class1.rawSizeOf)
@@ -242,7 +242,8 @@ class Classes {
 
 	def void prepare(NoopClass noopClass, AllocData data) {
 		if (data.classes.add(noopClass)) {
-			noopClass.allFieldsTopDown.filter[static].forEach[prepare(data)]
+			noopClass.allFieldsTopDown.filter[typeOf.INESHeader].forEach[prepare(data)]
+			noopClass.allFieldsTopDown.filter[ROM].forEach[prepare(data)]
 
 			if (noopClass.isGame) {
 				noopClass.allMethodsBottomUp.findFirst[reset].prepare(data)

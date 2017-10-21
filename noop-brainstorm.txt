@@ -439,3 +439,8 @@ Pages
 	Half page dedicated for methods arguments, including arrays metadata
 
 * a look-ahead is performed when referencing an object or array returned from a method call; if the returned object or array was instancied locally on callee method, the object's bytes must be moved to the caller and the pointer updated after callee returns; these bytes must be considerated on the method's size calculation
+
+TODO:
+	method
+		recursion check in compile
+		polymorphic non static invocation check
