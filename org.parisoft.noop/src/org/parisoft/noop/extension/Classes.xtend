@@ -242,10 +242,10 @@ class Classes {
 
 	def void prepare(NoopClass noopClass, AllocData data) {
 		if (data.classes.add(noopClass)) {
-			noopClass.allFieldsTopDown.filter[typeOf.INESHeader].forEach[prepare(data)]
 			noopClass.allFieldsTopDown.filter[ROM].forEach[prepare(data)]
 
 			if (noopClass.isGame) {
+				noopClass.allFieldsBottomUp.findFirst[typeOf.INESHeader].prepare(data)
 				noopClass.allMethodsBottomUp.findFirst[reset].prepare(data)
 				noopClass.allMethodsBottomUp.findFirst[nmi].prepare(data)
 				noopClass.allMethodsBottomUp.findFirst[irq].prepare(data)
