@@ -21,6 +21,7 @@ import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopPackage
+import java.util.Objects
 
 /**
  * Generates code from your model files on save.
@@ -80,7 +81,7 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def gameClass(Resource resource) {
-		val uri = resource.URI.trimSegments(1)
+		val uri = resource.URI?.trimSegments(1)
 
 		val games = descriptions.allResourceDescriptions.map [
 			getExportedObjectsByType(NoopPackage::eINSTANCE.noopClass)
@@ -93,7 +94,7 @@ class NoopGenerator extends AbstractGenerator {
 
 			obj as NoopClass
 		].filter[
-			eResource.URI.trimSegments(1).equals(uri)
+			Objects::equals(eResource.URI?.trimSegments(1), uri)
 		].filter [
 			it.isGame && it.name != TypeSystem::LIB_GAME
 		].toSet
