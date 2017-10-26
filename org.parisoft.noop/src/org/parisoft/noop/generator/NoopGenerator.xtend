@@ -80,6 +80,8 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def gameClass(Resource resource) {
+		val uri = resource.URI.trimSegments(1)
+
 		val games = descriptions.allResourceDescriptions.map [
 			getExportedObjectsByType(NoopPackage::eINSTANCE.noopClass)
 		].flatten.map [
@@ -90,6 +92,8 @@ class NoopGenerator extends AbstractGenerator {
 			}
 
 			obj as NoopClass
+		].filter[
+			eResource.URI.trimSegments(1).equals(uri)
 		].filter [
 			it.isGame && it.name != TypeSystem::LIB_GAME
 		].toSet
