@@ -5,7 +5,7 @@ generate noop "http://www.parisoft.org/noop/Noop"
 NoopClass:
 	name=CID ('extends' superClass=[NoopClass|CID])? '{' LF*
 	members+=Member*
-	'}';
+	'}' LF?;
 
 Member:
 	(Variable | Method) LF+;

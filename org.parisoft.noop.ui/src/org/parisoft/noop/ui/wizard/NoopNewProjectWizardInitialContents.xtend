@@ -3,23 +3,37 @@
  */
 package org.parisoft.noop.ui.wizard
 
-
 import com.google.inject.Inject
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.resource.FileExtensionProvider
 
 class NoopNewProjectWizardInitialContents {
-	@Inject
-	FileExtensionProvider fileExtensionProvider
+
+	@Inject FileExtensionProvider fileExtensionProvider
+	@Inject NoopProjectCreator projectCreator
 
 	def generateInitialContents(IFileSystemAccess2 fsa) {
+		val className = projectCreator?.projectInfo?.projectName.toFirstUpper ?: 'MyGame'
+		
 		fsa.generateFile(
-			"src/Hello." + fileExtensionProvider.primaryFileExtension,
+			'''«projectCreator?.modelFolderName»/«className».«fileExtensionProvider.primaryFileExtension»''',
 			'''
-			Hello {
-				
-			}
+				«className» extends Game {
+					
+					$reset() {
+						// game initialization
+						
+						forever {
+							// game logic goes here
+						}
+					}
+					
+					$nmi() {
+						// draw stuff goes here
+					}
+					
+				}
 			'''
-			)
+		)
 	}
 }
