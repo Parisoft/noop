@@ -15,6 +15,8 @@ import org.parisoft.noop.ui.highlighting.NoopAntlrTokenToAttributeIdMapper
 import org.eclipse.xtext.ui.editor.syntaxcoloring.AbstractAntlrTokenToAttributeIdMapper
 import org.eclipse.xtext.ide.editor.syntaxcoloring.ISemanticHighlightingCalculator
 import org.parisoft.noop.ui.highlighting.NoopSemanticHighlightingCalculator
+import org.parisoft.noop.ui.wizard.NoopProjectCreator
+import org.parisoft.noop.ui.wizard.NoopProjectCreator2
 
 /**
  * Use this class to register components to be used within the Eclipse IDE.
@@ -29,6 +31,7 @@ class NoopUiModule extends AbstractNoopUiModule {
 		binder.bind(IHighlightingConfiguration).to(NoopHighlightingConfiguration)
 		binder.bind(AbstractAntlrTokenToAttributeIdMapper).to(NoopAntlrTokenToAttributeIdMapper)
 		binder.bind(ISemanticHighlightingCalculator).to(NoopSemanticHighlightingCalculator)
+		binder.bind(NoopProjectCreator).to(NoopProjectCreator2)
 	}
 
 }

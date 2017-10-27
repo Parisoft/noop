@@ -4,6 +4,7 @@
 package org.parisoft.noop.generator
 
 import com.google.inject.Inject
+import java.util.Objects
 import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
@@ -21,7 +22,6 @@ import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopPackage
-import java.util.Objects
 
 /**
  * Generates code from your model files on save.
