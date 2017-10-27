@@ -57,9 +57,11 @@ import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.noop.MemberSelect
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils
+import java.io.File
 
 class Expressions {
 
+	@Inject extension Files
 	@Inject extension Datas
 	@Inject extension Values
 	@Inject extension Classes
@@ -96,6 +98,10 @@ class Expressions {
 
 	def isAsmFile(StringLiteral string) {
 		string.isFileInclude && string.value.toLowerCase.endsWith(Members::FILE_ASM_EXTENSION)
+	}
+
+	def isIncFile(StringLiteral string) {
+		string.isFileInclude && string.value.toLowerCase.endsWith(Members::FILE_INC_EXTENSION)
 	}
 
 	def isDmcFile(StringLiteral string) {
@@ -335,7 +341,8 @@ class Expressions {
 					expression.value.chars.boxed.collect(Collectors::toList)
 				NewInstance:
 					if (expression.constructor !== null) {
-						new NoopInstance(expression.type.name, expression.type.allFieldsBottomUp, expression.constructor)
+						new NoopInstance(expression.type.name, expression.type.allFieldsBottomUp,
+							expression.constructor)
 					} else {
 						expression.type.defaultValueOf
 					}
@@ -785,7 +792,12 @@ class Expressions {
 					«IF data.db !== null»
 						«data.db»:
 							«IF expression.value.toLowerCase.startsWith(Members::FILE_SCHEMA)»
-								«IF expression.isAsmFile».include«ELSE».incbin«ENDIF» "«expression.value.substring(Members::FILE_SCHEMA.length)»"
+								«val filepath = new File(expression.eResource.URI.resFolder, expression.value.substring(Members::FILE_SCHEMA.length)).absolutePath»
+								«IF expression.isAsmFile || expression.isIncFile»
+									.include "«filepath»"
+								«ELSE»
+									.incbin "«filepath»"
+								«ENDIF»
 							«ELSE»
 								.db «expression.value.toBytes.join(', ', [toHex])»
 							«ENDIF»

@@ -36,6 +36,7 @@ public class Members {
 	public static val FALSE = 'FALSE'
 	public static val FILE_SCHEMA = 'file://'
 	public static val FILE_ASM_EXTENSION = '.asm'
+	public static val FILE_INC_EXTENSION = '.inc'
 	public static val FILE_DMC_EXTENSION = '.dmc'
 
 	@Inject extension Datas

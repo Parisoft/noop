@@ -6,8 +6,6 @@ package org.parisoft.noop.generator
 import com.google.inject.Inject
 import java.util.Objects
 import java.util.concurrent.atomic.AtomicInteger
-import org.eclipse.core.resources.ResourcesPlugin
-import org.eclipse.core.runtime.Path
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
@@ -18,6 +16,7 @@ import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Datas
 import org.parisoft.noop.^extension.Expressions
+import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.Statements
 import org.parisoft.noop.^extension.TypeSystem
@@ -32,6 +31,7 @@ import org.parisoft.noop.noop.NoopPackage
  */
 class NoopGenerator extends AbstractGenerator {
 
+	@Inject extension Files
 	@Inject extension Classes
 	@Inject extension Members
 	@Inject extension Statements
@@ -44,9 +44,14 @@ class NoopGenerator extends AbstractGenerator {
 		val asm = resource.compile
 
 		if (asm !== null) {
-			fsa.generateFile(asm.filename, asm.content)
-			val file = ResourcesPlugin.workspace.root.getFile(new Path(fsa.getURI(asm.filename).toPlatformString(true))).rawLocation.toOSString
-			println(file)
+			fsa.generateFile(asm.asmFileName, asm.content)
+
+			val asmFile = fsa.getURI(asm.asmFileName).toFile
+			val binFile = fsa.getURI(asm.binFileName).toFile
+			val lstFile = fsa.getURI(asm.lstFileName).toFile
+			println(asmFile)
+			println(binFile)
+			println(lstFile)
 		}
 	}
 
@@ -61,7 +66,7 @@ class NoopGenerator extends AbstractGenerator {
 		gameImpl.alloc(data)
 		val content = data.compile.optimize
 
-		new ASM('''«gameImpl.name».asm''', content)
+		new ASM(gameImpl.name, content)
 	}
 
 	private def optimize(CharSequence code) {
@@ -176,18 +181,18 @@ class NoopGenerator extends AbstractGenerator {
 		«ENDFOR»
 		
 		;-- Macros ------------------------------------------------------
-		macro mult8x8to8 ; A = A + «Members::TEMP_VAR_NAME1» * «Members::TEMP_VAR_NAME2»
-		  JMP +loop:
-		-add:
-		  CLC
-		  ADC «Members::TEMP_VAR_NAME1»
-		-loop:
-		  ASL «Members::TEMP_VAR_NAME1»
-		+loop:
-		  LSR «Members::TEMP_VAR_NAME2»
-		  BCS -add:
-		  BNE -loop:
-		endm
+		;macro mult8x8to8 ; A = A + «Members::TEMP_VAR_NAME1» * «Members::TEMP_VAR_NAME2»
+		;  JMP +loop:
+		;-add:
+		;  CLC
+		;  ADC «Members::TEMP_VAR_NAME1»
+		;-loop:
+		;  ASL «Members::TEMP_VAR_NAME1»
+		;+loop:
+		;  LSR «Members::TEMP_VAR_NAME2»
+		;  BCS -add:
+		;  BNE -loop:
+		;endm
 		
 		;-- Methods -----------------------------------------------------
 		«FOR method : data.methods.sortBy[fullyQualifiedName]»
