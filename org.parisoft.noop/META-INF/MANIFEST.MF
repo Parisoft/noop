@@ -13,7 +13,8 @@ Require-Bundle: org.eclipse.xtext,
  org.eclipse.xtext.util,
  org.eclipse.xtend.lib,
  org.eclipse.emf.common,
- org.antlr.runtime
+ org.antlr.runtime,
+ org.eclipse.core.resources;bundle-version="3.12.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Export-Package: noop.io,
  noop.lang,

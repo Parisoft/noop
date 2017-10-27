@@ -6,6 +6,8 @@ package org.parisoft.noop.generator
 import com.google.inject.Inject
 import java.util.Objects
 import java.util.concurrent.atomic.AtomicInteger
+import org.eclipse.core.resources.ResourcesPlugin
+import org.eclipse.core.runtime.Path
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
@@ -43,6 +45,8 @@ class NoopGenerator extends AbstractGenerator {
 
 		if (asm !== null) {
 			fsa.generateFile(asm.filename, asm.content)
+			val file = ResourcesPlugin.workspace.root.getFile(new Path(fsa.getURI(asm.filename).toPlatformString(true))).rawLocation.toOSString
+			println(file)
 		}
 	}
 
