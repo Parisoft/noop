@@ -45,15 +45,11 @@ class NoopGenerator extends AbstractGenerator {
 
 		if (asm !== null) {
 			fsa.generateFile(asm.asmFileName, asm.content)
-
-			val asmFile = fsa.getURI(asm.asmFileName).toFile
-			val binFile = fsa.getURI(asm.binFileName).toFile
-			val lstFile = fsa.getURI(asm.lstFileName).toFile
 			
 			val asm8 = new Asm8 => [
-				inputFileName = asmFile.absolutePath
-				outputFileName = binFile.absolutePath
-				listFileName = lstFile.absolutePath
+				inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
+				outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
+				listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
 			]
 			
 			asm8.compile
