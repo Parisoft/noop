@@ -45,14 +45,19 @@ class NoopGenerator extends AbstractGenerator {
 
 		if (asm !== null) {
 			fsa.generateFile(asm.asmFileName, asm.content)
-			
+
 			val asm8 = new Asm8 => [
 				inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
 				outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
 				listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
 			]
-			
-			asm8.compile
+
+			try {
+				asm8.compile
+			} catch (Exception exception) {
+				fsa.getURI(asm.binFileName).toFile.delete
+				throw exception
+			}
 		}
 	}
 
@@ -103,7 +108,7 @@ class NoopGenerator extends AbstractGenerator {
 			}
 
 			obj as NoopClass
-		].filter[
+		].filter [
 			Objects::equals(eResource.URI?.trimSegments(1), uri)
 		].filter [
 			it.isGame && it.name != TypeSystem::LIB_GAME
@@ -248,9 +253,9 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def fieldValue(NewInstance instance, String fieldname) {
-		instance?.constructor?.fields.findFirst [
+		instance?.constructor?.fields?.findFirst [
 			variable.name == fieldname
-		].value.valueOf ?: instance.type.allFieldsBottomUp.findFirst [
+		]?.value?.valueOf ?: instance.type.allFieldsBottomUp.findFirst [
 			name == fieldname
 		].valueOf
 

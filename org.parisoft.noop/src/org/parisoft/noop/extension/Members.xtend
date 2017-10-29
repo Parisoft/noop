@@ -202,7 +202,7 @@ public class Members {
 	}
 
 	def valueOf(Variable variable) {
-		if (variable.isNonConstant) {
+		if (variable.isNonConstant && variable.containerClass.isNonINESHeader) {
 			throw new NonConstantMemberException
 		}
 		
