@@ -407,7 +407,7 @@ PPU {
     	!	INC ?j?                        !
     	!	LDX ?j?                        !
     	!	JMP -for1compare:              !
-    	!+for1end                          !
+    	!+for1end:                         !
     	!	                               !
     	!+for0increment:                   !
     	!	CLC                            !
