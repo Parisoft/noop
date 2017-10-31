@@ -9,7 +9,7 @@ Controller2 extends Controllers {
 		!  	LDX #0     !
 		!-loop1:       !
 		!	LDA $4017  !
-		!	AND #1     !
+		!	AND #3     !
 		!	BEQ +next1 !
 		!	TXA        !
 		!	ORA ?mask? !
@@ -24,66 +24,66 @@ Controller2 extends Controllers {
 	}
 	
 	$isPressedA() {
-		return (_$A & _$status2) as Bool
+		return (_$A & _$status2) = _$A
 	}
 	
 	$isPressedB() {
-		return (_$B & _$status2) as Bool
+		return (_$B & _$status2) = _$B
 	}
 	
 	$isPressedSelect() {
-		return (_$SELECT & _$status2) as Bool
+		return (_$SELECT & _$status2) = _$SELECT
 	}
 	
 	$isPressedStart() {
-		return (_$START & _$status2) as Bool
+		return (_$START & _$status2) = _$START
 	}
 	
 	$isPressedUp() {
-		return (_$UP & _$status2) as Bool
+		return (_$UP & _$status2) = _$UP
 	}
 	
 	$isPressedDown() {
-		return (_$DOWN & _$status2) as Bool
+		return (_$DOWN & _$status2) = _$DOWN
 	}
 	
 	$isPressedLeft() {
-		return (_$LEFT & _$status2) as Bool
+		return (_$LEFT & _$status2) = _$LEFT
 	}
 	
 	$isPressedRight() {
-		return (_$RIGHT & _$status2) as Bool
+		return (_$RIGHT & _$status2) = _$RIGHT
 	}
 	
 	$wasPressedA() {
-		return (_$A & _$preStatus2) as Bool
+		return (_$A & _$preStatus2) = _$A
 	}
 	
 	$wasPressedB() {
-		return (_$B & _$preStatus2) as Bool
+		return (_$B & _$preStatus2) = _$B
 	}
 	
 	$wasPressedSelect() {
-		return (_$SELECT & _$preStatus2) as Bool
+		return (_$SELECT & _$preStatus2) = _$SELECT
 	}
 	
 	$wasPressedStart() {
-		return (_$START & _$preStatus2) as Bool
+		return (_$START & _$preStatus2) = _$START
 	}
 	
 	$wasPressedUp() {
-		return (_$UP & _$preStatus2) as Bool
+		return (_$UP & _$preStatus2) = _$UP
 	}
 	
 	$wasPressedDown() {
-		return (_$DOWN & _$preStatus2) as Bool
+		return (_$DOWN & _$preStatus2) = _$DOWN
 	}
 	
 	$wasPressedLeft() {
-		return (_$LEFT & _$preStatus2) as Bool
+		return (_$LEFT & _$preStatus2) = _$LEFT
 	}
 	
 	$wasPressedRight() {
-		return (_$RIGHT & _$preStatus2) as Bool
+		return (_$RIGHT & _$preStatus2) = _$RIGHT
 	}
 }

@@ -25,14 +25,14 @@ Controllers {
 		!	TAY         !
 		!-ctrlr1:       !
 		!	LDA $4016   !
-		!	AND #1      !
+		!	AND #3      !
 		!	BEQ +ctrlr2 !
 		!	TXA         !
 		!	ORA ?mask?  !
 		!	TAX         !
 		!+ctrlr2:       !
 		!	LDA $4017   !
-		!	AND #1      !
+		!	AND #3      !
 		!	BEQ +next   !
 		!	TYA         !
 		!	ORA ?mask?  !

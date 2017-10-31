@@ -1105,13 +1105,26 @@ class Expressions {
 			«ENDIF»
 		«left.compile(lda)»
 			«IF binaryOperation === Operation::AND»
-				BEQ +skipRightExpression@«right.hashCode.toHex»:
-			«ELSEIF binaryOperation === Operation::OR»
-				BNE +skipRightExpression@«right.hashCode.toHex»:
+				BEQ +skipRightExpression@«right.hashCode.toHex»
+			«ELSEIF binaryOperation === Operation::OR && data.relative === null»
+				BNE +skipRightExpression@«right.hashCode.toHex»
+			«ELSEIF binaryOperation === Operation::OR && data.relative !== null»
+				BNE +«data.relative»
 			«ENDIF»		
 		«right.compile(opr)»
-		«IF binaryOperation === Operation::AND || binaryOperation === Operation::OR»
+		«IF binaryOperation === Operation::AND»
+			«IF data.relative !== null»
+				«noop»
+					BNE +«data.relative»
+			«ENDIF»
 			+skipRightExpression@«right.hashCode.toHex»:
+		«ELSEIF binaryOperation === Operation::OR»
+			«IF data.relative !== null»
+				«noop»
+					BNE +«data.relative»
+			«ELSE»
+				+skipRightExpression@«right.hashCode.toHex»:
+			«ENDIF»
 		«ENDIF»
 		«IF data.mode === Mode::OPERATE»
 			«noop»

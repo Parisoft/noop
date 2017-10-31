@@ -43,9 +43,9 @@ class Statements {
 	}
 
 	def IfStatement getIfContainer(IfStatement ifStatement) {
-		val elseContainer = ifStatement.getContainerOfType(ElseStatement)
+		val elseContainer = ifStatement.eContainer
 
-		if (elseContainer !== null) {
+		if (elseContainer !== null && elseContainer instanceof ElseStatement) {
 			return elseContainer.getContainerOfType(IfStatement).ifContainer
 		}
 
@@ -302,7 +302,7 @@ class Statements {
 					type = statement.condition.typeOf
 					relative = statement.nameOf.toString
 				])»
-					JMP +«IF statement.^else !== null»«statement.^else.nameOfCondition»«ELSE»«endIf»«ENDIF»:
+					JMP +«IF statement.^else !== null»«statement.^else.nameOfCondition»«ELSE»«endIf»«ENDIF»
 				+«statement.nameOf»:
 				«FOR stmt : statement.body.statements»
 					«stmt.compile(new CompileData => [
@@ -312,7 +312,7 @@ class Statements {
 				«ENDFOR»
 				«IF statement.^else !== null»
 					«noop»
-						JMP +«endIf»:
+						JMP +«endIf»
 					«statement.^else.compile(data)»
 				«ENDIF»
 				«IF mainIf == statement»
