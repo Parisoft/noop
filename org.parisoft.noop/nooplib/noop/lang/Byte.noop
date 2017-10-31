@@ -1,2 +1,5 @@
 Byte extends Int {
+
+	$MIN : 0
+	$MAX : 255
 }

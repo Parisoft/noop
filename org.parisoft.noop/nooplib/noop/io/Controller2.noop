@@ -6,49 +6,84 @@ Controller2 extends Controllers {
 		!	STA $4016  !
 		!	LDA #$00   !
 		!	STA $4016  !
-		!  	LDX #0          !
-		!-loop1:            !
-		!	LDA $4017       !
-		!	AND #1          !
-		!	BEQ +next1:     !
-		!	TXA             !
-		!	ORA ?mask?      !
-		!	TAX             !
-		!+next1:            !
-		!	ASL ?mask?      !
-		!	BNE -loop1:     !
-		!	STX ?_$status2? !
+		!  	LDX #0     !
+		!-loop1:       !
+		!	LDA $4017  !
+		!	AND #1     !
+		!	BEQ +next1 !
+		!	TXA        !
+		!	ORA ?mask? !
+		!	TAX        !
+		!+next1:       !
+		!	ASL ?mask? !
+		!	BNE -loop1 !
+		
+		!	LDA ?_$status2?    !
+		!	STA ?_$preStatus2? !
+		!	STX ?_$status2?    !
 	}
 	
-	$pressedA() {
+	$isPressedA() {
 		return (_$A & _$status2) as Bool
 	}
 	
-	$pressedB() {
+	$isPressedB() {
 		return (_$B & _$status2) as Bool
 	}
 	
-	$pressedSelect() {
+	$isPressedSelect() {
 		return (_$SELECT & _$status2) as Bool
 	}
 	
-	$pressedStart() {
+	$isPressedStart() {
 		return (_$START & _$status2) as Bool
 	}
 	
-	$pressedUp() {
+	$isPressedUp() {
 		return (_$UP & _$status2) as Bool
 	}
 	
-	$pressedDown() {
+	$isPressedDown() {
 		return (_$DOWN & _$status2) as Bool
 	}
 	
-	$pressedLeft() {
+	$isPressedLeft() {
 		return (_$LEFT & _$status2) as Bool
 	}
 	
-	$pressedRight() {
+	$isPressedRight() {
 		return (_$RIGHT & _$status2) as Bool
+	}
+	
+	$wasPressedA() {
+		return (_$A & _$preStatus2) as Bool
+	}
+	
+	$wasPressedB() {
+		return (_$B & _$preStatus2) as Bool
+	}
+	
+	$wasPressedSelect() {
+		return (_$SELECT & _$preStatus2) as Bool
+	}
+	
+	$wasPressedStart() {
+		return (_$START & _$preStatus2) as Bool
+	}
+	
+	$wasPressedUp() {
+		return (_$UP & _$preStatus2) as Bool
+	}
+	
+	$wasPressedDown() {
+		return (_$DOWN & _$preStatus2) as Bool
+	}
+	
+	$wasPressedLeft() {
+		return (_$LEFT & _$preStatus2) as Bool
+	}
+	
+	$wasPressedRight() {
+		return (_$RIGHT & _$preStatus2) as Bool
 	}
 }

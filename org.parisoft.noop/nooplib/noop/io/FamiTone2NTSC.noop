@@ -407,9 +407,9 @@ FamiTone2NTSC {
 		!                                                                           !
 		!@set_envelopes:                                                            !
 		!                                                                           !
-		!	lda #<(?$_FT2DummyEnvelope?)                                              !
+		!	lda #<(?_$FT2DummyEnvelope?)                                              !
 		!	sta ?_$FT_ENV_ADR_L?,x                                                      !
-		!	lda #>(?$_FT2DummyEnvelope?)                                               !
+		!	lda #>(?_$FT2DummyEnvelope?)                                               !
 		!	sta ?_$FT_ENV_ADR_H?,x                                                      !
 		!	lda #0                                                                  !
 		!	sta ?_$FT_ENV_REPEAT?,x                                                     !
@@ -613,51 +613,51 @@ FamiTone2NTSC {
 		!                                                                                                     !
 		!                                                                                                     !
 		!	ldx #<(?_$FT_CH1_VARS?)	;process channel 1                                                            !
-		$_FT2ChannelUpdate()
+		_$FT2ChannelUpdate()
 		!	bcc @no_new_note1                                                                                 !
 		!	ldx #<(?_$FT_CH1_ENVS?)                                                                               !
 		!	lda ?_$FT_CH1_INSTRUMENT?                                                                             !
-		$_FT2SetInstrument()
+		_$FT2SetInstrument()
 		!	sta ?_$FT_CH1_DUTY?                                                                                   !
 		!@no_new_note1:                                                                                       !
 		!                                                                                                     !
 		!	ldx #<(?_$FT_CH2_VARS?)	;process channel 2                                                            !
-		$_FT2ChannelUpdate()
+		_$FT2ChannelUpdate()
 		!	bcc @no_new_note2                                                                                 !
 		!	ldx #<(?_$FT_CH2_ENVS?)                                                                               !
 		!	lda ?_$FT_CH2_INSTRUMENT?                                                                             !
-		$_FT2SetInstrument()
+		_$FT2SetInstrument()
 		!	sta ?_$FT_CH2_DUTY?                                                                                   !
 		!@no_new_note2:                                                                                       !
 		!                                                                                                     !
 		!	ldx #<(?_$FT_CH3_VARS?)	;process channel 3                                                            !
-		$_FT2ChannelUpdate()
+		_$FT2ChannelUpdate()
 		!	bcc @no_new_note3                                                                                 !
 		!	ldx #<(?_$FT_CH3_ENVS?)                                                                               !
 		!	lda ?_$FT_CH3_INSTRUMENT?                                                                             !
-		$_FT2SetInstrument()
+		_$FT2SetInstrument()
 		!@no_new_note3:                                                                                       !
 		!                                                                                                     !
 		!	ldx #<(?_$FT_CH4_VARS?)	;process channel 4                                                            !
-		$_FT2ChannelUpdate()
+		_$FT2ChannelUpdate()
 		!	bcc @no_new_note4                                                                                 !
 		!	ldx #<(?_$FT_CH4_ENVS?)                                                                               !
 		!	lda ?_$FT_CH4_INSTRUMENT?                                                                             !
-		$_FT2SetInstrument()
+		_$FT2SetInstrument()
 		!	sta ?_$FT_CH4_DUTY?                                                                                   !
 		!@no_new_note4:                                                                                       !
 		!                                                                                                     !
 		!	.ifdef ?_$FT_DPCM_ENABLE?                                                                             !
 		!                                                                                                     !
 		!	ldx #<(?_$FT_CH5_VARS?)	;process channel 5                                                            !
-		$_FT2ChannelUpdate()
+		_$FT2ChannelUpdate()
 		!	bcc @no_new_note5                                                                                 !
 		!	lda ?_$FT_CH5_NOTE?                                                                                   !
 		!	bne @play_sample                                                                                  !
 		$stopDcmSample()
 		!	bne @no_new_note5		;A is non-zero after FamiToneSampleStop                                   !
 		!@play_sample:                                                                                        !
-		$_FamiToneSamplePlayM()
+		_$FamiToneSamplePlayM()
 		!@no_new_note5:                                                                                       !
 		!                                                                                                     !
 		!	.endif                                                                                            !
@@ -729,14 +729,14 @@ FamiTone2NTSC {
 		!	tax                                                                                               !
 		!	lda ?_$FT_CH1_PITCH_OFF?                                                                              !
 		!	tay                                                                                               !
-		!	adc ?$_FT2NoteTableLSB?,x                                                                            !
+		!	adc ?_$FT2NoteTableLSB?,x                                                                            !
 		!	sta ?_$FT_MR_PULSE1_L?                                                                                !
 		!	tya						;sign extension for the pitch offset                                      !
 		!	ora #$7f                                                                                          !
 		!	bmi @ch1sign                                                                                      !
 		!	lda #0                                                                                            !
 		!@ch1sign:                                                                                            !
-		!	adc ?$_FT2NoteTableMSB?,x                                                                            !
+		!	adc ?_$FT2NoteTableMSB?,x                                                                            !
 		!                                                                                                     !
 		!	.ifndef ?_$FT_SFX_ENABLE?                                                                             !
 		!	cmp ?_$FT_PULSE1_PREV?                                                                                !
@@ -759,14 +759,14 @@ FamiTone2NTSC {
 		!	tax                                                                                               !
 		!	lda ?_$FT_CH2_PITCH_OFF?                                                                              !
 		!	tay                                                                                               !
-		!	adc ?$_FT2NoteTableLSB?,x                                                                            !
+		!	adc ?_$FT2NoteTableLSB?,x                                                                            !
 		!	sta ?_$FT_MR_PULSE2_L?                                                                                !
 		!	tya                                                                                               !
 		!	ora #$7f                                                                                          !
 		!	bmi @ch2sign                                                                                      !
 		!	lda #0                                                                                            !
 		!@ch2sign:                                                                                            !
-		!	adc ?$_FT2NoteTableMSB?,x                                                                            !
+		!	adc ?_$FT2NoteTableMSB?,x                                                                            !
 		!                                                                                                     !
 		!	.ifndef ?_$FT_SFX_ENABLE?                                                                             !
 		!	cmp ?_$FT_PULSE2_PREV?                                                                                !
@@ -789,14 +789,14 @@ FamiTone2NTSC {
 		!	tax                                                                                               !
 		!	lda ?_$FT_CH3_PITCH_OFF?                                                                              !
 		!	tay                                                                                               !
-		!	adc ?$_FT2NoteTableLSB?,x                                                                            !
+		!	adc ?_$FT2NoteTableLSB?,x                                                                            !
 		!	sta ?_$FT_MR_TRI_L?                                                                                   !
 		!	tya                                                                                               !
 		!	ora #$7f                                                                                          !
 		!	bmi @ch3sign                                                                                      !
 		!	lda #0                                                                                            !
 		!@ch3sign:                                                                                            !
-		!	adc ?$_FT2NoteTableMSB?,x                                                                            !
+		!	adc ?_$FT2NoteTableMSB?,x                                                                            !
 		!	sta ?_$FT_MR_TRI_H?                                                                                   !
 		!	lda ?_$FT_CH3_VOLUME?                                                                                 !
 		!@ch3cut:                                                                                             !
@@ -828,19 +828,19 @@ FamiTone2NTSC {
 		!                                                                                                     !
 		!	.if ?_$FT_SFX_STREAMS?>0                                                                              !
 		!	ldx #?$FT_SFX_CH0?                                                                                   !
-		$_FT2SfxUpdate()
+		_$FT2SfxUpdate()
 		!	.endif                                                                                            !
 		!	.if ?_$FT_SFX_STREAMS?>1                                                                              !
 		!	ldx #?$FT_SFX_CH1?                                                                                   !
-		$_FT2SfxUpdate()
+		_$FT2SfxUpdate()
 		!	.endif                                                                                            !
 		!	.if ?_$FT_SFX_STREAMS?>2                                                                              !
 		!	ldx #?$FT_SFX_CH2?                                                                                   !
-		$_FT2SfxUpdate()
+		_$FT2SfxUpdate()
 		!	.endif                                                                                            !
 		!	.if ?_$FT_SFX_STREAMS?>3                                                                              !
 		!	ldx #?$FT_SFX_CH3?                                                                                   !
-		$_FT2SfxUpdate()
+		_$FT2SfxUpdate()
 		!	.endif                                                                                            !
 		!                                                                                                     !
 		!                                                                                                     !
@@ -894,7 +894,7 @@ FamiTone2NTSC {
 	;internal routine, sets up envelopes of a channel according to current instrument
 	;in X envelope group offset, A instrument number
 	*/
-	$_FT2SetInstrument() {
+	_$FT2SetInstrument() {
 		!	asl a					;instrument number is pre multiplied by 4     !
 		!	tay                                                                   !
 		!	lda ?_$FT_INSTRUMENT_H?                                                   !
@@ -947,7 +947,7 @@ FamiTone2NTSC {
 	/*
 	;internal routine, parses channel note data
 	*/
-	$_FT2ChannelUpdate() {
+	_$FT2ChannelUpdate() {
 		!	lda ?_$FT_CHN_REPEAT?,x		;check repeat counter                                 !
 		!	beq @no_repeat                                                                !
 		!	dec ?_$FT_CHN_REPEAT?,x		;decrease repeat counter                              !
@@ -1074,10 +1074,10 @@ FamiTone2NTSC {
 	; in: A is number of a sample, 1..63
 	;------------------------------------------------------------------------------
 	*/
-	$_FamiToneSamplePlayM() {		//;for music (low priority)
+	_$FamiToneSamplePlayM() {		//;for music (low priority)
 		!	ldx ?_$FT_DPCM_EFFECT? !
 		!	BNE @continue      !
-		$_FT2SamplePlay()
+		_$FT2SamplePlay()
 		!	RTS                !
 		!@continue:            !
 		!	tax                !
@@ -1089,7 +1089,7 @@ FamiTone2NTSC {
 		!@not_busy:            !
 		!	sta ?_$FT_DPCM_EFFECT? !
 		!	txa                !
-		$_FT2SamplePlay()
+		_$FT2SamplePlay()
 	}
 
 	/*
@@ -1117,10 +1117,10 @@ FamiTone2NTSC {
 		!	LDA ?sample?       !
 		!	ldx #1             !
 		!	stx ?_$FT_DPCM_EFFECT? !
-		$_FT2SamplePlay()
+		_$FT2SamplePlay()
 	}
 	
-	$_FT2SamplePlay() {
+	_$FT2SamplePlay() {
 		!	sta ?_$ftTempPtr?		;sample number*3, offset in the sample table  !
 		!	asl a                                                             !
 		!	clc                                                               !
@@ -1185,7 +1185,7 @@ FamiTone2NTSC {
 		!	ldx #?$FT_SFX_CH0?			;init all the streams                       !
 		!                                                                       !
 		!@set_channels:                                                         !
-		$_FT2SfxClearChannel()
+		_$FT2SfxClearChannel()
 		!	txa                                                                 !
 		!	clc                                                                 !
 		!	adc #?_$FT_SFX_STRUCT_SIZE?                                             !
@@ -1199,7 +1199,7 @@ FamiTone2NTSC {
 	;in: A is 0
 	;    X is offset of sound effect stream
 	*/
-	$_FT2SfxClearChannel() {
+	_$FT2SfxClearChannel() {
 		!	lda #0                                         !
 		!	sta ?_$FT_SFX_PTR_H?,x		;this stops the effect !
 		!	sta ?_$FT_SFX_REPEAT?,x                            !
@@ -1236,7 +1236,7 @@ FamiTone2NTSC {
 		!	tay                                                          !
 		!                                                                !
 		!	;stops the effect if it plays        !
-		$_FT2SfxClearChannel()
+		_$FT2SfxClearChannel()
 		!                                                                !
 		!	lda ?_$FT_SFX_ADR_L?                                             !
 		!	sta ?_$ftTempPtr? + 0                                           !
@@ -1254,7 +1254,7 @@ FamiTone2NTSC {
 	;internal routine, update one sound effect stream
 	;in: X is offset of sound effect stream
 	*/
-	$_FT2SfxUpdate() {
+	_$FT2SfxUpdate() {
 		!	lda ?_$FT_SFX_REPEAT?,x		;check if repeat counter is not zero                           !
 		!	beq @no_repeat                                                                         !
 		!	dec ?_$FT_SFX_REPEAT?,x		;decrement and return                                          !
@@ -1351,16 +1351,16 @@ FamiTone2NTSC {
 		!@no_noise:                                                                                !
 	}
 	
-	$_FT2DummyEnvelope @PRG-ROM : [0xC0, 0x00, 0x00]
+	_$FT2DummyEnvelope @PRG-ROM : [0xC0, 0x00, 0x00]
 	
-	$_FT2NoteTableLSB @PRG-ROM : [
+	_$FT2NoteTableLSB @PRG-ROM : [
 		 [0x00, 0xAD, 0x4D, 0xF2, 0x9D, 0x4C, 0x00, 0xB8, 0x74, 0x34, 0xF7, 0xBE, 0x88, 0x56, 0x26, 0xF8],
 		 [0xCE, 0xA5, 0x7F, 0x5B, 0x39, 0x19, 0xFB, 0xDE, 0xC3, 0xAA, 0x92, 0x7B, 0x66, 0x52, 0x3F, 0x2D],
 		 [0x1C, 0x0C, 0xFD, 0xEE, 0xE1, 0xD4, 0xC8, 0xBD, 0xB2, 0xA8, 0x9F, 0x96, 0x8D, 0x85, 0x7E, 0x76],
 		 [0x70, 0x69, 0x63, 0x5E, 0x58, 0x53, 0x4F, 0x4A, 0x46, 0x42, 0x3E, 0x3A, 0x37, 0x34, 0x31, 0x2E]
 	 ]
 
-	$_FT2NoteTableMSB @PRG-ROM : [
+	_$FT2NoteTableMSB @PRG-ROM : [
 		 [0x00, 0x06, 0x06, 0x05, 0x05, 0x05, 0x05, 0x04, 0x04, 0x04, 0x03, 0x03, 0x03, 0x03, 0x03, 0x02],
 		 [0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01],
 		 [0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],

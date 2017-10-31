@@ -167,7 +167,7 @@ PPU {
     	!	STA $2007             ; write to PPU                                !
     	!	INY                                                                 !
     	!	CPY #$10                                                            !
-    	!	BNE -loop:                                                          !
+    	!	BNE -loop                                                           !
     }
     
     /*
@@ -315,7 +315,7 @@ PPU {
     	!	LDA #$3F                                                         !
     	!	STA $2006	       ; write the high byte of $3F00 address        !
     	!	LDA #$10                                                         !
-    	!	STA $2006           ; write the low byte of $3F00 address        !
+    	!	STA $2006          ; write the low byte of $3F00 address         !
     	!	                                                                 !
     	!	LDY #$00                                                         !
     	!-loop:                                                              !
@@ -323,7 +323,7 @@ PPU {
     	!	STA $2007	       ; write to PPU                                !
     	!	INY                                                              !
     	!	CPY #$10                                                         !
-    	!	BNE -loop:                                                       !
+    	!	BNE -loop                                                        !
     }
     
     $drawBackground(Byte bgPosition, Byte row, Byte col, Byte[][] nameTable) {
@@ -358,22 +358,22 @@ PPU {
     	!+if0:                             !
     	!	LDX ?bgPosition?               !
     	!	CPX #?$NAME_TABLE_DEFAULT?     !
-    	!	BNE +elseif0:                  !
+    	!	BNE +elseif0                   !
     	!	CLC                            !
     	!	ADC #$20                       !
-    	!	JMP +endif0:                   !
+    	!	JMP +endif0                    !
     	!+elseif0:                         !
     	!	CPX #?$NAME_TABLE_TOP_RIGHT?   !
-    	!	BNE +elseif1:                  !
+    	!	BNE +elseif1                   !
     	!	CLC                            !
     	!	ADC #$24                       !
-    	!	JMP +endif0:                   !
+    	!	JMP +endif0                    !
     	!+elseif1:                         !
     	!	CPX #?$NAME_TABLE_BOTTOM_LEFT? !
-    	!	BNE +else0:                    !
+    	!	BNE +else0                     !
     	!	CLC                            !
     	!	ADC #$28                       !
-    	!	JMP +endif0:                   !
+    	!	JMP +endif0                    !
     	!+else0:                           !
     	!	CLC                            !
     	!	ADC #$2C                       !
@@ -387,7 +387,7 @@ PPU {
     	!	STX ?i?                        !
     	!-for0compare:                     !
     	!	CPX ?nameTable?.len0           !
-    	!	BEQ +for0end:                  !
+    	!	BEQ +for0end                   !
     	!+for0block:                       !
     	!	LDA ?addr?+1                   !
     	!	STA $2006                      !
@@ -398,7 +398,7 @@ PPU {
     	!	STX ?j?                        !
     	!-for1compare:                     !
     	!	CPX ?nameTable?.len1           !
-    	!	BEQ +for1end:                  !
+    	!	BEQ +for1end                   !
     	!+for1block:                       !
     	!	LDY ?j?                        !
     	!	LDA (?nameTable?), Y           !
@@ -406,7 +406,7 @@ PPU {
     	!+for1increment:                   !
     	!	INC ?j?                        !
     	!	LDX ?j?                        !
-    	!	JMP -for1compare:              !
+    	!	JMP -for1compare               !
     	!+for1end:                         !
     	!	                               !
     	!+for0increment:                   !
@@ -414,7 +414,7 @@ PPU {
     	!	LDA ?nameTable?+0              !
     	!	ADC ?nameTable?.len1           !
     	!	STA ?nameTable?+0              !
-    	!	BCC ++for0increment:           !
+    	!	BCC ++for0increment            !
     	!	LDA ?nameTable?+1              !
     	!	ADC #$00                       !
     	!	STA ?nameTable?+1              !
@@ -423,14 +423,14 @@ PPU {
     	!	LDA ?addr?+0                   !
     	!	ADC #?$SCREEN_WIDTH_TILES?     !
     	!	STA ?addr?+0                   !
-    	!	BCC +++for0increment:          !
+    	!	BCC +++for0increment           !
     	!	LDA ?addr?+1                   !
     	!	ADC #$00                       !
     	!	STA ?addr?+1                   !
     	!+++for0increment:                 !
     	!	INC ?i?                        !
     	!	LDX ?i?                        !
-    	!	JMP -for0compare:              !
+    	!	JMP -for0compare               !
     	!+for0end:                         !
     }
 
@@ -468,19 +468,19 @@ PPU {
     	!+if0:                             !
     	!	LDX ?bgPosition?               !
     	!	CPX #?$NAME_TABLE_DEFAULT?     !
-    	!	BNE +elseif0:                  !
+    	!	BNE +elseif0                   !
     	!	LDA #$20                       !
-    	!	JMP +endif0:                   !
+    	!	JMP +endif0                    !
     	!+elseif0:                         !
     	!	CPX #?$NAME_TABLE_TOP_RIGHT?   !
-    	!	BNE +elseif1:                  !
+    	!	BNE +elseif1                   !
     	!	LDA #$24                       !
-    	!	JMP +endif0:                   !
+    	!	JMP +endif0                    !
     	!+elseif1:                         !
     	!	CPX #?$NAME_TABLE_BOTTOM_LEFT? !
-    	!	BNE +else0:                    !
+    	!	BNE +else0                     !
     	!	LDA #$28                       !
-    	!	JMP +endif0:                   !
+    	!	JMP +endif0                    !
     	!+else0:                           !
     	!	LDA #$2C                       !
     	!+endif0:                          !

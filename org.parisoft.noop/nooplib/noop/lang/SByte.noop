@@ -1,2 +1,5 @@
 SByte extends Int {
+
+	$MIN : -128
+	$MAX : 127
 }

@@ -1,2 +1,5 @@
 UInt extends Int {
+
+	$MIN : 0
+	$MAX : 65535
 }

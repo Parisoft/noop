@@ -11,6 +11,8 @@ Controllers {
 	
 	_$status1 : 0
 	_$status2 : 0
+	_$preStatus1 : 0
+	_$preStatus2 : 0
 		
 	$update() {
 		mask : 1
@@ -19,26 +21,31 @@ Controllers {
 		!	LDA #$00   !
 		!	STA $4016  !
 
-		!  	TAX             !
-		!	TAY             !
-		!-ctrlr1:           !
-		!	LDA $4016       !
-		!	AND #1          !
-		!	BEQ +ctrlr2:    !
-		!	TXA             !
-		!	ORA ?mask?      !
-		!	TAX             !
-		!+ctrlr2:           !
-		!	LDA $4017       !
-		!	AND #1          !
-		!	BEQ +next:      !
-		!	TYA             !
-		!	ORA ?mask?      !
-		!	TAY             !
-		!+next:             !
-		!	ASL ?mask?      !
-		!	BNE -ctrlr1:    !
-		!	STX ?_$status1? !
-		!	STY ?_$status2? !
+		!  	TAX         !
+		!	TAY         !
+		!-ctrlr1:       !
+		!	LDA $4016   !
+		!	AND #1      !
+		!	BEQ +ctrlr2 !
+		!	TXA         !
+		!	ORA ?mask?  !
+		!	TAX         !
+		!+ctrlr2:       !
+		!	LDA $4017   !
+		!	AND #1      !
+		!	BEQ +next   !
+		!	TYA         !
+		!	ORA ?mask?  !
+		!	TAY         !
+		!+next:         !
+		!	ASL ?mask?  !
+		!	BNE -ctrlr1 !
+		
+		!	LDA ?_$status1?    !
+		!	STA ?_$preStatus1? !
+		!	LDA ?_$status2?    !
+		!	STA ?_$preStatus2? !
+		!	STX ?_$status1?    !
+		!	STY ?_$status2?    !
 	}
 }
