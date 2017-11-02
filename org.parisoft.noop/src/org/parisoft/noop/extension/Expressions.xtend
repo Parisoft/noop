@@ -743,8 +743,8 @@ class Expressions {
 					«ENDIF»
 					«ref.resolveTo(data)»
 				'''
-				OrExpression: '''«Operation::OR.compileBinary(expression.left, expression.right, data)»'''
-				AndExpression: '''«Operation::AND.compileBinary(expression.left, expression.right, data)»'''
+				OrExpression: '''«compileOr(expression.left, expression.right, data)»'''
+				AndExpression: '''«compileAnd(expression.left, expression.right, data)»'''
 				EqualsExpression: '''«Operation::COMPARE_EQ.compileBinary(expression.left, expression.right, data)»'''
 				DifferExpression: '''«Operation::COMPARE_NE.compileBinary(expression.left, expression.right, data)»'''
 				LtExpression: '''«Operation::COMPARE_LT.compileBinary(expression.left, expression.right, data)»'''
@@ -760,7 +760,7 @@ class Expressions {
 				LShiftExpression: '''«Operation::BIT_SHIFT_LEFT.compileBinary(expression.left, expression.right, data)»'''
 				RShiftExpression: '''«Operation::BIT_SHIFT_RIGHT.compileBinary(expression.left, expression.right, data)»'''
 				EorExpression: '''«Operation::BIT_EXCLUSIVE_OR.compileUnary(expression.right, data)»'''
-				NotExpression: '''«Operation::NEGATION.compileUnary(expression.right, data)»'''
+				NotExpression: '''«expression.right.compileNot(data)»'''
 				SigNegExpression: '''«Operation::SIGNUM.compileUnary(expression.right, data)»'''
 				SigPosExpression: '''«expression.right.compile(data)»'''
 				DecExpression: '''«Operation::DECREMENT.compileInc(expression.right, data)»'''
@@ -1087,45 +1087,24 @@ class Expressions {
 
 	private def compileBinary(Operation binaryOperation, Expression left, Expression right, CompileData data) '''
 		«val lda = new CompileData => [
-					container = data.container
-					operation = data.operation
-					type = if (data.type.isBoolean) left.typeOf else data.type
-					register = 'A'
-					mode = Mode::COPY
-				]»
+			container = data.container
+			operation = data.operation
+			type = if (data.type.isBoolean) left.typeOf else data.type
+			register = 'A'
+			mode = Mode::COPY
+		]»
 		«val opr = new CompileData => [
-					container = data.container
-					operation = binaryOperation
-					relative = data.relative
-					type = if (data.type.isBoolean) left.typeOf else data.type
-					mode = Mode::OPERATE
-				]»
+			container = data.container
+			operation = binaryOperation
+			relative = data.relative
+			type = if (data.type.isBoolean) left.typeOf else data.type
+			mode = Mode::OPERATE
+		]»
 			«IF data.operation !== null»
 				PHA
 			«ENDIF»
 		«left.compile(lda)»
-			«IF binaryOperation === Operation::AND»
-				BEQ +skipRightExpression@«right.hashCode.toHex»
-			«ELSEIF binaryOperation === Operation::OR && data.relative === null»
-				BNE +skipRightExpression@«right.hashCode.toHex»
-			«ELSEIF binaryOperation === Operation::OR && data.relative !== null»
-				BNE +«data.relative»
-			«ENDIF»		
 		«right.compile(opr)»
-		«IF binaryOperation === Operation::AND»
-			«IF data.relative !== null»
-				«noop»
-					BNE +«data.relative»
-			«ENDIF»
-			+skipRightExpression@«right.hashCode.toHex»:
-		«ELSEIF binaryOperation === Operation::OR»
-			«IF data.relative !== null»
-				«noop»
-					BNE +«data.relative»
-			«ELSE»
-				+skipRightExpression@«right.hashCode.toHex»:
-			«ENDIF»
-		«ENDIF»
 		«IF data.mode === Mode::OPERATE»
 			«noop»
 				«FOR i : 0..< data.sizeOf»
@@ -1133,38 +1112,104 @@ class Expressions {
 					PLA
 				«ENDFOR»
 			«val tmp = new CompileData => [
-						container = data.container
-						type = data.type
-						absolute = Members::TEMP_VAR_NAME2
-					]»
+				container = data.container
+				type = data.type
+				absolute = Members::TEMP_VAR_NAME2
+			]»
 			«data.operateOn(tmp)»
 		«ELSEIF data.mode === Mode::COPY && data.relative === null»
 			«val res = new CompileData => [
-						container = data.container
-						type = data.type
-						register = 'A'
-					]»
+				container = data.container
+				type = data.type
+				register = 'A'
+			]»
 			«res.copyTo(data)»
 		«ENDIF»
 	'''
 
-	private def compileUnary(Operation unaryOperation, Expression right, CompileData data) '''
+	private def compileOr(Expression left, Expression right, CompileData data) '''
+		«val lctx = new CompileData => [
+			container = data.container
+			operation = data.operation
+			relative = data.relative ?: '''orIsTrue@«right.hashCode.toHexString»'''
+			type = if (data.type.isBoolean) left.typeOf else data.type
+		]»
+		«val rctx = new CompileData => [
+			container = data.container
+			relative = data.relative ?: '''orIsTrue@«right.hashCode.toHexString»'''
+			type = if (data.type.isBoolean) left.typeOf else data.type
+		]»
+		«left.compile(lctx)»
+		«right.compile(rctx)»
+		«IF data.relative === null»
+			+orIsFalse@«right.hashCode.toHexString»:
+				LDA #«Members::FALSE»
+				JMP +orEnd
+			+orIsTrue@«right.hashCode.toHexString»:
+				LDA #«Members::TRUE»
+			+orEnd:
+			«IF data.mode === Mode::COPY»
+				«val res = new CompileData => [
+					container = data.container
+					type = data.type
+					register = 'A'
+				]»
+				«res.copyTo(data)»
+			«ENDIF»
+		«ENDIF»
+	'''
+
+	private def CharSequence compileAnd(Expression left, Expression right, CompileData data) '''
+		«val lctx = new CompileData => [
+			container = data.container
+			operation = data.operation
+			relative = '''andIsFalse@«right.hashCode.toHexString»'''
+			type = if (data.type.isBoolean) left.typeOf else data.type
+		]»
+		«val rctx = new CompileData => [
+			container = data.container
+			relative = data.relative ?: '''andIsTue@«right.hashCode.toHexString»'''
+			type = if (data.type.isBoolean) left.typeOf else data.type
+		]»
+		«left.compileNot(lctx)»
+		«right.compile(rctx)»
+		+andIsFalse@«right.hashCode.toHexString»:
+		«IF data.relative === null»
+			«noop»
+				LDA #«Members::FALSE»
+				JMP +andEnd
+			+andIsTue@«right.hashCode.toHexString»:
+				LDA #«Members::TRUE»
+			+andEnd:
+			«IF data.mode === Mode::COPY»
+				«val res = new CompileData => [
+					container = data.container
+					type = data.type
+					register = 'A'
+				]»
+				«res.copyTo(data)»
+			«ENDIF»
+		«ENDIF»
+	'''
+
+	private def compileUnary(Operation unaryOperation, Expression expr, CompileData data) '''
 		«val lda = new CompileData => [
-				container = data.container
-				type = data.type
-				register = 'A'
-				mode = Mode::COPY
-			]»
+			container = data.container
+			type = data.type
+			register = 'A'
+			mode = Mode::COPY
+		]»
 		«val acc = new CompileData => [
-				container = data.container
-				type = data.type
-				operation = unaryOperation
-				mode = Mode::OPERATE
-			]»
+			container = data.container
+			relative = data.relative
+			type = data.type
+			operation = unaryOperation
+			mode = Mode::OPERATE
+		]»
 			«IF data.operation !== null»
 				PHA
 			«ENDIF» 
-		«right.compile(lda)»
+		«expr.compile(lda)»
 		«acc.operate»
 		«IF data.mode === Mode::OPERATE»
 			«FOR i : 0 ..< data.sizeOf»
@@ -1178,15 +1223,48 @@ class Expressions {
 					absolute = Members::TEMP_VAR_NAME2
 				]»
 			«data.operateOn(tmp)»
-		«ELSEIF data.mode === Mode::COPY»
+		«ELSEIF data.mode === Mode::COPY && data.relative === null»
 			«val res = new CompileData => [
-					container = data.container
-					type = data.type
-					register = 'A'
-				]»
+				container = data.container
+				type = data.type
+				register = 'A'
+			]»
 			«res.copyTo(data)»
 		«ENDIF»
 	'''
+
+	private def compileNot(Expression expr, CompileData data) {
+		switch (expr) {
+			OrExpression:
+				compileAnd(NoopFactory::eINSTANCE.createNotExpression => [
+					right = expr.left
+				], NoopFactory::eINSTANCE.createNotExpression => [
+					right = expr.right
+				], data)
+			AndExpression:
+				compileOr(NoopFactory::eINSTANCE.createNotExpression => [
+					right = expr.left
+				], NoopFactory::eINSTANCE.createNotExpression => [
+					right = expr.right
+				], data)
+			EqualsExpression:
+				Operation::COMPARE_NE.compileBinary(expr.left, expr.right, data)
+			DifferExpression:
+				Operation::COMPARE_EQ.compileBinary(expr.left, expr.right, data)
+			LtExpression:
+				Operation::COMPARE_GE.compileBinary(expr.left, expr.right, data)
+			LeExpression:
+				Operation::COMPARE_LT.compileBinary(expr.right, expr.left, data)
+			GtExpression:
+				Operation::COMPARE_GE.compileBinary(expr.right, expr.left, data)
+			GeExpression:
+				Operation::COMPARE_LT.compileBinary(expr.left, expr.right, data)
+			NotExpression:
+				expr.compile(data)
+			default:
+				Operation::NEGATION.compileUnary(expr, data)
+		}
+	}
 
 	private def compileSelfReference(Expression expression, CompileData data) '''
 		«val method = expression.getContainerOfType(Method)»

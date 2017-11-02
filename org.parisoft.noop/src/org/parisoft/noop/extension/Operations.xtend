@@ -190,7 +190,11 @@ class Operations {
 
 	def negate(CompileData acc) '''
 		«noop»
-			EOR #%00000001
+			«IF acc.relative !== null»
+				BEQ +«acc.relative»
+			«ELSE»
+				EOR #%00000001
+			«ENDIF»
 	'''
 
 	def signum(CompileData acc) '''
@@ -244,7 +248,7 @@ class Operations {
 				+«comparisonEnd»
 			«ELSE»
 				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
 				+«comparisonIsFalse»
 			«ENDIF»
 		«ELSE»
@@ -260,7 +264,7 @@ class Operations {
 				+«comparisonEnd»
 			«ELSE»
 				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
 			«ENDIF»
 		«ENDIF»
 	'''
@@ -297,7 +301,7 @@ class Operations {
 				+«comparisonEnd»
 			«ELSE»
 				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
 				+«comparisonIsFalse»
 			«ENDIF»
 		«ELSE»
@@ -313,7 +317,7 @@ class Operations {
 				+«comparisonEnd»
 			«ELSE»
 				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
 			«ENDIF»
 		«ENDIF»
 	'''
@@ -348,7 +352,7 @@ class Operations {
 				+«comparisonEnd»
 			«ELSE»
 				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
 				+«comparisonIsFalse»
 			«ENDIF»
 		«ELSE»
@@ -364,7 +368,7 @@ class Operations {
 				+«comparisonEnd»
 			«ELSE»
 				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»:
+					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
 			«ENDIF»
 		«ENDIF»
 	'''
@@ -452,7 +456,7 @@ class Operations {
 			+«comparisonEnd»
 		«ELSE»
 			«noop»
-				«branch» +«acc.relative»:
+				«branch» +«acc.relative»
 			+«comparisonIsFalse»
 		«ENDIF»
 	'''
@@ -489,7 +493,7 @@ class Operations {
 			«branch = sbranch»
 				BVC +«comparison»
 				EOR #$80
-			+«comparison»
+			+«comparison»:
 		«ELSE»
 			«noop»
 				«IF operand.isIndexed»
@@ -538,16 +542,16 @@ class Operations {
 		«IF acc.relative === null»
 			«noop»
 				«branch» +«comparisonIsTrue»
-			+«comparisonIsFalse»
+			+«comparisonIsFalse»:
 				LDA #«Members::FALSE»
 				JMP +«comparisonEnd»
-			+«comparisonIsTrue»
+			+«comparisonIsTrue»:
 				LDA #«Members::TRUE»
-			+«comparisonEnd»
+			+«comparisonEnd»:
 		«ELSE»
 			«noop»
-				«branch» +«acc.relative»:
-			+«comparisonIsFalse»
+				«branch» +«acc.relative»
+			+«comparisonIsFalse»:
 		«ENDIF»
 	'''
 
@@ -582,7 +586,7 @@ class Operations {
 			«branch = sbranch»
 				BVC +«comparison»
 				EOR #$80
-			+«comparison»
+			+«comparison»:
 		«ELSE»
 			«IF acc.type.isUnsigned && operand.type.isSigned»
 				«IF operand.sizeOf > 1»
@@ -642,16 +646,16 @@ class Operations {
 			«IF acc.relative === null»
 				«noop»
 					«branch» +«comparisonIsTrue»
-				+«comparisonIsFalse»
+				+«comparisonIsFalse»:
 					LDA #«Members::FALSE»
 					JMP +«comparisonEnd»
-				+«comparisonIsTrue»
+				+«comparisonIsTrue»:
 					LDA #«Members::TRUE»
-				+«comparisonEnd»
+				+«comparisonEnd»:
 			«ELSE»
 				«noop»
-					«branch» +«acc.relative»:
-				+«comparisonIsFalse»
+					«branch» +«acc.relative»
+				+«comparisonIsFalse»:
 			«ENDIF»
 		«ENDIF»
 	'''
@@ -664,24 +668,24 @@ class Operations {
 				PLA
 				LDX #(«operand.immediate»)
 				BEQ +«shiftEnd»
-			-«shiftLoop»
+			-«shiftLoop»:
 				ASL «Members::TEMP_VAR_NAME1»
 				ROL A
 				DEX
 				BNE -«shiftLoop»
 				PHA
 				LDA «Members::TEMP_VAR_NAME1»
-			+«shiftEnd»
+			+«shiftEnd»:
 		«ELSE»
 			«val labelLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
 				LDX #(«operand.immediate»)
 				BEQ +«shiftEnd»
-			-«labelLoop»
+			-«labelLoop»:
 				ASL A
 				DEX
 				BNE -«labelLoop»
-			+«shiftEnd»
+			+«shiftEnd»:
 		«ENDIF»
 	'''
 
@@ -696,14 +700,14 @@ class Operations {
 				«ENDIF»
 				LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 				BEQ +«shiftEnd»
-			-«shiftLoop»
+			-«shiftLoop»:
 				ASL «Members::TEMP_VAR_NAME1»
 				ROL A
 				DEY
 				BNE -«shiftLoop»
 				PHA
 				LDA «Members::TEMP_VAR_NAME1»
-			+«shiftEnd»
+			+«shiftEnd»:
 		«ELSE»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
@@ -712,11 +716,11 @@ class Operations {
 				«ENDIF»
 				LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 				BEQ +«shiftEnd»
-			-«shiftLoop»
+			-«shiftLoop»:
 				ASL A
 				DEY
 				BNE -«shiftLoop»
-			+«shiftEnd»
+			+«shiftEnd»:
 		«ENDIF»
 	'''
 
@@ -730,13 +734,13 @@ class Operations {
 				BEQ +«shiftEnd»
 				TAX
 				PLA
-			-«shiftLoop»
+			-«shiftLoop»:
 				ASL «Members::TEMP_VAR_NAME1»
 				ROL A
 				DEX
 				BNE -«shiftLoop»
 				PHA
-			+«shiftEnd»
+			+«shiftEnd»:
 				LDA «Members::TEMP_VAR_NAME1»
 		«ELSE»
 			«val shiftLoop = labelForShiftLoop»
@@ -747,11 +751,11 @@ class Operations {
 				BEQ +«shiftEnd»
 				TAX
 				LDA «Members::TEMP_VAR_NAME1»
-			-«shiftLoop»
+			-«shiftLoop»:
 				ASL A
 				DEX
 				BNE -«shiftLoop»
-			+«shiftEnd»
+			+«shiftEnd»:
 				LDA «Members::TEMP_VAR_NAME1»
 		«ENDIF»
 	'''
@@ -764,24 +768,24 @@ class Operations {
 				PLA
 				LDX #(«operand.immediate»)
 				BEQ +«shiftEnd»
-			-«shiftLoop»
+			-«shiftLoop»:
 				LSR A
 				ROR «Members::TEMP_VAR_NAME1»
 				DEX
 				BNE -«shiftLoop»
 				PHA
 				LDA «Members::TEMP_VAR_NAME1»
-			+«shiftEnd»
+			+«shiftEnd»:
 		«ELSE»
 			«val labelLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
 				LDX #(«operand.immediate»)
 				BEQ +«shiftEnd»
-			-«labelLoop»
+			-«labelLoop»:
 				LSR A
 				DEX
 				BNE -«labelLoop»
-			+«shiftEnd»
+			+«shiftEnd»:
 		«ENDIF»
 	'''
 
@@ -812,11 +816,11 @@ class Operations {
 				«ENDIF»
 				LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 				BEQ +«shiftEnd»
-			-«shiftLoop»
+			-«shiftLoop»:
 				LSR A
 				DEY
 				BNE -«shiftLoop»
-			+«shiftEnd»
+			+«shiftEnd»:
 		«ENDIF»
 	'''
 
@@ -830,13 +834,13 @@ class Operations {
 				BEQ +«shiftEnd»
 				TAX
 				PLA
-			-«shiftLoop»
+			-«shiftLoop»:
 				LSR A
 				ROR «Members::TEMP_VAR_NAME1»
 				DEX
 				BNE -«shiftLoop»
 				PHA
-			+«shiftEnd»
+			+«shiftEnd»:
 				LDA «Members::TEMP_VAR_NAME1»
 		«ELSE»
 			«val shiftLoop = labelForShiftLoop»
@@ -847,11 +851,11 @@ class Operations {
 				BEQ +«shiftEnd»
 				TAX
 				LDA «Members::TEMP_VAR_NAME1»
-			-«shiftLoop»
+			-«shiftLoop»:
 				LSR A
 				DEX
 				BNE -«shiftLoop»
-			+«shiftEnd»
+			+«shiftEnd»:
 				LDA «Members::TEMP_VAR_NAME1»
 		«ENDIF»
 	'''
@@ -866,7 +870,7 @@ class Operations {
 			«val labelDone = labelForIncDone»
 				BNE +«labelDone»
 				INC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
-			+«labelDone»
+			+«labelDone»:
 		«ENDIF»
 	'''
 
@@ -879,7 +883,7 @@ class Operations {
 				BNE +«labelDone»
 				INY
 				INC («operand.indirect»), Y
-			+«labelDone»
+			+«labelDone»:
 		«ENDIF»
 	'''
 
@@ -893,7 +897,7 @@ class Operations {
 				LDA «data.absolute»«IF data.isIndexed», X«ENDIF»
 				BNE +«labelSkip»
 				DEC «data.absolute» + 1«IF data.isIndexed», X«ENDIF»
-			+«labelSkip»
+			+«labelSkip»:
 				DEC «data.absolute»«IF data.isIndexed», X«ENDIF»
 		«ELSE»
 			«noop»
@@ -911,7 +915,7 @@ class Operations {
 				INY
 				DEC («data.indirect»), Y
 				DEY
-			+«labelSkip»
+			+«labelSkip»:
 				DEC («data.indirect»), Y
 		«ELSE»
 			«noop»
@@ -1058,30 +1062,30 @@ class Operations {
 				ORA #$7F
 				BMI +«signLabel»
 				LDA #$00
-			+«signLabel»
+			+«signLabel»:
 		«ELSE»
 			«noop»
 				LDA #$00
 		«ENDIF»
 	'''
 
-	private def labelForSignedMSBEnd() '''signedMSBEnd«labelCounter.andIncrement»:'''
+	private def labelForSignedMSBEnd() '''signedMSBEnd«labelCounter.andIncrement»'''
 
-	private def labelForIncDone() '''incDone«labelCounter.andIncrement»:'''
+	private def labelForIncDone() '''incDone«labelCounter.andIncrement»'''
 
-	private def labelForDecMSBSkip() '''decMSBSkip«labelCounter.andIncrement»:'''
+	private def labelForDecMSBSkip() '''decMSBSkip«labelCounter.andIncrement»'''
 
-	private def labelForShiftLoop() '''shiftLoop«labelCounter.andIncrement»:'''
+	private def labelForShiftLoop() '''shiftLoop«labelCounter.andIncrement»'''
 
-	private def labelForShiftEnd() '''shiftEnd«labelCounter.andIncrement»:'''
+	private def labelForShiftEnd() '''shiftEnd«labelCounter.andIncrement»'''
 
-	private def labelForComparison() '''comparison«labelCounter.andIncrement»:'''
+	private def labelForComparison() '''comparison«labelCounter.andIncrement»'''
 
-	private def labelForComparisonIsTrue() '''comparisonIsTrue«labelCounter.andIncrement»:'''
+	private def labelForComparisonIsTrue() '''comparisonIsTrue«labelCounter.andIncrement»'''
 
-	private def labelForComparisonIsFalse() '''comparisonIsFalse«labelCounter.andIncrement»:'''
+	private def labelForComparisonIsFalse() '''comparisonIsFalse«labelCounter.andIncrement»'''
 
-	private def labelForComparisonEnd() '''comparisonEnd«labelCounter.andIncrement»:'''
+	private def labelForComparisonEnd() '''comparisonEnd«labelCounter.andIncrement»'''
 
 	private def void noop() {
 	}

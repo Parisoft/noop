@@ -68,61 +68,50 @@ Expression:
 	AssignmentExpression;
 
 AssignmentExpression returns Expression:
-	OrExpression ({AssignmentExpression.left=current} assignment=AssignmentType right=Expression)?;
+	LogicalExpression ({AssignmentExpression.left=current} assignment=AssignmentType right=Expression)?;
 
-OrExpression returns Expression:
-	AndExpression ({OrExpression.left=current} 'or' right=AndExpression)*;
-
-AndExpression returns Expression:
-	BitwiseExpression ({AndExpression.left=current} 'and' right=BitwiseExpression)*;
+LogicalExpression returns Expression:
+	BitwiseExpression (({OrExpression.left=current} 'or' | {AndExpression.left=current} 'and') right=BitwiseExpression)*;
 
 BitwiseExpression returns Expression:
 	EqualityExpression (({BOrExpression.left=current} '|' | {BAndExpression.left=current} '&') right=EqualityExpression)*;
 
 EqualityExpression returns Expression:
-	ComparisonExpression (({EqualsExpression.left=current} '=' | {DifferExpression.left=current} '#')
-	right=ComparisonExpression)*;
+	RelationalExpression (({EqualsExpression.left=current} '=' | {DifferExpression.left=current} '#')
+	right=RelationalExpression)*;
 
-ComparisonExpression returns Expression:
+RelationalExpression returns Expression:
 	InheritsExpression
 	(({GtExpression.left=current} '>' |
 	{GeExpression.left=current} '>=' |
 	{LtExpression.left=current} '<' |
 	{LeExpression.left=current} '<=')
-	right=AddOrSubExpression)*;
+	right=AdditiveExpression)*;
 
 InheritsExpression returns Expression:
 	ShiftExpression ({InheritsExpression.left=current} 'inherits' type=[NoopClass|CID])?;
 
 ShiftExpression returns Expression:
-	AddOrSubExpression (({LShiftExpression.left=current} '<<' | {RShiftExpression.left=current} '>>')
-	right=AddOrSubExpression)*;
+	AdditiveExpression (({LShiftExpression.left=current} '<<' | {RShiftExpression.left=current} '>>')
+	right=AdditiveExpression)*;
 
-AddOrSubExpression returns Expression:
-	MulOrDivExpression (({AddExpression.left=current} '+' | {SubExpression.left=current} '-')
-	right=MulOrDivExpression)*;
+AdditiveExpression returns Expression:
+	MultiplicativeExpression (({AddExpression.left=current} '+' | {SubExpression.left=current} '-')
+	right=MultiplicativeExpression)*;
 
-MulOrDivExpression returns Expression:
-	EorExpression (({MulExpression.left=current} '*' | {DivExpression.left=current} '/')
-	right=EorExpression)*;
+MultiplicativeExpression returns Expression:
+	UnaryExpression (({MulExpression.left=current} '*' | {DivExpression.left=current} '/')
+	right=UnaryExpression)*;
 
-EorExpression returns Expression:
-	NotExpression | {EorExpression} '~' right=EorExpression;
-
-NotExpression returns Expression:
-	SigNegExpression | {NotExpression} 'not' right=NotExpression;
-
-SigNegExpression returns Expression:
-	SigPosExpression | {SigNegExpression} '-' right=SigNegExpression;
-
-SigPosExpression returns Expression:
-	DecExpression | {SigPosExpression} '+' right=SigPosExpression;
-
-DecExpression returns Expression:
-	IncExpression | {DecExpression} '--' right=DecExpression;
-
-IncExpression returns Expression:
-	CastExpression | {IncExpression} '++' right=IncExpression;
+UnaryExpression returns Expression:
+	CastExpression |
+	(({EorExpression} '~' |
+	{NotExpression} 'not' |
+	{SigNegExpression} '-' |
+	{SigPosExpression} '+' |
+	{DecExpression} '--' |
+	{IncExpression} '++')
+	right=UnaryExpression);
 
 CastExpression returns Expression:
 	SelectionExpression ({CastExpression.left=current} 'as' type=[NoopClass|CID])?;
