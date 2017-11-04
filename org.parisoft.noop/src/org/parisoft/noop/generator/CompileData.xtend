@@ -46,6 +46,7 @@ class CompileData {
 	@Accessors var NoopClass type
 	@Accessors var Mode mode = Mode::COPY
 	@Accessors var AllocData allocation
+	@Accessors var boolean accLoaded = false
 
 	override toString() '''
 		StorageData{
@@ -60,6 +61,7 @@ class CompileData {
 			,container=«container»
 			,type=«type?.name»
 			,mode=«mode»
+			,accLoaded=«accLoaded»
 		}
 	'''
 
@@ -81,6 +83,7 @@ class CompileData {
 			container = src.container
 			type = src.type
 			mode = src.mode
+			accLoaded = src.isAccLoaded
 		]
 	}
 	

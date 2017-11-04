@@ -71,12 +71,14 @@ AssignmentExpression returns Expression:
 	LogicalExpression ({AssignmentExpression.left=current} LF* assignment=AssignmentType LF* right=Expression)?;
 
 LogicalExpression returns Expression:
-	BitwiseExpression (({OrExpression.left=current} LF* 'or' | {AndExpression.left=current} LF* 'and')
-	LF* right=BitwiseExpression)*;
+	BitwiseOrExpression (({OrExpression.left=current} LF* 'or' | {AndExpression.left=current} LF* 'and')
+	LF* right=BitwiseOrExpression)*;
 
-BitwiseExpression returns Expression:
-	EqualityExpression (({BOrExpression.left=current} LF* '|' | {BAndExpression.left=current} LF* '&')
-	LF* right=EqualityExpression)*;
+BitwiseOrExpression returns Expression:
+	BitwiseAndExpression ({BOrExpression.left=current} LF* '|' LF* right=BitwiseAndExpression)*;
+
+BitwiseAndExpression returns Expression:
+	EqualityExpression ({BAndExpression.left=current} LF* '&' LF* right=EqualityExpression)*;
 
 EqualityExpression returns Expression:
 	RelationalExpression (({EqualsExpression.left=current} LF* '=' | {DifferExpression.left=current} LF* '#')

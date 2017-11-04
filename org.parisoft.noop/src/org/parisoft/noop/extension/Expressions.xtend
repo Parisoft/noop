@@ -1098,15 +1098,17 @@ class Expressions {
 			operation = binaryOperation
 			relative = data.relative
 			type = if (data.type.isBoolean) left.typeOf else data.type
+			accLoaded = true
 			mode = Mode::OPERATE
 		]»
-			«IF data.operation !== null»
+		«IF data.operation !== null && data.isAccLoaded»
+			«data.accLoaded = false»
 				PHA
-			«ENDIF»
+		«ENDIF»
 		«left.compile(lda)»
 		«right.compile(opr)»
 		«IF data.mode === Mode::OPERATE»
-			«noop»
+			«data.accLoaded = true»
 				«FOR i : 0..< data.sizeOf»
 					STA «Members::TEMP_VAR_NAME2»«IF i > 0» + «i»«ENDIF»
 					PLA
@@ -1206,14 +1208,15 @@ class Expressions {
 			operation = unaryOperation
 			mode = Mode::OPERATE
 		]»
-			«IF data.operation !== null»
+		«IF data.operation !== null && data.isAccLoaded»
+			«data.accLoaded = false»
 				PHA
-			«ENDIF» 
+		«ENDIF» 
 		«expr.compile(lda)»
 		«acc.operate»
 		«IF data.mode === Mode::OPERATE»
 			«FOR i : 0 ..< data.sizeOf»
-				«noop»
+				«data.accLoaded = true»
 					STA «Members::TEMP_VAR_NAME2»«IF i > 0» + «i»«ENDIF»
 					PLA
 			«ENDFOR»

@@ -86,7 +86,7 @@ class NoopGenerator extends AbstractGenerator {
 			val jsrBeforeRts = line.startsWith('\tJSR') && lines.get(i + 1).startsWith('\tRTS')
 
 			if (jsrBeforeRts) {
-				builder.append('''	JMP «line.substring(4)»''').append(System::lineSeparator)
+				builder.append('''	JMP «line.substring(5)»''').append(System::lineSeparator)
 			} else if (!(pushPull || pullPush || rtsAfterJsr)) {
 				builder.append(line).append(System::lineSeparator)
 			}
