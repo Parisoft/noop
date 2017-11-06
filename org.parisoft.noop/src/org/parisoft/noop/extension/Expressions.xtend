@@ -716,6 +716,18 @@ class Expressions {
 							right = expression.right
 						]»
 						«sub.compile(ref => [mode = Mode::COPY])»
+					«ELSEIF expression.assignment === AssignmentType::MUL_ASSIGN»
+						«val mul = NoopFactory::eINSTANCE.createMulExpression => [
+							left = expression.left
+							right = expression.right
+						]»
+						«mul.compile(ref => [mode = Mode::COPY])»
+					«ELSEIF expression.assignment === AssignmentType::DIV_ASSIGN»
+						«val div = NoopFactory::eINSTANCE.createDivExpression => [
+							left = expression.left
+							right = expression.right
+						]»
+						«div.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BOR_ASSIGN»
 						«val bor = NoopFactory::eINSTANCE.createBOrExpression => [
 							left = expression.left
@@ -743,8 +755,8 @@ class Expressions {
 					«ENDIF»
 					«ref.resolveTo(data)»
 				'''
-				OrExpression: '''«compileOr(expression.left, expression.right, data)»'''
-				AndExpression: '''«compileAnd(expression.left, expression.right, data)»'''
+				OrExpression: '''«expression.left.compileOr(expression.right, data)»'''
+				AndExpression: '''«expression.left.compileAnd(expression.right, data)»'''
 				EqualsExpression: '''«Operation::COMPARE_EQ.compileBinary(expression.left, expression.right, data)»'''
 				DifferExpression: '''«Operation::COMPARE_NE.compileBinary(expression.left, expression.right, data)»'''
 				LtExpression: '''«Operation::COMPARE_LT.compileBinary(expression.left, expression.right, data)»'''
@@ -753,8 +765,8 @@ class Expressions {
 				GeExpression: '''«Operation::COMPARE_GE.compileBinary(expression.left, expression.right, data)»'''
 				AddExpression: '''«Operation::ADDITION.compileBinary(expression.left, expression.right, data)»'''
 				SubExpression: '''«Operation::SUBTRACTION.compileBinary(expression.left, expression.right, data)»'''
-				MulExpression: '''«Operation::MULTIPLICATION.compileBinary(expression.left, expression.right, data)»'''
-				DivExpression: '''«Operation::DIVISION.compileBinary(expression.left, expression.right, data)»'''
+				MulExpression: '''«expression.left.compileMultiplication(expression.right, data)»'''
+				DivExpression: '''«expression.left.compileDivision(expression.right, data)»'''
 				BOrExpression: '''«Operation::BIT_OR.compileBinary(expression.left, expression.right, data)»'''
 				BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, data)»'''
 				LShiftExpression: '''«Operation::BIT_SHIFT_LEFT.compileBinary(expression.left, expression.right, data)»'''
@@ -901,7 +913,7 @@ class Expressions {
 						«noop»
 							RTS
 					«ELSEIF expression.dimension.isNotEmpty»
-						TODO: compile array constructor call
+						;TODO: compile array constructor call
 					«ELSEIF expression.type.isPrimitive»
 						«val defaultByte = NoopFactory::eINSTANCE.createByteLiteral => [value = 0]»
 						«defaultByte.compile(data)»
@@ -1128,6 +1140,34 @@ class Expressions {
 			«res.copyTo(data)»
 		«ENDIF»
 	'''
+
+	private def compileMultiplication(Expression left, Expression right, CompileData data) {
+		try {
+			val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
+			Operation::MULTIPLICATION.compileBinary(const, right, data)
+		} catch (NonConstantExpressionException exception) {
+			try {
+				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+				Operation::MULTIPLICATION.compileBinary(left, const, data)
+			} catch (NonConstantExpressionException exception2) {
+				Operation::MULTIPLICATION.compileBinary(left, right, data)
+			}
+		}
+	}
+	
+	private def compileDivision(Expression left, Expression right, CompileData data) {
+		try {
+			val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
+			Operation::DIVISION.compileBinary(const, right, data)
+		} catch (NonConstantExpressionException exception) {
+			try {
+				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+				Operation::DIVISION.compileBinary(left, const, data)
+			} catch (NonConstantExpressionException exception2) {
+				Operation::DIVISION.compileBinary(left, right, data)
+			}
+		}
+	}
 
 	private def compileOr(Expression left, Expression right, CompileData data) '''
 		«val lctx = new CompileData => [

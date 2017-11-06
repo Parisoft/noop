@@ -4,6 +4,9 @@ import com.google.inject.Inject
 import java.util.concurrent.atomic.AtomicInteger
 import org.parisoft.noop.generator.CompileData
 
+import static extension java.lang.Integer.*
+import static extension java.lang.Math.*
+
 class Operations {
 
 	@Inject extension Datas
@@ -21,6 +24,7 @@ class Operations {
 			case COMPARE_GE: acc.greaterEqualsThan(operand)
 			case ADDITION: acc.add(operand)
 			case SUBTRACTION: acc.subtract(operand)
+			case MULTIPLICATION: acc.multiply(operand)
 			case BIT_OR: acc.bitOr(operand)
 			case BIT_AND: acc.bitAnd(operand)
 			case BIT_SHIFT_LEFT: acc.bitShiftLeft(operand)
@@ -117,6 +121,16 @@ class Operations {
 			acc.operateAbsolute('SBC', 'SEC', operand)
 		} else if (operand.indirect !== null) {
 			acc.operateIndirect('SBC', 'SEC', operand)
+		}
+	}
+
+	def multiply(CompileData acc, CompileData operand) {
+		if (operand.immediate !== null) {
+			acc.multiplyImmediate(operand)
+		} else if (operand.absolute !== null) {
+			acc.multiplyAbsolute(operand)
+		} else if (operand.indirect !== null) {
+			acc.multiplyIndirect(operand)
 		}
 	}
 
@@ -921,6 +935,121 @@ class Operations {
 			«noop»
 				DEC («data.indirect»), Y
 		«ENDIF»
+	'''
+
+	private def multiplyImmediate(CompileData multiplicand, CompileData multiplier) '''
+		«val const = multiplier.immediate.valueOf»
+		«val ONE = '1'.charAt(0)»
+		«val bits = const.abs.toBinaryString.toCharArray.reverse»
+		«IF multiplicand.sizeOf > 1»
+			«IF const === 0»
+				«noop»
+					PLA
+					LDA #$00
+					PHA
+			«ELSEIF const.abs > 1 && bits.filter[it == ONE].size == 1»
+				«noop»
+					TAX
+					PLA
+					TAY
+					«FOR i : 0..< bits.indexOf(ONE)»
+						TXA
+						ASL A
+						TAX
+						TYA
+						ROL A
+						«IF i < bits.indexOf(ONE) - 1»
+							TAY
+						«ENDIF»
+					«ENDFOR»
+					PHA
+					TXA
+			«ELSEIF const.abs > 1»
+				«var lastPower = new AtomicInteger»
+					TAX
+					PLA
+					TAY
+				«FOR i : 0..< bits.size»
+					«IF bits.get(i) == ONE»
+						«noop»
+							«FOR pow : 0..< i - lastPower.get»
+								TXA
+								ASL A
+								TAX
+								TYA
+								ROL A
+								TAY
+							«ENDFOR»
+							«IF i == 0 || lastPower.get == 0 && bits.head != ONE»
+								STX «Members::TEMP_VAR_NAME1»
+								STA «Members::TEMP_VAR_NAME1» + 1
+							«ELSEIF i == bits.size - 1»
+								CLC
+								TXA
+								ADC «Members::TEMP_VAR_NAME1»
+								TAX
+								TYA
+								ADC «Members::TEMP_VAR_NAME1» + 1
+								PHA
+								TXA
+							«ELSE»
+								CLC
+								TXA
+								ADC «Members::TEMP_VAR_NAME1»
+								STA «Members::TEMP_VAR_NAME1»
+								TYA
+								ADC «Members::TEMP_VAR_NAME1» + 1
+								STA «Members::TEMP_VAR_NAME1» + 1
+							«ENDIF»
+						«lastPower.set(i)»
+					«ENDIF»
+				«ENDFOR»
+			«ENDIF»
+		«ELSE»
+			«IF const === 0»
+				«noop»
+					LDA #$00
+			«ELSEIF const.abs > 1 && bits.filter[it == ONE].size == 1»
+				«noop»
+					«FOR i : 0..< bits.indexOf(ONE)»
+						ASL A
+					«ENDFOR»
+			«ELSEIF const.abs > 1»
+				«var lastPower = new AtomicInteger»
+				«FOR i : 0..< bits.size»
+					«IF bits.get(i) == ONE»
+						«noop»
+							«FOR pow : 0..< i - lastPower.get»
+								ASL A
+							«ENDFOR»
+							«IF i == 0 || lastPower.get == 0 && bits.head != ONE»
+								STA «Members::TEMP_VAR_NAME1»
+							«ELSEIF i == bits.size - 1»
+								CLC
+								ADC «Members::TEMP_VAR_NAME1»
+							«ELSE»
+								TAX
+								CLC
+								ADC «Members::TEMP_VAR_NAME1»
+								STA «Members::TEMP_VAR_NAME1»
+								TXA
+							«ENDIF»
+						«lastPower.set(i)»
+					«ENDIF»
+				«ENDFOR»
+			«ENDIF»
+		«ENDIF»
+		«IF const < 0»
+			«multiplicand.signum»
+		«ENDIF»
+	'''
+
+	private def multiplyAbsolute(CompileData multiplicand, CompileData multiplier) '''
+		
+	'''
+
+	private def multiplyIndirect(CompileData multiplicand, CompileData multiplier) '''
+		
 	'''
 
 	private def operateImmediate(CompileData operand, String instruction) '''
