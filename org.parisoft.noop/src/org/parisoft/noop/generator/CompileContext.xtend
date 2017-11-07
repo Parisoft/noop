@@ -44,6 +44,7 @@ class CompileContext {
 	@Accessors var Operation operation // Ex.: ORA a
 	@Accessors var String container
 	@Accessors var NoopClass type
+	@Accessors var NoopClass opType
 	@Accessors var Mode mode = Mode::COPY
 	@Accessors var AllocContext allocation
 	@Accessors var boolean accLoaded = false
@@ -62,6 +63,7 @@ class CompileContext {
 			,type=«type?.name»
 			,mode=«mode»
 			,accLoaded=«accLoaded»
+			,opType=«opType»
 		}
 	'''
 
@@ -84,6 +86,7 @@ class CompileContext {
 			type = src.type
 			mode = src.mode
 			accLoaded = src.isAccLoaded
+			opType = src.opType
 		]
 	}
 	

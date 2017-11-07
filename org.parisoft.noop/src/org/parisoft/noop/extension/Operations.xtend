@@ -194,11 +194,11 @@ class Operations {
 		«noop»
 			EOR #$FF
 			«IF acc.sizeOf > 1»
-				STA «Members::TEMP_VAR_NAME1»
+				TAX
 				PLA
 				EOR #$FF
 				PHA
-				LDA «Members::TEMP_VAR_NAME1»
+				TXA
 			«ENDIF»
 	'''
 
@@ -237,49 +237,43 @@ class Operations {
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«val comparisonEnd = labelForComparisonEnd»
-		«IF acc.sizeOf > 1»
+		«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 			«noop»
 				CMP #<(«operand.immediate»)
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
-			«IF operand.sizeOf > 1»
-				«noop»
-					PLA
-					CMP #>(«operand.immediate»)
-			«ELSE»
-				«operand.loadMSB»
-					STA «Members::TEMP_VAR_NAME1»
-					PLA
-					CMP «Members::TEMP_VAR_NAME1»
-			«ENDIF»
-			«IF acc.relative === null»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
-				+«comparisonIsFalse»
-					LDA #«Members::FALSE»
-					JMP +«comparisonEnd»
-				+«comparisonIsTrue»
-					LDA #«Members::TRUE»
-				+«comparisonEnd»
-			«ELSE»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
-				+«comparisonIsFalse»
-			«ENDIF»
+				PLA
+				CMP #>(«operand.immediate»)
+		«ELSEIF acc.sizeOf > 1»
+			«noop»
+				CMP #(«operand.immediate»)
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+			«operand.loadMSB»
+				STA «Members::TEMP_VAR_NAME1»
+				PLA
+				CMP «Members::TEMP_VAR_NAME1»
+		«ELSEIF operand.sizeOf > 1»
+			«noop»
+				CMP #<(«operand.immediate»)
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+			«acc.loadMSB»
+				CMP #>(«operand.immediate»)
 		«ELSE»
 			«noop»
 				CMP #(«operand.immediate»)
-			«IF acc.relative === null»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
-					LDA #«Members::FALSE»
-					JMP +«comparisonEnd»
-				+«comparisonIsTrue»
-					LDA #«Members::TRUE»
-				+«comparisonEnd»
-			«ELSE»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
-			«ENDIF»
+		«ENDIF»
+		«IF acc.relative === null»
+			«noop»
+				B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
+			+«comparisonIsFalse»:
+				LDA #«Members::FALSE»
+				JMP +«comparisonEnd»
+			+«comparisonIsTrue»:
+				LDA #«Members::TRUE»
+			+«comparisonEnd»:
+		«ELSE»
+			«noop»
+				B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
+			+«comparisonIsFalse»:
 		«ENDIF»
 	'''
 
@@ -290,49 +284,38 @@ class Operations {
 			«IF operand.isIndexed»
 				LDX «operand.index»
 			«ENDIF»
-		«IF acc.sizeOf > 1»
+			CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+		«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 			«noop»
-				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
-			«IF operand.sizeOf > 1»
-				«noop»
-					PLA
-					CMP «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
-			«ELSE»
-				«operand.loadMSB»
-					STA «Members::TEMP_VAR_NAME1»
-					PLA
-					CMP «Members::TEMP_VAR_NAME1»
-			«ENDIF»
-			«IF acc.relative === null»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
-				+«comparisonIsFalse»
-					LDA #«Members::FALSE»
-					JMP +«comparisonEnd»
-				+«comparisonIsTrue»
-					LDA #«Members::TRUE»
-				+«comparisonEnd»
-			«ELSE»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
-				+«comparisonIsFalse»
-			«ENDIF»
+				PLA
+				CMP «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+		«ELSEIF acc.sizeOf > 1»
+			«noop»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+			«operand.loadMSB»
+				STA «Members::TEMP_VAR_NAME1»
+				PLA
+				CMP «Members::TEMP_VAR_NAME1»
+		«ELSEIF operand.sizeOf > 1»
+			«noop»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+			«acc.loadMSB»
+				CMP «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+		«ENDIF»
+		«IF acc.relative === null»
+			«noop»
+				B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
+			+«comparisonIsFalse»:
+				LDA #«Members::FALSE»
+				JMP +«comparisonEnd»
+			+«comparisonIsTrue»:
+				LDA #«Members::TRUE»
+			+«comparisonEnd»:
 		«ELSE»
 			«noop»
-				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-			«IF acc.relative === null»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
-					LDA #«Members::FALSE»
-					JMP +«comparisonEnd»
-				+«comparisonIsTrue»
-					LDA #«Members::TRUE»
-				+«comparisonEnd»
-			«ELSE»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
-			«ENDIF»
+				B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
+			+«comparisonIsFalse»:
 		«ENDIF»
 	'''
 
@@ -341,49 +324,40 @@ class Operations {
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«val comparisonEnd = labelForComparisonEnd»
 			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
-		«IF acc.sizeOf > 1»
+			CMP («operand.indirect»), Y
+		«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 			«noop»
-				CMP «operand.indirect», Y
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
-			«IF operand.sizeOf > 1»
-				«noop»
-					PLA
-					CMP «operand.indirect», Y
-			«ELSE»
-				«operand.loadMSB»
-					STA «Members::TEMP_VAR_NAME1»
-					PLA
-					CMP «Members::TEMP_VAR_NAME1»
-			«ENDIF»
-			«IF acc.relative === null»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
-				+«comparisonIsFalse»
-					LDA #«Members::FALSE»
-					JMP +«comparisonEnd»
-				+«comparisonIsTrue»
-					LDA #«Members::TRUE»
-				+«comparisonEnd»
-			«ELSE»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
-				+«comparisonIsFalse»
-			«ENDIF»
+				PLA
+				INY
+				CMP («operand.indirect»), Y
+		«ELSEIF acc.sizeOf > 1»
+			«noop»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+			«operand.loadMSB»
+				STA «Members::TEMP_VAR_NAME1»
+				PLA
+				CMP «Members::TEMP_VAR_NAME1»
+		«ELSEIF operand.sizeOf > 1»
+			«noop»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+			«acc.loadMSB»
+				INY
+				CMP («operand.indirect»), Y
+		«ENDIF»
+		«IF acc.relative === null»
+			«noop»
+				B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
+			+«comparisonIsFalse»:
+				LDA #«Members::FALSE»
+				JMP +«comparisonEnd»
+			+«comparisonIsTrue»:
+				LDA #«Members::TRUE»
+			+«comparisonEnd»:
 		«ELSE»
 			«noop»
-				CMP («operand.indirect»), Y
-			«IF acc.relative === null»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«comparisonIsTrue»
-					LDA #«Members::FALSE»
-					JMP +«comparisonEnd»
-				+«comparisonIsTrue»
-					LDA #«Members::TRUE»
-				+«comparisonEnd»
-			«ELSE»
-				«noop»
-					B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
-			«ENDIF»
+				B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
+			+«comparisonIsFalse»:
 		«ENDIF»
 	'''
 
@@ -394,19 +368,23 @@ class Operations {
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«IF acc.type.isSigned && operand.type.isSigned»
-			«IF acc.sizeOf > 1»
+			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 				«noop»
 					CMP #<(«operand.immediate»)
-				«IF operand.sizeOf > 1»
-					«noop»
-						PLA
-						SBC #>(«operand.immediate»)
-				«ELSE»
-					«operand.loadMSB»
-						STA «Members::TEMP_VAR_NAME1»
-						PLA
-						SBC «Members::TEMP_VAR_NAME1»
-				«ENDIF»
+					PLA
+					SBC #>(«operand.immediate»)
+			«ELSEIF acc.sizeOf > 1»
+				«noop»
+					CMP #(«operand.immediate»)
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					SBC «Members::TEMP_VAR_NAME1»
+			«ELSEIF operand.sizeOf > 1»
+				«noop»
+					CMP #<(«operand.immediate»)
+				«acc.loadMSB»
+					SBC #>(«operand.immediate»)
 			«ELSE»
 				«noop»
 					SEC
@@ -415,7 +393,7 @@ class Operations {
 			«branch = sbranch»
 				BVC +«comparison»
 				EOR #$80
-			+«comparison»
+			+«comparison»:
 		«ELSE»
 			«IF acc.type.isUnsigned && operand.type.isSigned»
 				«IF operand.sizeOf > 1»
@@ -430,30 +408,34 @@ class Operations {
 			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
 				«IF acc.sizeOf > 1»
 					«noop»
-						STA «Members::TEMP_VAR_NAME1»
+						TAY
 						PLA
 						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						PHA
-						LDA «Members::TEMP_VAR_NAME1»
+						TYA
 				«ELSE»
 					«noop»
 						TAY
 						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
 			«ENDIF»
-			«IF acc.sizeOf > 1»
+			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 				«noop»
 					CMP #<(«operand.immediate»)
-				«IF operand.sizeOf > 1»
-					«noop»
-						PLA
-						SBC #>«operand.immediate»
-				«ELSE»
-					«operand.loadMSB»
-						STA «Members::TEMP_VAR_NAME1»
-						PLA
-						SBC «Members::TEMP_VAR_NAME1»
-				«ENDIF»
+					PLA
+					SBC #>«operand.immediate»
+			«ELSEIF acc.sizeOf > 1»
+				«noop»
+					CMP #(«operand.immediate»)
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					SBC «Members::TEMP_VAR_NAME1»
+			«ELSEIF operand.sizeOf > 1»
+				«noop»
+					CMP #<(«operand.immediate»)
+				«acc.loadMSB»
+					SBC #>«operand.immediate»
 			«ELSE»
 				«noop»
 					CMP #(«operand.immediate»)
@@ -462,16 +444,16 @@ class Operations {
 		«IF acc.relative === null»
 			«noop»
 				«branch» +«comparisonIsTrue»
-			+«comparisonIsFalse»
+			+«comparisonIsFalse»:
 				LDA #«Members::FALSE»
 				JMP +«comparisonEnd»
-			+«comparisonIsTrue»
+			+«comparisonIsTrue»:
 				LDA #«Members::TRUE»
-			+«comparisonEnd»
+			+«comparisonEnd»:
 		«ELSE»
 			«noop»
 				«branch» +«acc.relative»
-			+«comparisonIsFalse»
+			+«comparisonIsFalse»:
 		«ENDIF»
 	'''
 
@@ -486,19 +468,23 @@ class Operations {
 				«IF operand.isIndexed»
 					LDX «operand.index»
 				«ENDIF»
-			«IF acc.sizeOf > 1»
+			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 				«noop»
 					CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-				«IF operand.sizeOf > 1»
-					«noop»
-						PLA
-						SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
-				«ELSE»
-					«operand.loadMSB»
-						STA «Members::TEMP_VAR_NAME1»
-						PLA
-						SBC «Members::TEMP_VAR_NAME1»
-				«ENDIF»
+					PLA
+					SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+			«ELSEIF acc.sizeOf > 1»
+				«noop»
+					CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					SBC «Members::TEMP_VAR_NAME1»
+			«ELSEIF operand.sizeOf > 1»
+				«noop»
+					CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				«acc.loadMSB»
+					SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
 			«ELSE»
 				«noop»
 					SEC
@@ -526,31 +512,31 @@ class Operations {
 			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
 				«IF acc.sizeOf > 1»
 					«noop»
-						STA «Members::TEMP_VAR_NAME1»
+						TAY
 						PLA
 						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						PHA
-						LDA «Members::TEMP_VAR_NAME1»
+						TYA
 				«ELSE»
 					«noop»
-						PHA
-						PLA
+						TAY
 						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
 			«ENDIF»
 			«noop»
 				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-			«IF acc.sizeOf > 1»
-				«IF operand.sizeOf > 1»
-					«noop»
-						PLA
-						SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
-				«ELSE»
-					«operand.loadMSB»
-						STA «Members::TEMP_VAR_NAME1»
-						PLA
-						SBC «Members::TEMP_VAR_NAME1»
-				«ENDIF»
+			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+				«noop»
+					PLA
+					SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+			«ELSEIF acc.sizeOf > 1»
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					SBC «Members::TEMP_VAR_NAME1»
+			«ELSEIF operand.sizeOf > 1»
+				«acc.loadMSB»
+					SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
 			«ENDIF»
 		«ENDIF»
 		«IF acc.relative === null»
@@ -578,20 +564,25 @@ class Operations {
 		«IF acc.type.isSigned && operand.type.isSigned»
 			«noop»
 				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
-			«IF acc.sizeOf > 1»
+			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 				«noop»
 					CMP («operand.indirect»), Y
-				«IF operand.sizeOf > 1»
-					«noop»
-						INY
-						PLA
-						SBC («operand.indirect»), Y
-				«ELSE»
-					«operand.loadMSB»
-						STA «Members::TEMP_VAR_NAME1»
-						PLA
-						SBC «Members::TEMP_VAR_NAME1»
-				«ENDIF»
+					PLA
+					INY
+					SBC («operand.indirect»), Y
+			«ELSEIF acc.sizeOf > 1»
+				«noop»
+					CMP («operand.indirect»), Y
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					SBC «Members::TEMP_VAR_NAME1»
+			«ELSEIF operand.sizeOf > 1»
+				«noop»
+					CMP («operand.indirect»), Y
+				«acc.loadMSB»
+					INY
+					SBC («operand.indirect»), Y
 			«ELSE»
 				«noop»
 					SEC
@@ -611,51 +602,54 @@ class Operations {
 						«ELSE»
 							LDY #$01
 						«ENDIF»
-						PHA
+						TAX
 						LDA («operand.indirect»), Y
 						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
-						PLA
+						TXA
 						DEY
 				«ELSE»
 					«noop»
 						LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
-						PHA
+						TAX
 						LDA («operand.indirect»), Y
 						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
-						PLA
+						TXA
 				«ENDIF»
 			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
 				«IF acc.sizeOf > 1»
 					«noop»
-						STA «Members::TEMP_VAR_NAME1»
+						TAX
 						PLA
 						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 						PHA
-						LDA «Members::TEMP_VAR_NAME1»
+						TXA
 				«ELSE»
 					«noop»
-						PHA
-						PLA
+						TAX
 						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
+				«noop»
+					LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 			«ELSE»
 				«noop»
 					LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 			«ENDIF»
 			«noop»
 				CMP («operand.indirect»), Y
-			«IF acc.sizeOf > 1»
-				«IF operand.sizeOf > 1»
-					«noop»
-						INY
-						PLA
-						SBC («operand.indirect»), Y
-				«ELSE»
-					«operand.loadMSB»
-						STA «Members::TEMP_VAR_NAME1»
-						PLA
-						SBC «Members::TEMP_VAR_NAME1»
-				«ENDIF»
+			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+				«noop»
+					PLA
+					INY
+					SBC («operand.indirect»), Y
+			«ELSEIF acc.sizeOf > 1»
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					SBC «Members::TEMP_VAR_NAME1»
+			«ELSEIF operand.sizeOf > 1»
+				«acc.loadMSB»
+					INY
+					SBC («operand.indirect»), Y
 			«ENDIF»
 			«IF acc.relative === null»
 				«noop»
@@ -1062,26 +1056,34 @@ class Operations {
 	'''
 
 	private def operateImmediate(CompileContext acc, String instruction, String clear, CompileContext operand) '''
-		«IF acc.sizeOf > 1»
+		«IF acc.sizeOfOp > 1»
 			«noop»
 				«IF clear !== null»
 					«clear»
 				«ENDIF»
 				«instruction» #<(«operand.immediate»)
-				STA «Members::TEMP_VAR_NAME1»
-			«IF operand.sizeOf > 1»
+				TAX
+			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 				«noop»
 					PLA
 					«instruction» #>(«operand.immediate»)
+			«ELSEIF acc.sizeOf > 1»
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					«instruction» «Members::TEMP_VAR_NAME1»
+			«ELSEIF operand.sizeOf > 1»
+				«acc.loadMSB»
+					«instruction» #>(«operand.immediate»)
 			«ELSE»
 				«operand.loadMSB»
-					STA «Members::TEMP_VAR_NAME1» + 1
-					PLA
-					«instruction» «Members::TEMP_VAR_NAME1» + 1
+					STA «Members::TEMP_VAR_NAME1»
+				«acc.loadMSB»
+					«instruction» «Members::TEMP_VAR_NAME1»
 			«ENDIF»
 			«noop»
 				PHA
-				LDA «Members::TEMP_VAR_NAME1»
+				TXA
 		«ELSE»
 			«noop»
 				«IF clear !== null»
@@ -1112,22 +1114,30 @@ class Operations {
 				«clear»
 			«ENDIF»
 			«instruction» «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-		«IF acc.sizeOf > 1»
+		«IF acc.sizeOfOp > 1»
 			«noop»
-				STA «Members::TEMP_VAR_NAME1»
-			«IF operand.sizeOf > 1»
+				TAY
+			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 				«noop»
 					PLA
 					«instruction» «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+			«ELSEIF acc.sizeOf > 1»
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					«instruction» «Members::TEMP_VAR_NAME1»
+			«ELSEIF operand.sizeOf > 1»
+				«acc.loadMSB»
+					«instruction» «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
 			«ELSE»
 				«operand.loadMSB»
-					STA «Members::TEMP_VAR_NAME1» + 1
-					PLA
-					«instruction» «Members::TEMP_VAR_NAME1» + 1
+					STA «Members::TEMP_VAR_NAME1»
+				«acc.loadMSB»
+					«instruction» «Members::TEMP_VAR_NAME1»
 			«ENDIF»
 			«noop»
 				PHA
-				LDA «Members::TEMP_VAR_NAME1»
+				TYA
 		«ENDIF»
 	'''
 
@@ -1148,23 +1158,31 @@ class Operations {
 				«clear»
 			«ENDIF»
 			«instruction» («operand.indirect»), Y
-		«IF acc.sizeOf > 1»
+		«IF acc.sizeOfOp > 1»
 			«noop»
-				STA «Members::TEMP_VAR_NAME1»
-			«IF operand.sizeOf > 1»
+				TAX
+			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 				«noop»
 					INY
 					PLA
 					«instruction» («operand.indirect»), Y
+			«ELSEIF acc.sizeOf > 1»
+				«operand.loadMSB»
+					STA «Members::TEMP_VAR_NAME1»
+					PLA
+					«instruction» «Members::TEMP_VAR_NAME1»
+			«ELSEIF operand.sizeOf > 1»
+				«acc.loadMSB»
+					«instruction» («operand.indirect»), Y
 			«ELSE»
 				«operand.loadMSB»
-					STA «Members::TEMP_VAR_NAME1» + 1
-					PLA
-					«instruction» «Members::TEMP_VAR_NAME1» + 1
+					STA «Members::TEMP_VAR_NAME1»
+				«acc.loadMSB»
+					«instruction» «Members::TEMP_VAR_NAME1»
 			«ENDIF»
 			«noop»
 				PHA
-				LDA «Members::TEMP_VAR_NAME1»
+				TXA
 		«ENDIF»
 	'''
 

@@ -19,8 +19,12 @@ class Datas {
 	val loopThreshold = 9
 	val labelCounter = new AtomicInteger
 
-	def int sizeOf(CompileContext ctx) {
+	def sizeOf(CompileContext ctx) {
 		ctx.type.sizeOf
+	}
+	
+	def sizeOfOp(CompileContext ctx) {
+		ctx.opType.sizeOf
 	}
 
 	def resolveTo(CompileContext src, CompileContext dst) {

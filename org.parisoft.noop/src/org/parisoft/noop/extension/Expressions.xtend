@@ -1101,7 +1101,7 @@ class Expressions {
 		«val lda = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
-			type = if (ctx.type.isBoolean) left.typeOf else ctx.type
+			type = left.typeOf //if (ctx.type.isBoolean) left.typeOf else ctx.type
 			register = 'A'
 			mode = Mode::COPY
 		]»
@@ -1109,7 +1109,8 @@ class Expressions {
 			container = ctx.container
 			operation = binaryOperation
 			relative = ctx.relative
-			type = if (ctx.type.isBoolean) left.typeOf else ctx.type
+			type = left.typeOf //if (ctx.type.isBoolean) left.typeOf else ctx.type
+			opType = ctx.type
 			accLoaded = true
 			mode = Mode::OPERATE
 		]»
@@ -1121,13 +1122,14 @@ class Expressions {
 		«right.compile(opr)»
 		«IF ctx.mode === Mode::OPERATE»
 			«ctx.accLoaded = true»
-				«FOR i : 0..< ctx.sizeOf»
+				«FOR i : 0..< lda.sizeOf»
 					STA «Members::TEMP_VAR_NAME2»«IF i > 0» + «i»«ENDIF»
 					PLA
 				«ENDFOR»
 			«val tmp = new CompileContext => [
 				container = ctx.container
-				type = ctx.type
+				type = lda.type
+				opType = ctx.type
 				absolute = Members::TEMP_VAR_NAME2
 			]»
 			«ctx.operateOn(tmp)»
@@ -1263,6 +1265,7 @@ class Expressions {
 			«val tmp = new CompileContext => [
 					container = ctx.container
 					type = ctx.type
+					opType = ctx.type
 					absolute = Members::TEMP_VAR_NAME2
 				]»
 			«ctx.operateOn(tmp)»
