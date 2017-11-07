@@ -1101,7 +1101,7 @@ class Expressions {
 		«val lda = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
-			type = left.typeOf //if (ctx.type.isBoolean) left.typeOf else ctx.type
+			type = if (binaryOperation.isComparisonOrMultiplication) left.typeOf else ctx.type //if (ctx.type.isBoolean) left.typeOf else ctx.type
 			register = 'A'
 			mode = Mode::COPY
 		]»
@@ -1109,7 +1109,7 @@ class Expressions {
 			container = ctx.container
 			operation = binaryOperation
 			relative = ctx.relative
-			type = left.typeOf //if (ctx.type.isBoolean) left.typeOf else ctx.type
+			type = if (binaryOperation.isComparisonOrMultiplication) left.typeOf else ctx.type //if (ctx.type.isBoolean) left.typeOf else ctx.type
 			opType = ctx.type
 			accLoaded = true
 			mode = Mode::OPERATE

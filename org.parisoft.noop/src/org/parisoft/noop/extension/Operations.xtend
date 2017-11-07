@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import static extension java.lang.Integer.*
 import static extension java.lang.Math.*
 import org.parisoft.noop.generator.CompileContext
+import org.parisoft.noop.generator.CompileContext.Operation
 
 class Operations {
 
@@ -13,6 +14,18 @@ class Operations {
 	@Inject extension Classes
 
 	val labelCounter = new AtomicInteger
+
+	def isComparisonOrMultiplication(Operation operation) {
+		switch (operation) {
+			case COMPARE_EQ: true
+			case COMPARE_NE: true
+			case COMPARE_LT: true
+			case COMPARE_GE: true
+			case MULTIPLICATION: true
+			case DIVISION: true
+			default: false
+		}
+	}
 
 	def operateOn(CompileContext acc, CompileContext operand) {
 		switch (acc.operation) {
