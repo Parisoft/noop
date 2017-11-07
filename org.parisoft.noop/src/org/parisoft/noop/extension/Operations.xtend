@@ -7,6 +7,7 @@ import static extension java.lang.Integer.*
 import static extension java.lang.Math.*
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.CompileContext.Operation
+import java.util.concurrent.atomic.AtomicReference
 
 class Operations {
 
@@ -375,7 +376,7 @@ class Operations {
 	'''
 
 	private def compareImmediate(CompileContext acc, String ubranch, String sbranch, CompileContext operand) '''
-		«var branch = ubranch»
+		«var branch = new AtomicReference(ubranch)»
 		«val comparison = labelForComparison»
 		«val comparisonEnd = labelForComparisonEnd»
 		«val comparisonIsTrue = labelForComparisonIsTrue»
@@ -403,7 +404,7 @@ class Operations {
 					SEC
 					SBC #(«operand.immediate»)
 			«ENDIF»
-			«branch = sbranch»
+			«branch.set(sbranch)»
 				BVC +«comparison»
 				EOR #$80
 			+«comparison»:
@@ -456,7 +457,7 @@ class Operations {
 		«ENDIF»
 		«IF acc.relative === null»
 			«noop»
-				«branch» +«comparisonIsTrue»
+				«branch.get» +«comparisonIsTrue»
 			+«comparisonIsFalse»:
 				LDA #«Members::FALSE»
 				JMP +«comparisonEnd»
@@ -465,13 +466,13 @@ class Operations {
 			+«comparisonEnd»:
 		«ELSE»
 			«noop»
-				«branch» +«acc.relative»
+				«branch.get» +«acc.relative»
 			+«comparisonIsFalse»:
 		«ENDIF»
 	'''
 
 	private def compareAbsolute(CompileContext acc, String ubranch, String sbranch, CompileContext operand) '''
-		«var branch = ubranch»
+		«var branch = new AtomicReference(ubranch)»
 		«val comparison = labelForComparison»
 		«val comparisonEnd = labelForComparisonEnd»
 		«val comparisonIsTrue = labelForComparisonIsTrue»
@@ -503,7 +504,7 @@ class Operations {
 					SEC
 					SBC «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 			«ENDIF»
-			«branch = sbranch»
+			«branch.set(sbranch)»
 				BVC +«comparison»
 				EOR #$80
 			+«comparison»:
@@ -554,7 +555,7 @@ class Operations {
 		«ENDIF»
 		«IF acc.relative === null»
 			«noop»
-				«branch» +«comparisonIsTrue»
+				«branch.get» +«comparisonIsTrue»
 			+«comparisonIsFalse»:
 				LDA #«Members::FALSE»
 				JMP +«comparisonEnd»
@@ -563,13 +564,13 @@ class Operations {
 			+«comparisonEnd»:
 		«ELSE»
 			«noop»
-				«branch» +«acc.relative»
+				«branch.get» +«acc.relative»
 			+«comparisonIsFalse»:
 		«ENDIF»
 	'''
 
 	private def compareIndirect(CompileContext acc, String ubranch, String sbranch, CompileContext operand) '''
-		«var branch = ubranch»
+		«var branch = new AtomicReference(ubranch)»
 		«val comparison = labelForComparison»
 		«val comparisonEnd = labelForComparisonEnd»
 		«val comparisonIsTrue = labelForComparisonIsTrue»
@@ -601,7 +602,7 @@ class Operations {
 					SEC
 					SBC («operand.indirect»), Y
 			«ENDIF»
-			«branch = sbranch»
+			«branch.set(sbranch)»
 				BVC +«comparison»
 				EOR #$80
 			+«comparison»:
@@ -666,7 +667,7 @@ class Operations {
 			«ENDIF»
 			«IF acc.relative === null»
 				«noop»
-					«branch» +«comparisonIsTrue»
+					«branch.get» +«comparisonIsTrue»
 				+«comparisonIsFalse»:
 					LDA #«Members::FALSE»
 					JMP +«comparisonEnd»
@@ -675,7 +676,7 @@ class Operations {
 				+«comparisonEnd»:
 			«ELSE»
 				«noop»
-					«branch» +«acc.relative»
+					«branch.get» +«acc.relative»
 				+«comparisonIsFalse»:
 			«ENDIF»
 		«ENDIF»
