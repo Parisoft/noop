@@ -3,9 +3,7 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.List
 import java.util.concurrent.atomic.AtomicInteger
-import org.parisoft.noop.generator.AllocData
-import org.parisoft.noop.generator.CompileData
-import org.parisoft.noop.generator.CompileData.Mode
+import org.parisoft.noop.generator.CompileContext.Mode
 import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.BreakStatement
@@ -23,6 +21,8 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.CompileContext
+import org.parisoft.noop.generator.AllocContext
 
 class Statements {
 
@@ -128,107 +128,107 @@ class Statements {
 		'''«forStatement.nameOf»@end'''
 	}
 
-	def void prepare(Statement statement, AllocData data) {
+	def void prepare(Statement statement, AllocContext ctx) {
 		switch (statement) {
 			Variable: {
-				statement.value?.prepare(data)
+				statement.value?.prepare(ctx)
 
 				if (statement.isConstant) {
-					data.constants += statement
+					ctx.constants += statement
 				} else if (statement.isROM) {
 					if (statement.storage.type == StorageType.PRGROM) {
-						data.prgRoms += statement
+						ctx.prgRoms += statement
 					} else if (statement.storage.type == StorageType.CHRROM) {
-						data.chrRoms += statement
+						ctx.chrRoms += statement
 					}
 				} else if (statement.isStatic && statement.typeOf.isNonINESHeader) {
-					data.statics += statement
+					ctx.statics += statement
 				}
 			}
 			IfStatement: {
-				statement.condition.prepare(data)
-				statement.body.statements.forEach[prepare(data)]
-				statement.^else?.prepare(data)
+				statement.condition.prepare(ctx)
+				statement.body.statements.forEach[prepare(ctx)]
+				statement.^else?.prepare(ctx)
 			}
 			ForStatement: {
-				statement.variables.forEach[prepare(data)]
-				statement.assignments.forEach[prepare(data)]
-				statement.condition?.prepare(data)
-				statement.expressions.forEach[prepare(data)]
-				statement.body.statements.forEach[prepare(data)]
+				statement.variables.forEach[prepare(ctx)]
+				statement.assignments.forEach[prepare(ctx)]
+				statement.condition?.prepare(ctx)
+				statement.expressions.forEach[prepare(ctx)]
+				statement.body.statements.forEach[prepare(ctx)]
 			}
 			ForeverStatement: {
-				statement.body.statements.forEach[prepare(data)]
+				statement.body.statements.forEach[prepare(ctx)]
 			}
 			AsmStatement: {
-				statement.vars.forEach[prepare(data)]
+				statement.vars.forEach[prepare(ctx)]
 			}
 			ReturnStatement: {
-				statement.value?.prepare(data)
+				statement.value?.prepare(ctx)
 			}
 			Expression: {
-				statement.prepare(data)
+				statement.prepare(ctx)
 			}
 		}
 	}
 	
-	def prepare(ElseStatement elseStatement, AllocData data) {
+	def prepare(ElseStatement elseStatement, AllocContext ctx) {
 		if (elseStatement.^if !== null) {
-			elseStatement.^if.prepare(data)
+			elseStatement.^if.prepare(ctx)
 		} else if (elseStatement.body !== null) {
-			elseStatement.body.statements.forEach[prepare(data)]
+			elseStatement.body.statements.forEach[prepare(ctx)]
 		}
 	}
 
-	def List<MemChunk> alloc(Statement statement, AllocData data) {
+	def List<MemChunk> alloc(Statement statement, AllocContext ctx) {
 		switch (statement) {
 			Variable: {
-				val name = statement.nameOf(data.container)
+				val name = statement.nameOf(ctx.container)
 				val chunks = newArrayList
 
 				if (statement.isParameter && (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty)) {
-					chunks += data.computePtr(name)
+					chunks += ctx.computePtr(name)
 
 					for (i : 0 ..< statement.dimensionOf.size) {
-						chunks += data.computeVar(statement.nameOfLen(data.container, i), 1)
+						chunks += ctx.computeVar(statement.nameOfLen(ctx.container, i), 1)
 					}
 				} else if (statement.isNonStatic) {
 					val page = statement?.storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE
-					chunks += data.computeVar(name, page, statement.sizeOf)
+					chunks += ctx.computeVar(name, page, statement.sizeOf)
 				}
 
-				return (chunks + statement?.value.alloc(data)).filterNull.toList
+				return (chunks + statement?.value.alloc(ctx)).filterNull.toList
 			}
 			IfStatement: {
-				val snapshot = data.snapshot
-				val chunks = statement.condition.alloc(data) + statement.body.statements.map[alloc(data)].flatten
+				val snapshot = ctx.snapshot
+				val chunks = statement.condition.alloc(ctx) + statement.body.statements.map[alloc(ctx)].flatten
 
-				chunks.disoverlap(data.container)
+				chunks.disoverlap(ctx.container)
 
-				data.restoreTo(snapshot)
+				ctx.restoreTo(snapshot)
 
-				return (chunks + (statement?.^else?.alloc(data) ?: emptyList)).filterNull.toList
+				return (chunks + (statement?.^else?.alloc(ctx) ?: emptyList)).filterNull.toList
 			}
 			ForStatement: {
-				val snapshot = data.snapshot
-				val chunks = statement.variables.map[alloc(data)].flatten.toList
-				chunks += statement.assignments.map[alloc(data)].flatten
-				chunks += statement.condition?.alloc(data)
-				chunks += statement.expressions.map[alloc(data)].flatten
-				chunks += statement.body.statements.map[alloc(data)].flatten
-				chunks.disoverlap(data.container)
+				val snapshot = ctx.snapshot
+				val chunks = statement.variables.map[alloc(ctx)].flatten.toList
+				chunks += statement.assignments.map[alloc(ctx)].flatten
+				chunks += statement.condition?.alloc(ctx)
+				chunks += statement.expressions.map[alloc(ctx)].flatten
+				chunks += statement.body.statements.map[alloc(ctx)].flatten
+				chunks.disoverlap(ctx.container)
 
-				data.restoreTo(snapshot)
+				ctx.restoreTo(snapshot)
 
 				return chunks.filterNull.toList
 			}
 			ForeverStatement: {
-				val snapshot = data.snapshot
-				val chunks = statement.body.statements.map[alloc(data)].flatten
+				val snapshot = ctx.snapshot
+				val chunks = statement.body.statements.map[alloc(ctx)].flatten
 
-				chunks.disoverlap(data.container)
+				chunks.disoverlap(ctx.container)
 
-				data.restoreTo(snapshot)
+				ctx.restoreTo(snapshot)
 
 				return chunks.toList
 			}
@@ -236,58 +236,58 @@ class Statements {
 				val chunks = newArrayList
 
 				if (statement.isNonVoid) {
-					chunks += data.computePtr(statement.nameOf)
+					chunks += ctx.computePtr(statement.nameOf)
 				}
 
-				chunks += statement.value?.alloc(data)
+				chunks += statement.value?.alloc(ctx)
 
 				return chunks.filterNull.toList
 			}
 			Expression:
-				statement.alloc(data)
+				statement.alloc(ctx)
 			AsmStatement:
-				statement.vars.map[alloc(data)].flatten.toList
+				statement.vars.map[alloc(ctx)].flatten.toList
 			default:
 				newArrayList
 		}
 	}
 
-	def alloc(ElseStatement statement, AllocData data) {
+	def alloc(ElseStatement statement, AllocContext ctx) {
 		if (statement.^if !== null) {
-			return statement.^if.alloc(data)
+			return statement.^if.alloc(ctx)
 		}
 
-		val snapshot = data.snapshot
-		val chunks = statement.body.statements.map[alloc(data)].flatten
+		val snapshot = ctx.snapshot
+		val chunks = statement.body.statements.map[alloc(ctx)].flatten
 
-		chunks.disoverlap(data.container)
-		data.restoreTo(snapshot)
+		chunks.disoverlap(ctx.container)
+		ctx.restoreTo(snapshot)
 
 		return chunks
 
 	}
 
-	def String compile(Statement statement, CompileData data) {
+	def String compile(Statement statement, CompileContext ctx) {
 		switch (statement) {
 			Variable: '''
 				«IF statement.isROM»
-					«statement.value.compile(data => [
+					«statement.value.compile(ctx => [
 						db = statement.nameOfStatic
 						type = statement.typeOf
 					])»
-				«ELSEIF data.absolute !== null»
-					«statement.value.compile(data => [
-						absolute = '''«data.absolute» + #«statement.nameOfOffset»'''
+				«ELSEIF ctx.absolute !== null»
+					«statement.value.compile(ctx => [
+						absolute = '''«ctx.absolute» + #«statement.nameOfOffset»'''
 						type = statement.typeOf
 					])»
-				«ELSEIF data.indirect !== null»
-					«statement.value.compile(data => [
+				«ELSEIF ctx.indirect !== null»
+					«statement.value.compile(ctx => [
 						index = '''#«statement.nameOfOffset»'''
 						type = statement.typeOf
 					])»
 				«ELSE»
-					«statement.value.compile(data => [
-						absolute = statement.nameOf(data.container)
+					«statement.value.compile(ctx => [
+						absolute = statement.nameOf(ctx.container)
 						type = statement.typeOf
 					])»
 				«ENDIF»
@@ -296,24 +296,24 @@ class Statements {
 				«val mainIf = statement.ifContainer»
 				«val endIf = mainIf.nameOfEnd»
 				+«statement.nameOfCondition»:
-				«statement.condition.compile(new CompileData => [
-					container = data.container
-					operation = data.operation
+				«statement.condition.compile(new CompileContext => [
+					container = ctx.container
+					operation = ctx.operation
 					type = statement.condition.typeOf
 					relative = statement.nameOf.toString
 				])»
 					JMP +«IF statement.^else !== null»«statement.^else.nameOfCondition»«ELSE»«endIf»«ENDIF»
 				+«statement.nameOf»:
 				«FOR stmt : statement.body.statements»
-					«stmt.compile(new CompileData => [
-						container = data.container
-						operation = data.operation
+					«stmt.compile(new CompileContext => [
+						container = ctx.container
+						operation = ctx.operation
 					])»
 				«ENDFOR»
 				«IF statement.^else !== null»
 					«noop»
 						JMP +«endIf»
-					«statement.^else.compile(data)»
+					«statement.^else.compile(ctx)»
 				«ENDIF»
 				«IF mainIf == statement»
 					+«endIf»:
@@ -325,16 +325,16 @@ class Statements {
 				«val forEnd = statement.nameOfEnd»
 				+«statement.nameOf»:
 				«FOR variable : statement.variables»
-					«variable.compile(new CompileData => [
-						container = data.container
-						operation = data.operation
+					«variable.compile(new CompileContext => [
+						container = ctx.container
+						operation = ctx.operation
 					])»
 				«ENDFOR»
 				-«forCondition»:
 				«IF statement.condition !== null»
-					«statement.condition.compile(new CompileData => [
-						container = data.container
-						operation = data.operation
+					«statement.condition.compile(new CompileContext => [
+						container = ctx.container
+						operation = ctx.operation
 						type = statement.condition.typeOf
 						relative = forIteration.toString
 					])»
@@ -342,16 +342,16 @@ class Statements {
 				«ENDIF»
 				+«forIteration»:
 				«FOR stmt : statement.body.statements»
-					«stmt.compile(new CompileData => [
-						container = data.container
-						operation = data.operation
+					«stmt.compile(new CompileContext => [
+						container = ctx.container
+						operation = ctx.operation
 					])»
 				«ENDFOR»
 				+«statement.nameOfEvaluation»:
 				«FOR expression : statement.expressions»
-					«expression.compile(new CompileData => [
-						container = data.container
-						operation = data.operation
+					«expression.compile(new CompileContext => [
+						container = ctx.container
+						operation = ctx.operation
 					])»
 				«ENDFOR»
 					JMP -«forCondition»:
@@ -361,9 +361,9 @@ class Statements {
 				«val foreverLoop = statement.nameOf»
 				-«foreverLoop»:
 				«FOR stmt : statement.body.statements»
-					«stmt.compile(new CompileData => [
-						container = data.container
-						operation = data.operation
+					«stmt.compile(new CompileContext => [
+						container = ctx.container
+						operation = ctx.operation
 					])»
 				«ENDFOR»
 					JMP -«foreverLoop»:
@@ -392,9 +392,9 @@ class Statements {
 			ReturnStatement: '''
 				«val method = statement.method»
 				«IF statement.isNonVoid»
-					«statement.value.compile(new CompileData => [
+					«statement.value.compile(new CompileContext => [
 						container = method.nameOf
-						operation = data.operation
+						operation = ctx.operation
 						type = statement.method.typeOf
 						
 						if (type.isPrimitive && statement.method.dimensionOf.isEmpty) {
@@ -406,9 +406,9 @@ class Statements {
 						}
 					])»
 				«ELSEIF statement.value !== null»
-					«statement.value.compile(new CompileData => [
+					«statement.value.compile(new CompileContext => [
 						container = method.nameOf
-						operation = data.operation
+						operation = ctx.operation
 						type = statement.value.typeOf
 					])»
 				«ENDIF»
@@ -429,19 +429,19 @@ class Statements {
 					]
 				}
 			Expression:
-				statement.compile(data)
+				statement.compile(ctx)
 			default:
 				''
 		}
 	}
 
-	def compile(ElseStatement elseStatement, CompileData data) '''
+	def compile(ElseStatement elseStatement, CompileContext ctx) '''
 		«IF elseStatement.^if !== null»
-			«elseStatement.^if.compile(data)»
+			«elseStatement.^if.compile(ctx)»
 		«ELSE»
 			+«elseStatement.nameOf»:
 			«FOR stmt : elseStatement.body?.statements»
-				«stmt.compile(data)»
+				«stmt.compile(ctx)»
 			«ENDFOR»
 		«ENDIF»
 	'''

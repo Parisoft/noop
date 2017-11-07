@@ -2,10 +2,10 @@ package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
 import java.util.concurrent.atomic.AtomicInteger
-import org.parisoft.noop.generator.CompileData
 
 import static extension java.lang.Integer.*
 import static extension java.lang.Math.*
+import org.parisoft.noop.generator.CompileContext
 
 class Operations {
 
@@ -14,7 +14,7 @@ class Operations {
 
 	val labelCounter = new AtomicInteger
 
-	def operateOn(CompileData acc, CompileData operand) {
+	def operateOn(CompileContext acc, CompileContext operand) {
 		switch (acc.operation) {
 			case OR: acc.or(operand)
 			case AND: acc.and(operand)
@@ -35,7 +35,7 @@ class Operations {
 		}
 	}
 
-	def operate(CompileData acc) {
+	def operate(CompileContext acc) {
 		switch (acc.operation) {
 			case BIT_EXCLUSIVE_OR: acc.bitExclusiveOr
 			case NEGATION: acc.negate
@@ -44,7 +44,7 @@ class Operations {
 		}
 	}
 
-	def or(CompileData acc, CompileData operand) {
+	def or(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			operand.operateImmediate('ORA')
 		} else if (operand.absolute !== null) {
@@ -54,7 +54,7 @@ class Operations {
 		}
 	}
 
-	def and(CompileData acc, CompileData operand) {
+	def and(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			operand.operateImmediate('AND')
 		} else if (operand.absolute !== null) {
@@ -64,7 +64,7 @@ class Operations {
 		}
 	}
 
-	def isEquals(CompileData acc, CompileData operand) {
+	def isEquals(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.equalsImmediate(false, operand)
 		} else if (operand.absolute !== null) {
@@ -74,7 +74,7 @@ class Operations {
 		}
 	}
 
-	def notEquals(CompileData acc, CompileData operand) {
+	def notEquals(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.equalsImmediate(true, operand)
 		} else if (operand.absolute !== null) {
@@ -84,7 +84,7 @@ class Operations {
 		}
 	}
 
-	def lessThan(CompileData acc, CompileData operand) {
+	def lessThan(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.compareImmediate('BCC', 'BMI', operand)
 		} else if (operand.absolute !== null) {
@@ -94,7 +94,7 @@ class Operations {
 		}
 	}
 
-	def greaterEqualsThan(CompileData acc, CompileData operand) {
+	def greaterEqualsThan(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.compareImmediate('BCS', 'BPL', operand)
 		} else if (operand.absolute !== null) {
@@ -104,7 +104,7 @@ class Operations {
 		}
 	}
 
-	def add(CompileData acc, CompileData operand) {
+	def add(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.operateImmediate('ADC', 'CLC', operand)
 		} else if (operand.absolute !== null) {
@@ -114,7 +114,7 @@ class Operations {
 		}
 	}
 
-	def subtract(CompileData acc, CompileData operand) {
+	def subtract(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.operateImmediate('SBC', 'SEC', operand)
 		} else if (operand.absolute !== null) {
@@ -124,7 +124,7 @@ class Operations {
 		}
 	}
 
-	def multiply(CompileData acc, CompileData operand) {
+	def multiply(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.multiplyImmediate(operand)
 		} else if (operand.absolute !== null) {
@@ -134,7 +134,7 @@ class Operations {
 		}
 	}
 
-	def bitOr(CompileData acc, CompileData operand) {
+	def bitOr(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.operateImmediate('ORA', operand)
 		} else if (operand.absolute !== null) {
@@ -144,7 +144,7 @@ class Operations {
 		}
 	}
 
-	def bitShiftLeft(CompileData acc, CompileData operand) {
+	def bitShiftLeft(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.bitShiftLeftImmediate(operand)
 		} else if (operand.absolute !== null) {
@@ -154,7 +154,7 @@ class Operations {
 		}
 	}
 
-	def bitShiftRight(CompileData acc, CompileData operand) {
+	def bitShiftRight(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.bitShiftRightImmediate(operand)
 		} else if (operand.absolute !== null) {
@@ -164,7 +164,7 @@ class Operations {
 		}
 	}
 
-	def bitAnd(CompileData acc, CompileData operand) {
+	def bitAnd(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.operateImmediate('AND', operand)
 		} else if (operand.absolute !== null) {
@@ -174,7 +174,7 @@ class Operations {
 		}
 	}
 
-	def increment(CompileData operand) {
+	def increment(CompileContext operand) {
 		if (operand.absolute !== null) {
 			operand.incAbsolute
 		} else if (operand.indirect !== null) {
@@ -182,7 +182,7 @@ class Operations {
 		}
 	}
 
-	def decrement(CompileData operand) {
+	def decrement(CompileContext operand) {
 		if (operand.absolute !== null) {
 			operand.decAbsolute
 		} else if (operand.indirect !== null) {
@@ -190,7 +190,7 @@ class Operations {
 		}
 	}
 
-	def bitExclusiveOr(CompileData acc) '''
+	def bitExclusiveOr(CompileContext acc) '''
 		«noop»
 			EOR #$FF
 			«IF acc.sizeOf > 1»
@@ -202,7 +202,7 @@ class Operations {
 			«ENDIF»
 	'''
 
-	def negate(CompileData acc) '''
+	def negate(CompileContext acc) '''
 		«noop»
 			«IF acc.relative !== null»
 				BEQ +«acc.relative»
@@ -211,7 +211,7 @@ class Operations {
 			«ENDIF»
 	'''
 
-	def signum(CompileData acc) '''
+	def signum(CompileContext acc) '''
 		«IF acc.sizeOf > 1»
 			«noop»
 				SEC
@@ -233,7 +233,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def equalsImmediate(CompileData acc, boolean diff, CompileData operand) '''
+	private def equalsImmediate(CompileContext acc, boolean diff, CompileContext operand) '''
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«val comparisonEnd = labelForComparisonEnd»
@@ -283,7 +283,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def equalsAbsolute(CompileData acc, boolean diff, CompileData operand) '''
+	private def equalsAbsolute(CompileContext acc, boolean diff, CompileContext operand) '''
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«val comparisonEnd = labelForComparisonEnd»
@@ -336,7 +336,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def equalsIndirect(CompileData acc, boolean diff, CompileData operand) '''
+	private def equalsIndirect(CompileContext acc, boolean diff, CompileContext operand) '''
 		«val comparisonIsTrue = labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«val comparisonEnd = labelForComparisonEnd»
@@ -387,7 +387,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def compareImmediate(CompileData acc, String ubranch, String sbranch, CompileData operand) '''
+	private def compareImmediate(CompileContext acc, String ubranch, String sbranch, CompileContext operand) '''
 		«var branch = ubranch»
 		«val comparison = labelForComparison»
 		«val comparisonEnd = labelForComparisonEnd»
@@ -475,7 +475,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def compareAbsolute(CompileData acc, String ubranch, String sbranch, CompileData operand) '''
+	private def compareAbsolute(CompileContext acc, String ubranch, String sbranch, CompileContext operand) '''
 		«var branch = ubranch»
 		«val comparison = labelForComparison»
 		«val comparisonEnd = labelForComparisonEnd»
@@ -569,7 +569,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def compareIndirect(CompileData acc, String ubranch, String sbranch, CompileData operand) '''
+	private def compareIndirect(CompileContext acc, String ubranch, String sbranch, CompileContext operand) '''
 		«var branch = ubranch»
 		«val comparison = labelForComparison»
 		«val comparisonEnd = labelForComparisonEnd»
@@ -674,7 +674,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def bitShiftLeftImmediate(CompileData acc, CompileData operand) '''
+	private def bitShiftLeftImmediate(CompileContext acc, CompileContext operand) '''
 		«IF acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
@@ -703,7 +703,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def bitShiftLeftAbsolute(CompileData acc, CompileData operand) '''
+	private def bitShiftLeftAbsolute(CompileContext acc, CompileContext operand) '''
 		«IF acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
@@ -738,7 +738,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def bitShiftLeftIndirect(CompileData acc, CompileData operand) '''
+	private def bitShiftLeftIndirect(CompileContext acc, CompileContext operand) '''
 		«IF acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
@@ -774,7 +774,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def bitShiftRightImmediate(CompileData acc, CompileData operand) '''
+	private def bitShiftRightImmediate(CompileContext acc, CompileContext operand) '''
 		«IF acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
@@ -803,7 +803,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def bitShiftRightAbsolute(CompileData acc, CompileData operand) '''
+	private def bitShiftRightAbsolute(CompileContext acc, CompileContext operand) '''
 		«IF acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
@@ -838,7 +838,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def bitShiftRightIndirect(CompileData acc, CompileData operand) '''
+	private def bitShiftRightIndirect(CompileContext acc, CompileContext operand) '''
 		«IF acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
@@ -874,7 +874,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def incAbsolute(CompileData operand) '''
+	private def incAbsolute(CompileContext operand) '''
 		«noop»
 			«IF operand.isIndexed»
 				LDX «operand.index»
@@ -888,7 +888,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def incIndirect(CompileData operand) '''
+	private def incIndirect(CompileContext operand) '''
 		«noop»
 			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 			INC («operand.indirect»), Y
@@ -901,43 +901,43 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def decAbsolute(CompileData data) '''
-		«IF data.isIndexed»
+	private def decAbsolute(CompileContext ctx) '''
+		«IF ctx.isIndexed»
 			«noop»
-				LDX «data.index»
+				LDX «ctx.index»
 		«ENDIF»
-		«IF data.sizeOf > 1»
+		«IF ctx.sizeOf > 1»
 			«val labelSkip = labelForDecMSBSkip»
-				LDA «data.absolute»«IF data.isIndexed», X«ENDIF»
+				LDA «ctx.absolute»«IF ctx.isIndexed», X«ENDIF»
 				BNE +«labelSkip»
-				DEC «data.absolute» + 1«IF data.isIndexed», X«ENDIF»
+				DEC «ctx.absolute» + 1«IF ctx.isIndexed», X«ENDIF»
 			+«labelSkip»:
-				DEC «data.absolute»«IF data.isIndexed», X«ENDIF»
+				DEC «ctx.absolute»«IF ctx.isIndexed», X«ENDIF»
 		«ELSE»
 			«noop»
-				DEC «data.absolute»«IF data.isIndexed», X«ENDIF»
+				DEC «ctx.absolute»«IF ctx.isIndexed», X«ENDIF»
 		«ENDIF»
 	'''
 
-	private def decIndirect(CompileData data) '''
+	private def decIndirect(CompileContext ctx) '''
 		«noop»
-			LDY «IF data.isIndexed»«data.index»«ELSE»#$00«ENDIF»
-		«IF data.sizeOf > 1»
+			LDY «IF ctx.isIndexed»«ctx.index»«ELSE»#$00«ENDIF»
+		«IF ctx.sizeOf > 1»
 			«val labelSkip = labelForDecMSBSkip»
-				LDA («data.indirect»), Y
+				LDA («ctx.indirect»), Y
 				BNE +«labelSkip»
 				INY
-				DEC («data.indirect»), Y
+				DEC («ctx.indirect»), Y
 				DEY
 			+«labelSkip»:
-				DEC («data.indirect»), Y
+				DEC («ctx.indirect»), Y
 		«ELSE»
 			«noop»
-				DEC («data.indirect»), Y
+				DEC («ctx.indirect»), Y
 		«ENDIF»
 	'''
 
-	private def multiplyImmediate(CompileData multiplicand, CompileData multiplier) '''
+	private def multiplyImmediate(CompileContext multiplicand, CompileContext multiplier) '''
 		«val const = multiplier.immediate.valueOf»
 		«val ONE = '1'.charAt(0)»
 		«val bits = const.abs.toBinaryString.toCharArray.reverse»
@@ -1044,24 +1044,24 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def multiplyAbsolute(CompileData multiplicand, CompileData multiplier) '''
+	private def multiplyAbsolute(CompileContext multiplicand, CompileContext multiplier) '''
 		
 	'''
 
-	private def multiplyIndirect(CompileData multiplicand, CompileData multiplier) '''
+	private def multiplyIndirect(CompileContext multiplicand, CompileContext multiplier) '''
 		
 	'''
 
-	private def operateImmediate(CompileData operand, String instruction) '''
+	private def operateImmediate(CompileContext operand, String instruction) '''
 		«noop»
 			«instruction» #(«operand.immediate»)
 	'''
 
-	private def operateImmediate(CompileData acc, String instruction, CompileData operand) '''
+	private def operateImmediate(CompileContext acc, String instruction, CompileContext operand) '''
 		«operateImmediate(acc, instruction, null, operand)»
 	'''
 
-	private def operateImmediate(CompileData acc, String instruction, String clear, CompileData operand) '''
+	private def operateImmediate(CompileContext acc, String instruction, String clear, CompileContext operand) '''
 		«IF acc.sizeOf > 1»
 			«noop»
 				«IF clear !== null»
@@ -1091,7 +1091,7 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def operateAbsolute(CompileData operand, String instruction) '''
+	private def operateAbsolute(CompileContext operand, String instruction) '''
 		«noop»
 			«IF operand.isIndexed»
 				LDX «operand.index»
@@ -1099,11 +1099,11 @@ class Operations {
 			«instruction» «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 	'''
 
-	private def operateAbsolute(CompileData acc, String instruction, CompileData operand) '''
+	private def operateAbsolute(CompileContext acc, String instruction, CompileContext operand) '''
 		«operateAbsolute(acc, instruction, null, operand)»
 	'''
 
-	private def operateAbsolute(CompileData acc, String instruction, String clear, CompileData operand) '''
+	private def operateAbsolute(CompileContext acc, String instruction, String clear, CompileContext operand) '''
 		«noop»
 			«IF operand.isIndexed»
 				LDX «operand.index»
@@ -1131,17 +1131,17 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def operateIndirect(CompileData operand, String instruction) '''
+	private def operateIndirect(CompileContext operand, String instruction) '''
 		«noop»
 			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 			«instruction» «operand.indirect», Y
 	'''
 
-	private def operateIndirect(CompileData acc, String instruction, CompileData operand) '''
+	private def operateIndirect(CompileContext acc, String instruction, CompileContext operand) '''
 		«operateIndirect(acc, instruction, null, operand)»
 	'''
 
-	private def operateIndirect(CompileData acc, String instruction, String clear, CompileData operand) '''
+	private def operateIndirect(CompileContext acc, String instruction, String clear, CompileContext operand) '''
 		«noop»
 			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 			«IF clear !== null»
@@ -1168,24 +1168,24 @@ class Operations {
 		«ENDIF»
 	'''
 
-	def loadMSB(CompileData data) '''
-		«IF data.type.isSigned»
+	def loadMSB(CompileContext ctx) '''
+		«IF ctx.type.isSigned»
 			«noop»
-				«IF data.immediate !== null»
-					LDA #(«data.immediate»)
-				«ELSEIF data.absolute !== null»
-					LDA «data.absolute»«IF data.isIndexed», X«ENDIF»
-				«ELSEIF data.indirect !== null»
-					LDA («data.indirect»), Y
+				«IF ctx.immediate !== null»
+					LDA #(«ctx.immediate»)
+				«ELSEIF ctx.absolute !== null»
+					LDA «ctx.absolute»«IF ctx.isIndexed», X«ENDIF»
+				«ELSEIF ctx.indirect !== null»
+					LDA («ctx.indirect»), Y
 				«ENDIF»
-			«data.loadMSBFromAcc»
+			«ctx.loadMSBFromAcc»
 		«ELSE»
 			«noop»
 				LDA #$00
 		«ENDIF»
 	'''
 
-	def loadMSBFromAcc(CompileData acc) '''
+	def loadMSBFromAcc(CompileContext acc) '''
 		«IF acc.type.isSigned»
 			«val signLabel = labelForSignedMSBEnd»
 				ORA #$7F

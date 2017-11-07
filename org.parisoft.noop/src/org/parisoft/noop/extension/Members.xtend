@@ -6,9 +6,7 @@ import java.util.List
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
-import org.parisoft.noop.generator.AllocData
-import org.parisoft.noop.generator.CompileData
-import org.parisoft.noop.generator.CompileData.Mode
+import org.parisoft.noop.generator.CompileContext.Mode
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.Index
 import org.parisoft.noop.noop.Member
@@ -23,6 +21,8 @@ import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.noop.StringLiteral
+import org.parisoft.noop.generator.CompileContext
+import org.parisoft.noop.generator.AllocContext
 
 public class Members {
 
@@ -297,16 +297,16 @@ public class Members {
 		'''«method.nameOf».ret'''.toString
 	}
 
-	def prepare(Method method, AllocData data) {
-		method.body.statements.forEach[prepare(data)]
+	def prepare(Method method, AllocContext ctx) {
+		method.body.statements.forEach[prepare(ctx)]
 	}
 
-	def dispose(Member member, AllocData data) {
+	def dispose(Member member, AllocContext ctx) {
 		if (member instanceof Variable) {
 			if (member.isNonStatic && member.isNonField && member.isNonParameter) { // TODO check for non for/forEach/while variables
-				val allChunks = data.pointers.get(member.nameOf) + data.variables.get(member.nameOf)
+				val allChunks = ctx.pointers.get(member.nameOf) + ctx.variables.get(member.nameOf)
 				
-				data.counters.forEach[counter, page|
+				ctx.counters.forEach[counter, page|
 					val chunks = allChunks.filter[hi < (page + 1) * 256]
 					val last = chunks.last
 					
@@ -314,8 +314,8 @@ public class Members {
 						if (last.lo < (page + 1) * 256) {
 							counter.set(last.lo)
 						} else {
-							data.resetCounter(page)
-							data.counters.get(page - 1).set(last.lo)
+							ctx.resetCounter(page)
+							ctx.counters.get(page - 1).set(last.lo)
 						}
 					}
 				]
@@ -323,26 +323,26 @@ public class Members {
 		}
 	}
 
-	def alloc(Method method, AllocData data) {
+	def alloc(Method method, AllocContext ctx) {
 		if (allocating.add(method)) {
 			try {
-				val snapshot = data.snapshot
+				val snapshot = ctx.snapshot
 				val methodName = method.nameOf
 
-				data.container = methodName
+				ctx.container = methodName
 
 				val receiver = if (method.isNonStatic) {
-						data.computePtr(method.nameOfReceiver)
+						ctx.computePtr(method.nameOfReceiver)
 					} else {
 						emptyList
 					}
 
-				val chunks = (receiver + method.params.map[alloc(data)].flatten).toList
-				chunks += method.body.statements.map[alloc(data)].flatten.toList
+				val chunks = (receiver + method.params.map[alloc(ctx)].flatten).toList
+				chunks += method.body.statements.map[alloc(ctx)].flatten.toList
 				chunks.disoverlap(methodName)
 
-				data.restoreTo(snapshot)
-				data.methods += method
+				ctx.restoreTo(snapshot)
+				ctx.methods += method
 
 				return chunks
 			} finally {
@@ -353,7 +353,7 @@ public class Members {
 		}
 	}
 
-	def compile(Method method, CompileData data) '''
+	def compile(Method method, CompileContext ctx) '''
 		«IF method.isNonDispose»
 			«method.nameOf»:
 			«IF method.isReset»
@@ -389,8 +389,8 @@ public class Members {
 
 			; Instantiate all static variables
 			«val resetMethod = method.nameOf»
-			«FOR staticVar : data.allocation.statics»
-				«staticVar.compile(new CompileData => [container = resetMethod])»
+			«FOR staticVar : ctx.allocation.statics»
+				«staticVar.compile(new CompileContext => [container = resetMethod])»
 			«ENDFOR»
 			
 			-waitVBlank2
@@ -398,7 +398,7 @@ public class Members {
 				BPL -waitVBlank2
 				;;;;;;;;;; Initial setup end
 			«FOR statement : method.body.statements»
-				«statement.compile(new CompileData => [container = method.nameOf])»
+				«statement.compile(new CompileContext => [container = method.nameOf])»
 			«ENDFOR»
 				RTS
 			«ELSEIF method.isNmi»
@@ -416,7 +416,7 @@ public class Members {
 				;;;;;;;;;; NMI initialization end
 				;;;;;;;;;; Effective code begin
 			«FOR statement : method.body.statements»
-				«statement.compile(new CompileData => [container = method.nameOf])»
+				«statement.compile(new CompileContext => [container = method.nameOf])»
 			«ENDFOR»
 				;;;;;;;;;; Effective code end
 				;;;;;;;;;; NMI finalization begin
@@ -429,7 +429,7 @@ public class Members {
 				RTI
 			«ELSE»
 				«FOR statement : method.body.statements»
-					«statement.compile(new CompileData => [container = method.nameOf])»
+					«statement.compile(new CompileContext => [container = method.nameOf])»
 				«ENDFOR»
 					RTS
 			«ENDIF»
@@ -457,8 +457,8 @@ public class Members {
 		}
 	}
 
-	def compileAbsoluteReference(Variable variable, CompileData receiver, List<Index> indexes, CompileData data) '''
-		«val ref = new CompileData => [
+	def compileAbsoluteReference(Variable variable, CompileContext receiver, List<Index> indexes, CompileContext ctx) '''
+		«val ref = new CompileContext => [
 			container = receiver.container
 			operation = receiver.operation
 			absolute = receiver.absolute
@@ -466,32 +466,32 @@ public class Members {
 			type = variable.typeOf
 		]»
 		«IF indexes.isNotEmpty»
-			«variable.compileIndexes(indexes, data)»
-			«val tmpIndex = indexes.nameOfTmp(data.container)»
+			«variable.compileIndexes(indexes, ctx)»
+			«val tmpIndex = indexes.nameOfTmp(ctx.container)»
 			«IF ref.index === null»
 				«ref.index = tmpIndex»
 			«ELSE»
-				«data.pushAccIfOperating»
+				«ctx.pushAccIfOperating»
 					CLC
 					LDA «tmpIndex»
 					ADC «ref.index»
 					STA «tmpIndex»
-				«data.pullAccIfOperating»
+				«ctx.pullAccIfOperating»
 				«ref.index = tmpIndex»
 			«ENDIF»
 		«ELSE»
 			«val tmpIndex = '''#«variable.nameOfOffset»'''»
 			«ref.absolute = '''«ref.absolute» + «tmpIndex»'''»
 		«ENDIF»
-		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
 		«ELSE»
-			«ref.resolveTo(data)»
+			«ref.resolveTo(ctx)»
 		«ENDIF»
 	'''
 	
-	def compileIndirectReference(Variable variable, CompileData receiver, List<Index> indexes, CompileData data) '''
-		«val ref = new CompileData => [
+	def compileIndirectReference(Variable variable, CompileContext receiver, List<Index> indexes, CompileContext ctx) '''
+		«val ref = new CompileContext => [
 			container = receiver.container
 			operation = receiver.operation
 			indirect = receiver.indirect
@@ -499,27 +499,27 @@ public class Members {
 			type = variable.typeOf
 		]»
 		«IF indexes.isNotEmpty»
-			«variable.compileIndexes(indexes, data)»
-			«val tmpIndex = indexes.nameOfTmp(data.container)»
+			«variable.compileIndexes(indexes, ctx)»
+			«val tmpIndex = indexes.nameOfTmp(ctx.container)»
 			«IF ref.index === null»
 				«ref.index = tmpIndex»
 			«ELSEIF ref.index.contains(STATIC_PREFIX)»
-				«data.pushAccIfOperating»
+				«ctx.pushAccIfOperating»
 					CLC
 					LDA «tmpIndex»
 					«FOR immediate : ref.index.split(' + ')»
 						ADC «immediate»
 					«ENDFOR»
 					STA «tmpIndex»
-				«data.pullAccIfOperating»
+				«ctx.pullAccIfOperating»
 				«ref.index = tmpIndex»
 			«ELSE»
-				«data.pushAccIfOperating»
+				«ctx.pushAccIfOperating»
 					CLC
 					LDA «tmpIndex»
 					ADC «ref.index»
 					STA «tmpIndex»
-				«data.pullAccIfOperating»
+				«ctx.pullAccIfOperating»
 				«ref.index = tmpIndex»
 			«ENDIF»
 		«ELSE»
@@ -529,103 +529,103 @@ public class Members {
 			«ELSEIF ref.index.contains(STATIC_PREFIX)»
 				«ref.index = '''«ref.index» + «tmpIndex»'''»
 			«ELSE»
-				«data.pushAccIfOperating»
+				«ctx.pushAccIfOperating»
 					CLC
 					LDA «tmpIndex»
 					ADC «ref.index»
 					STA «tmpIndex»
-				«data.pullAccIfOperating»
+				«ctx.pullAccIfOperating»
 				«ref.index = tmpIndex»
 			«ENDIF»
 		«ENDIF»
-		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
 		«ELSE»
-			«ref.resolveTo(data)»
+			«ref.resolveTo(ctx)»
 		«ENDIF»
 	'''
 
-	def compilePointerReference(Variable variable, String receiver, List<Index> indexes, CompileData data) '''
+	def compilePointerReference(Variable variable, String receiver, List<Index> indexes, CompileContext ctx) '''
 		«IF indexes.isNotEmpty»
-			«variable.compileIndexes(indexes, data)»
+			«variable.compileIndexes(indexes, ctx)»
 		«ENDIF»
-		«val ref = new CompileData => [
-			container = data.container
+		«val ref = new CompileContext => [
+			container = ctx.container
 			type = variable.typeOf
 			indirect = receiver
 			index = if (indexes.isNotEmpty) {
-				indexes.nameOfTmp(data.container)
+				indexes.nameOfTmp(ctx.container)
 			} else {
 				'''#«variable.nameOfOffset»'''
 			}
 		]»
-		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
 		«ELSE»
-			«ref.resolveTo(data)»
+			«ref.resolveTo(ctx)»
 		«ENDIF»
 	'''
 
-	def compileStaticReference(Variable variable, List<Index> indexes, CompileData data) '''
+	def compileStaticReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
 		«IF indexes.isNotEmpty»
-			«variable.compileIndexes(indexes, data)»
+			«variable.compileIndexes(indexes, ctx)»
 		«ENDIF»
-		«val ref = new CompileData => [
-			container = data.container
+		«val ref = new CompileContext => [
+			container = ctx.container
 			type = variable.typeOf
 			absolute = variable.nameOfStatic
 			index = if (indexes.isNotEmpty) {
-				indexes.nameOfTmp(data.container)
+				indexes.nameOfTmp(ctx.container)
 			}
 		]»
-		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
 		«ELSE»
-			«ref.resolveTo(data)»
+			«ref.resolveTo(ctx)»
 		«ENDIF»
 	'''
 	
-	def compileLocalReference(Variable variable, List<Index> indexes, CompileData data) '''
+	def compileLocalReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
 		«IF indexes.isNotEmpty»
-			«variable.compileIndexes(indexes, data)»
+			«variable.compileIndexes(indexes, ctx)»
 		«ENDIF»
-		«val ref = new CompileData => [
-			container = data.container
+		«val ref = new CompileContext => [
+			container = ctx.container
 			type = variable.typeOf
 			absolute = variable.nameOf
 			index = if (indexes.isNotEmpty) {
-				indexes.nameOfTmp(data.container)
+				indexes.nameOfTmp(ctx.container)
 			}
 		]»
-		«IF data.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(data, variable.lenOfArrayReference(indexes))»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
 		«ELSE»
-			«ref.resolveTo(data)»
+			«ref.resolveTo(ctx)»
 		«ENDIF»
 	'''
 	
-	def compileConstantReference(Variable variable, CompileData data) '''
-		«val const = new CompileData => [
-			container = data.container
+	def compileConstantReference(Variable variable, CompileContext ctx) '''
+		«val const = new CompileContext => [
+			container = ctx.container
 			type = variable.typeOf
 			immediate = variable.nameOfConstant
 		]»
-		«IF data.mode === Mode::OPERATE»
-			«data.operateOn(const)»
-		«ELSEIF data.mode === Mode::COPY»
-			«const.copyTo(data)»
+		«IF ctx.mode === Mode::OPERATE»
+			«ctx.operateOn(const)»
+		«ELSEIF ctx.mode === Mode::COPY»
+			«const.copyTo(ctx)»
 		«ENDIF»
 	'''
 
-	def compileInvocation(Method method, List<Expression> args, CompileData data) '''
+	def compileInvocation(Method method, List<Expression> args, CompileContext ctx) '''
 		«IF method.isNonDispose»
-			«data.pushAccIfOperating»
+			«ctx.pushAccIfOperating»
 			«val methodName = method.nameOf»
 			«FOR i : 0..< args.size»
 				«val param = method.params.get(i)»
 				«val arg = args.get(i)»
-				«arg.compile(new CompileData => [
-					container = data.container
+				«arg.compile(new CompileContext => [
+					container = ctx.container
 					type = param.type
 					
 					if (param.type.isPrimitive && param.dimensionOf.isEmpty) {
@@ -645,10 +645,10 @@ public class Members {
 			«ENDFOR»
 			«noop»
 				JSR «method.nameOf»
-			«data.pullAccIfOperating»
+			«ctx.pullAccIfOperating»
 			«IF method.typeOf.isNonVoid»
-				«val ret = new CompileData => [
-					container = data.container
+				«val ret = new CompileContext => [
+					container = ctx.container
 					type = method.typeOf
 					
 					if (method.typeOf.isPrimitive && method.dimensionOf.isEmpty) {
@@ -657,20 +657,20 @@ public class Members {
 						indirect = method.nameOfReturn
 					}
 				]»
-				«ret.resolveTo(data)»
+				«ret.resolveTo(ctx)»
 			«ENDIF»
 		«ENDIF»
 	'''
 
-	def compileIndexes(Variable variable, List<Index> indexes, CompileData data) '''
-		«val indexName = indexes.nameOfTmp(data.container)»
+	def compileIndexes(Variable variable, List<Index> indexes, CompileContext ctx) '''
+		«val indexName = indexes.nameOfTmp(ctx.container)»
 		«val dimension = variable.dimensionOf»
 		«val sizeOfVar = variable.typeOf.sizeOf»
-		«data.pushAccIfOperating»
+		«ctx.pushAccIfOperating»
 		«IF dimension.size === 1 && sizeOfVar === 1»
-			«indexes.head.value.compile(new CompileData => [
-				container = data.container
-				type = data.type.toByteClass
+			«indexes.head.value.compile(new CompileContext => [
+				container = ctx.container
+				type = ctx.type.toByteClass
 				register = 'A'
 			])»
 				«IF variable.isField && variable.isNonStatic»
@@ -680,10 +680,10 @@ public class Members {
 				STA «indexName»
 		«ELSE»
 			«FOR i : 0..< indexes.size»
-				«indexes.get(i).value.compile(new CompileData => [
-					container = data.container
-					operation = data.operation
-					type = data.type.toByteClass
+				«indexes.get(i).value.compile(new CompileContext => [
+					container = ctx.container
+					operation = ctx.operation
+					type = ctx.type.toByteClass
 					register = 'A'
 				])»
 					«FOR len : (i + 1)..< dimension.size»
@@ -716,7 +716,7 @@ public class Members {
 				«ENDIF»
 				STA «indexName»
 		«ENDIF»
-		«data.pullAccIfOperating»
+		«ctx.pullAccIfOperating»
 	'''
 	
 	private def void noop() {

@@ -8,7 +8,7 @@ import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
-class AllocData {
+class AllocContext {
 
 	@Accessors var NewInstance header
 	@Accessors val classes = <NoopClass>newLinkedHashSet
@@ -38,14 +38,14 @@ class AllocData {
 	def snapshot() {
 		val src = this
 
-		new AllocData => [
+		new AllocContext => [
 			counters.forEach[counter, page| counter.set(src.counters.get(page).get)]
 			container = src.container
 			allocStatic = src.allocStatic
 		]
 	}
 
-	def restoreTo(AllocData snapshot) {
+	def restoreTo(AllocContext snapshot) {
 		counters.forEach[counter, page| counter.set(snapshot.counters.get(page).get)]
 		container = snapshot.container
 		allocStatic = snapshot.allocStatic

@@ -6,13 +6,13 @@ import java.util.Map
 import java.util.NoSuchElementException
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
-import org.parisoft.noop.generator.AllocData
 import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.AllocContext
 
 class Classes {
 
@@ -218,18 +218,18 @@ class Classes {
 	}
 
 	def prepare(NoopClass gameImplClass) {
-		val data = new AllocData
+		val ctx = new AllocContext
 
-		gameImplClass.prepare(data)
+		gameImplClass.prepare(ctx)
 
 		classeSizeCache.get.clear
 
-		data.classes += data.classes.map[superClasses].flatten.toSet
-		data.classes.forEach [ class1 |
+		ctx.classes += ctx.classes.map[superClasses].flatten.toSet
+		ctx.classes.forEach [ class1 |
 			if (class1.isPrimitive) {
 				classeSizeCache.get.put(class1, class1.rawSizeOf)
 			} else {
-				classeSizeCache.get.put(class1, data.classes.filter [ class2 |
+				classeSizeCache.get.put(class1, ctx.classes.filter [ class2 |
 					class2.isInstanceOf(class1)
 				].map [
 					rawSizeOf
@@ -237,45 +237,45 @@ class Classes {
 			}
 		]
 
-		return data
+		return ctx
 	}
 
-	def void prepare(NoopClass noopClass, AllocData data) {
-		if (data.classes.add(noopClass)) {
-			noopClass.allFieldsTopDown.filter[ROM].forEach[prepare(data)]
+	def void prepare(NoopClass noopClass, AllocContext ctx) {
+		if (ctx.classes.add(noopClass)) {
+			noopClass.allFieldsTopDown.filter[ROM].forEach[prepare(ctx)]
 
 			if (noopClass.isGame) {
-				noopClass.allFieldsBottomUp.findFirst[typeOf.INESHeader].prepare(data)
-				noopClass.allMethodsBottomUp.findFirst[reset].prepare(data)
-				noopClass.allMethodsBottomUp.findFirst[nmi].prepare(data)
-				noopClass.allMethodsBottomUp.findFirst[irq].prepare(data)
+				noopClass.allFieldsBottomUp.findFirst[typeOf.INESHeader].prepare(ctx)
+				noopClass.allMethodsBottomUp.findFirst[reset].prepare(ctx)
+				noopClass.allMethodsBottomUp.findFirst[nmi].prepare(ctx)
+				noopClass.allMethodsBottomUp.findFirst[irq].prepare(ctx)
 			}
 		}
 	}
 
-	def void alloc(NoopClass noopClass, AllocData data) {
+	def void alloc(NoopClass noopClass, AllocContext ctx) {
 		if (noopClass.isGame) {
-			data.statics.forEach[alloc(data)]
+			ctx.statics.forEach[alloc(ctx)]
 
-			val chunks = noopClass.allMethodsBottomUp.findFirst[nmi].alloc(data)
+			val chunks = noopClass.allMethodsBottomUp.findFirst[nmi].alloc(ctx)
 
-			data.counters.forEach [ counter, page |
+			ctx.counters.forEach [ counter, page |
 				try {
 					counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
 				} catch (NoSuchElementException e) {
 				}
 			]
 
-			chunks += noopClass.allMethodsBottomUp.findFirst[irq].alloc(data)
+			chunks += noopClass.allMethodsBottomUp.findFirst[irq].alloc(ctx)
 
-			data.counters.forEach [ counter, page |
+			ctx.counters.forEach [ counter, page |
 				try {
 					counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
 				} catch (NoSuchElementException e) {
 				}
 			]
 
-			noopClass.allMethodsBottomUp.findFirst[reset].alloc(data)
+			noopClass.allMethodsBottomUp.findFirst[reset].alloc(ctx)
 		}
 	}
 

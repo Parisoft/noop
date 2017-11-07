@@ -68,9 +68,9 @@ class NoopGenerator extends AbstractGenerator {
 			return null
 		}
 
-		val data = gameImpl.prepare
-		gameImpl.alloc(data)
-		val content = data.compile.optimize
+		val ctx = gameImpl.prepare
+		gameImpl.alloc(ctx)
+		val content = ctx.compile.optimize
 
 		new ASM(gameImpl.name, content)
 	}
@@ -121,12 +121,12 @@ class NoopGenerator extends AbstractGenerator {
 		return games.head
 	}
 
-	private def compile(AllocData data) '''
+	private def compile(AllocContext ctx) '''
 		;----------------------------------------------------------------
 		; Class Metadata
 		;----------------------------------------------------------------
 		«var classCount = 0»
-		«FOR noopClass : data.classes.filter[nonPrimitive]»
+		«FOR noopClass : ctx.classes.filter[nonPrimitive]»
 			«noopClass.asmName» = «classCount++»
 			«val fieldOffset = new AtomicInteger(1)»
 			«FOR field : noopClass.allFieldsTopDown.filter[nonStatic]»
@@ -141,17 +141,17 @@ class NoopGenerator extends AbstractGenerator {
 		«Members::FALSE» = 0
 		«Members::FT_DPCM_OFF» = $C000
 		«Members::FT_DPCM_PTR» = («Members::FT_DPCM_OFF»&$3fff)>>6
-		«FOR cons : data.constants»
+		«FOR cons : ctx.constants»
 			«cons.nameOfConstant» = «cons.value.compileConstant»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
 		; Static variables
 		;----------------------------------------------------------------
-		«FOR page : 0..< data.counters.size»
-			«val counter = data.counters.get(page)»
+		«FOR page : 0..< ctx.counters.size»
+			«val counter = ctx.counters.get(page)»
 			«counter.set(page * 256)»
-			«val staticVars = data.statics.filter[storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE === page]»
+			«val staticVars = ctx.statics.filter[storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE === page]»
 			«FOR staticVar : staticVars»
 				«staticVar.nameOfStatic» = «counter.getAndAdd(staticVar.sizeOf).toHexString(4)»
 			«ENDFOR»
@@ -160,10 +160,10 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		; Local variables
 		;----------------------------------------------------------------
-		«Members::TEMP_VAR_NAME1» = «data.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
-		«Members::TEMP_VAR_NAME2» = «data.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
-		«FOR chunk : data.pointers.values.flatten.sort + data.variables.values.flatten.sort»
-			«val delta = data.counters.get(chunk.page).get - chunk.page * 256»
+		«Members::TEMP_VAR_NAME1» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
+		«Members::TEMP_VAR_NAME2» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
+		«FOR chunk : ctx.pointers.values.flatten.sort + ctx.variables.values.flatten.sort»
+			«val delta = ctx.counters.get(chunk.page).get - chunk.page * 256»
 			«chunk.shiftTo(delta)»
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
@@ -172,18 +172,18 @@ class NoopGenerator extends AbstractGenerator {
 		; iNES Header
 		;----------------------------------------------------------------
 			.db 'NES', $1A ;identification of the iNES header
-			.db «(data.header.fieldValue('prgRomPages') as Integer).toHexString» ;number of 16KB PRG-ROM pages
-			.db «(data.header.fieldValue('chrRomPages') as Integer).toHexString» ;number of 8KB CHR-ROM pages
-			.db «(data.header.fieldValue('mapper') as Integer).toHexString» | «(data.header.fieldValue('mirroring') as Integer).toHexString»
+			.db «(ctx.header.fieldValue('prgRomPages') as Integer).toHexString» ;number of 16KB PRG-ROM pages
+			.db «(ctx.header.fieldValue('chrRomPages') as Integer).toHexString» ;number of 8KB CHR-ROM pages
+			.db «(ctx.header.fieldValue('mapper') as Integer).toHexString» | «(ctx.header.fieldValue('mirroring') as Integer).toHexString»
 			.dsb 9, $00 ;clear the remaining bytes to 16
 			
 		;----------------------------------------------------------------
 		; PRG-ROM Bank(s)
 		;----------------------------------------------------------------
-			.base $10000 - («(data.header.fieldValue('prgRomPages') as Integer).toHexString» * $4000) 
+			.base $10000 - («(ctx.header.fieldValue('prgRomPages') as Integer).toHexString» * $4000) 
 		
-		«FOR rom : data.prgRoms.filter[nonDMC]»
-			«rom.compile(new CompileData)»
+		«FOR rom : ctx.prgRoms.filter[nonDMC]»
+			«rom.compile(new CompileContext)»
 		«ENDFOR»
 		
 		;-- Macros ------------------------------------------------------
@@ -201,21 +201,21 @@ class NoopGenerator extends AbstractGenerator {
 		;endm
 		
 		;-- Methods -----------------------------------------------------
-		«FOR method : data.methods.sortBy[fullyQualifiedName]»
-			«method.compile(new CompileData => [allocation = data])»
+		«FOR method : ctx.methods.sortBy[fullyQualifiedName]»
+			«method.compile(new CompileContext => [allocation = ctx])»
 			
 		«ENDFOR»
 		;-- Constructors ------------------------------------------------
-		«FOR constructor : data.constructors.sortBy[type.name]»
+		«FOR constructor : ctx.constructors.sortBy[type.name]»
 			«constructor.compile(null)»
 			
 		«ENDFOR»
-		«val dmcList = data.prgRoms.filter[DMC].toList»
+		«val dmcList = ctx.prgRoms.filter[DMC].toList»
 		«IF dmcList.isNotEmpty»
 			;-- DMC sound data-----------------------------------------------
 				.org «Members::FT_DPCM_OFF»
 			«FOR dmcRom : dmcList»
-				«dmcRom.compile(new CompileData)»
+				«dmcRom.compile(new CompileContext)»
 			«ENDFOR»
 		«ENDIF»
 		
@@ -224,17 +224,17 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 			.org $FFFA     
 		
-		 	.dw «data.methods.findFirst[nmi].nameOf»
-		 	.dw «data.methods.findFirst[reset].nameOf»
-		 	.dw «data.methods.findFirst[irq].nameOf»
+		 	.dw «ctx.methods.findFirst[nmi].nameOf»
+		 	.dw «ctx.methods.findFirst[reset].nameOf»
+		 	.dw «ctx.methods.findFirst[irq].nameOf»
 		
 		;----------------------------------------------------------------
 		; CHR-ROM bank(s)
 		;----------------------------------------------------------------
 		   .base $0000
 		
-		«FOR rom : data.chrRoms»
-			«rom.compile(new CompileData)»
+		«FOR rom : ctx.chrRoms»
+			«rom.compile(new CompileContext)»
 		«ENDFOR»
 	'''
 

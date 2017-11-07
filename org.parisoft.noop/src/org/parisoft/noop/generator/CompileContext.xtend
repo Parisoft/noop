@@ -3,7 +3,7 @@ package org.parisoft.noop.generator
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.noop.NoopClass
 
-class CompileData {
+class CompileContext {
 
 	enum Operation {
 		OR,
@@ -45,7 +45,7 @@ class CompileData {
 	@Accessors var String container
 	@Accessors var NoopClass type
 	@Accessors var Mode mode = Mode::COPY
-	@Accessors var AllocData allocation
+	@Accessors var AllocContext allocation
 	@Accessors var boolean accLoaded = false
 
 	override toString() '''
@@ -69,9 +69,9 @@ class CompileData {
 		index !== null
 	}
 	
-	override CompileData clone() {
+	override CompileContext clone() {
 		val src = this
-		new CompileData => [
+		new CompileContext => [
 			immediate = src.immediate
 			register = src.register
 			absolute = src.absolute

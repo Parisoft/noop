@@ -2,9 +2,9 @@ package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
 import java.util.concurrent.atomic.AtomicInteger
-import org.parisoft.noop.generator.AllocData
-import org.parisoft.noop.generator.CompileData
 import org.parisoft.noop.generator.MemChunk
+import org.parisoft.noop.generator.CompileContext
+import org.parisoft.noop.generator.AllocContext
 
 class Datas {
 
@@ -19,11 +19,11 @@ class Datas {
 	val loopThreshold = 9
 	val labelCounter = new AtomicInteger
 
-	def int sizeOf(CompileData data) {
-		data.type.sizeOf
+	def int sizeOf(CompileContext ctx) {
+		ctx.type.sizeOf
 	}
 
-	def resolveTo(CompileData src, CompileData dst) {
+	def resolveTo(CompileContext src, CompileContext dst) {
 		switch (dst.mode) {
 			case COPY: src.copyTo(dst)
 			case POINT: dst.pointTo(src)
@@ -32,7 +32,7 @@ class Datas {
 		}
 	}
 
-	def copyTo(CompileData src, CompileData dst) '''
+	def copyTo(CompileContext src, CompileContext dst) '''
 		«IF src.immediate !== null»
 			«IF dst.absolute !== null»
 				«src.copyImmediateToAbsolute(dst)»
@@ -74,7 +74,7 @@ class Datas {
 		«ENDIF»
 	'''
 
-	private def copyImmediateToAbsolute(CompileData src, CompileData dst) '''
+	private def copyImmediateToAbsolute(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 			«IF dst.isIndexed»
 				LDX «dst.index»
@@ -88,7 +88,7 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyImmediateToIndirect(CompileData src, CompileData dst) '''
+	private def copyImmediateToIndirect(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 			LDY «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
 			LDA #<(«src.immediate»)
@@ -101,7 +101,7 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyImmediateToRegister(CompileData src, CompileData dst) '''
+	private def copyImmediateToRegister(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 		«IF dst.sizeOf > 1»
 			«noop»
@@ -114,7 +114,7 @@ class Datas {
 		«ENDIF»
 	'''
 
-	private def copyAbsoluteToAbsolute(CompileData src, CompileData dst) '''
+	private def copyAbsoluteToAbsolute(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
 			«noop»
@@ -181,7 +181,7 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyAbsoluteToIndirect(CompileData src, CompileData dst) '''
+	private def copyAbsoluteToIndirect(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
 			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
@@ -257,7 +257,7 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyAbsoluteToRegister(CompileData src, CompileData dst) '''
+	private def copyAbsoluteToRegister(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 		«IF src.isIndexed»
 			«noop»
@@ -277,7 +277,7 @@ class Datas {
 			LDA «src.absolute»«IF src.isIndexed», X«ENDIF»
 	'''
 
-	private def copyIndirectToAbsolute(CompileData src, CompileData dst) '''
+	private def copyIndirectToAbsolute(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
 			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
@@ -349,7 +349,7 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyIndirectToIndirect(CompileData src, CompileData dst) '''
+	private def copyIndirectToIndirect(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
 			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
@@ -420,7 +420,7 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyIndirectToRegister(CompileData src, CompileData dst) '''
+	private def copyIndirectToRegister(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 		«IF dst.sizeOf > 1»
 			«IF src.sizeOf > 1»
@@ -448,7 +448,7 @@ class Datas {
 			LDA («src.indirect»), Y
 	'''
 
-	private def copyRegisterToAbsolute(CompileData src, CompileData dst) '''
+	private def copyRegisterToAbsolute(CompileContext src, CompileContext dst) '''
 		«noop»
 			«IF dst.isIndexed»
 				LDX «dst.index»
@@ -469,7 +469,7 @@ class Datas {
 		«ENDIF»
 	'''
 
-	private def copyRegisterToIndirect(CompileData src, CompileData dst) '''
+	private def copyRegisterToIndirect(CompileContext src, CompileContext dst) '''
 		«noop»
 			LDY «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
 			STA («dst.indirect»), Y
@@ -489,14 +489,14 @@ class Datas {
 		«ENDIF»
 	'''
 
-	private def branchImmediateToRelative(CompileData src, CompileData dst) '''
+	private def branchImmediateToRelative(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 			LDA #(«src.immediate»)
 			BNE +«dst.relative»:
 		«dst.pullAccIfOperating»
 	'''
 
-	private def branchAbsoluteToRelative(CompileData src, CompileData dst) '''
+	private def branchAbsoluteToRelative(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 			«IF src.isIndexed»
 				LDX «src.index»
@@ -506,7 +506,7 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def branchIndirectToRelative(CompileData src, CompileData dst) '''
+	private def branchIndirectToRelative(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 			LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
 			LDA («src.indirect»), Y
@@ -514,12 +514,12 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def branchRegisterToRelative(CompileData src, CompileData dst) '''
+	private def branchRegisterToRelative(CompileContext src, CompileContext dst) '''
 		«noop»
 			BNE +«dst.relative»:
 	'''
 
-	def copyArrayTo(CompileData src, CompileData dst, int len) '''
+	def copyArrayTo(CompileContext src, CompileContext dst, int len) '''
 		«IF src.absolute !== null && dst.absolute !== null»
 			«src.copyArrayAbsoluteToAbsoulte(dst, len)»
 		«ELSEIF src.absolute !== null && dst.indirect !== null»
@@ -531,7 +531,7 @@ class Datas {
 		«ENDIF»
 	'''
 
-	private def copyArrayAbsoluteToAbsoulte(CompileData src, CompileData dst, int len) '''
+	private def copyArrayAbsoluteToAbsoulte(CompileContext src, CompileContext dst, int len) '''
 		«dst.pushAccIfOperating»
 		«val bytes = len * dst.sizeOf»
 		«IF bytes < loopThreshold»
@@ -592,7 +592,7 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyArrayAbsoluteToIndirect(CompileData src, CompileData dst, int len) '''
+	private def copyArrayAbsoluteToIndirect(CompileContext src, CompileContext dst, int len) '''
 		«dst.pushAccIfOperating»
 		«val bytes = len * dst.sizeOf»
 		«IF bytes < loopThreshold»
@@ -658,7 +658,7 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyArrayIndirectToAbsolute(CompileData src, CompileData dst, int len) '''
+	private def copyArrayIndirectToAbsolute(CompileContext src, CompileContext dst, int len) '''
 		«dst.pushAccIfOperating»
 		«val bytes = len * dst.sizeOf»
 		«IF bytes < loopThreshold»
@@ -724,7 +724,7 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyArrayIndirectToIndirect(CompileData src, CompileData dst, int len) '''
+	private def copyArrayIndirectToIndirect(CompileContext src, CompileContext dst, int len) '''
 		«dst.pushAccIfOperating»
 		«val bytes = len * dst.sizeOf»
 		«IF bytes < loopThreshold»
@@ -785,13 +785,13 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	def fillArrayWith(CompileData array, CompileData identity, int len) '''
+	def fillArrayWith(CompileContext array, CompileContext identity, int len) '''
 	'''
 
-	private def fillArrayAbsoluteWithAbsolute(CompileData array, CompileData identity, int len) '''
+	private def fillArrayAbsoluteWithAbsolute(CompileContext array, CompileContext identity, int len) '''
 	'''
 
-	def pointTo(CompileData ptr, CompileData src) '''
+	def pointTo(CompileContext ptr, CompileContext src) '''
 		«IF src.absolute !== null && ptr.indirect !== null»
 			«ptr.pushAccIfOperating»
 			«ptr.pointIndirectToAbsolute(src)»
@@ -803,7 +803,7 @@ class Datas {
 		«ENDIF»
 	'''
 
-	private def pointIndirectToAbsolute(CompileData ptr, CompileData src) '''
+	private def pointIndirectToAbsolute(CompileContext ptr, CompileContext src) '''
 		«noop»
 			LDA #<(«src.absolute»)
 			«IF src.isIndexed»
@@ -818,7 +818,7 @@ class Datas {
 			STA «ptr.indirect» + 1
 	'''
 
-	private def pointIndirectToIndirect(CompileData ptr, CompileData src) '''
+	private def pointIndirectToIndirect(CompileContext ptr, CompileContext src) '''
 		«noop»
 			LDA «src.indirect»
 			«IF src.isIndexed»
@@ -833,22 +833,22 @@ class Datas {
 			STA «ptr.indirect» + 1
 	'''
 
-	def referenceInto(CompileData src, CompileData dst) {
+	def referenceInto(CompileContext src, CompileContext dst) {
 		dst.absolute = src.absolute
 		dst.indirect = src.indirect
 		dst.index = src.index
 	}
 
-	def pushAccIfOperating(CompileData data) '''
-		«IF data.operation !== null && data.isAccLoaded»
-			«data.accLoaded = false»
+	def pushAccIfOperating(CompileContext ctx) '''
+		«IF ctx.operation !== null && ctx.isAccLoaded»
+			«ctx.accLoaded = false»
 				PHA
 		«ENDIF»
 	'''
 
-	def pullAccIfOperating(CompileData data) '''
-		«IF data.operation !== null && !data.isAccLoaded»
-			«data.accLoaded = true»
+	def pullAccIfOperating(CompileContext ctx) '''
+		«IF ctx.operation !== null && !ctx.isAccLoaded»
+			«ctx.accLoaded = true»
 				PLA
 		«ENDIF»
 	'''
@@ -858,51 +858,51 @@ class Datas {
 	private def void noop() {
 	}
 
-	def computePtr(AllocData data, String varName) {
-		computeVar(data, varName, PTR_PAGE, 2)
+	def computePtr(AllocContext ctx, String varName) {
+		computeVar(ctx, varName, PTR_PAGE, 2)
 	}
 
-	def computeVar(AllocData data, String varName, int size) {
-		computeVar(data, varName, VAR_PAGE, size)
+	def computeVar(AllocContext ctx, String varName, int size) {
+		computeVar(ctx, varName, VAR_PAGE, size)
 	}
 
-	def computeVar(AllocData data, String varName, int page, int size) {
-		val chunksByVarName = if (page === PTR_PAGE) data.pointers else data.variables
+	def computeVar(AllocContext ctx, String varName, int page, int size) {
+		val chunksByVarName = if (page === PTR_PAGE) ctx.pointers else ctx.variables
 
 		chunksByVarName.compute(varName, [ name, value |
 			var chunks = value
 
 			if (chunks === null) {
-				chunks = newArrayList(data.chunkFor(page, name, size))
-			} else if (data.counters.get(page).get < chunks.last.hi) {
-				data.counters.get(page).set(chunks.last.hi + 1)
+				chunks = newArrayList(ctx.chunkFor(page, name, size))
+			} else if (ctx.counters.get(page).get < chunks.last.hi) {
+				ctx.counters.get(page).set(chunks.last.hi + 1)
 			}
 
 			return chunks
 		])
 	}
 
-	def computeTmp(AllocData data, String varName, int size) {
+	def computeTmp(AllocContext ctx, String varName, int size) {
 		if (size > 2) {
-			data.variables.compute(varName, [ name, value |
+			ctx.variables.compute(varName, [ name, value |
 				var chunks = value
 
 				if (chunks === null) {
-					chunks = newArrayList(data.chunkFor(VAR_PAGE, name, size) => [tmp = true])
-				} else if (data.counters.get(VAR_PAGE).get < chunks.last.hi) {
-					data.counters.get(VAR_PAGE).set(chunks.last.hi + 1)
+					chunks = newArrayList(ctx.chunkFor(VAR_PAGE, name, size) => [tmp = true])
+				} else if (ctx.counters.get(VAR_PAGE).get < chunks.last.hi) {
+					ctx.counters.get(VAR_PAGE).set(chunks.last.hi + 1)
 				}
 
 				return chunks
 			])
 		} else {
-			data.pointers.compute(varName, [ name, value |
+			ctx.pointers.compute(varName, [ name, value |
 				var chunks = value
 
 				if (chunks === null) {
-					chunks = newArrayList(data.chunkFor(PTR_PAGE, name, size) => [tmp = true])
-				} else if (data.counters.get(PTR_PAGE).get < chunks.last.hi) {
-					data.counters.get(PTR_PAGE).set(chunks.last.hi + 1)
+					chunks = newArrayList(ctx.chunkFor(PTR_PAGE, name, size) => [tmp = true])
+				} else if (ctx.counters.get(PTR_PAGE).get < chunks.last.hi) {
+					ctx.counters.get(PTR_PAGE).set(chunks.last.hi + 1)
 				}
 
 				return chunks
