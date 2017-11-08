@@ -748,8 +748,9 @@ class Operations {
 					ASL «Members::TEMP_VAR_NAME1»
 					ROL A
 			«ENDFOR»
-			PHA
-			LDA «Members::TEMP_VAR_NAME1»
+			«noop»
+				PHA
+				LDA «Members::TEMP_VAR_NAME1»
 		«ELSE»
 			«FOR i : 0..< shift»
 				«noop»
@@ -886,10 +887,11 @@ class Operations {
 						LDA «Members::TEMP_VAR_NAME1» + 1
 					«ENDIF»
 			«ENDIF»
-			«IF acc.sizeOfOp > 1»
-				PHA
-			«ENDIF»
-			LDA «Members::TEMP_VAR_NAME1»
+			«noop»
+				«IF acc.sizeOfOp > 1»
+					PHA
+				«ENDIF»
+				LDA «Members::TEMP_VAR_NAME1»
 		«ELSEIF acc.type.isUnsigned»
 			«FOR i : 0..< shift»
 				«noop»
@@ -923,7 +925,8 @@ class Operations {
 				«acc.loadMSB»
 			«ENDIF»
 			«IF acc.type.isSigned»
-				STA «Members::TEMP_VAR_NAME1» + 1
+				«noop»
+					STA «Members::TEMP_VAR_NAME1» + 1
 			«ENDIF»
 			-«shiftLoop»:
 				«IF acc.type.isSigned»
@@ -991,7 +994,8 @@ class Operations {
 				«acc.loadMSB»
 			«ENDIF»
 			«IF acc.type.isSigned»
-				STA «Members::TEMP_VAR_NAME1» + 1
+				«noop»
+					STA «Members::TEMP_VAR_NAME1» + 1
 			«ENDIF»
 			-«shiftLoop»:
 				«IF acc.type.isSigned»
@@ -1117,13 +1121,14 @@ class Operations {
 						PLA
 				«ELSE»
 					«multiplicand.loadMSB»
-				«ENDIF»	
-				«FOR i : 0..< bits.indexOf(one)»
-					ASL «Members::TEMP_VAR_NAME1»
-					ROL A
-				«ENDFOR»
-				PHA
-				LDA «Members::TEMP_VAR_NAME1»
+				«ENDIF»
+				«noop»
+					«FOR i : 0..< bits.indexOf(one)»
+						ASL «Members::TEMP_VAR_NAME1»
+						ROL A
+					«ENDFOR»
+					PHA
+					LDA «Members::TEMP_VAR_NAME1»
 			«ELSEIF const.abs > 1»
 				«var lastPower = new AtomicInteger»
 					STA «Members::TEMP_VAR_NAME1»
@@ -1133,8 +1138,9 @@ class Operations {
 				«ELSE»
 					«multiplicand.loadMSB»
 				«ENDIF»
-				STA «Members::TEMP_VAR_NAME1» + 1
-				LDA «Members::TEMP_VAR_NAME1»
+				«noop»
+					STA «Members::TEMP_VAR_NAME1» + 1
+					LDA «Members::TEMP_VAR_NAME1»
 				«FOR i : 0..< bits.size»
 					«IF bits.get(i) == one»
 						«noop»
@@ -1208,11 +1214,11 @@ class Operations {
 	'''
 
 	private def multiplyAbsolute(CompileContext multiplicand, CompileContext multiplier) '''
-		
+		; TODO multiplyAbsolute
 	'''
 
 	private def multiplyIndirect(CompileContext multiplicand, CompileContext multiplier) '''
-		
+		; TODO multiplyIndirect
 	'''
 
 	private def operateImmediate(CompileContext operand, String instruction) '''
