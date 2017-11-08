@@ -765,12 +765,12 @@ class Expressions {
 				GeExpression: '''«Operation::COMPARE_GE.compileBinary(expression.left, expression.right, ctx)»'''
 				AddExpression: '''«Operation::ADDITION.compileBinary(expression.left, expression.right, ctx)»'''
 				SubExpression: '''«Operation::SUBTRACTION.compileBinary(expression.left, expression.right, ctx)»'''
-				MulExpression: '''«expression.left.compileMultiplication(expression.right, ctx)»'''
-				DivExpression: '''«expression.left.compileDivision(expression.right, ctx)»'''
+				MulExpression: '''«Operation::MULTIPLICATION.compileMultiplication(expression.left, expression.right, ctx)»'''
+				DivExpression: '''«Operation::DIVISION.compileMultiplication(expression.left, expression.right, ctx)»'''
 				BOrExpression: '''«Operation::BIT_OR.compileBinary(expression.left, expression.right, ctx)»'''
 				BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, ctx)»'''
-				LShiftExpression: '''«Operation::BIT_SHIFT_LEFT.compileBinary(expression.left, expression.right, ctx)»'''
-				RShiftExpression: '''«Operation::BIT_SHIFT_RIGHT.compileBinary(expression.left, expression.right, ctx)»'''
+				LShiftExpression: '''«Operation::BIT_SHIFT_LEFT.compileMultiplication(expression.left, expression.right, ctx)»'''
+				RShiftExpression: '''«Operation::BIT_SHIFT_RIGHT.compileMultiplication(expression.left, expression.right, ctx)»'''
 				EorExpression: '''«Operation::BIT_EXCLUSIVE_OR.compileUnary(expression.right, ctx)»'''
 				NotExpression: '''«expression.right.compileNot(ctx)»'''
 				SigNegExpression: '''«Operation::SIGNUM.compileUnary(expression.right, ctx)»'''
@@ -778,7 +778,7 @@ class Expressions {
 				DecExpression: '''«Operation::DECREMENT.compileInc(expression.right, ctx)»'''
 				IncExpression: '''«Operation::INCREMENT.compileInc(expression.right, ctx)»'''
 				CastExpression: '''«expression.left.compile(ctx)»'''
-				InheritsExpression: ''';TODO: inherits'''
+				InheritsExpression: '''	;TODO: inherits'''
 				ByteLiteral: '''
 					«IF ctx.db !== null»
 						«val bytes = expression.valueOf.toBytes»
@@ -1098,10 +1098,11 @@ class Expressions {
 	'''
 
 	private def compileBinary(Operation binaryOperation, Expression left, Expression right, CompileContext ctx) '''
+		«val accType = if (ctx.sizeOf > left.sizeOf || binaryOperation.isComparison || binaryOperation.isDivision) left.typeOf else ctx.type»
 		«val lda = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
-			type = if (binaryOperation.isComparisonOrMultiplication) left.typeOf else ctx.type //if (ctx.type.isBoolean) left.typeOf else ctx.type
+			type = accType //if (ctx.type.isBoolean) left.typeOf else ctx.type
 			register = 'A'
 			mode = Mode::COPY
 		]»
@@ -1109,7 +1110,7 @@ class Expressions {
 			container = ctx.container
 			operation = binaryOperation
 			relative = ctx.relative
-			type = if (binaryOperation.isComparisonOrMultiplication) left.typeOf else ctx.type //if (ctx.type.isBoolean) left.typeOf else ctx.type
+			type = accType //if (ctx.type.isBoolean) left.typeOf else ctx.type
 			opType = ctx.type
 			accLoaded = true
 			mode = Mode::OPERATE
@@ -1122,13 +1123,13 @@ class Expressions {
 		«right.compile(opr)»
 		«IF ctx.mode === Mode::OPERATE»
 			«ctx.accLoaded = true»
-				«FOR i : 0..< lda.sizeOf»
+				«FOR i : 0..< accType.sizeOf»
 					STA «Members::TEMP_VAR_NAME2»«IF i > 0» + «i»«ENDIF»
 					PLA
 				«ENDFOR»
 			«val tmp = new CompileContext => [
 				container = ctx.container
-				type = lda.type
+				type = accType
 				opType = ctx.type
 				absolute = Members::TEMP_VAR_NAME2
 			]»
@@ -1143,34 +1144,20 @@ class Expressions {
 		«ENDIF»
 	'''
 
-	private def compileMultiplication(Expression left, Expression right, CompileContext ctx) {
+	private def compileMultiplication(Operation operation, Expression left, Expression right, CompileContext ctx) {
 		try {
 			val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
-			Operation::MULTIPLICATION.compileBinary(const, right, ctx)
+			operation.compileBinary(const, right, ctx)
 		} catch (NonConstantExpressionException exception) {
 			try {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
-				Operation::MULTIPLICATION.compileBinary(left, const, ctx)
+				operation.compileBinary(left, const, ctx)
 			} catch (NonConstantExpressionException exception2) {
-				Operation::MULTIPLICATION.compileBinary(left, right, ctx)
+				operation.compileBinary(left, right, ctx)
 			}
 		}
 	}
 	
-	private def compileDivision(Expression left, Expression right, CompileContext ctx) {
-		try {
-			val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
-			Operation::DIVISION.compileBinary(const, right, ctx)
-		} catch (NonConstantExpressionException exception) {
-			try {
-				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
-				Operation::DIVISION.compileBinary(left, const, ctx)
-			} catch (NonConstantExpressionException exception2) {
-				Operation::DIVISION.compileBinary(left, right, ctx)
-			}
-		}
-	}
-
 	private def compileOr(Expression left, Expression right, CompileContext ctx) '''
 		«val lctx = new CompileContext => [
 			container = ctx.container

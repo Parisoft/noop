@@ -16,14 +16,20 @@ class Operations {
 
 	val labelCounter = new AtomicInteger
 
-	def isComparisonOrMultiplication(Operation operation) {
+	def isComparison(Operation operation) {
 		switch (operation) {
 			case COMPARE_EQ: true
 			case COMPARE_NE: true
 			case COMPARE_LT: true
 			case COMPARE_GE: true
-			case MULTIPLICATION: true
+			default: false
+		}
+	}
+
+	def isDivision(Operation operation) {
+		switch (operation) {
 			case DIVISION: true
+			case BIT_SHIFT_RIGHT: true
 			default: false
 		}
 	}
@@ -150,11 +156,11 @@ class Operations {
 
 	def bitOr(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
-			acc.operateImmediate('ORA', operand)
+			acc.operateImmediate('ORA', null, operand)
 		} else if (operand.absolute !== null) {
-			acc.operateAbsolute('ORA', operand)
+			acc.operateAbsolute('ORA', null, operand)
 		} else if (operand.indirect !== null) {
-			acc.operateIndirect('ORA', operand)
+			acc.operateIndirect('ORA', null, operand)
 		}
 	}
 
@@ -180,11 +186,11 @@ class Operations {
 
 	def bitAnd(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
-			acc.operateImmediate('AND', operand)
+			acc.operateImmediate('AND', null, operand)
 		} else if (operand.absolute !== null) {
-			acc.operateAbsolute('AND', operand)
+			acc.operateAbsolute('AND', null, operand)
 		} else if (operand.indirect !== null) {
-			acc.operateIndirect('AND', operand)
+			acc.operateIndirect('AND', null, operand)
 		}
 	}
 
@@ -257,6 +263,12 @@ class Operations {
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 				PLA
 				CMP #>(«operand.immediate»)
+		«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«noop»
+				CMP #(«operand.immediate»)
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+				PLA
+				CMP #$00
 		«ELSEIF acc.sizeOf > 1»
 			«noop»
 				CMP #(«operand.immediate»)
@@ -304,6 +316,11 @@ class Operations {
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 				PLA
 				CMP «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+		«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«noop»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+				PLA
+				CMP #$00
 		«ELSEIF acc.sizeOf > 1»
 			«noop»
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
@@ -345,6 +362,11 @@ class Operations {
 				PLA
 				INY
 				CMP («operand.indirect»), Y
+		«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«noop»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+				PLA
+				CMP #$00
 		«ELSEIF acc.sizeOf > 1»
 			«noop»
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
@@ -387,6 +409,11 @@ class Operations {
 					CMP #<(«operand.immediate»)
 					PLA
 					SBC #>(«operand.immediate»)
+			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+				«noop»
+					CMP #(«operand.immediate»)
+					PLA
+					SBC #$00
 			«ELSEIF acc.sizeOf > 1»
 				«noop»
 					CMP #(«operand.immediate»)
@@ -438,6 +465,11 @@ class Operations {
 					CMP #<(«operand.immediate»)
 					PLA
 					SBC #>«operand.immediate»
+			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+				«noop»
+					CMP #(«operand.immediate»)
+					PLA
+					SBC #$00
 			«ELSEIF acc.sizeOf > 1»
 				«noop»
 					CMP #(«operand.immediate»)
@@ -487,6 +519,11 @@ class Operations {
 					CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 					PLA
 					SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+				«noop»
+					CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+					PLA
+					SBC #$00
 			«ELSEIF acc.sizeOf > 1»
 				«noop»
 					CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
@@ -543,6 +580,10 @@ class Operations {
 				«noop»
 					PLA
 					SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+				«noop»
+					PLA
+					SBC #$00
 			«ELSEIF acc.sizeOf > 1»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
@@ -584,6 +625,11 @@ class Operations {
 					PLA
 					INY
 					SBC («operand.indirect»), Y
+			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+				«noop»
+					CMP («operand.indirect»), Y
+					PLA
+					SBC #$00
 			«ELSEIF acc.sizeOf > 1»
 				«noop»
 					CMP («operand.indirect»), Y
@@ -655,6 +701,10 @@ class Operations {
 					PLA
 					INY
 					SBC («operand.indirect»), Y
+			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+				«noop»
+					PLA
+					SBC #$00
 			«ELSEIF acc.sizeOf > 1»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
@@ -665,78 +715,93 @@ class Operations {
 					INY
 					SBC («operand.indirect»), Y
 			«ENDIF»
-			«IF acc.relative === null»
-				«noop»
-					«branch.get» +«comparisonIsTrue»
-				+«comparisonIsFalse»:
-					LDA #«Members::FALSE»
-					JMP +«comparisonEnd»
-				+«comparisonIsTrue»:
-					LDA #«Members::TRUE»
-				+«comparisonEnd»:
-			«ELSE»
-				«noop»
-					«branch.get» +«acc.relative»
-				+«comparisonIsFalse»:
-			«ENDIF»
+		«ENDIF»
+		«IF acc.relative === null»
+			«noop»
+				«branch.get» +«comparisonIsTrue»
+			+«comparisonIsFalse»:
+				LDA #«Members::FALSE»
+				JMP +«comparisonEnd»
+			+«comparisonIsTrue»:
+				LDA #«Members::TRUE»
+			+«comparisonEnd»:
+		«ELSE»
+			«noop»
+				«branch.get» +«acc.relative»
+			+«comparisonIsFalse»:
 		«ENDIF»
 	'''
 
 	private def bitShiftLeftImmediate(CompileContext acc, CompileContext operand) '''
-		«IF acc.sizeOf > 1»
-			«val shiftLoop = labelForShiftLoop»
-			«val shiftEnd = labelForShiftEnd»
+		«val shift = operand.immediate.parseInt.bitwiseAnd((operand.sizeOf * 8) - 1)»
+		«IF acc.sizeOfOp > 1 && shift != 0»
+			«noop»
 				STA «Members::TEMP_VAR_NAME1»
-				PLA
-				LDX #(«operand.immediate»)
-				BEQ +«shiftEnd»
-			-«shiftLoop»:
-				ASL «Members::TEMP_VAR_NAME1»
-				ROL A
-				DEX
-				BNE -«shiftLoop»
-				PHA
-				LDA «Members::TEMP_VAR_NAME1»
-			+«shiftEnd»:
+			«IF acc.sizeOf > 1»
+				«noop»
+					PLA
+			«ELSE»
+				«acc.loadMSB»
+			«ENDIF»
+			«FOR i : 0..< shift»
+				«noop»
+					ASL «Members::TEMP_VAR_NAME1»
+					ROL A
+			«ENDFOR»
+			PHA
+			LDA «Members::TEMP_VAR_NAME1»
 		«ELSE»
-			«val labelLoop = labelForShiftLoop»
-			«val shiftEnd = labelForShiftEnd»
-				LDX #(«operand.immediate»)
-				BEQ +«shiftEnd»
-			-«labelLoop»:
-				ASL A
-				DEX
-				BNE -«labelLoop»
-			+«shiftEnd»:
+			«FOR i : 0..< shift»
+				«noop»
+					ASL A
+			«ENDFOR»
 		«ENDIF»
 	'''
 
 	private def bitShiftLeftAbsolute(CompileContext acc, CompileContext operand) '''
-		«IF acc.sizeOf > 1»
+		«IF acc.sizeOfOp > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
 				STA «Members::TEMP_VAR_NAME1»
-				PLA
 				«IF operand.isIndexed»
 					LDX «operand.index»
 				«ENDIF»
-				LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				LDA «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				AND #«(operand.sizeOf * 8) - 1»
 				BEQ +«shiftEnd»
+				TAY
+			«IF acc.sizeOf > 1»
+				«noop»
+					PLA
+			«ELSE»
+				«acc.loadMSB»
+			«ENDIF»
 			-«shiftLoop»:
 				ASL «Members::TEMP_VAR_NAME1»
 				ROL A
 				DEY
 				BNE -«shiftLoop»
 				PHA
-				LDA «Members::TEMP_VAR_NAME1»
 			+«shiftEnd»:
+				LDA «Members::TEMP_VAR_NAME1»
 		«ELSE»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
 				«IF operand.isIndexed»
 					LDX «operand.index»
+					STA «Members::TEMP_VAR_NAME1»
+				«ELSE»
+					TAX
 				«ENDIF»
-				LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				LDA «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				AND #«(operand.sizeOf * 8) - 1»
+				TAY
+				«IF operand.isIndexed»
+					LDA «Members::TEMP_VAR_NAME1»
+				«ELSE»
+					TXA
+				«ENDIF»
+				CPY #$00
 				BEQ +«shiftEnd»
 			-«shiftLoop»:
 				ASL A
@@ -747,15 +812,21 @@ class Operations {
 	'''
 
 	private def bitShiftLeftIndirect(CompileContext acc, CompileContext operand) '''
-		«IF acc.sizeOf > 1»
+		«IF acc.sizeOfOp > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
 				STA «Members::TEMP_VAR_NAME1»
 				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 				LDA («operand.indirect»), Y
+				AND #«(operand.sizeOf * 8) - 1»
 				BEQ +«shiftEnd»
 				TAX
-				PLA
+			«IF acc.sizeOf > 1»
+				«noop»
+					PLA
+			«ELSE»
+				«acc.loadMSB»
+			«ENDIF»
 			-«shiftLoop»:
 				ASL «Members::TEMP_VAR_NAME1»
 				ROL A
@@ -770,76 +841,133 @@ class Operations {
 				STA «Members::TEMP_VAR_NAME1»
 				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 				LDA («operand.indirect»), Y
-				BEQ +«shiftEnd»
+				AND #«(operand.sizeOf * 8) - 1»
 				TAX
 				LDA «Members::TEMP_VAR_NAME1»
+				CPX #$00
+				BEQ +«shiftEnd»
 			-«shiftLoop»:
 				ASL A
 				DEX
 				BNE -«shiftLoop»
 			+«shiftEnd»:
-				LDA «Members::TEMP_VAR_NAME1»
 		«ENDIF»
 	'''
 
 	private def bitShiftRightImmediate(CompileContext acc, CompileContext operand) '''
-		«IF acc.sizeOf > 1»
-			«val shiftLoop = labelForShiftLoop»
-			«val shiftEnd = labelForShiftEnd»
+		«val shift = operand.immediate.parseInt.bitwiseAnd((operand.sizeOf * 8) - 1)»
+		«IF (acc.sizeOfOp > 1 || acc.sizeOf > 1) && shift != 0»
+			«noop»
 				STA «Members::TEMP_VAR_NAME1»
-				PLA
-				LDX #(«operand.immediate»)
-				BEQ +«shiftEnd»
-			-«shiftLoop»:
-				LSR A
-				ROR «Members::TEMP_VAR_NAME1»
-				DEX
-				BNE -«shiftLoop»
+			«IF acc.sizeOf > 1»
+				«noop»
+					PLA
+			«ELSE»
+				«acc.loadMSB»
+			«ENDIF»
+			«IF acc.type.isUnsigned»
+				«noop»
+					«FOR i : 0..< shift»
+						LSR A
+						ROR «Members::TEMP_VAR_NAME1»
+					«ENDFOR»
+			«ELSE»
+				«noop»
+					STA «Members::TEMP_VAR_NAME1» + 1
+					«FOR i : 0..< shift»
+						«IF i > 0»
+							LDA «Members::TEMP_VAR_NAME1» + 1
+						«ENDIF»
+						ASL A
+						ROR «Members::TEMP_VAR_NAME1» + 1
+						ROR «Members::TEMP_VAR_NAME1»
+					«ENDFOR»
+					«IF acc.sizeOfOp > 1»
+						LDA «Members::TEMP_VAR_NAME1» + 1
+					«ENDIF»
+			«ENDIF»
+			«IF acc.sizeOfOp > 1»
 				PHA
-				LDA «Members::TEMP_VAR_NAME1»
-			+«shiftEnd»:
+			«ENDIF»
+			LDA «Members::TEMP_VAR_NAME1»
+		«ELSEIF acc.type.isUnsigned»
+			«FOR i : 0..< shift»
+				«noop»
+					CMP #$80
+					ROR A
+			«ENDFOR»
 		«ELSE»
-			«val labelLoop = labelForShiftLoop»
-			«val shiftEnd = labelForShiftEnd»
-				LDX #(«operand.immediate»)
-				BEQ +«shiftEnd»
-			-«labelLoop»:
-				LSR A
-				DEX
-				BNE -«labelLoop»
-			+«shiftEnd»:
+			«FOR i : 0..< shift»
+				«noop»
+					LSR A
+			«ENDFOR»
 		«ENDIF»
 	'''
 
 	private def bitShiftRightAbsolute(CompileContext acc, CompileContext operand) '''
-		«IF acc.sizeOf > 1»
+		«IF acc.sizeOfOp > 1 || acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
 				STA «Members::TEMP_VAR_NAME1»
-				PLA
 				«IF operand.isIndexed»
 					LDX «operand.index»
 				«ENDIF»
-				LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				LDA «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				AND #«(operand.sizeOf * 8) - 1»
 				BEQ +«shiftEnd»
-			-«shiftLoop»
-				LSR A
-				ROR «Members::TEMP_VAR_NAME1»
+				TAY
+			«IF acc.sizeOf > 1»
+				«noop»
+					PLA
+			«ELSE»
+				«acc.loadMSB»
+			«ENDIF»
+			«IF acc.type.isSigned»
+				STA «Members::TEMP_VAR_NAME1» + 1
+			«ENDIF»
+			-«shiftLoop»:
+				«IF acc.type.isSigned»
+					ASL A
+					ROR «Members::TEMP_VAR_NAME1» + 1
+					ROR «Members::TEMP_VAR_NAME1»
+					LDA «Members::TEMP_VAR_NAME1» + 1
+				«ELSE»
+					LSR A
+					ROR «Members::TEMP_VAR_NAME1»
+				«ENDIF»
 				DEY
 				BNE -«shiftLoop»
-				PHA
+				«IF acc.sizeOfOp > 1»
+					PHA
+				«ENDIF»
+			+«shiftEnd»:
 				LDA «Members::TEMP_VAR_NAME1»
-			+«shiftEnd»
 		«ELSE»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
 				«IF operand.isIndexed»
 					LDX «operand.index»
+					STA «Members::TEMP_VAR_NAME1»
+				«ELSE»
+					TAX
 				«ENDIF»
-				LDY «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				LDA «operand.absolute»«IF operand.isIndexed», X«ENDIF»
+				AND #«(operand.sizeOf * 8) - 1»
+				TAY
+				«IF operand.isIndexed»
+					LDA «Members::TEMP_VAR_NAME1»
+				«ELSE»
+					TXA
+				«ENDIF»
+				CPY #$00
 				BEQ +«shiftEnd»
 			-«shiftLoop»:
-				LSR A
+				«IF acc.type.isUnsigned»
+					LSR A
+				«ELSE»
+					CMP #$80
+					ROR A
+				«ENDIF»
 				DEY
 				BNE -«shiftLoop»
 			+«shiftEnd»:
@@ -847,21 +975,39 @@ class Operations {
 	'''
 
 	private def bitShiftRightIndirect(CompileContext acc, CompileContext operand) '''
-		«IF acc.sizeOf > 1»
+		«IF acc.sizeOfOp > 1 || acc.sizeOf > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
 				STA «Members::TEMP_VAR_NAME1»
 				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 				LDA («operand.indirect»), Y
+				AND #«(operand.sizeOf * 8) - 1»
 				BEQ +«shiftEnd»
 				TAX
-				PLA
+			«IF acc.sizeOf > 1»
+				«noop»
+					PLA
+			«ELSE»
+				«acc.loadMSB»
+			«ENDIF»
+			«IF acc.type.isSigned»
+				STA «Members::TEMP_VAR_NAME1» + 1
+			«ENDIF»
 			-«shiftLoop»:
-				LSR A
-				ROR «Members::TEMP_VAR_NAME1»
+				«IF acc.type.isSigned»
+					ASL A
+					ROR «Members::TEMP_VAR_NAME1» + 1
+					ROR «Members::TEMP_VAR_NAME1»
+					LDA «Members::TEMP_VAR_NAME1» + 1
+				«ELSE»
+					LSR A
+					ROR «Members::TEMP_VAR_NAME1»
+				«ENDIF»
 				DEX
 				BNE -«shiftLoop»
-				PHA
+				«IF acc.sizeOfOp > 1»
+					PHA
+				«ENDIF»
 			+«shiftEnd»:
 				LDA «Members::TEMP_VAR_NAME1»
 		«ELSE»
@@ -870,15 +1016,21 @@ class Operations {
 				STA «Members::TEMP_VAR_NAME1»
 				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 				LDA («operand.indirect»), Y
-				BEQ +«shiftEnd»
+				AND #«(operand.sizeOf * 8) - 1»
 				TAX
 				LDA «Members::TEMP_VAR_NAME1»
+				CPX #$00
+				BEQ +«shiftEnd»
 			-«shiftLoop»:
-				LSR A
+				«IF acc.type.isUnsigned»
+					LSR A
+				«ELSE»
+					CMP #$80
+					ROR A
+				«ENDIF»
 				DEX
 				BNE -«shiftLoop»
 			+«shiftEnd»:
-				LDA «Members::TEMP_VAR_NAME1»
 		«ENDIF»
 	'''
 
@@ -947,67 +1099,70 @@ class Operations {
 
 	private def multiplyImmediate(CompileContext multiplicand, CompileContext multiplier) '''
 		«val const = multiplier.immediate.valueOf»
-		«val ONE = '1'.charAt(0)»
+		«val one = '1'.charAt(0)»
 		«val bits = const.abs.toBinaryString.toCharArray.reverse»
-		«IF multiplicand.sizeOf > 1»
+		«IF multiplicand.sizeOfOp > 1»
 			«IF const === 0»
 				«noop»
-					PLA
+					«IF multiplicand.sizeOf > 1»
+						PLA
+					«ENDIF»
 					LDA #$00
 					PHA
-			«ELSEIF const.abs > 1 && bits.filter[it == ONE].size == 1»
+			«ELSEIF const.abs > 1 && bits.filter[it == one].size == 1»
 				«noop»
-					TAX
-					PLA
-					TAY
-					«FOR i : 0..< bits.indexOf(ONE)»
-						TXA
-						ASL A
-						TAX
-						TYA
-						ROL A
-						«IF i < bits.indexOf(ONE) - 1»
-							TAY
-						«ENDIF»
-					«ENDFOR»
-					PHA
-					TXA
+					STA «Members::TEMP_VAR_NAME1»
+				«IF multiplicand.sizeOf > 1»
+					«noop»
+						PLA
+				«ELSE»
+					«multiplicand.loadMSB»
+				«ENDIF»	
+				«FOR i : 0..< bits.indexOf(one)»
+					ASL «Members::TEMP_VAR_NAME1»
+					ROL A
+				«ENDFOR»
+				PHA
+				LDA «Members::TEMP_VAR_NAME1»
 			«ELSEIF const.abs > 1»
 				«var lastPower = new AtomicInteger»
-					TAX
-					PLA
-					TAY
+					STA «Members::TEMP_VAR_NAME1»
+				«IF multiplicand.sizeOf > 1»
+					«noop»
+						PLA
+				«ELSE»
+					«multiplicand.loadMSB»
+				«ENDIF»
+				STA «Members::TEMP_VAR_NAME1» + 1
+				LDA «Members::TEMP_VAR_NAME1»
 				«FOR i : 0..< bits.size»
-					«IF bits.get(i) == ONE»
+					«IF bits.get(i) == one»
 						«noop»
 							«FOR pow : 0..< i - lastPower.get»
-								TXA
 								ASL A
-								TAX
-								TYA
-								ROL A
-								TAY
+								ROL «Members::TEMP_VAR_NAME1» + 1
 							«ENDFOR»
-							«IF i == 0 || lastPower.get == 0 && bits.head != ONE»
-								STX «Members::TEMP_VAR_NAME1»
-								STA «Members::TEMP_VAR_NAME1» + 1
-							«ELSEIF i == bits.size - 1»
+							«IF i == 0 || lastPower.get == 0 && bits.head != one»
+								STA «Members::TEMP_VAR_NAME3»
+								LDX «Members::TEMP_VAR_NAME1» + 1
+								STX «Members::TEMP_VAR_NAME3» + 1
+							«ELSEIF i < bits.size - 1»
 								CLC
-								TXA
-								ADC «Members::TEMP_VAR_NAME1»
 								TAX
-								TYA
-								ADC «Members::TEMP_VAR_NAME1» + 1
-								PHA
+								ADC «Members::TEMP_VAR_NAME3»
+								STA «Members::TEMP_VAR_NAME3»
+								LDA «Members::TEMP_VAR_NAME1» + 1
+								ADC «Members::TEMP_VAR_NAME3» + 1
+								STA «Members::TEMP_VAR_NAME3» + 1
 								TXA
 							«ELSE»
 								CLC
+								ADC «Members::TEMP_VAR_NAME3»
+								TAX
+								LDA «Members::TEMP_VAR_NAME1» + 1
+								ADC «Members::TEMP_VAR_NAME3» + 1
+								PHA
 								TXA
-								ADC «Members::TEMP_VAR_NAME1»
-								STA «Members::TEMP_VAR_NAME1»
-								TYA
-								ADC «Members::TEMP_VAR_NAME1» + 1
-								STA «Members::TEMP_VAR_NAME1» + 1
 							«ENDIF»
 						«lastPower.set(i)»
 					«ENDIF»
@@ -1017,30 +1172,30 @@ class Operations {
 			«IF const === 0»
 				«noop»
 					LDA #$00
-			«ELSEIF const.abs > 1 && bits.filter[it == ONE].size == 1»
+			«ELSEIF const.abs > 1 && bits.filter[it == one].size == 1»
 				«noop»
-					«FOR i : 0..< bits.indexOf(ONE)»
+					«FOR i : 0..< bits.indexOf(one)»
 						ASL A
 					«ENDFOR»
 			«ELSEIF const.abs > 1»
 				«var lastPower = new AtomicInteger»
 				«FOR i : 0..< bits.size»
-					«IF bits.get(i) == ONE»
+					«IF bits.get(i) == one»
 						«noop»
 							«FOR pow : 0..< i - lastPower.get»
 								ASL A
 							«ENDFOR»
-							«IF i == 0 || lastPower.get == 0 && bits.head != ONE»
+							«IF i == 0 || lastPower.get == 0 && bits.head != one»
 								STA «Members::TEMP_VAR_NAME1»
-							«ELSEIF i == bits.size - 1»
-								CLC
-								ADC «Members::TEMP_VAR_NAME1»
-							«ELSE»
+							«ELSEIF i < bits.size - 1»
 								TAX
 								CLC
 								ADC «Members::TEMP_VAR_NAME1»
 								STA «Members::TEMP_VAR_NAME1»
 								TXA
+							«ELSE»
+								CLC
+								ADC «Members::TEMP_VAR_NAME1»
 							«ENDIF»
 						«lastPower.set(i)»
 					«ENDIF»
@@ -1065,10 +1220,6 @@ class Operations {
 			«instruction» #(«operand.immediate»)
 	'''
 
-	private def operateImmediate(CompileContext acc, String instruction, CompileContext operand) '''
-		«operateImmediate(acc, instruction, null, operand)»
-	'''
-
 	private def operateImmediate(CompileContext acc, String instruction, String clear, CompileContext operand) '''
 		«IF acc.sizeOfOp > 1»
 			«noop»
@@ -1081,6 +1232,10 @@ class Operations {
 				«noop»
 					PLA
 					«instruction» #>(«operand.immediate»)
+			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+				«noop»
+					PLA
+					«instruction» #$00
 			«ELSEIF acc.sizeOf > 1»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
@@ -1089,6 +1244,9 @@ class Operations {
 			«ELSEIF operand.sizeOf > 1»
 				«acc.loadMSB»
 					«instruction» #>(«operand.immediate»)
+			«ELSEIF operand.type.isUnsigned»
+				«acc.loadMSB»
+					«instruction» #$00
 			«ELSE»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
@@ -1115,10 +1273,6 @@ class Operations {
 			«instruction» «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 	'''
 
-	private def operateAbsolute(CompileContext acc, String instruction, CompileContext operand) '''
-		«operateAbsolute(acc, instruction, null, operand)»
-	'''
-
 	private def operateAbsolute(CompileContext acc, String instruction, String clear, CompileContext operand) '''
 		«noop»
 			«IF operand.isIndexed»
@@ -1135,6 +1289,10 @@ class Operations {
 				«noop»
 					PLA
 					«instruction» «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+				«noop»
+					PLA
+					«instruction» #$00
 			«ELSEIF acc.sizeOf > 1»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
@@ -1143,6 +1301,9 @@ class Operations {
 			«ELSEIF operand.sizeOf > 1»
 				«acc.loadMSB»
 					«instruction» «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+			«ELSEIF operand.type.isUnsigned»
+				«acc.loadMSB»
+					«instruction» #$00
 			«ELSE»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
@@ -1161,10 +1322,6 @@ class Operations {
 			«instruction» «operand.indirect», Y
 	'''
 
-	private def operateIndirect(CompileContext acc, String instruction, CompileContext operand) '''
-		«operateIndirect(acc, instruction, null, operand)»
-	'''
-
 	private def operateIndirect(CompileContext acc, String instruction, String clear, CompileContext operand) '''
 		«noop»
 			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
@@ -1180,6 +1337,10 @@ class Operations {
 					INY
 					PLA
 					«instruction» («operand.indirect»), Y
+			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+				«noop»
+					PLA
+					«instruction» #$00
 			«ELSEIF acc.sizeOf > 1»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
@@ -1188,6 +1349,9 @@ class Operations {
 			«ELSEIF operand.sizeOf > 1»
 				«acc.loadMSB»
 					«instruction» («operand.indirect»), Y
+			«ELSEIF operand.type.isUnsigned»
+				«acc.loadMSB»
+					«instruction» #$00
 			«ELSE»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»

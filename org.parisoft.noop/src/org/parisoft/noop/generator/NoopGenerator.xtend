@@ -162,6 +162,7 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		«Members::TEMP_VAR_NAME1» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
 		«Members::TEMP_VAR_NAME2» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
+		«Members::TEMP_VAR_NAME3» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
 		«FOR chunk : ctx.pointers.values.flatten.sort + ctx.variables.values.flatten.sort»
 			«val delta = ctx.counters.get(chunk.page).get - chunk.page * 256»
 			«chunk.shiftTo(delta)»
