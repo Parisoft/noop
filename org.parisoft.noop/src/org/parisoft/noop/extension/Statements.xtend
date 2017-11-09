@@ -83,7 +83,7 @@ class Statements {
 			'''else@«elseStatement.hashCode.toHexString»'''
 		}
 	}
-	
+
 	def nameOfCondition(ElseStatement elseStatement) {
 		if (elseStatement.^if !== null) {
 			elseStatement.^if.nameOfCondition
@@ -171,7 +171,7 @@ class Statements {
 			}
 		}
 	}
-	
+
 	def prepare(ElseStatement elseStatement, AllocContext ctx) {
 		if (elseStatement.^if !== null) {
 			elseStatement.^if.prepare(ctx)
@@ -412,6 +412,7 @@ class Statements {
 						type = statement.value.typeOf
 					])»
 				«ENDIF»
+					RTS
 			'''
 			AsmStatement:
 				if (statement.vars.isEmpty) {
@@ -420,12 +421,13 @@ class Statements {
 					val i = new AtomicInteger
 
 					statement.codes.reduce [ c1, c2 |
-						val c1Ini = if (c1.startsWith('!') || c1.startsWith('?')) 1 else 0
-						val c1End = if (c1.endsWith('!') || c1.endsWith('?')) c1.length - 1 else c1.length
-						val c2Ini = if (c2.startsWith('!') || c2.startsWith('?')) 1 else 0
-						val c2End = if (c2.endsWith('!') || c2.endsWith('?')) c2.length - 1 else c2.length
-						
-						c1.substring(c1Ini, c1End) + statement.vars.get(i.andIncrement).nameOf + c2.substring(c2Ini, c2End)
+						val c1Ini = if(c1.startsWith('!') || c1.startsWith('?')) 1 else 0
+						val c1End = if(c1.endsWith('!') || c1.endsWith('?')) c1.length - 1 else c1.length
+						val c2Ini = if(c2.startsWith('!') || c2.startsWith('?')) 1 else 0
+						val c2End = if(c2.endsWith('!') || c2.endsWith('?')) c2.length - 1 else c2.length
+
+						c1.substring(c1Ini, c1End) + statement.vars.get(i.andIncrement).nameOf +
+							c2.substring(c2Ini, c2End)
 					]
 				}
 			Expression:

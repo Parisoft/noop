@@ -53,6 +53,10 @@ public class Members {
 	val running = new HashSet<Member>
 	val allocating = new HashSet<Member>
 
+	def getOverriders(Method method) {
+		method.containerClass.subClasses.map[declaredMethods.filter[it.isOverrideOf(method)]].filterNull.flatten
+	}
+
 	def isAccessibleFrom(Member member, EObject context) {
 		if (context instanceof MemberSelect) {
 			val receiverClass = context.receiver.typeOf
@@ -136,6 +140,27 @@ public class Members {
 	
 	def isNonDMC(Variable variable) {
 		!variable.isDMC
+	}
+
+	def isOverrideOf(Method m1, Method m2) {
+		if (m1.params.size === m2.params.size) {
+			for (i : 0 ..< m1.params.size) {
+				val p1 = m1.params.get(i)
+				val p2 = m2.params.get(i)
+				
+				if (p1.typeOf != p2.typeOf) {
+					return false
+				}
+				
+				if (p1.dimensionOf.size != p2.dimensionOf.size) {
+					return false
+				}
+			}
+
+			return m1.name == m2.name
+		}
+		
+		return false
 	}
 
 	def isIrq(Method method) {
@@ -388,7 +413,7 @@ public class Members {
 				INX
 				BNE -clrMem:
 
-			; Instantiate all static variables
+				; Instantiate all static variables
 			«val resetMethod = method.nameOf»
 			«FOR staticVar : ctx.allocation.statics»
 				«staticVar.compile(new CompileContext => [container = resetMethod])»
@@ -615,6 +640,51 @@ public class Members {
 			«ctx.operateOn(const)»
 		«ELSEIF ctx.mode === Mode::COPY»
 			«const.copyTo(ctx)»
+		«ENDIF»
+	'''
+
+	def compileInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
+		«val overrides = method.overriders.toList»
+		«receiver.compile(new CompileContext => [
+			container = ctx.container
+			operation = ctx.operation
+			indirect = method.nameOfReceiver
+			type = receiver.typeOf
+			mode = Mode::POINT
+		])»
+		«IF overrides.isNotEmpty»
+			«noop»
+				«IF ctx.operation !== null && ctx.isAccLoaded»
+					TAX
+				«ENDIF»
+				LDY #$00
+				LDA («method.nameOfReceiver»), Y
+				TAY
+				«IF ctx.operation !== null && ctx.isAccLoaded»
+					TXA
+				«ENDIF»
+		«ENDIF»
+		«val finish = '''invocation@«overrides.hashCode».finish'''»
+		«FOR overriden : overrides»
+			«val skip = '''invocation@«overrides.hashCode».skip.«overriden.fullyQualifiedName»'''»
+				CPY #«overriden.containerClass.asmName»
+				BNE +«skip»
+			«val falseReceiver = new CompileContext => [
+				operation = ctx.operation
+				indirect = method.nameOfReceiver
+			]»
+			«val realReceiver = new CompileContext => [
+				operation = ctx.operation
+				indirect = overriden.nameOfReceiver
+			]»
+			«realReceiver.pointTo(falseReceiver)»
+			«overriden.compileInvocation(args, ctx)»
+				JMP +«finish»
+			+«skip»:
+		«ENDFOR»
+		«method.compileInvocation(args, ctx)»
+		«IF overrides.isNotEmpty»
+			+«finish»:
 		«ENDIF»
 	'''
 

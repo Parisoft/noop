@@ -82,12 +82,15 @@ class NoopGenerator extends AbstractGenerator {
 		lines.forEach [ line, i |
 			val pushPull = line == '\tPHA' && lines.get(i - 1) == '\tPLA'
 			val pullPush = line == '\tPLA' && lines.get(i + 1) == '\tPHA'
+			val jmpJmp = line.startsWith('\tJMP') && lines.get(i - 1).startsWith('\tJMP')
+			val rtsRts = line == '\tRTS' && lines.get(i - 1) == '\tRTS'
+			val jmpRts = line == '\tRTS' && lines.get(i - 1).startsWith('\tJMP')
 			val rtsAfterJsr = line.startsWith('\tRTS') && lines.get(i - 1).startsWith('\tJSR')
 			val jsrBeforeRts = line.startsWith('\tJSR') && lines.get(i + 1).startsWith('\tRTS')
 
 			if (jsrBeforeRts) {
 				builder.append('''	JMP «line.substring(5)»''').append(System::lineSeparator)
-			} else if (!(pushPull || pullPush || rtsAfterJsr)) {
+			} else if (!(pushPull || pullPush || rtsAfterJsr || rtsRts || jmpRts || jmpJmp)) {
 				builder.append(line).append(System::lineSeparator)
 			}
 		]
@@ -96,7 +99,7 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def gameClass(Resource resource) {
-		val uri = resource.URI?.trimSegments(1)
+		val resourceProject = resource.URI.projectURI
 
 		val games = descriptions.allResourceDescriptions.map [
 			getExportedObjectsByType(NoopPackage::eINSTANCE.noopClass)
@@ -109,7 +112,7 @@ class NoopGenerator extends AbstractGenerator {
 
 			obj as NoopClass
 		].filter [
-			Objects::equals(eResource.URI?.trimSegments(1), uri)
+			Objects::equals(eResource.URI?.projectURI, resourceProject)
 		].filter [
 			it.isGame && it.name != TypeSystem::LIB_GAME
 		].toSet

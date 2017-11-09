@@ -13,11 +13,13 @@ import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.generator.AllocContext
+import java.util.List
 
 class Classes {
 
 	static val int SIZE_OF_CLASS_TYPE = 1;
 	static val ThreadLocal<Map<NoopClass, Integer>> classeSizeCache = ThreadLocal::withInitial[newHashMap]
+	static val ThreadLocal<List<NoopClass>> classesCache = ThreadLocal::withInitial[newArrayList]
 
 	@Inject extension Members
 	@Inject extension Statements
@@ -34,6 +36,10 @@ class Classes {
 		}
 
 		visited
+	}
+	
+	def subClasses(NoopClass c) {
+		classesCache.get.filter[it != c].filter[isInstanceOf(c)]
 	}
 
 	def containerClass(EObject e) {
@@ -236,6 +242,9 @@ class Classes {
 				].max)
 			}
 		]
+		
+		classesCache.get.clear
+		classesCache.get += ctx.classes 
 
 		return ctx
 	}

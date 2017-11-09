@@ -497,6 +497,7 @@ class Expressions {
 				} else if (expression.member instanceof Method) {
 					expression.args.forEach[prepare(ctx)]
 					(expression.member as Method).prepare(ctx)
+					(expression.member as Method).overriders.forEach[prepare(ctx)]
 				}
 
 				expression.indexes.forEach[value.prepare(ctx)]
@@ -622,7 +623,7 @@ class Expressions {
 						return chunks
 					}
 
-					val methodChunks = method.alloc(ctx)
+					val methodChunks = method.alloc(ctx) + method.overriders.filter[nonStatic].map[alloc(ctx)].flatten
 
 					if (method.isNonStatic) {
 						chunks += expression.receiver.alloc(ctx)
@@ -987,14 +988,14 @@ class Expressions {
 							«ENDIF»
 						«ELSEIF member instanceof Method»
 							«val method = member as Method»
-							«receiver.compile(new CompileContext => [
-								container = ctx.container
-								operation = ctx.operation
-								indirect = method.nameOfReceiver
-								type = receiver.typeOf
-								mode = Mode::POINT
-							])»
-							«method.compileInvocation(expression.args, ctx)»
+«««							«receiver.compile(new CompileContext => [
+«««								container = ctx.container
+«««								operation = ctx.operation
+«««								indirect = method.nameOfReceiver
+«««								type = receiver.typeOf
+«««								mode = Mode::POINT
+«««							])»
+							«method.compileInvocation(receiver, expression.args, ctx)»
 						«ENDIF»
 					«ENDIF»
 				'''

@@ -22,6 +22,10 @@ class Files {
 	}
 	
 	def getResFolder(URI uri) {
-		uri.trimSegments(uri.segmentCount - 2).appendSegment(RES_FOLDER).toFile
+		uri.projectURI.appendSegment(RES_FOLDER).toFile
+	}
+	
+	def getProjectURI(URI uri) {
+		uri.trimSegments(uri.segmentCount - 2)
 	}
 }
