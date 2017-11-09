@@ -45,6 +45,7 @@ class Operations {
 			case ADDITION: acc.add(operand)
 			case SUBTRACTION: acc.subtract(operand)
 			case MULTIPLICATION: acc.multiply(operand)
+			case DIVISION: acc.divide(operand)
 			case BIT_OR: acc.bitOr(operand)
 			case BIT_AND: acc.bitAnd(operand)
 			case BIT_SHIFT_LEFT: acc.bitShiftLeft(operand)
@@ -151,6 +152,12 @@ class Operations {
 			acc.multiplyAbsolute(operand)
 		} else if (operand.indirect !== null) {
 			acc.multiplyIndirect(operand)
+		}
+	}
+
+	def divide(CompileContext acc, CompileContext operand) {
+		if (operand.immediate !== null) {
+			acc.divideImmediate(operand)
 		}
 	}
 
@@ -1219,6 +1226,60 @@ class Operations {
 
 	private def multiplyIndirect(CompileContext multiplicand, CompileContext multiplier) '''
 		; TODO multiplyIndirect
+	'''
+
+	private def divideImmediate(CompileContext dividend, CompileContext divisor) '''
+		«val const = divisor.immediate.parseInt»
+		«IF dividend.sizeOfOp > 1 || dividend.sizeOf > 1»
+			; TODO divide 16bits
+		«ELSE»
+			«val divStart = '''div@«dividend.hashCode.toHexString».start'''»
+			«val divDone = '''div@«dividend.hashCode.toHexString».done'''»
+			«val divEnd = '''div@«dividend.hashCode.toHexString».end'''»
+			«IF dividend.type.isSigned»
+				«noop»
+					TAY
+					BPL +«divStart»
+				«dividend.signum»
+			«ENDIF»
+			+«divStart»:
+				LDX #$00
+				STX «Members::TEMP_VAR_NAME1»
+				«IF const.abs > 0xFF»
+					CPX #>«const.abs»
+					BCC +«divDone»
+				«ENDIF»
+				CMP #<«const.abs»
+				BCC +«divDone»
+			«FOR i : 8 >.. 0»
+				«val shift = const.abs << i»
+				«IF shift <= 0xFF»
+					«noop»
+						CMP #«shift»
+						BCC +
+						SBC #«shift»
+					+	ROL «Members::TEMP_VAR_NAME1»
+				«ENDIF»
+			«ENDFOR»
+			+«divDone»:
+				LDA «Members::TEMP_VAR_NAME1»
+			«IF dividend.type.isSigned»
+				«noop»
+					BEQ +«divEnd»
+					CPY #$00
+					«IF const < 0»
+						BMI +«divEnd»
+					«ELSE»
+						BPL +«divEnd»
+					«ENDIF»
+				«dividend.signum»
+			«ELSEIF const < 0»
+				«noop»
+					BEQ +«divEnd»
+				«dividend.signum»
+			«ENDIF»
+			+«divEnd»:
+		«ENDIF»
 	'''
 
 	private def operateImmediate(CompileContext operand, String instruction) '''

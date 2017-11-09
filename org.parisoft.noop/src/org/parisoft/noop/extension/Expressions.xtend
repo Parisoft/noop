@@ -1102,7 +1102,7 @@ class Expressions {
 		«val lda = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
-			type = accType //if (ctx.type.isBoolean) left.typeOf else ctx.type
+			type = accType
 			register = 'A'
 			mode = Mode::COPY
 		]»
@@ -1110,7 +1110,7 @@ class Expressions {
 			container = ctx.container
 			operation = binaryOperation
 			relative = ctx.relative
-			type = accType //if (ctx.type.isBoolean) left.typeOf else ctx.type
+			type = accType
 			opType = ctx.type
 			accLoaded = true
 			mode = Mode::OPERATE
@@ -1147,7 +1147,12 @@ class Expressions {
 	private def compileMultiplication(Operation operation, Expression left, Expression right, CompileContext ctx) {
 		try {
 			val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
-			operation.compileBinary(const, right, ctx)
+
+			if (operation === Operation::MULTIPLICATION) {
+				operation.compileBinary(right, const, ctx)
+			} else {
+				operation.compileBinary(const, right, ctx)
+			}
 		} catch (NonConstantExpressionException exception) {
 			try {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
@@ -1157,7 +1162,7 @@ class Expressions {
 			}
 		}
 	}
-	
+
 	private def compileOr(Expression left, Expression right, CompileContext ctx) '''
 		«val lctx = new CompileContext => [
 			container = ctx.container
