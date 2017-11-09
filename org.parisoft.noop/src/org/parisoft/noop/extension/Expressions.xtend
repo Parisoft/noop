@@ -688,7 +688,7 @@ class Expressions {
 			val value = new CompileContext => [
 				container = ctx?.container
 				operation = ctx?.operation
-				type = ctx?.type
+				type = expression.typeOf
 				immediate = expression.compileConstant
 			]
 			value.resolveTo(ctx)?.toString
@@ -790,9 +790,9 @@ class Expressions {
 							«ENDIF»
 					«ELSE»
 						«val src = new CompileContext => [
-						type = expression.typeOf
-						immediate = expression.value.toHex.toString
-					]»
+							type = expression.typeOf
+							immediate = expression.value.toHex.toString
+						]»
 						«src.resolveTo(ctx)»
 					«ENDIF»
 				'''
