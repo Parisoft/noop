@@ -23,6 +23,8 @@ import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.AllocContext
+import org.parisoft.noop.noop.Super
+import org.parisoft.noop.noop.This
 
 public class Members {
 
@@ -55,6 +57,10 @@ public class Members {
 
 	def getOverriders(Method method) {
 		method.containerClass.subClasses.map[declaredMethods.filter[it.isOverrideOf(method)]].filterNull.flatten
+	}
+	
+	def getOverriders(Variable variable) {
+		variable.containerClass.subClasses.map[declaredFields.filter[it.isOverrideOf(variable)]].filterNull.flatten
 	}
 
 	def isAccessibleFrom(Member member, EObject context) {
@@ -161,6 +167,10 @@ public class Members {
 		}
 		
 		return false
+	}
+
+	def isOverrideOf(Variable v1, Variable v2) {
+		return v1.name == v2.name
 	}
 
 	def isIrq(Method method) {
@@ -483,7 +493,47 @@ public class Members {
 		}
 	}
 
-	def compileAbsoluteReference(Variable variable, CompileContext receiver, List<Index> indexes, CompileContext ctx) '''
+	def compileReference(Variable variable, Expression receiver, List<Index> indexes, CompileContext ctx) '''
+		«val overriders = if (receiver instanceof This || receiver instanceof Super) emptyList else variable.overriders»
+		«val rcv = new CompileContext => [
+			container = ctx.container
+			operation = ctx.operation
+			accLoaded = ctx.isAccLoaded
+			type = receiver.typeOf
+		]»
+		«IF overriders.isEmpty»
+			«receiver.compile(rcv => [mode = Mode::REFERENCE])»
+			«IF rcv.absolute !== null»
+				«variable.compileAbsoluteReference(rcv, indexes, ctx)»
+			«ELSEIF rcv.indirect !== null»
+				«variable.compileIndirectReference(rcv, indexes, ctx)»
+			«ENDIF»
+		«ELSE»
+			«receiver.compile(rcv => [
+				indirect = receiver.nameOfTmpVar(ctx.container)
+				mode = Mode::POINT
+			])»
+			«ctx.pushAccIfOperating»
+				LDY #$00
+				LDA («rcv.indirect»), Y
+			«val finish = '''reference@«rcv.hashCode.toHexString».end'''»
+			«val pullAcc = ctx.pullAccIfOperating»
+			«FOR overrider : overriders»
+				«val skip = '''reference@«rcv.hashCode.toHexString».skip.«overrider.fullyQualifiedName»'''»
+					CMP #«overrider.containerClass.asmName»
+					BNE +«skip»
+				«pullAcc»
+				«overrider.compileIndirectReference(rcv, indexes, ctx)»
+					JMP +«finish»
+				+«skip»:
+			«ENDFOR»
+			«pullAcc»
+			«variable.compileIndirectReference(rcv, indexes, ctx)»
+			+«finish»:
+		«ENDIF»
+	'''
+	
+	private def compileAbsoluteReference(Variable variable, CompileContext receiver, List<Index> indexes, CompileContext ctx) '''
 		«val ref = new CompileContext => [
 			container = receiver.container
 			operation = receiver.operation
@@ -516,7 +566,7 @@ public class Members {
 		«ENDIF»
 	'''
 	
-	def compileIndirectReference(Variable variable, CompileContext receiver, List<Index> indexes, CompileContext ctx) '''
+	private def compileIndirectReference(Variable variable, CompileContext receiver, List<Index> indexes, CompileContext ctx) '''
 		«val ref = new CompileContext => [
 			container = receiver.container
 			operation = receiver.operation
@@ -644,30 +694,24 @@ public class Members {
 	'''
 
 	def compileInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
-		«val overrides = method.overriders.toList»
+		«val overriders = if (receiver instanceof This || receiver instanceof Super) emptyList else method.overriders»
 		«receiver.compile(new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
+			accLoaded = ctx.accLoaded
 			indirect = method.nameOfReceiver
 			type = receiver.typeOf
 			mode = Mode::POINT
 		])»
-		«IF overrides.isNotEmpty»
-			«noop»
-				«IF ctx.operation !== null && ctx.isAccLoaded»
-					TAX
-				«ENDIF»
+		«IF overriders.isNotEmpty»
+			«ctx.pushAccIfOperating»
 				LDY #$00
 				LDA («method.nameOfReceiver»), Y
-				TAY
-				«IF ctx.operation !== null && ctx.isAccLoaded»
-					TXA
-				«ENDIF»
 		«ENDIF»
-		«val finish = '''invocation@«overrides.hashCode».finish'''»
-		«FOR overriden : overrides»
-			«val skip = '''invocation@«overrides.hashCode».skip.«overriden.fullyQualifiedName»'''»
-				CPY #«overriden.containerClass.asmName»
+		«val finish = '''invocation@«overriders.hashCode.toHexString».finish'''»
+		«FOR overrider : overriders»
+			«val skip = '''invocation@«overriders.hashCode.toHexString».skip.«overrider.fullyQualifiedName»'''»
+				CMP #«overrider.containerClass.asmName»
 				BNE +«skip»
 			«val falseReceiver = new CompileContext => [
 				operation = ctx.operation
@@ -675,15 +719,15 @@ public class Members {
 			]»
 			«val realReceiver = new CompileContext => [
 				operation = ctx.operation
-				indirect = overriden.nameOfReceiver
+				indirect = overrider.nameOfReceiver
 			]»
 			«realReceiver.pointTo(falseReceiver)»
-			«overriden.compileInvocation(args, ctx)»
+			«overrider.compileInvocation(args, ctx)»
 				JMP +«finish»
 			+«skip»:
 		«ENDFOR»
 		«method.compileInvocation(args, ctx)»
-		«IF overrides.isNotEmpty»
+		«IF overriders.isNotEmpty»
 			+«finish»:
 		«ENDIF»
 	'''

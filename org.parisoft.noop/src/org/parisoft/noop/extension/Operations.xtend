@@ -1415,6 +1415,7 @@ class Operations {
 					«instruction» «Members::TEMP_VAR_NAME1»
 			«ELSEIF operand.sizeOf > 1»
 				«acc.loadMSB»
+					INY
 					«instruction» («operand.indirect»), Y
 			«ELSEIF operand.type.isUnsigned»
 				«acc.loadMSB»

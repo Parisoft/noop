@@ -58,6 +58,7 @@ import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 import java.io.File
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.AllocContext
+import org.parisoft.noop.noop.ReturnStatement
 
 class Expressions {
 
@@ -70,6 +71,14 @@ class Expressions {
 	@Inject extension Statements
 	@Inject extension TypeSystem
 	@Inject extension Collections
+
+	def isThisOrSuperReference(MemberSelect selection) {
+		selection.member instanceof This || selection.member instanceof Super
+	}
+	
+	def isNonThisNorSuperReference(MemberSelect selection) {
+		!selection.isThisOrSuperReference
+	}
 
 	def isMethodInvocation(MemberSelect selection) {
 		try {
@@ -89,7 +98,7 @@ class Expressions {
 
 	def isOnMemberSelectionOrReference(Expression expression) {
 		val container = expression.eContainer
-		container !== null && (container instanceof MemberSelect || container instanceof MemberRef)
+		container !== null && (container instanceof MemberSelect || container instanceof MemberRef || container instanceof ReturnStatement)
 	}
 
 	def isFileInclude(StringLiteral string) {
@@ -108,6 +117,10 @@ class Expressions {
 		string.isFileInclude && string.value.toLowerCase.endsWith(Members::FILE_DMC_EXTENSION)
 	}
 
+	def nameOfTmpVar(Expression instance, String containerName) {
+		'''«containerName».tmp«instance.typeOf.name»@«instance.hashCode.toHexString»'''.toString
+	}
+
 	def nameOfTmp(List<Index> indexes, String containerName) {
 		'''«containerName».idx@«indexes.hashCode.toHexString»'''.toString
 	}
@@ -118,10 +131,6 @@ class Expressions {
 
 	def nameOfTmpArray(NewInstance instance, String containerName) {
 		'''«containerName».tmp«instance.typeOf.name»Array@«instance.hashCode.toHexString»'''.toString
-	}
-
-	def nameOfTmpVar(NewInstance instance, String containerName) {
-		'''«containerName».tmp«instance.typeOf.name»@«instance.hashCode.toHexString»'''.toString
 	}
 
 	def nameOfConstructor(NewInstance instance) {
@@ -623,9 +632,13 @@ class Expressions {
 						return chunks
 					}
 
-					val methodChunks = method.alloc(ctx) + method.overriders.filter[nonStatic].map[alloc(ctx)].flatten
+					val methodChunks = method.alloc(ctx)
 
 					if (method.isNonStatic) {
+						if (expression.isNonThisNorSuperReference) {
+							methodChunks += method.overriders.map[alloc(ctx)].flatten
+						}
+						
 						chunks += expression.receiver.alloc(ctx)
 					}
 
@@ -636,6 +649,10 @@ class Expressions {
 
 					if (variable.isNonStatic) {
 						chunks += expression.receiver.alloc(ctx)
+						
+						if (expression.isNonThisNorSuperReference && variable.overriders.isNotEmpty) {
+							chunks += ctx.computePtr(expression.receiver.nameOfTmpVar(ctx.container))
+						}
 					}
 
 					if (expression.indexes.isNotEmpty) {
@@ -974,27 +991,9 @@ class Expressions {
 						«ENDIF»
 					«ELSE»
 						«IF member instanceof Variable»
-							«val rcv = new CompileContext => [
-								container = ctx.container
-								operation = ctx.operation
-								type = receiver.typeOf
-								mode = Mode::REFERENCE
-							]»
-							«receiver.compile(rcv)»
-							«IF rcv.absolute !== null»
-								«member.compileAbsoluteReference(rcv, expression.indexes, ctx)»
-							«ELSEIF rcv.indirect !== null»
-								«member.compileIndirectReference(rcv, expression.indexes, ctx)»
-							«ENDIF»
+							«member.compileReference(receiver, expression.indexes, ctx)»
 						«ELSEIF member instanceof Method»
 							«val method = member as Method»
-«««							«receiver.compile(new CompileContext => [
-«««								container = ctx.container
-«««								operation = ctx.operation
-«««								indirect = method.nameOfReceiver
-«««								type = receiver.typeOf
-«««								mode = Mode::POINT
-«««							])»
 							«method.compileInvocation(receiver, expression.args, ctx)»
 						«ENDIF»
 					«ENDIF»
@@ -1241,6 +1240,7 @@ class Expressions {
 			relative = ctx.relative
 			type = ctx.type
 			operation = unaryOperation
+			accLoaded = true
 			mode = Mode::OPERATE
 		]»
 		«IF ctx.operation !== null && ctx.isAccLoaded»
