@@ -519,16 +519,19 @@ public class Members {
 			«val finish = '''reference@«rcv.hashCode.toHexString».end'''»
 			«val pullAcc = ctx.pullAccIfOperating»
 			«FOR overrider : overriders»
-				«val skip = '''reference@«rcv.hashCode.toHexString».skip.«overrider.fullyQualifiedName»'''»
-					CMP #«overrider.containerClass.asmName»
-					BNE +«skip»
+				«noop»
+				+	CMP #«overrider.containerClass.asmName»
+					BNE +
 				«pullAcc»
 				«overrider.compileIndirectReference(rcv, indexes, ctx)»
 					JMP +«finish»
-				+«skip»:
 			«ENDFOR»
-			«pullAcc»
-			«variable.compileIndirectReference(rcv, indexes, ctx)»
+			«IF pullAcc.length > 0»
+				+«pullAcc»
+				«variable.compileIndirectReference(rcv, indexes, ctx)»
+			«ELSE»
+				+«variable.compileIndirectReference(rcv, indexes, ctx)»
+			«ENDIF»
 			+«finish»:
 		«ENDIF»
 	'''
@@ -703,32 +706,33 @@ public class Members {
 			type = receiver.typeOf
 			mode = Mode::POINT
 		])»
-		«IF overriders.isNotEmpty»
+		«IF overriders.isEmpty»
+			«method.compileInvocation(args, ctx)»
+		«ELSE»
 			«ctx.pushAccIfOperating»
 				LDY #$00
 				LDA («method.nameOfReceiver»), Y
-		«ENDIF»
-		«val finish = '''invocation@«overriders.hashCode.toHexString».finish'''»
-		«FOR overrider : overriders»
-			«val skip = '''invocation@«overriders.hashCode.toHexString».skip.«overrider.fullyQualifiedName»'''»
-				CMP #«overrider.containerClass.asmName»
-				BNE +«skip»
-			«val falseReceiver = new CompileContext => [
-				operation = ctx.operation
-				indirect = method.nameOfReceiver
-			]»
-			«val realReceiver = new CompileContext => [
-				operation = ctx.operation
-				indirect = overrider.nameOfReceiver
-			]»
-			«realReceiver.pointTo(falseReceiver)»
-			«overrider.compileInvocation(args, ctx)»
-				JMP +«finish»
-			+«skip»:
-		«ENDFOR»
-		«method.compileInvocation(args, ctx)»
-		«IF overriders.isNotEmpty»
-			+«finish»:
+			«val invocationEnd = '''invocation@«overriders.hashCode.toHexString».end'''»
+			«FOR overrider : overriders»
+				«val invocation = '''invocation@«overriders.hashCode.toHexString».«overrider.fullyQualifiedName»'''»
+				+	CMP #«overrider.containerClass.asmName»
+					BEQ +«invocation»
+					JMP +
+				+«invocation»:
+				«val falseReceiver = new CompileContext => [
+					operation = ctx.operation
+					indirect = method.nameOfReceiver
+				]»
+				«val realReceiver = new CompileContext => [
+					operation = ctx.operation
+					indirect = overrider.nameOfReceiver
+				]»
+				«realReceiver.pointTo(falseReceiver)»
+				«overrider.compileInvocation(args, ctx)»
+					JMP +«invocationEnd»
+			«ENDFOR»
+			+«method.compileInvocation(args, ctx)»
+			+«invocationEnd»:
 		«ENDIF»
 	'''
 
