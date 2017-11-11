@@ -14,8 +14,6 @@ class Operations {
 	@Inject extension Datas
 	@Inject extension Classes
 
-	val labelCounter = new AtomicInteger
-
 	def isComparison(Operation operation) {
 		switch (operation) {
 			case COMPARE_EQ: true
@@ -1462,23 +1460,23 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def labelForSignedMSBEnd() '''signedMSBEnd«labelCounter.andIncrement»'''
+	private def labelForSignedMSBEnd() '''signedMSBEnd'''
 
-	private def labelForIncDone() '''incDone«labelCounter.andIncrement»'''
+	private def labelForIncDone() '''incDone'''
 
-	private def labelForDecMSBSkip() '''decMSBSkip«labelCounter.andIncrement»'''
+	private def labelForDecMSBSkip() '''decMSBSkip'''
 
-	private def labelForShiftLoop() '''shiftLoop«labelCounter.andIncrement»'''
+	private def labelForShiftLoop() '''shiftLoop'''
 
-	private def labelForShiftEnd() '''shiftEnd«labelCounter.andIncrement»'''
+	private def labelForShiftEnd() '''shiftEnd'''
 
-	private def labelForComparison() '''comparison«labelCounter.andIncrement»'''
+	private def labelForComparison() '''comparison'''
 
-	def labelForComparisonIsTrue() '''comparisonIsTrue«labelCounter.andIncrement»'''
+	def labelForComparisonIsTrue() '''comparisonIsTrue'''
 
-	def labelForComparisonIsFalse() '''comparisonIsFalse«labelCounter.andIncrement»'''
+	def labelForComparisonIsFalse() '''comparisonIsFalse'''
 
-	def labelForComparisonEnd() '''comparisonEnd«labelCounter.andIncrement»'''
+	def labelForComparisonEnd() '''comparisonEnd'''
 
 	private def void noop() {
 	}

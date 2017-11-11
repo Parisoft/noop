@@ -65,7 +65,7 @@ class Statements {
 	}
 
 	def nameOf(IfStatement ifStatement) {
-		'''«IF ifStatement.eContainer instanceof ElseStatement»elseif«ELSE»if«ENDIF»'''
+		'''«IF ifStatement.eContainer instanceof ElseStatement»elseif«ELSE»if«ENDIF»@«ifStatement.hashCode.toHexString»'''
 	}
 
 	def nameOfCondition(IfStatement ifStatement) {
