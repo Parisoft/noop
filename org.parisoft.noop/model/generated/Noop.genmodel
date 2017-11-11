@@ -141,9 +141,9 @@
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//LeExpression/left"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//LeExpression/right"/>
     </genClasses>
-    <genClasses ecoreClass="Noop.ecore#//InheritsExpression">
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//InheritsExpression/left"/>
-      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//InheritsExpression/type"/>
+    <genClasses ecoreClass="Noop.ecore#//InstanceOfExpression">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//InstanceOfExpression/left"/>
+      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//InstanceOfExpression/type"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//LShiftExpression">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//LShiftExpression/left"/>

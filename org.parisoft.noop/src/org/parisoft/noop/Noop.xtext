@@ -85,15 +85,15 @@ EqualityExpression returns Expression:
 	LF* right=RelationalExpression)*;
 
 RelationalExpression returns Expression:
-	InheritsExpression
+	InstaceOfExpression
 	(({GtExpression.left=current} LF* '>' |
 	{GeExpression.left=current} LF* '>=' |
 	{LtExpression.left=current} LF* '<' |
 	{LeExpression.left=current} LF* '<=')
 	LF* right=AdditiveExpression)*;
 
-InheritsExpression returns Expression:
-	ShiftExpression ({InheritsExpression.left=current} 'inherits' type=[NoopClass|CID])?;
+InstaceOfExpression returns Expression:
+	ShiftExpression ({InstanceOfExpression.left=current} 'instanceOf' type=[NoopClass|CID])?;
 
 ShiftExpression returns Expression:
 	AdditiveExpression (({LShiftExpression.left=current} LF* '<<' | {RShiftExpression.left=current} LF* '>>')

@@ -264,7 +264,7 @@ public class Members {
 					member.value.dimensionOf
 				}
 			Method:
-				<Integer>emptyList // methods cannot return arrays?
+				<Integer>emptyList // FIXME methods cannot return arrays?
 		}
 	}
 

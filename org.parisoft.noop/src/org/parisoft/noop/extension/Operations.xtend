@@ -1474,11 +1474,11 @@ class Operations {
 
 	private def labelForComparison() '''comparison«labelCounter.andIncrement»'''
 
-	private def labelForComparisonIsTrue() '''comparisonIsTrue«labelCounter.andIncrement»'''
+	def labelForComparisonIsTrue() '''comparisonIsTrue«labelCounter.andIncrement»'''
 
-	private def labelForComparisonIsFalse() '''comparisonIsFalse«labelCounter.andIncrement»'''
+	def labelForComparisonIsFalse() '''comparisonIsFalse«labelCounter.andIncrement»'''
 
-	private def labelForComparisonEnd() '''comparisonEnd«labelCounter.andIncrement»'''
+	def labelForComparisonEnd() '''comparisonEnd«labelCounter.andIncrement»'''
 
 	private def void noop() {
 	}
