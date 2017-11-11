@@ -80,7 +80,7 @@ class Statements {
 		if (elseStatement.^if !== null) {
 			elseStatement.^if.nameOf
 		} else {
-			'''else'''
+			'''else@«elseStatement.hashCode.toHexString»'''
 		}
 	}
 
