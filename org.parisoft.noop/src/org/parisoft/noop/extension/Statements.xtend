@@ -3,6 +3,8 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.List
 import java.util.concurrent.atomic.AtomicInteger
+import org.parisoft.noop.generator.AllocContext
+import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.CompileContext.Mode
 import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.noop.AsmStatement
@@ -21,8 +23,6 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.CompileContext
-import org.parisoft.noop.generator.AllocContext
 
 class Statements {
 
@@ -65,22 +65,22 @@ class Statements {
 	}
 
 	def nameOf(IfStatement ifStatement) {
-		'''«IF ifStatement.eContainer instanceof ElseStatement»elseif«ELSE»if«ENDIF»@«ifStatement.hashCode.toHexString»'''
+		'''«IF ifStatement.eContainer instanceof ElseStatement»elseif«ELSE»if«ENDIF»'''
 	}
 
 	def nameOfCondition(IfStatement ifStatement) {
-		'''«ifStatement.nameOf»@condition'''
+		'''«ifStatement.nameOf».condition'''
 	}
 
 	def nameOfEnd(IfStatement ifStatement) {
-		'''«ifStatement.nameOf»@end'''
+		'''«ifStatement.nameOf».end'''
 	}
 
 	def nameOf(ElseStatement elseStatement) {
 		if (elseStatement.^if !== null) {
 			elseStatement.^if.nameOf
 		} else {
-			'''else@«elseStatement.hashCode.toHexString»'''
+			'''else'''
 		}
 	}
 
@@ -105,7 +105,7 @@ class Statements {
 	}
 
 	def nameOfEnd(ForeverStatement forever) {
-		'''«forever.nameOf»@end'''
+		'''«forever.nameOf».end'''
 	}
 
 	def nameOf(ForStatement forStatement) {
@@ -113,19 +113,19 @@ class Statements {
 	}
 
 	def nameOfCondition(ForStatement forStatement) {
-		'''«forStatement.nameOf»@condition'''
+		'''«forStatement.nameOf».condition'''
 	}
 
 	def nameOfEvaluation(ForStatement forStatement) {
-		'''«forStatement.nameOf»@evaluation'''
+		'''«forStatement.nameOf».evaluation'''
 	}
 
 	def nameOfIteration(ForStatement forStatement) {
-		'''«forStatement.nameOf»@iteration'''
+		'''«forStatement.nameOf».iteration'''
 	}
 
 	def nameOfEnd(ForStatement forStatement) {
-		'''«forStatement.nameOf»@end'''
+		'''«forStatement.nameOf».end'''
 	}
 
 	def void prepare(Statement statement, AllocContext ctx) {

@@ -516,7 +516,7 @@ public class Members {
 			«ctx.pushAccIfOperating»
 				LDY #$00
 				LDA («rcv.indirect»), Y
-			«val finish = '''reference@«rcv.hashCode.toHexString».end'''»
+			«val finish = '''reference.end'''»
 			«val pullAcc = ctx.pullAccIfOperating»
 			«FOR overrider : overriders»
 				«noop»
@@ -712,13 +712,12 @@ public class Members {
 			«ctx.pushAccIfOperating»
 				LDY #$00
 				LDA («method.nameOfReceiver»), Y
-			«val invocationEnd = '''invocation@«overriders.hashCode.toHexString».end'''»
+			«val invocationEnd = '''invocation.end'''»
 			«FOR overrider : overriders»
-				«val invocation = '''invocation@«overriders.hashCode.toHexString».«overrider.fullyQualifiedName»'''»
+				«noop»
 				+	CMP #«overrider.containerClass.asmName»
-					BEQ +«invocation»
+					BEQ ++
 					JMP +
-				+«invocation»:
 				«val falseReceiver = new CompileContext => [
 					operation = ctx.operation
 					indirect = method.nameOfReceiver
@@ -727,7 +726,7 @@ public class Members {
 					operation = ctx.operation
 					indirect = overrider.nameOfReceiver
 				]»
-				«realReceiver.pointTo(falseReceiver)»
+				++«realReceiver.pointTo(falseReceiver)»
 				«overrider.compileInvocation(args, ctx)»
 					JMP +«invocationEnd»
 			«ENDFOR»
