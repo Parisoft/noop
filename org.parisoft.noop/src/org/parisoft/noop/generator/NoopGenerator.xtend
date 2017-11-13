@@ -78,19 +78,29 @@ class NoopGenerator extends AbstractGenerator {
 	private def optimize(CharSequence code) {
 		val lines = code.toString.split(System::lineSeparator)
 		val builder = new StringBuilder
+		val AtomicInteger skip = new AtomicInteger
 
 		lines.forEach [ line, i |
-			val pushPull = line == '\tPHA' && lines.get(i - 1) == '\tPLA'
-			val pullPush = line == '\tPLA' && lines.get(i + 1) == '\tPHA'
-			val jmpJmp = line.startsWith('\tJMP') && lines.get(i - 1).startsWith('\tJMP')
-			val rtsRts = line == '\tRTS' && lines.get(i - 1) == '\tRTS'
-			val jmpRts = line == '\tRTS' && lines.get(i - 1).startsWith('\tJMP')
-			val rtsAfterJsr = line.startsWith('\tRTS') && lines.get(i - 1).startsWith('\tJSR')
-			val jsrBeforeRts = line.startsWith('\tJSR') && lines.get(i + 1).startsWith('\tRTS')
+			var next = if (i + 1 < lines.length) lines.get(i + 1) else ''
 
-			if (jsrBeforeRts) {
+			if (skip.get > 0) {
+				skip.decrementAndGet
+			} else if (line == '\tPLA' && next == '\tPHA') {
+				skip.set(1)
+			} else if ((line.startsWith('\tJMP') || line.startsWith('\tRTS')) &&
+				(next.startsWith('\tJMP') || next.startsWith('\tRTS'))) {
+				while (next.startsWith('\tJMP') || next.startsWith('\tRTS')) {
+					next = lines.get(i + 1 + skip.incrementAndGet)
+				}
+
+				builder.append(line).append(System::lineSeparator)
+			} else if (line.startsWith('\tJSR') && next.startsWith('\tRTS')) {
+				while (next.startsWith('\tRTS')) {
+					next = lines.get(i + 1 + skip.incrementAndGet)
+				}
+
 				builder.append('''	JMP «line.substring(5)»''').append(System::lineSeparator)
-			} else if (!(pushPull || pullPush || rtsAfterJsr || rtsRts || jmpRts || jmpJmp)) {
+			} else {
 				builder.append(line).append(System::lineSeparator)
 			}
 		]
