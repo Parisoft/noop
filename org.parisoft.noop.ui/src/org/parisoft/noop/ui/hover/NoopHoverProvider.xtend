@@ -19,8 +19,8 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 			NoopClass: '''Class <b>«o.fullyQualifiedName»</b>'''
 			Variable: '''«IF o.eContainer instanceof NoopClass»Field«ELSE»Variable«ENDIF»
 			<b>«o.name»</b>«IF o.isConstant» = «o.valueOf»«ENDIF»
-			 of type <b>«o.typeOf.fullyQualifiedName»</b>«FOR i : 0 ..< o.dimensionOf.size»[]«ENDFOR»'''
-			Method: '''Method <b>«o.name»</b> returns <b>«o.typeOf?.name»</b>.'''
+			 of type <b>«o.typeOf.fullyQualifiedName»</b>«FOR i : 0 ..< o.dimensionOf.size»[«IF o.isBounded»«o.dimensionOf.get(i)»«ENDIF»]«ENDFOR»'''
+			Method: '''Method <b>«o.name»</b> returns <b>«o.typeOf?.name»</b>«FOR i : 0 ..< o.dimensionOf.size»[«o.dimensionOf.get(i)»]«ENDFOR».'''
 			default:
 				super.getFirstLine(o)
 		}

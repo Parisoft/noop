@@ -17,10 +17,10 @@ Variable:
 	name=ID storage=Storage? ':' value=Expression;
 
 Parameter returns Variable:
-	type=[NoopClass|CID] (dimension+='[' ']')* name=ID storage=Storage?;
+	type=[NoopClass|CID] (dimension+=Length)* name=ID storage=Storage?;
 
 Method:
-	name=ID '(' (params+=Parameter (',' params+=Parameter)*)? ')' (dimension+='[' ']')* storage=Storage? body=Block;
+	name=ID '(' LF* (params+=Parameter LF* (',' LF* params+=Parameter LF*)*)? ')' storage=Storage? body=Block;
 
 Block:
 	{Block} '{' LF* statements+=Statement* '}';
@@ -145,12 +145,15 @@ ConstructorField:
 Index:
 	'[' value=Expression ']';
 
+Length:
+	{Length} '[' value=Expression? ']';
+
 enum AssignmentType:
 	ASSIGN=':=' | ADD_ASSIGN='+=' | SUB_ASSIGN='-=' | MUL_ASSIGN='*=' | DIV_ASSIGN='/=' | BOR_ASSIGN='|=' |
 	BAN_ASSIGN='&=' | BLS_ASSIGN='<<=' | BRS_ASSIGN='>>=';
 
 enum StorageType:
-	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM' | RAM='@RAM';
+	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM' | RAM='@RAM' | INLINE='@Inline';
 
 terminal ASM_TO_VAR:
 	'!' !('!' | '?')* '?';

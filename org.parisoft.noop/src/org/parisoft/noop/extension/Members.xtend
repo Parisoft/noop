@@ -147,6 +147,14 @@ public class Members {
 	def isNonDMC(Variable variable) {
 		!variable.isDMC
 	}
+	
+	def isUnbounded(Variable parameter) {
+		!parameter.isBounded
+	}
+	
+	def isBounded(Variable parameter) {
+		parameter.dimension?.forall[value !== null]
+	}
 
 	def isOverrideOf(Method m1, Method m2) {
 		if (m1.params.size === m2.params.size) {
@@ -259,12 +267,22 @@ public class Members {
 		switch (member) {
 			Variable:
 				if (member.isParameter) {
-					member.dimension.map[1]
+					member.dimension.map[value?.valueOf as Integer ?: 1]
 				} else {
 					member.value.dimensionOf
 				}
 			Method:
-				<Integer>emptyList // FIXME methods cannot return arrays?
+				member.dimensionOf
+		}
+	}
+	
+	def dimensionOf(Method method) {
+		if (running.add(method)) {
+			try {
+				method.body.getAllContentsOfType(ReturnStatement).head?.dimensionOf ?: emptyList
+			} finally {
+				running.remove(method)
+			}
 		}
 	}
 
@@ -754,12 +772,14 @@ public class Members {
 						mode = Mode::POINT
 					}
 				])»
-				«val dimension = arg.dimensionOf»
-				«FOR dim : 0..< dimension.size»
-				«noop»
-					LDA #«dimension.get(dim).toHex»
-					STA «param.nameOfLen(methodName, dim)»
-				«ENDFOR»
+				«IF param.isUnbounded»
+					«val dimension = arg.dimensionOf»
+					«FOR dim : 0..< dimension.size»
+					«noop»
+						LDA #«dimension.get(dim).toHex»
+						STA «param.nameOfLen(methodName, dim)»
+					«ENDFOR»
+				«ENDIF»
 			«ENDFOR»
 			«noop»
 				JSR «method.nameOf»

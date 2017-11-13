@@ -127,6 +127,10 @@ class Statements {
 	def nameOfEnd(ForStatement forStatement) {
 		'''«forStatement.nameOf».end'''
 	}
+	
+	def dimensionOf(ReturnStatement returnStatement) {
+		return returnStatement?.value?.dimensionOf ?: emptyList
+	}
 
 	def void prepare(Statement statement, AllocContext ctx) {
 		switch (statement) {
@@ -189,8 +193,10 @@ class Statements {
 				if (statement.isParameter && (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty)) {
 					chunks += ctx.computePtr(name)
 
-					for (i : 0 ..< statement.dimensionOf.size) {
-						chunks += ctx.computeVar(statement.nameOfLen(ctx.container, i), 1)
+					if (statement.isUnbounded) {
+						for (i : 0 ..< statement.dimensionOf.size) {
+							chunks += ctx.computeVar(statement.nameOfLen(ctx.container, i), 1)
+						}
 					}
 				} else if (statement.isNonStatic) {
 					val page = statement?.storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE
