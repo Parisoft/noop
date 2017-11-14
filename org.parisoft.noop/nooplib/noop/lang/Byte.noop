@@ -1,4 +1,4 @@
-Byte extends Int {
+Byte extends Primitive {
 
 	$MIN : 0
 	$MAX : 255

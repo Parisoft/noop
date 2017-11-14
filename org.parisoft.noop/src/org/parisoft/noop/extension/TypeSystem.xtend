@@ -23,6 +23,8 @@ class TypeSystem {
 	public static val LIB_NES_HEADER = "INESHeader"
 	public static val LIB_GAME = "Game"
 	
+	public static val LIB_NUMBERS = newArrayList(LIB_BYTE, LIB_SBYTE, LIB_INT, LIB_UINT)
+	
 	public static val MIN_INT = -32768
 	public static val MAX_INT = 32767
 	public static val MIN_UINT = 0

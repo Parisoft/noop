@@ -1,4 +1,4 @@
-UInt extends Int {
+UInt extends Primitive {
 
 	$MIN : 0
 	$MAX : 65535

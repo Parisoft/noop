@@ -74,12 +74,30 @@ class Classes {
 	}
 
 	def merge(Collection<NoopClass> classes) {
-		classes.map [
-			superClasses
-		].reduce [ h1, h2 |
-			h1.removeIf[c1|!h2.exists[c2|c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString]]
-			h1
-		]?.head ?: TypeSystem::TYPE_VOID
+		if (classes.isEmpty) {
+			TypeSystem::TYPE_VOID
+		} else if (classes.forall[isNumeric]) {
+			classes.reduce [ c1, c2 |
+				if (c1.sizeOf > c2.sizeOf) {
+					c1
+				} else if (c1.sizeOf < c2.sizeOf) {
+					c2
+				} else if (c1.isSigned) {
+					c1
+				} else {
+					c2
+				}
+			]
+		} else {
+			classes.map [
+				superClasses
+			].reduce [ h1, h2 |
+				h1.removeIf [ c1 |
+					!h2.exists[c2|c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString]
+				]
+				h1
+			]?.head ?: TypeSystem::TYPE_VOID
+		}
 	}
 
 	def declaredFields(NoopClass c) {
@@ -117,7 +135,7 @@ class Classes {
 	}
 
 	def isNumeric(NoopClass c) {
-		c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_INT]
+		TypeSystem::LIB_NUMBERS.contains(c.fullyQualifiedName?.toString)
 	}
 
 	def isBoolean(NoopClass c) {

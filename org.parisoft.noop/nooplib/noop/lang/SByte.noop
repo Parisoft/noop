@@ -1,4 +1,4 @@
-SByte extends Int {
+SByte extends Primitive {
 
 	$MIN : -128
 	$MAX : 127
