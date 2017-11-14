@@ -12,6 +12,7 @@ import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.eclipse.xtext.resource.IResourceDescriptions
+import org.parisoft.noop.exception.NullExpressionException
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Datas
@@ -55,7 +56,7 @@ class NoopGenerator extends AbstractGenerator {
 			try {
 				asm8.compile
 			} catch (Exception exception) {
-				fsa.getURI(asm.binFileName).toFile.delete
+				fsa.deleteFile(asm.binFileName)
 				throw exception
 			}
 		}
@@ -68,11 +69,15 @@ class NoopGenerator extends AbstractGenerator {
 			return null
 		}
 
-		val ctx = gameImpl.prepare
-		gameImpl.alloc(ctx)
-		val content = ctx.compile.optimize
+		try {
+			val ctx = gameImpl.prepare
+			gameImpl.alloc(ctx)
+			val content = ctx.compile.optimize
 
-		new ASM(gameImpl.name, content)
+			new ASM(gameImpl.name, content)
+		} catch (NullExpressionException e) {
+			System::err.println('''Got a null expression. Is eclipse cleaning?''')
+		}
 	}
 
 	private def optimize(CharSequence code) {
@@ -81,7 +86,7 @@ class NoopGenerator extends AbstractGenerator {
 		val AtomicInteger skip = new AtomicInteger
 
 		lines.forEach [ line, i |
-			var next = if (i + 1 < lines.length) lines.get(i + 1) else ''
+			var next = if(i + 1 < lines.length) lines.get(i + 1) else ''
 
 			if (skip.get > 0) {
 				skip.decrementAndGet
@@ -139,8 +144,8 @@ class NoopGenerator extends AbstractGenerator {
 		; Class Metadata
 		;----------------------------------------------------------------
 		«var classCount = 0»
-		«FOR noopClass : ctx.classes.filter[nonPrimitive]»
-			«noopClass.asmName» = «classCount++»
+		«FOR noopClass : ctx.classes.values.filter[nonPrimitive]»
+			«noopClass.nameOf» = «classCount++»
 			«val fieldOffset = new AtomicInteger(1)»
 			«FOR field : noopClass.allFieldsTopDown.filter[nonStatic]»
 				«field.nameOfOffset» = «fieldOffset.getAndAdd(field.sizeOf)»
@@ -154,7 +159,7 @@ class NoopGenerator extends AbstractGenerator {
 		«Members::FALSE» = 0
 		«Members::FT_DPCM_OFF» = $C000
 		«Members::FT_DPCM_PTR» = («Members::FT_DPCM_OFF»&$3fff)>>6
-		«FOR cons : ctx.constants»
+		«FOR cons : ctx.constants.values»
 			«cons.nameOfConstant» = «cons.value.compileConstant»
 		«ENDFOR»
 		
@@ -164,7 +169,7 @@ class NoopGenerator extends AbstractGenerator {
 		«FOR page : 0..< ctx.counters.size»
 			«val counter = ctx.counters.get(page)»
 			«counter.set(page * 256)»
-			«val staticVars = ctx.statics.filter[storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE === page]»
+			«val staticVars = ctx.statics.values.filter[(storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE) === page]»
 			«FOR staticVar : staticVars»
 				«staticVar.nameOfStatic» = «counter.getAndAdd(staticVar.sizeOf).toHexString(4)»
 			«ENDFOR»
@@ -196,7 +201,7 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 			.base $10000 - («(ctx.header.fieldValue('prgRomPages') as Integer).toHexString» * $4000) 
 		
-		«FOR rom : ctx.prgRoms.filter[nonDMC]»
+		«FOR rom : ctx.prgRoms.values.filter[nonDMC]»
 			«rom.compile(new CompileContext)»
 		«ENDFOR»
 		
@@ -215,16 +220,16 @@ class NoopGenerator extends AbstractGenerator {
 		;endm
 		
 		;-- Methods -----------------------------------------------------
-		«FOR method : ctx.methods.sortBy[fullyQualifiedName]»
+		«FOR method : ctx.methods.values.sortBy[fullyQualifiedName]»
 			«method.compile(new CompileContext => [allocation = ctx])»
 			
 		«ENDFOR»
 		;-- Constructors ------------------------------------------------
-		«FOR constructor : ctx.constructors.sortBy[type.name]»
+		«FOR constructor : ctx.constructors.values.sortBy[type.name]»
 			«constructor.compile(null)»
 			
 		«ENDFOR»
-		«val dmcList = ctx.prgRoms.filter[DMC].toList»
+		«val dmcList = ctx.prgRoms.values.filter[DMC].toList»
 		«IF dmcList.isNotEmpty»
 			;-- DMC sound data-----------------------------------------------
 				.org «Members::FT_DPCM_OFF»
@@ -238,16 +243,16 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 			.org $FFFA     
 		
-		 	.dw «ctx.methods.findFirst[nmi].nameOf»
-		 	.dw «ctx.methods.findFirst[reset].nameOf»
-		 	.dw «ctx.methods.findFirst[irq].nameOf»
+		 	.dw «ctx.methods.values.findFirst[nmi].nameOf»
+		 	.dw «ctx.methods.values.findFirst[reset].nameOf»
+		 	.dw «ctx.methods.values.findFirst[irq].nameOf»
 		
 		;----------------------------------------------------------------
 		; CHR-ROM bank(s)
 		;----------------------------------------------------------------
 		   .base $0000
 		
-		«FOR rom : ctx.chrRoms»
+		«FOR rom : ctx.chrRoms.values»
 			«rom.compile(new CompileContext)»
 		«ENDFOR»
 	'''

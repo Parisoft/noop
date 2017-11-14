@@ -2,24 +2,22 @@ package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
 import java.util.Collection
-import java.util.Map
 import java.util.NoSuchElementException
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
+import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.AllocContext
-import java.util.List
 
 class Classes {
 
 	static val int SIZE_OF_CLASS_TYPE = 1;
-	static val ThreadLocal<Map<NoopClass, Integer>> classeSizeCache = ThreadLocal::withInitial[newHashMap]
-	static val ThreadLocal<List<NoopClass>> classesCache = ThreadLocal::withInitial[newArrayList]
+	static val classeSizeCache = ThreadLocal::withInitial[<NoopClass, Integer>newHashMap]
+	static val classesCache = ThreadLocal::withInitial[<NoopClass>newArrayList]
 
 	@Inject extension Members
 	@Inject extension Statements
@@ -30,14 +28,30 @@ class Classes {
 		val visited = <NoopClass>newArrayList()
 		var current = c
 
+		if (current?.eIsProxy) {
+			try {
+				current = current.eResource.resourceSet.getEObject(current.URI, true) as NoopClass
+			} catch (Exception exception) {
+				return visited
+			}
+		}
+
 		while (current !== null && !visited.contains(current)) {
 			visited.add(current)
 			current = current.superClassOrObject
+
+			if (current?.eIsProxy) {
+				try {
+					current = current.eResource.resourceSet.getEObject(current.URI, true) as NoopClass
+				} catch (Exception exception) {
+					current = null
+				}
+			}
 		}
 
 		visited
 	}
-	
+
 	def subClasses(NoopClass c) {
 		classesCache.get.filter[it != c].filter[isInstanceOf(c)]
 	}
@@ -51,7 +65,8 @@ class Classes {
 	}
 
 	def getSuperClassOrObject(NoopClass c) {
-		if (c === null || c.fullyQualifiedName?.toString == TypeSystem::LIB_PRIMITIVE || c.fullyQualifiedName?.toString == TypeSystem::LIB_VOID) {
+		if (c === null || c.fullyQualifiedName?.toString == TypeSystem::LIB_PRIMITIVE ||
+			c.fullyQualifiedName?.toString == TypeSystem::LIB_VOID) {
 			null
 		} else {
 			c.superClass ?: c.toObjectClass
@@ -102,27 +117,15 @@ class Classes {
 	}
 
 	def isNumeric(NoopClass c) {
-		try {
-			c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_INT]
-		} catch (Exception exception) {
-			false
-		}
+		c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_INT]
 	}
 
 	def isBoolean(NoopClass c) {
-		try {
-			c.fullyQualifiedName.toString == TypeSystem::LIB_BOOL
-		} catch (Exception exception) {
-			false
-		}
+		c.fullyQualifiedName.toString == TypeSystem::LIB_BOOL
 	}
 
 	def isVoid(NoopClass c) {
-		try {
-			c.fullyQualifiedName.toString == TypeSystem::LIB_VOID
-		} catch (Exception exception) {
-			false
-		}
+		c.fullyQualifiedName.toString == TypeSystem::LIB_VOID
 	}
 
 	def isNonVoid(NoopClass c) {
@@ -130,11 +133,7 @@ class Classes {
 	}
 
 	def isPrimitive(NoopClass c) {
-		try {
-			c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_PRIMITIVE]
-		} catch (Exception exception) {
-			false
-		}
+		c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_PRIMITIVE]
 	}
 
 	def isNonPrimitive(NoopClass c) {
@@ -142,13 +141,7 @@ class Classes {
 	}
 
 	def isGame(NoopClass c) {
-		try {
-			c.superClasses.exists [
-				it.fullyQualifiedName.toString == TypeSystem::LIB_GAME
-			]
-		} catch (Exception exception) {
-			false
-		}
+		c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_GAME]
 	}
 
 	def isNonGame(NoopClass c) {
@@ -156,13 +149,7 @@ class Classes {
 	}
 
 	def isINESHeader(NoopClass c) {
-		try {
-			c.superClasses.exists [
-				it.fullyQualifiedName.toString == TypeSystem::LIB_NES_HEADER
-			]
-		} catch (Exception exception) {
-			false
-		}
+		c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_NES_HEADER]
 	}
 
 	def isNonINESHeader(NoopClass c) {
@@ -191,7 +178,7 @@ class Classes {
 		}
 	}
 
-	def asmName(NoopClass c) {
+	def nameOf(NoopClass c) {
 		'''«c.name».class'''.toString
 	}
 
@@ -230,27 +217,27 @@ class Classes {
 
 		classeSizeCache.get.clear
 
-		ctx.classes += ctx.classes.map[superClasses].flatten.toSet
-		ctx.classes.forEach [ class1 |
+		ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
+		ctx.classes.values.forEach [ class1 |
 			if (class1.isPrimitive) {
 				classeSizeCache.get.put(class1, class1.rawSizeOf)
 			} else {
-				classeSizeCache.get.put(class1, ctx.classes.filter [ class2 |
+				classeSizeCache.get.put(class1, ctx.classes.values.filter [ class2 |
 					class2.isInstanceOf(class1)
 				].map [
 					rawSizeOf
 				].max)
 			}
 		]
-		
+
 		classesCache.get.clear
-		classesCache.get += ctx.classes 
+		classesCache.get += ctx.classes.values
 
 		return ctx
 	}
 
 	def void prepare(NoopClass noopClass, AllocContext ctx) {
-		if (ctx.classes.add(noopClass)) {
+		if (ctx.classes.put(noopClass.nameOf, noopClass) === null) {
 			noopClass.allFieldsTopDown.filter[ROM].forEach[prepare(ctx)]
 
 			if (noopClass.isGame) {
@@ -264,7 +251,7 @@ class Classes {
 
 	def void alloc(NoopClass noopClass, AllocContext ctx) {
 		if (noopClass.isGame) {
-			ctx.statics.forEach[alloc(ctx)]
+			ctx.statics.values.forEach[alloc(ctx)]
 
 			val chunks = noopClass.allMethodsBottomUp.findFirst[nmi].alloc(ctx)
 

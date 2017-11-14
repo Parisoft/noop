@@ -52,8 +52,8 @@ public class Members {
 	@Inject extension Collections
 	@Inject extension IQualifiedNameProvider
 
-	val running = new HashSet<Member>
-	val allocating = new HashSet<Member>
+	static val running = ThreadLocal.withInitial[new HashSet<Member>]
+	static val allocating = ThreadLocal.withInitial[new HashSet<Member>]
 
 	def getOverriders(Method method) {
 		method.containerClass.subClasses.map[declaredMethods.filter[it.isOverrideOf(method)]].filterNull.flatten
@@ -213,7 +213,7 @@ public class Members {
 	}
 
 	def typeOf(Variable variable) {
-		if (running.add(variable)) {
+		if (running.get.add(variable)) {
 			try {
 				if (variable.type !== null) {
 					variable.type
@@ -223,17 +223,17 @@ public class Members {
 					variable.value.typeOf
 				}
 			} finally {
-				running.remove(variable)
+				running.get.remove(variable)
 			}
 		}
 	}
 
 	def typeOf(Method method) {
-		if (running.add(method)) {
+		if (running.get.add(method)) {
 			try {
 				method.body.getAllContentsOfType(ReturnStatement).map[value.typeOf].filterNull.toSet.merge
 			} finally {
-				running.remove(method)
+				running.get.remove(method)
 			}
 		}
 	}
@@ -250,11 +250,11 @@ public class Members {
 			throw new NonConstantMemberException
 		}
 		
-		if (running.add(variable)) {
+		if (running.get.add(variable)) {
 			try {
 				return variable.value.valueOf
 			} finally {
-				running.remove(variable)
+				running.get.remove(variable)
 			}
 		}
 	}
@@ -276,12 +276,12 @@ public class Members {
 		}
 	}
 	
-	def dimensionOf(Method method) {
-		if (running.add(method)) {
+	def List<Integer> dimensionOf(Method method) {
+		if (running.get.add(method)) {
 			try {
 				method.body.getAllContentsOfType(ReturnStatement).head?.dimensionOf ?: emptyList
 			} finally {
-				running.remove(method)
+				running.get.remove(method)
 			}
 		}
 	}
@@ -378,7 +378,7 @@ public class Members {
 	}
 
 	def alloc(Method method, AllocContext ctx) {
-		if (allocating.add(method)) {
+		if (allocating.get.add(method)) {
 			try {
 				val snapshot = ctx.snapshot
 				val methodName = method.nameOf
@@ -396,11 +396,11 @@ public class Members {
 				chunks.disoverlap(methodName)
 
 				ctx.restoreTo(snapshot)
-				ctx.methods += method
+				ctx.methods.put(method.nameOf, method)
 
 				return chunks
 			} finally {
-				allocating.remove(method)
+				allocating.get.remove(method)
 			}
 		} else {
 			newArrayList
@@ -443,7 +443,7 @@ public class Members {
 
 				; Instantiate all static variables
 			«val resetMethod = method.nameOf»
-			«FOR staticVar : ctx.allocation.statics»
+			«FOR staticVar : ctx.allocation.statics.values»
 				«staticVar.compile(new CompileContext => [container = resetMethod])»
 			«ENDFOR»
 			
@@ -481,6 +481,11 @@ public class Members {
 				PLA
 				;;;;;;;;;; NMI finalization end
 				RTI
+			«ELSEIF method.isIrq»
+				«FOR statement : method.body.statements»
+					«statement.compile(new CompileContext => [container = method.nameOf])»
+				«ENDFOR»
+					RTI
 			«ELSE»
 				«FOR statement : method.body.statements»
 					«statement.compile(new CompileContext => [container = method.nameOf])»
@@ -502,11 +507,11 @@ public class Members {
 			throw new NonConstantMemberException
 		}
 		
-		if (running.add(variable)) {
+		if (running.get.add(variable)) {
 			try {
 				return variable.nameOfConstant
 			} finally {
-				running.remove(variable)
+				running.get.remove(variable)
 			}
 		}
 	}
@@ -538,7 +543,7 @@ public class Members {
 			«val pullAcc = ctx.pullAccIfOperating»
 			«FOR overrider : overriders»
 				«noop»
-				+	CMP #«overrider.containerClass.asmName»
+				+	CMP #«overrider.containerClass.nameOf»
 					BNE +
 				«pullAcc»
 				«overrider.compileIndirectReference(rcv, indexes, ctx)»
@@ -733,7 +738,7 @@ public class Members {
 			«val invocationEnd = '''invocation.end'''»
 			«FOR overrider : overriders»
 				«noop»
-				+	CMP #«overrider.containerClass.asmName»
+				+	CMP #«overrider.containerClass.nameOf»
 					BEQ ++
 					JMP +
 				«val falseReceiver = new CompileContext => [

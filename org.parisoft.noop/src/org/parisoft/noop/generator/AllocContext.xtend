@@ -11,15 +11,15 @@ import org.parisoft.noop.noop.Variable
 class AllocContext {
 
 	@Accessors var NewInstance header
-	@Accessors val classes = <NoopClass>newLinkedHashSet
-	@Accessors val statics = <Variable>newLinkedHashSet
-	@Accessors val constants = <Variable>newLinkedHashSet
-	@Accessors val prgRoms = <Variable>newLinkedHashSet
-	@Accessors val chrRoms = <Variable>newLinkedHashSet
+	@Accessors val classes = <String, NoopClass>newLinkedHashMap
+	@Accessors val statics = <String, Variable>newLinkedHashMap
+	@Accessors val constants = <String, Variable>newLinkedHashMap
+	@Accessors val prgRoms = <String, Variable>newLinkedHashMap
+	@Accessors val chrRoms = <String, Variable>newLinkedHashMap
 	@Accessors val variables = <String, List<MemChunk>>newHashMap
 	@Accessors val pointers = <String, List<MemChunk>>newHashMap
-	@Accessors val methods = <Method>newHashSet
-	@Accessors val constructors = <NewInstance>newTreeSet[n1, n2|n1.type.name.compareTo(n2.type.name)]
+	@Accessors val methods = <String, Method>newLinkedHashMap
+	@Accessors val constructors = <String, NewInstance>newLinkedHashMap
 
 	@Accessors val counters = newArrayList(new AtomicInteger(0x0000), new AtomicInteger(0x0100), new AtomicInteger(0x0200), new AtomicInteger(0x0300),
 		new AtomicInteger(0x0400), new AtomicInteger(0x0500), new AtomicInteger(0x0600), new AtomicInteger(0x0700))
@@ -59,5 +59,5 @@ class AllocContext {
 			container : «container»
 		}
 	'''
-
+	
 }

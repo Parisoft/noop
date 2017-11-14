@@ -59,6 +59,7 @@ import java.io.File
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.noop.ReturnStatement
+import org.parisoft.noop.exception.NullExpressionException
 
 class Expressions {
 
@@ -148,7 +149,7 @@ class Expressions {
 
 	def NoopClass typeOf(Expression expression) {
 		if (expression === null) {
-			return TypeSystem::TYPE_VOID
+			throw new NullExpressionException
 		}
 
 		switch (expression) {
@@ -612,7 +613,7 @@ class Expressions {
 					chunks.disoverlap(constructorName)
 
 					ctx.restoreTo(snapshot)
-					ctx.constructors += expression
+					ctx.constructors.put(expression.type.nameOf, expression)
 
 					if (expression.constructor !== null) {
 						chunks += expression.constructor.fields.map[variable.value.alloc(ctx)].flatten
@@ -812,7 +813,7 @@ class Expressions {
 					«val comparisonEnd = labelForComparisonEnd»
 					«FOR subClass : subClasses»
 						«noop»
-							CMP #«subClass.asmName»
+							CMP #«subClass.nameOf»
 							BEQ +«IF ctx.relative !== null»«ctx.relative»«ELSE»«comparisonIsTrue»«ENDIF»
 					«ENDFOR»
 					«IF ctx.relative === null»
@@ -946,7 +947,7 @@ class Expressions {
 						«val receiver = expression.nameOfReceiver»
 						«constructor»:
 							LDY #$00
-							LDA #«expression.type.asmName»
+							LDA #«expression.type.nameOf»
 							STA («receiver»), Y
 						«FOR field : expression.fieldsInitializedOnContructor»
 							«field.compile(new CompileContext => [
