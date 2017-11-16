@@ -6,6 +6,8 @@ import java.util.List
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
+import org.parisoft.noop.generator.AllocContext
+import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.CompileContext.Mode
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.Index
@@ -15,16 +17,14 @@ import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.ReturnStatement
+import org.parisoft.noop.noop.StringLiteral
+import org.parisoft.noop.noop.Super
+import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.StringLiteral
-import org.parisoft.noop.generator.CompileContext
-import org.parisoft.noop.generator.AllocContext
-import org.parisoft.noop.noop.Super
-import org.parisoft.noop.noop.This
 
 public class Members {
 
@@ -41,7 +41,7 @@ public class Members {
 	public static val FILE_ASM_EXTENSION = '.asm'
 	public static val FILE_INC_EXTENSION = '.inc'
 	public static val FILE_DMC_EXTENSION = '.dmc'
-
+	
 	@Inject extension Datas
 	@Inject extension Values
 	@Inject extension Classes
@@ -54,6 +54,7 @@ public class Members {
 
 	static val running = ThreadLocal.withInitial[new HashSet<Member>]
 	static val allocating = ThreadLocal.withInitial[new HashSet<Member>]
+	static val preparing = ThreadLocal.withInitial[new HashSet<Member>]
 
 	def getOverriders(Method method) {
 		method.containerClass.subClasses.map[declaredMethods.filter[it.isOverrideOf(method)]].filterNull.flatten
@@ -352,7 +353,13 @@ public class Members {
 	}
 
 	def prepare(Method method, AllocContext ctx) {
-		method.body.statements.forEach[prepare(ctx)]
+		if (preparing.get.add(method)) {
+			try {
+				method.body.statements.forEach[prepare(ctx)]
+			} finally {
+				preparing.get.remove(method)		
+			}
+		}
 	}
 
 	def dispose(Member member, AllocContext ctx) {

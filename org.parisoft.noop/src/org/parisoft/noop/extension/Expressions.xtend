@@ -552,8 +552,13 @@ class Expressions {
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 			SubExpression:
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			MulExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+			MulExpression: {
+				val math = expression.typeOf.toMathClass()
+				val method = math.declaredMethods.findFirst[
+						name == '''«Members::STATIC_PREFIX»multiplyAsByte'''.toString
+					]
+				(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
+			}
 			DivExpression:
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 			BOrExpression:
@@ -1185,7 +1190,13 @@ class Expressions {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
 				operation.compileBinary(left, const, ctx)
 			} catch (NonConstantExpressionException exception2) {
-				operation.compileBinary(left, right, ctx)
+				if (operation == Operation::MULTIPLICATION) {
+					ctx.type.toMathClass().declaredMethods.findFirst[
+						name == '''«Members::STATIC_PREFIX»multiplyAsByte'''.toString
+					]?.compileInvocation(newArrayList(left, right), ctx)				
+				} else {
+					operation.compileBinary(left, right, ctx)
+				}
 			}
 		}
 	}

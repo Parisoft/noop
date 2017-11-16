@@ -1,0 +1,15 @@
+Math {
+	
+	$multiplyAsByte(Byte a, Byte b) {
+		r : 0
+		!	JMP +   !
+		!-	CLC     !
+		!	ADC ?a? !
+		!--	ASL ?a? !
+		!+	LSR ?b? !
+		!	BCS -   !
+		!	BNE --  !
+		!	STA ?r? !
+		return r
+	}
+}

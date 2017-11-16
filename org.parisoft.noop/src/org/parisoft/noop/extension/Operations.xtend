@@ -264,23 +264,26 @@ class Operations {
 		«val comparisonEnd = labelForComparisonEnd»
 		«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 			«noop»
-				CMP #<(«operand.immediate»)
-				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+				TAX
 				PLA
+				CPX #<(«operand.immediate»)
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 				CMP #>(«operand.immediate»)
 		«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
 			«noop»
-				CMP #(«operand.immediate»)
-				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+				TAX
 				PLA
+				CPX #(«operand.immediate»)
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 				CMP #$00
 		«ELSEIF acc.sizeOf > 1»
 			«noop»
-				CMP #(«operand.immediate»)
-				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
-			«operand.loadMSB»
-				STA «Members::TEMP_VAR_NAME1»
+				TAX
 				PLA
+				CPX #(«operand.immediate»)
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+				STA «Members::TEMP_VAR_NAME1»
+			«operand.loadMSB»
 				CMP «Members::TEMP_VAR_NAME1»
 		«ELSEIF operand.sizeOf > 1»
 			«noop»
@@ -315,29 +318,41 @@ class Operations {
 			«IF operand.isIndexed»
 				LDX «operand.index»
 			«ENDIF»
-			CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 		«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 			«noop»
-				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+				TAY
 				PLA
 				CMP «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+				TYA
+				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 		«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
 			«noop»
-				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+				TAY
 				PLA
 				CMP #$00
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+				TYA
+				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 		«ELSEIF acc.sizeOf > 1»
 			«noop»
-				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
-			«operand.loadMSB»
 				STA «Members::TEMP_VAR_NAME1»
 				PLA
+				STA «Members::TEMP_VAR_NAME1» + 1
+				LDA «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 				CMP «Members::TEMP_VAR_NAME1»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+			«operand.loadMSB»
+				CMP «Members::TEMP_VAR_NAME1» + 1
 		«ELSEIF operand.sizeOf > 1»
 			«noop»
+				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 			«acc.loadMSB»
 				CMP «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
+		«ELSE»
+			«noop»
+				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 		«ENDIF»
 		«IF acc.relative === null»
 			«noop»
@@ -360,30 +375,36 @@ class Operations {
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«val comparisonEnd = labelForComparisonEnd»
 			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
-			CMP («operand.indirect»), Y
 		«IF acc.sizeOf > 1 && operand.sizeOf > 1»
 			«noop»
-				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
-				PLA
-				INY
-				CMP («operand.indirect»), Y
-		«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
-			«noop»
-				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
-				PLA
-				CMP #$00
-		«ELSEIF acc.sizeOf > 1»
-			«noop»
-				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
-			«operand.loadMSB»
 				STA «Members::TEMP_VAR_NAME1»
 				PLA
+				STA «Members::TEMP_VAR_NAME1» + 1
+				LDA («operand.indirect»), Y
 				CMP «Members::TEMP_VAR_NAME1»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+				INY
+				LDA («operand.indirect»), Y
+				CMP «Members::TEMP_VAR_NAME1» + 1
+		«ELSEIF acc.sizeOf > 1»
+			«noop»
+				STA «Members::TEMP_VAR_NAME1»
+				PLA
+				STA «Members::TEMP_VAR_NAME1» + 1
+				LDA («operand.indirect»), Y
+				CMP «Members::TEMP_VAR_NAME1»
+				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
+			«operand.loadMSB»
+				CMP «Members::TEMP_VAR_NAME1» + 1
 		«ELSEIF operand.sizeOf > 1»
 			«noop»
+				CMP («operand.indirect»), Y
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 			«acc.loadMSB»
 				INY
+				CMP («operand.indirect»), Y
+		«ELSE»
+			«noop»
 				CMP («operand.indirect»), Y
 		«ENDIF»
 		«IF acc.relative === null»

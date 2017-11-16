@@ -21,8 +21,9 @@ class AllocContext {
 	@Accessors val methods = <String, Method>newLinkedHashMap
 	@Accessors val constructors = <String, NewInstance>newLinkedHashMap
 
-	@Accessors val counters = newArrayList(new AtomicInteger(0x0000), new AtomicInteger(0x0100), new AtomicInteger(0x0200), new AtomicInteger(0x0300),
-		new AtomicInteger(0x0400), new AtomicInteger(0x0500), new AtomicInteger(0x0600), new AtomicInteger(0x0700))
+	@Accessors val counters = newArrayList(new AtomicInteger(0x0000), new AtomicInteger(0x0100),
+		new AtomicInteger(0x0200), new AtomicInteger(0x0300), new AtomicInteger(0x0400), new AtomicInteger(0x0500),
+		new AtomicInteger(0x0600), new AtomicInteger(0x0700))
 	@Accessors var String container
 	@Accessors var boolean allocStatic = false
 
@@ -30,7 +31,7 @@ class AllocContext {
 		counters.get(page).set(page * 256)
 		counters.get(page).get
 	}
-		
+
 	def chunkFor(int page, String variable, int size) {
 		new MemChunk(variable, counters.get(page).getAndAdd(size), size)
 	}
@@ -39,14 +40,14 @@ class AllocContext {
 		val src = this
 
 		new AllocContext => [
-			counters.forEach[counter, page| counter.set(src.counters.get(page).get)]
+			counters.forEach[counter, page|counter.set(src.counters.get(page).get)]
 			container = src.container
 			allocStatic = src.allocStatic
 		]
 	}
 
 	def restoreTo(AllocContext snapshot) {
-		counters.forEach[counter, page| counter.set(snapshot.counters.get(page).get)]
+		counters.forEach[counter, page|counter.set(snapshot.counters.get(page).get)]
 		container = snapshot.container
 		allocStatic = snapshot.allocStatic
 	}
@@ -59,5 +60,5 @@ class AllocContext {
 			container : «container»
 		}
 	'''
-	
+
 }
