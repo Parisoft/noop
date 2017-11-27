@@ -805,10 +805,10 @@ public class Members {
 				«IF param.isUnbounded»
 					«val dimension = arg.dimensionOf»
 					«FOR dim : 0..< dimension.size»
-						«noop»
-							LDA #<«dimension.get(dim).toHex»
+						«val len = dimension.get(dim).toHex»
+							LDA #<«len»
 							STA «param.nameOfLen(methodName, dim)»
-							LDA #>«dimension.get(dim).toHex»
+							LDA #>«len»
 							STA «param.nameOfLen(methodName, dim)» + 1
 					«ENDFOR»
 				«ENDIF»
