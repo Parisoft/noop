@@ -195,7 +195,7 @@ class Statements {
 
 					if (statement.isUnbounded) {
 						for (i : 0 ..< statement.dimensionOf.size) {
-							chunks += ctx.computeVar(statement.nameOfLen(ctx.container, i), 1)
+							chunks += ctx.computeVar(statement.nameOfLen(ctx.container, i), 2)
 						}
 					}
 				} else if (statement.isNonStatic) {

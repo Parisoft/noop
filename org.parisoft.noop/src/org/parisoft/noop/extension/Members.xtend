@@ -41,6 +41,7 @@ public class Members {
 	public static val FILE_ASM_EXTENSION = '.asm'
 	public static val FILE_INC_EXTENSION = '.inc'
 	public static val FILE_DMC_EXTENSION = '.dmc'
+	public static val METHOD_ARRAY_LENGTH = 'length'
 	
 	@Inject extension Datas
 	@Inject extension Values
@@ -67,7 +68,7 @@ public class Members {
 	def isAccessibleFrom(Member member, EObject context) {
 		if (context instanceof MemberSelect) {
 			val receiverClass = context.receiver.typeOf
-			member.containerClass.isSubclassOf(receiverClass) && (context.containerClass.isSubclassOf(receiverClass) || member.isPublic)
+			receiverClass.isSubclassOf(member.containerClass) && (member.isPublic || context.containerClass.isSubclassOf(receiverClass))
 		} else {
 			context.containerClass.isSubclassOf(member.containerClass)
 		} 
@@ -194,12 +195,25 @@ public class Members {
 		method.containerClass.isGame && method.name == '''«STATIC_PREFIX»reset'''.toString && method.params.isEmpty
 	}
 	
-	def isDispose(Method method) {
-		method.name == 'dispose' && method.params.isEmpty
+	def isNative(Method method) {
+		val methodContainerName = method.containerClass.fullyQualifiedName.toString
+		return (methodContainerName == TypeSystem.LIB_OBJECT || methodContainerName == TypeSystem.LIB_PRIMITIVE)
 	}
 	
-	def isNonDispose(Method method) {
-		!method.isDispose
+	def isNonNative(Method method) {
+		!method.isNative
+	}
+	
+	def isArrayNative(Method method) {
+		method.isNative && (method.name == METHOD_ARRAY_LENGTH)
+	}
+	
+	def isNonArrayNative(Method method) {
+		!method.isArrayNative
+	}
+	
+	def isDispose(Method method) {
+		method.isNative && method.name == 'dispose'
 	}
 	
 	def isArrayReference(Variable variable, List<Index> indexes) {
@@ -415,7 +429,7 @@ public class Members {
 	}
 
 	def compile(Method method, CompileContext ctx) '''
-		«IF method.isNonDispose»
+		«IF method.isNonNative»
 			«method.nameOf»:
 			«IF method.isReset»
 				;;;;;;;;;; Initial setup begin
@@ -727,46 +741,50 @@ public class Members {
 	'''
 
 	def compileInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
-		«val overriders = if (receiver instanceof This || receiver instanceof Super) emptyList else method.overriders»
-		«receiver.compile(new CompileContext => [
-			container = ctx.container
-			operation = ctx.operation
-			accLoaded = ctx.accLoaded
-			indirect = method.nameOfReceiver
-			type = receiver.typeOf
-			mode = Mode::POINT
-		])»
-		«IF overriders.isEmpty»
-			«method.compileInvocation(args, ctx)»
+		«IF method.isNative»
+			«method.compileNativeInvocation(receiver, args, ctx)»
 		«ELSE»
-			«ctx.pushAccIfOperating»
-				LDY #$00
-				LDA («method.nameOfReceiver»), Y
-			«val invocationEnd = '''invocation.end'''»
-			«FOR overrider : overriders»
-				«noop»
-				+	CMP #«overrider.containerClass.nameOf»
-					BEQ ++
-					JMP +
-				«val falseReceiver = new CompileContext => [
-					operation = ctx.operation
-					indirect = method.nameOfReceiver
-				]»
-				«val realReceiver = new CompileContext => [
-					operation = ctx.operation
-					indirect = overrider.nameOfReceiver
-				]»
-				++«realReceiver.pointTo(falseReceiver)»
-				«overrider.compileInvocation(args, ctx)»
-					JMP +«invocationEnd»
-			«ENDFOR»
-			+«method.compileInvocation(args, ctx)»
-			+«invocationEnd»:
+			«val overriders = if (receiver instanceof This || receiver instanceof Super) emptyList else method.overriders»
+			«receiver.compile(new CompileContext => [
+				container = ctx.container
+				operation = ctx.operation
+				accLoaded = ctx.accLoaded
+				indirect = method.nameOfReceiver
+				type = receiver.typeOf
+				mode = Mode::POINT
+			])»
+			«IF overriders.isEmpty»
+				«method.compileInvocation(args, ctx)»
+			«ELSE»
+				«ctx.pushAccIfOperating»
+					LDY #$00
+					LDA («method.nameOfReceiver»), Y
+				«val invocationEnd = '''invocation.end'''»
+				«FOR overrider : overriders»
+					«noop»
+					+	CMP #«overrider.containerClass.nameOf»
+						BEQ ++
+						JMP +
+					«val falseReceiver = new CompileContext => [
+						operation = ctx.operation
+						indirect = method.nameOfReceiver
+					]»
+					«val realReceiver = new CompileContext => [
+						operation = ctx.operation
+						indirect = overrider.nameOfReceiver
+					]»
+					++«realReceiver.pointTo(falseReceiver)»
+					«overrider.compileInvocation(args, ctx)»
+						JMP +«invocationEnd»
+				«ENDFOR»
+				+«method.compileInvocation(args, ctx)»
+				+«invocationEnd»:
+			«ENDIF»
 		«ENDIF»
 	'''
 
 	def compileInvocation(Method method, List<Expression> args, CompileContext ctx) '''
-		«IF method.isNonDispose»
+		«IF method.isNonNative»
 			«ctx.pushAccIfOperating»
 			«val methodName = method.nameOf»
 			«FOR i : 0..< args.size»
@@ -787,9 +805,11 @@ public class Members {
 				«IF param.isUnbounded»
 					«val dimension = arg.dimensionOf»
 					«FOR dim : 0..< dimension.size»
-					«noop»
-						LDA #«dimension.get(dim).toHex»
-						STA «param.nameOfLen(methodName, dim)»
+						«noop»
+							LDA #<«dimension.get(dim).toHex»
+							STA «param.nameOfLen(methodName, dim)»
+							LDA #>«dimension.get(dim).toHex»
+							STA «param.nameOfLen(methodName, dim)» + 1
 					«ENDFOR»
 				«ENDIF»
 			«ENDFOR»
@@ -808,6 +828,27 @@ public class Members {
 					}
 				]»
 				«ret.resolveTo(ctx)»
+			«ENDIF»
+		«ENDIF»
+	'''
+	
+	def compileNativeInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
+		«IF method.name == METHOD_ARRAY_LENGTH»
+			«IF receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable && ((receiver as MemberRef).member as Variable).isUnbounded»
+				«val dim = (receiver as MemberRef).indexes.size»
+				«val len = new CompileContext => [
+					container = ctx.container
+					type = ctx.type.toIntClass
+					absolute = ((receiver as MemberRef).member as Variable).nameOfLen(dim)
+				]»
+				«len.resolveTo(ctx)»
+			«ELSE»
+				«val len = new CompileContext => [
+					container = ctx.container
+					type = ctx.type.toIntClass
+					immediate = receiver.dimensionOf.head.toString
+				]»
+				«len.resolveTo(ctx)»
 			«ENDIF»
 		«ENDIF»
 	'''

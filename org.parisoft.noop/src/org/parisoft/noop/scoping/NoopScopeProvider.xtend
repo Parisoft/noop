@@ -83,7 +83,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 		return switch (container) {
 			NoopClass: {
-				val thisMembers = container.members.takeWhile[it != context].filter(Variable) + container.declaredMethods
+				val thisMembers = container.members.takeWhile[it != context].filter(Variable) +
+					container.declaredMethods
 				val superMembers = container.allFieldsBottomUp + container.allMethodsBottomUp
 				Scopes.scopeFor(thisMembers, Scopes.scopeFor(superMembers))
 			}
@@ -111,7 +112,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 		return switch (container) {
 			NoopClass: {
-				val thisMembers = container.members.takeWhile[it != context].filter(Variable) + container.declaredMethods.filterOverload(args)
+				val thisMembers = container.members.takeWhile[it != context].filter(Variable) +
+					container.declaredMethods.filterOverload(args)
 				val superMembers = container.allFieldsBottomUp + container.allMethodsBottomUp.filterOverload(args)
 				Scopes.scopeFor(thisMembers, Scopes.scopeFor(superMembers))
 			}
@@ -129,14 +131,18 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	protected def scopeForMemberSelect(MemberSelect selection) {
 		val receiver = selection.receiver
 		val type = receiver.typeOf
+		val isArrayReceiver = receiver.dimensionOf.size > selection.indexes.size
 
 		if (type === null) {
 			IScope.NULLSCOPE
 		} else if (receiver instanceof NewInstance && (receiver as NewInstance).constructor === null) {
 			if (selection.hasArgs) {
 				Scopes.scopeFor(
-					type.declaredMethods.filter[static].filterOverload(selection.args) + type.declaredFields.filter[static],
-					Scopes.scopeFor(type.allMethodsBottomUp.filter[static].filterOverload(selection.args) + type.allFieldsBottomUp.filter[static])
+					type.declaredMethods.filter[static].filterOverload(selection.args) + type.declaredFields.filter [
+						static
+					],
+					Scopes.scopeFor(type.allMethodsBottomUp.filter[static].filterOverload(selection.args) +
+						type.allFieldsBottomUp.filter[static])
 				)
 			} else {
 				Scopes.scopeFor(
@@ -146,13 +152,17 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			}
 		} else if (selection.hasArgs) {
 			Scopes.scopeFor(
-				type.declaredMethods.filter[nonStatic].filterOverload(selection.args) + type.declaredFields.filter[nonStatic],
-				Scopes.scopeFor(type.allMethodsBottomUp.filter[nonStatic].filterOverload(selection.args) + type.allFieldsBottomUp.filter[nonStatic])
+				type.declaredMethods.filter[nonStatic].filterOverload(selection.args).filterNative(isArrayReceiver) +
+					type.declaredFields.filter[nonStatic],
+				Scopes.scopeFor(type.allMethodsBottomUp.filter[nonStatic].filterOverload(selection.args) +
+					type.allFieldsBottomUp.filter[nonStatic])
 			)
 		} else {
+			val inheritedMethods = type.allMethodsBottomUp.filter[nonStatic].filterNative(isArrayReceiver)
 			Scopes.scopeFor(
 				type.declaredMethods.filter[nonStatic] + type.declaredFields.filter[nonStatic],
-				Scopes.scopeFor(type.allMethodsBottomUp.filter[nonStatic] + type.allFieldsBottomUp.filter[nonStatic])
+				Scopes.scopeFor(inheritedMethods +
+					type.allFieldsBottomUp.filter[nonStatic])
 			)
 		}
 	}
@@ -172,6 +182,16 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 				val param = method.params.get(index)
 				arg.typeOf.isInstanceOf(param.typeOf) && arg.dimensionOf.size === param.dimensionOf.size
 			]
+		]
+	}
+
+	private def filterNative(Iterable<Method> methods, boolean isArrayRecevier) {
+		methods.filter [
+			if (isArrayRecevier) {
+				it.isArrayNative
+			} else {
+				it.isNonArrayNative
+			}
 		]
 	}
 

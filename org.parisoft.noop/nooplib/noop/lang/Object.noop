@@ -10,4 +10,10 @@ Object {
     	//native
     }
     
+    //-- Arrays methods ---
+    
+    length() {
+    	return Int
+    }
+    
 }

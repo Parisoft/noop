@@ -3,4 +3,10 @@ Primitive {
 	dispose() {
     	//native
     }
+    
+    //-- Arrays methods ---
+    
+    length() {
+    	return Int
+    }
 }
