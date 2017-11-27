@@ -118,7 +118,7 @@ UnaryExpression returns Expression:
 	right=UnaryExpression);
 
 CastExpression returns Expression:
-	SelectionExpression ({CastExpression.left=current} 'as' type=[NoopClass|CID])?;
+	SelectionExpression ({CastExpression.left=current} 'as' type=[NoopClass|CID] dimension+=Index*)?;
 
 SelectionExpression returns Expression:
 	TerminalExpression ({MemberSelect.receiver=current} LF* '.' LF*

@@ -73,6 +73,10 @@ class Expressions {
 	@Inject extension TypeSystem
 	@Inject extension Collections
 
+	def getFieldsInitializedOnContructor(NewInstance instance) {
+		instance.type.allFieldsTopDown.filter[nonStatic]
+	}
+
 	def isThisOrSuperReference(MemberSelect selection) {
 		selection.member instanceof This || selection.member instanceof Super
 	}
@@ -143,8 +147,8 @@ class Expressions {
 		'''«instance.nameOfConstructor».rcv'''.toString
 	}
 
-	def fieldsInitializedOnContructor(NewInstance instance) {
-		instance.type.allFieldsTopDown.filter[nonStatic]
+	def toFile(StringLiteral string) {
+		new File(string.eResource.URI.resFolder, string.value.substring(Members::FILE_SCHEMA.length))
 	}
 
 	def NoopClass typeOf(Expression expression) {
@@ -374,9 +378,15 @@ class Expressions {
 	def dimensionOf(Expression expression) {
 		switch (expression) {
 			StringLiteral:
-				expression.valueOf.dimensionOf
+				if (expression.isFileInclude) {
+					newArrayList(expression.toFile.length as int)
+				} else {
+					expression.valueOf.dimensionOf
+				}
 			ArrayLiteral:
 				expression.valueOf.dimensionOf
+			CastExpression:
+				expression.dimension.map[value.valueOf as Integer]
 			MemberSelect:
 				expression.member.dimensionOf.subListFrom(expression.indexes.size)
 			MemberRef:
@@ -554,9 +564,9 @@ class Expressions {
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 			MulExpression: {
 				val math = expression.typeOf.toMathClass()
-				val method = math.declaredMethods.findFirst[
-						name == '''«Members::STATIC_PREFIX»multiplyAsByte'''.toString
-					]
+				val method = math.declaredMethods.findFirst [
+					name == '''«Members::STATIC_PREFIX»multiplyAsByte'''.toString
+				]
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
 			}
 			DivExpression:
@@ -855,8 +865,8 @@ class Expressions {
 				StringLiteral: '''
 					«IF ctx.db !== null»
 						«ctx.db»:
-							«IF expression.value.toLowerCase.startsWith(Members::FILE_SCHEMA)»
-								«val filepath = new File(expression.eResource.URI.resFolder, expression.value.substring(Members::FILE_SCHEMA.length)).absolutePath»
+							«IF expression.isFileInclude»
+								«val filepath = expression.toFile.absolutePath»
 								«IF expression.isAsmFile || expression.isIncFile»
 									.include "«filepath»"
 								«ELSE»
@@ -1191,9 +1201,9 @@ class Expressions {
 				operation.compileBinary(left, const, ctx)
 			} catch (NonConstantExpressionException exception2) {
 				if (operation == Operation::MULTIPLICATION) {
-					ctx.type.toMathClass().declaredMethods.findFirst[
+					ctx.type.toMathClass().declaredMethods.findFirst [
 						name == '''«Members::STATIC_PREFIX»multiplyAsByte'''.toString
-					]?.compileInvocation(newArrayList(left, right), ctx)				
+					]?.compileInvocation(newArrayList(left, right), ctx)
 				} else {
 					operation.compileBinary(left, right, ctx)
 				}
