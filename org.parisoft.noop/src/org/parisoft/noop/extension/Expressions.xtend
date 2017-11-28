@@ -731,61 +731,61 @@ class Expressions {
 			switch (expression) {
 				AssignmentExpression: '''
 					«val ref = new CompileContext => [
-									container = ctx.container
-									operation = ctx.operation
-									type = expression.left.typeOf
-									mode = Mode::REFERENCE
-								]»
+						container = ctx.container
+						operation = ctx.operation
+						type = expression.left.typeOf
+						mode = Mode::REFERENCE
+					]»
 					«expression.left.compile(ref)»
 					«IF expression.assignment === AssignmentType::ASSIGN»
 						«expression.right.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::ADD_ASSIGN»
 						«val add = NoopFactory::eINSTANCE.createAddExpression => [
-										left = expression.left
-										right = expression.right
-									]»
+							left = expression.left
+							right = expression.right
+						]»
 						«add.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::SUB_ASSIGN»
 						«val sub = NoopFactory::eINSTANCE.createSubExpression => [
-										left = expression.left
-										right = expression.right
-									]»
+							left = expression.left
+							right = expression.right
+						]»
 						«sub.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::MUL_ASSIGN»
 						«val mul = NoopFactory::eINSTANCE.createMulExpression => [
-										left = expression.left
-										right = expression.right
-									]»
+							left = expression.left
+							right = expression.right
+						]»
 						«mul.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::DIV_ASSIGN»
 						«val div = NoopFactory::eINSTANCE.createDivExpression => [
-										left = expression.left
-										right = expression.right
-									]»
+							left = expression.left
+							right = expression.right
+						]»
 						«div.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BOR_ASSIGN»
 						«val bor = NoopFactory::eINSTANCE.createBOrExpression => [
-										left = expression.left
-										right = expression.right
-									]»
+							left = expression.left
+							right = expression.right
+						]»
 						«bor.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BAN_ASSIGN»
 						«val ban = NoopFactory::eINSTANCE.createBAndExpression => [
-										left = expression.left
-										right = expression.right
-									]»
+							left = expression.left
+							right = expression.right
+						]»
 						«ban.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BLS_ASSIGN»
 						«val bls = NoopFactory::eINSTANCE.createLShiftExpression => [
-										left = expression.left
-										right = expression.right
-									]»
+							left = expression.left
+							right = expression.right
+						]»
 						«bls.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BRS_ASSIGN»
 						«val brs = NoopFactory::eINSTANCE.createRShiftExpression => [
-										left = expression.left
-										right = expression.right
-									]»
+							left = expression.left
+							right = expression.right
+						]»
 						«brs.compile(ref => [mode = Mode::COPY])»
 					«ENDIF»
 					«ref.resolveTo(ctx)»
@@ -816,12 +816,12 @@ class Expressions {
 				InstanceOfExpression: '''
 					«val subClasses = newArrayList(expression.type) + expression.type.subClasses»
 					«val leftClass = new CompileContext => [
-									container = ctx.container
-									operation = ctx.operation
-									accLoaded = ctx.isAccLoaded
-									type = expression.type.toByteClass
-									register = 'A'
-								]»
+						container = ctx.container
+						operation = ctx.operation
+						accLoaded = ctx.isAccLoaded
+						type = expression.type.toByteClass
+						register = 'A'
+					]»
 					«expression.left.compile(leftClass)»
 					«val comparisonIsFalse = labelForComparisonIsFalse»
 					«val comparisonIsTrue = labelForComparisonIsTrue»
@@ -852,9 +852,9 @@ class Expressions {
 							«ENDIF»
 					«ELSE»
 						«val src = new CompileContext => [
-										type = expression.typeOf
-										immediate = expression.value.toHex.toString
-									]»
+							type = expression.typeOf
+							immediate = expression.value.toHex.toString
+						]»
 						«src.resolveTo(ctx)»
 					«ENDIF»
 				'''
@@ -865,16 +865,17 @@ class Expressions {
 				StringLiteral: '''
 					«IF ctx.db !== null»
 						«ctx.db»:
-							«IF expression.isFileInclude»
-								«val filepath = expression.toFile.absolutePath»
+						«IF expression.isFileInclude»
+							«val filepath = expression.toFile.absolutePath»
 								«IF expression.isAsmFile || expression.isIncFile»
 									.include "«filepath»"
 								«ELSE»
 									.incbin "«filepath»"
 								«ENDIF»
-							«ELSE»
+						«ELSE»
+							«noop»
 								.db «expression.value.toBytes.join(', ', [toHex])»
-							«ENDIF»
+						«ENDIF»
 					«ELSEIF ctx.absolute !== null»
 						«ctx.pushAccIfOperating»
 						«val bytes = expression.value.bytes.map[intValue]»
@@ -916,13 +917,14 @@ class Expressions {
 							«ENDFOR»
 					«ELSE»
 						«val tmp = if (expression.isOnMemberSelectionOrReference) {	
-										new CompileContext => [	container = ctx.container
-																operation = ctx.operation
-																absolute = expression.nameOfTmp(ctx.container)
-																type = ctx.type]
-									} else {
-										ctx.clone
-									}
+								new CompileContext => [	
+									container = ctx.container
+									operation = ctx.operation
+									absolute = expression.nameOfTmp(ctx.container)
+									type = ctx.type]
+							} else {
+								ctx.clone
+							}
 						»
 						«val elements = expression.flatList»
 						«FOR i : 0 ..< elements.size»

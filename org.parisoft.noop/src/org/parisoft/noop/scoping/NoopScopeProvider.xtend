@@ -161,8 +161,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			val inheritedMethods = type.allMethodsBottomUp.filter[nonStatic].filterNative(isArrayReceiver)
 			Scopes.scopeFor(
 				type.declaredMethods.filter[nonStatic] + type.declaredFields.filter[nonStatic],
-				Scopes.scopeFor(inheritedMethods +
-					type.allFieldsBottomUp.filter[nonStatic])
+				Scopes.scopeFor(inheritedMethods + type.allFieldsBottomUp.filter[nonStatic])
 			)
 		}
 	}
@@ -177,6 +176,12 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 	private def filterOverload(Iterable<Method> methods, List<Expression> args) {
 		methods.filter [ method |
+			method.params.size == args.size && args.forall [ arg |
+				val index = args.indexOf(arg)
+				val param = method.params.get(index)
+				arg.typeOf == param.typeOf && arg.dimensionOf.size === param.dimensionOf.size
+			]
+		] + methods.filter [ method |
 			method.params.size == args.size && args.forall [ arg |
 				val index = args.indexOf(arg)
 				val param = method.params.get(index)

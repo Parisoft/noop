@@ -104,11 +104,14 @@ AdditiveExpression returns Expression:
 	LF* right=MultiplicativeExpression)*;
 
 MultiplicativeExpression returns Expression:
-	UnaryExpression (({MulExpression.left=current} LF* '*' | {DivExpression.left=current} LF* '/')
-	LF* right=UnaryExpression)*;
+	CastExpression (({MulExpression.left=current} LF* '*' | {DivExpression.left=current} LF* '/')
+	LF* right=CastExpression)*;
+
+CastExpression returns Expression:
+	UnaryExpression ({CastExpression.left=current} 'as' type=[NoopClass|CID] dimension+=Index*)?;
 
 UnaryExpression returns Expression:
-	CastExpression |
+	SelectionExpression |
 	(({EorExpression} '~' |
 	{NotExpression} 'not' |
 	{SigNegExpression} '-' |
@@ -116,9 +119,6 @@ UnaryExpression returns Expression:
 	{DecExpression} '--' |
 	{IncExpression} '++')
 	right=UnaryExpression);
-
-CastExpression returns Expression:
-	SelectionExpression ({CastExpression.left=current} 'as' type=[NoopClass|CID] dimension+=Index*)?;
 
 SelectionExpression returns Expression:
 	TerminalExpression ({MemberSelect.receiver=current} LF* '.' LF*
