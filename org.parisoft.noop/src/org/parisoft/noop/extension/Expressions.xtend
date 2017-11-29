@@ -182,7 +182,7 @@ class Expressions {
 			SubExpression:
 				expression.typeOfValueOrInt
 			MulExpression:
-				expression.typeOfValueOrInt
+				expression.typeOfValueOrMerge(expression.left, expression.right)
 			DivExpression:
 				expression.typeOfValueOrMerge(expression.left, expression.right)
 			BOrExpression:

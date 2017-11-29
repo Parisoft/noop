@@ -1,7 +1,7 @@
 Math {
 	
-	$multiplyAsByte(Byte a, Byte b) {
-		r : 0
+	$multiply8Bit(Byte a @RAM[0], Byte b @RAM[0]) {
+		r @RAM[0] : 0
 		!	JMP +   !
 		!-	CLC     !
 		!	ADC ?a? !
@@ -11,5 +11,59 @@ Math {
 		!	BNE --  !
 		!	STA ?r? !
 		return r
+	}
+	
+	$multiply(UInt a @RAM[0], UInt b @RAM[0]) {
+		r @RAM[0] : UInt
+		s @RAM[0] : Byte
+		!	LDX #16     !
+		!-	LSR ?b? + 1 !
+		!	ROR ?b?     !
+		!	BCC +       !
+		!	CLC	        !
+		!	TAY	        !
+		!	LDA ?a?	    !
+		!	ADC ?s?     !
+		!	STA ?s?     !
+		!	TYA         !
+		!	ADC ?a? + 1 !
+		!+	ROR A       !
+		!	ROR ?s?     !
+		!	ROR ?r? + 1 !
+		!	ROR ?r?     !
+		!	DEX         !
+		!	BNE -       !
+		return r
+	}
+	
+	$multiply(Int a @RAM[0], Int b @RAM[0]) {
+		r @RAM[0] : $multiply(a as UInt, b as UInt)
+		!	LDA ?a? + 1!
+		!	EOR ?b? + 1!
+		!	BPL +done  !
+		!	SEC        !
+		!	LDA ?a? + 1!
+		!	BPL +      !
+		!	LDA ?r? + 1!
+		!	SBC ?b? + 1!
+		!	STA ?r? + 1!
+		!	JMP +done  !
+		!+	LDA ?r? + 1!
+		!	SBC ?a? + 1!
+		!	STA ?r? + 1!
+		!+done:        !
+		return r as Int
+	}
+	
+	$multiply(Int a @RAM[0], UInt b @RAM[0]) {
+		r @RAM[0] : $multiply(a as UInt, b)
+		!	LDA ?a? + 1!
+		!	BPL +done  !
+		!	SEC        !
+		!	LDA ?r? + 1!
+		!	SBC ?b? + 1!
+		!	STA ?r? + 1!
+		!+done:        !
+		return r as Int
 	}
 }
