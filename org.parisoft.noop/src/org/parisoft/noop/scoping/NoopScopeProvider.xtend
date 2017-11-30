@@ -26,6 +26,7 @@ import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.ConstructorField
 import org.parisoft.noop.noop.ForStatement
 import org.parisoft.noop.noop.AsmStatement
+import org.eclipse.xtext.naming.IQualifiedNameProvider
 
 /**
  * This class contains custom scoping description.
@@ -38,6 +39,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	@Inject extension Expressions
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension IQualifiedNameProvider
 
 	override getScope(EObject context, EReference eRef) {
 		switch (context) {
@@ -137,32 +139,27 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			IScope.NULLSCOPE
 		} else if (receiver instanceof NewInstance && (receiver as NewInstance).constructor === null) {
 			if (selection.hasArgs) {
-				Scopes.scopeFor(
-					type.declaredMethods.filter[static].filterOverload(selection.args) + type.declaredFields.filter [
-						static
-					],
-					Scopes.scopeFor(type.allMethodsBottomUp.filter[static].filterOverload(selection.args) +
-						type.allFieldsBottomUp.filter[static])
-				)
+				val declaredMembers = type.declaredMethods.filter[static].filterOverload(selection.args) +
+					type.declaredFields.filter[static]
+				val allMembers = type.allMethodsBottomUp.filter[static].filterOverload(selection.args) +
+					type.allFieldsBottomUp.filter[static]
+				Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
 			} else {
-				Scopes.scopeFor(
-					type.declaredFields.filter[static] + type.declaredMethods.filter[static],
-					Scopes.scopeFor(type.allFieldsBottomUp.filter[static] + type.allMethodsBottomUp.filter[static])
-				)
+				val declaredMembers = type.declaredFields.filter[static] + type.declaredMethods.filter[static]
+				val allMembers = type.allFieldsBottomUp.filter[static] + type.allMethodsBottomUp.filter[static]
+				Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
 			}
 		} else if (selection.hasArgs) {
-			Scopes.scopeFor(
-				type.declaredMethods.filter[nonStatic].filterOverload(selection.args).filterNative(isArrayReceiver) +
-					type.declaredFields.filter[nonStatic],
-				Scopes.scopeFor(type.allMethodsBottomUp.filter[nonStatic].filterOverload(selection.args) +
-					type.allFieldsBottomUp.filter[nonStatic])
-			)
+			val declaredMembers = type.declaredMethods.filter[nonStatic].filterOverload(selection.args) +
+				type.declaredFields.filter[nonStatic]
+			val allMembers = type.allMethodsBottomUp.filter[nonStatic].filterOverload(selection.args).filterNative(
+				isArrayReceiver) + type.allFieldsBottomUp.filter[nonStatic]
+			Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
 		} else {
-			val inheritedMethods = type.allMethodsBottomUp.filter[nonStatic].filterNative(isArrayReceiver)
-			Scopes.scopeFor(
-				type.declaredMethods.filter[nonStatic] + type.declaredFields.filter[nonStatic],
-				Scopes.scopeFor(inheritedMethods + type.allFieldsBottomUp.filter[nonStatic])
-			)
+			val declaredMembers = type.declaredMethods.filter[nonStatic] + type.declaredFields.filter[nonStatic]
+			val allMembers = type.allMethodsBottomUp.filter[nonStatic].filterNative(isArrayReceiver) +
+				type.allFieldsBottomUp.filter[nonStatic]
+			Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
 		}
 	}
 
@@ -179,13 +176,16 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			method.params.size == args.size && args.forall [ arg |
 				val index = args.indexOf(arg)
 				val param = method.params.get(index)
-				arg.typeOf == param.typeOf && arg.dimensionOf.size === param.dimensionOf.size
+				val argType = arg.typeOf
+				val paramType = param.typeOf
+				argType.fullyQualifiedName.toString == paramType.fullyQualifiedName.toString &&
+					argType.sizeOf == paramType.sizeOf && arg.dimensionOf.size == param.dimensionOf.size
 			]
 		] + methods.filter [ method |
 			method.params.size == args.size && args.forall [ arg |
 				val index = args.indexOf(arg)
 				val param = method.params.get(index)
-				arg.typeOf.isInstanceOf(param.typeOf) && arg.dimensionOf.size === param.dimensionOf.size
+				arg.typeOf.isInstanceOf(param.typeOf) && arg.dimensionOf.size == param.dimensionOf.size
 			]
 		]
 	}

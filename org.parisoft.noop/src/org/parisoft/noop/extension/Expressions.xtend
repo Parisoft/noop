@@ -1,11 +1,15 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
+import java.io.File
 import java.util.List
 import java.util.stream.Collectors
+import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 import org.parisoft.noop.exception.InvalidExpressionException
 import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.exception.NonConstantMemberException
+import org.parisoft.noop.generator.AllocContext
+import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.CompileContext.Mode
 import org.parisoft.noop.generator.CompileContext.Operation
 import org.parisoft.noop.generator.MemChunk
@@ -35,6 +39,7 @@ import org.parisoft.noop.noop.LShiftExpression
 import org.parisoft.noop.noop.LeExpression
 import org.parisoft.noop.noop.LtExpression
 import org.parisoft.noop.noop.MemberRef
+import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.MulExpression
 import org.parisoft.noop.noop.NewInstance
@@ -43,6 +48,7 @@ import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.NotExpression
 import org.parisoft.noop.noop.OrExpression
 import org.parisoft.noop.noop.RShiftExpression
+import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.SigNegExpression
 import org.parisoft.noop.noop.SigPosExpression
 import org.parisoft.noop.noop.StringLiteral
@@ -53,13 +59,6 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.MemberSelect
-import org.eclipse.xtext.nodemodel.util.NodeModelUtils
-import java.io.File
-import org.parisoft.noop.generator.CompileContext
-import org.parisoft.noop.generator.AllocContext
-import org.parisoft.noop.noop.ReturnStatement
-import org.parisoft.noop.exception.NullExpressionException
 
 class Expressions {
 
@@ -153,7 +152,8 @@ class Expressions {
 
 	def NoopClass typeOf(Expression expression) {
 		if (expression === null) {
-			throw new NullExpressionException
+			//throw new NullExpressionException
+			return TypeSystem::TYPE_VOID
 		}
 
 		switch (expression) {
@@ -182,7 +182,7 @@ class Expressions {
 			SubExpression:
 				expression.typeOfValueOrInt
 			MulExpression:
-				expression.typeOfValueOrMerge(expression.left, expression.right)
+				expression.typeOfValueOr16Bit(expression.left, expression.right)
 			DivExpression:
 				expression.typeOfValueOrMerge(expression.left, expression.right)
 			BOrExpression:
@@ -286,6 +286,18 @@ class Expressions {
 			expression.typeOfValue
 		} catch (Exception e) {
 			expression.toIntClass
+		}
+	}
+	
+	private def typeOfValueOr16Bit(Expression expression, Expression left, Expression right) {
+		try {
+			expression.typeOfValue
+		} catch (Exception e) {
+			if (left.typeOf.isSigned || right.typeOf.isSigned) {
+				expression.toIntClass
+			} else {
+				expression.toUIntClass				
+			}
 		}
 	}
 
