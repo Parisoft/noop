@@ -8,6 +8,7 @@ import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 import org.parisoft.noop.exception.InvalidExpressionException
 import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.exception.NonConstantMemberException
+import org.parisoft.noop.exception.NullExpressionException
 import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.CompileContext.Mode
@@ -59,6 +60,8 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.eclipse.xtend.lib.annotations.Accessors
+import org.parisoft.noop.^extension.Expressions.MethodReference
 
 class Expressions {
 
@@ -76,28 +79,71 @@ class Expressions {
 		instance.type.allFieldsTopDown.filter[nonStatic]
 	}
 
+	private def getMultiplyMethod(Expression left, Expression right, NoopClass type) {
+		try {
+			try {
+				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+				new MethodReference => [args = newArrayList(left, const)]
+			} catch (NonConstantExpressionException exception) {
+				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
+				new MethodReference => [args = newArrayList(right, const)]
+			}
+		} catch (NonConstantExpressionException exception) {
+			if (type.sizeOf > 1) {
+				val lhsType = if (left.sizeOf < right.sizeOf) {
+						if (left.typeOf.isSigned) {
+							left.typeOf.toIntClass
+						} else {
+							left.typeOf.toUIntClass
+						}
+					} else {
+						left.typeOf
+					}
+
+				val rhsType = if (left.sizeOf > right.sizeOf) {
+						if (right.typeOf.isSigned) {
+							right.typeOf.toIntClass
+						} else {
+							right.typeOf.toUIntClass
+						}
+					} else {
+						right.typeOf
+					}
+
+				if (lhsType.isSigned && rhsType.isUnsigned) {
+					new MethodReference => [
+						method = type.toMathClass().declaredMethods.findFirst [
+							name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
+								params.head.type.isEquals(rhsType) && params.last.type.isEquals(lhsType)
+						]
+						args = newArrayList(right, left)
+					]
+				} else {
+					new MethodReference => [
+						method = type.toMathClass().declaredMethods.findFirst [
+							name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
+								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+						]
+						args = newArrayList(left, right)
+					]
+				}
+			} else {
+				new MethodReference => [
+					method = type.toMathClass().declaredMethods.findFirst [
+						name == '''«Members::STATIC_PREFIX»multiply8Bit'''.toString
+					]
+					args = newArrayList(left, right)
+				]
+			}
+		}
+	}
+
 	def isThisOrSuperReference(MemberSelect selection) {
 		selection.member instanceof This || selection.member instanceof Super
 	}
 
 	def isNonThisNorSuperReference(MemberSelect selection) {
 		!selection.isThisOrSuperReference
-	}
-
-	def isMethodInvocation(MemberSelect selection) {
-		try {
-			selection.member instanceof Method
-		} catch (Error e) {
-			false
-		}
-	}
-
-	def isMethodInvocation(MemberRef ref) {
-		try {
-			ref.member instanceof Method
-		} catch (Error e) {
-			false
-		}
 	}
 
 	def isOnMemberSelectionOrReference(Expression expression) {
@@ -152,8 +198,7 @@ class Expressions {
 
 	def NoopClass typeOf(Expression expression) {
 		if (expression === null) {
-			//throw new NullExpressionException
-			return TypeSystem::TYPE_VOID
+			throw new NullExpressionException
 		}
 
 		switch (expression) {
@@ -288,7 +333,7 @@ class Expressions {
 			expression.toIntClass
 		}
 	}
-	
+
 	private def typeOfValueOr16Bit(Expression expression, Expression left, Expression right) {
 		try {
 			expression.typeOfValue
@@ -296,7 +341,7 @@ class Expressions {
 			if (left.typeOf.isSigned || right.typeOf.isSigned) {
 				expression.toIntClass
 			} else {
-				expression.toUIntClass				
+				expression.toUIntClass
 			}
 		}
 	}
@@ -550,8 +595,17 @@ class Expressions {
 
 	def List<MemChunk> alloc(Expression expression, AllocContext ctx) {
 		switch (expression) {
-			AssignmentExpression:
-				expression.right.alloc(ctx)
+			AssignmentExpression: {
+				if (expression.assignment === AssignmentType::MUL_ASSIGN) {
+					getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
+				}
+				
+				try {
+					expression.right.alloc(ctx => [types.put(expression.left.typeOf)])
+				} finally {
+					ctx.types.pop
+				}
+			}
 			OrExpression:
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 			AndExpression:
@@ -575,11 +629,14 @@ class Expressions {
 			SubExpression:
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 			MulExpression: {
-				val math = expression.typeOf.toMathClass()
-				val method = math.declaredMethods.findFirst [
-					name == '''«Members::STATIC_PREFIX»multiplyAsByte'''.toString
-				]
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
+				val method = getMultiplyMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).
+					method
+
+				if (method !== null) {
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
+				} else {
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				}
 			}
 			DivExpression:
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
@@ -604,7 +661,11 @@ class Expressions {
 			IncExpression:
 				expression.right.alloc(ctx)
 			CastExpression:
-				expression.left.alloc(ctx)
+				try {
+					expression.left.alloc(ctx => [types.put(expression.type)])
+				} finally {
+					ctx.types.pop
+				}
 			ArrayLiteral: {
 				val chunks = expression.values.map[alloc(ctx)].flatten.toList
 
@@ -653,7 +714,7 @@ class Expressions {
 				val snapshot = ctx.snapshot
 				val chunks = newArrayList
 
-				if (expression.isMethodInvocation) {
+				if (expression.member instanceof Method) {
 					val method = expression.member as Method
 
 					if (method.isDispose) {
@@ -671,7 +732,14 @@ class Expressions {
 						chunks += expression.receiver.alloc(ctx)
 					}
 
-					chunks += expression.args.map[alloc(ctx)].flatten
+					expression.args.forEach [ arg, i |
+						try {
+							chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
+						} finally {
+							ctx.types.pop
+						}
+					]
+
 					chunks += methodChunks
 				} else if (expression.member instanceof Variable) {
 					val variable = expression.member as Variable
@@ -702,9 +770,18 @@ class Expressions {
 				val snapshot = ctx.snapshot
 				val chunks = newArrayList
 
-				if (expression.isMethodInvocation) {
-					val methodChunks = (expression.member as Method).alloc(ctx)
-					chunks += expression.args.map[alloc(ctx)].flatten
+				if (expression.member instanceof Method) {
+					val method = expression.member as Method
+					val methodChunks = method.alloc(ctx)
+
+					expression.args.forEach [ arg, i |
+						try {
+							chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
+						} finally {
+							ctx.types.pop
+						}
+					]
+
 					chunks += methodChunks
 				}
 
@@ -1201,28 +1278,29 @@ class Expressions {
 	'''
 
 	private def compileMultiplication(Operation operation, Expression left, Expression right, CompileContext ctx) {
-		try {
-			val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
+		if (operation === Operation::MULTIPLICATION) {
+			val mult = getMultiplyMethod(left, right, ctx.type)
 
-			if (operation === Operation::MULTIPLICATION) {
-				operation.compileBinary(right, const, ctx)
+			if (mult.method !== null) {
+				mult.method.compileInvocation(mult.args, ctx)
 			} else {
-				operation.compileBinary(const, right, ctx)
+				operation.compileBinary(mult.args.head, mult.args.last, ctx)
 			}
-		} catch (NonConstantExpressionException exception) {
+		} else {
+			// TODO call division methods like mult does above
 			try {
-				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
-				operation.compileBinary(left, const, ctx)
-			} catch (NonConstantExpressionException exception2) {
-				if (operation == Operation::MULTIPLICATION) {
-					ctx.type.toMathClass().declaredMethods.findFirst [
-						name == '''«Members::STATIC_PREFIX»multiplyAsByte'''.toString
-					]?.compileInvocation(newArrayList(left, right), ctx)
-				} else {
+				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
+				operation.compileBinary(const, right, ctx)
+			} catch (NonConstantExpressionException exception) {
+				try {
+					val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+					operation.compileBinary(left, const, ctx)
+				} catch (NonConstantExpressionException exception2) {
 					operation.compileBinary(left, right, ctx)
 				}
 			}
 		}
+
 	}
 
 	private def compileOr(Expression left, Expression right, CompileContext ctx) '''
@@ -1387,4 +1465,8 @@ class Expressions {
 	private def void noop() {
 	}
 
+	static class MethodReference {
+		@Accessors var Method method
+		@Accessors var List<Expression> args
+	}
 }

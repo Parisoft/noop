@@ -65,7 +65,7 @@ Math {
 	}
 	
 	$multiply(UInt a @RAM[0], Int b @RAM[0]) {
-		r @RAM[0] : $multiply(a as UInt, b)
+		r @RAM[0] : $multiply(a, b as UInt)
 		!	LDA ?b? + 1!
 		!	BPL +done  !
 		!	SEC        !

@@ -174,18 +174,28 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	private def filterOverload(Iterable<Method> methods, List<Expression> args) {
 		methods.filter [ method |
 			method.params.size == args.size && args.forall [ arg |
-				val index = args.indexOf(arg)
-				val param = method.params.get(index)
-				val argType = arg.typeOf
-				val paramType = param.typeOf
-				argType.fullyQualifiedName.toString == paramType.fullyQualifiedName.toString &&
-					argType.sizeOf == paramType.sizeOf && arg.dimensionOf.size == param.dimensionOf.size
+				try {
+					val index = args.indexOf(arg)
+					val param = method.params.get(index)
+					val argType = arg.typeOf
+					val paramType = param.typeOf
+
+					argType.fullyQualifiedName.toString == paramType.fullyQualifiedName.toString &&
+						argType.sizeOf == paramType.sizeOf && arg.dimensionOf.size == param.dimensionOf.size
+				} catch (Exception exception) {
+					false
+				}
 			]
 		] + methods.filter [ method |
 			method.params.size == args.size && args.forall [ arg |
-				val index = args.indexOf(arg)
-				val param = method.params.get(index)
-				arg.typeOf.isInstanceOf(param.typeOf) && arg.dimensionOf.size == param.dimensionOf.size
+				try {
+					val index = args.indexOf(arg)
+					val param = method.params.get(index)
+
+					arg.typeOf.isInstanceOf(param.typeOf) && arg.dimensionOf.size == param.dimensionOf.size
+				} catch (Exception exception) {
+					false
+				}
 			]
 		]
 	}

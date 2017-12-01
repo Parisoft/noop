@@ -16,15 +16,16 @@ import static extension org.eclipse.xtext.EcoreUtil2.*
 class Classes {
 
 	static val int SIZE_OF_CLASS_TYPE = 1;
-	static val classeSizeCache = ThreadLocal::withInitial[<NoopClass, Integer>newHashMap]
-	static val classesCache = ThreadLocal::withInitial[<NoopClass>newArrayList]
 
 	@Inject extension Members
 	@Inject extension Statements
 	@Inject extension TypeSystem
 	@Inject extension IQualifiedNameProvider
 
-	def superClasses(NoopClass c) {
+	val classeSizeCache = <NoopClass, Integer>newHashMap
+	val classesCache = <NoopClass>newArrayList
+
+	def getSuperClasses(NoopClass c) {
 		val visited = <NoopClass>newArrayList()
 		var current = c
 
@@ -52,11 +53,11 @@ class Classes {
 		visited
 	}
 
-	def subClasses(NoopClass c) {
-		classesCache.get.filter[it != c].filter[isInstanceOf(c)]
+	def getSubClasses(NoopClass c) {
+		classesCache.filter[it != c].filter[isInstanceOf(c)]
 	}
 
-	def containerClass(EObject e) {
+	def getContainerClass(EObject e) {
 		e.getContainerOfType(NoopClass)
 	}
 
@@ -100,28 +101,32 @@ class Classes {
 		}
 	}
 
-	def declaredFields(NoopClass c) {
+	def getDeclaredFields(NoopClass c) {
 		c.members.filter(Variable)
 	}
 
-	def declaredMethods(NoopClass c) {
+	def getDeclaredMethods(NoopClass c) {
 		c.members.filter(Method)
 	}
 
-	def allFieldsBottomUp(NoopClass c) {
+	def getAllFieldsBottomUp(NoopClass c) {
 		c.superClasses.map[members].flatten.filter(Variable)
 	}
 
-	def allMethodsBottomUp(NoopClass c) {
+	def getAllMethodsBottomUp(NoopClass c) {
 		c.superClasses.map[members].flatten.filter(Method)
 	}
 
-	def allFieldsTopDown(NoopClass c) {
+	def getAllFieldsTopDown(NoopClass c) {
 		c.superClasses.reverse.map[members].flatten.filter(Variable)
 	}
 
-	def allMethodsTopDown(NoopClass c) {
+	def getAllMethodsTopDown(NoopClass c) {
 		c.superClasses.reverse.map[members].flatten.filter(Method)
+	}
+	
+	def isEquals(NoopClass c1, NoopClass c2) {
+		c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString
 	}
 
 	def isInstanceOf(NoopClass c1, NoopClass c2) {
@@ -225,7 +230,7 @@ class Classes {
 	}
 
 	def int sizeOf(NoopClass c) {
-		classeSizeCache.get.computeIfAbsent(c, [rawSizeOf])
+		classeSizeCache.computeIfAbsent(c, [rawSizeOf])
 	}
 
 	def prepare(NoopClass gameImplClass) {
@@ -233,14 +238,14 @@ class Classes {
 
 		gameImplClass.prepare(ctx)
 
-		classeSizeCache.get.clear
+		classeSizeCache.clear
 
 		ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
 		ctx.classes.values.forEach [ class1 |
 			if (class1.isPrimitive) {
-				classeSizeCache.get.put(class1, class1.rawSizeOf)
+				classeSizeCache.put(class1, class1.rawSizeOf)
 			} else {
-				classeSizeCache.get.put(class1, ctx.classes.values.filter [ class2 |
+				classeSizeCache.put(class1, ctx.classes.values.filter [ class2 |
 					class2.isInstanceOf(class1)
 				].map [
 					rawSizeOf
@@ -248,8 +253,8 @@ class Classes {
 			}
 		]
 
-		classesCache.get.clear
-		classesCache.get += ctx.classes.values
+		classesCache.clear
+		classesCache += ctx.classes.values
 
 		return ctx
 	}

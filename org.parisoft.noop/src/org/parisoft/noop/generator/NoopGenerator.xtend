@@ -12,7 +12,6 @@ import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.eclipse.xtext.resource.IResourceDescriptions
-import org.parisoft.noop.exception.NullExpressionException
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Datas
@@ -75,8 +74,9 @@ class NoopGenerator extends AbstractGenerator {
 			val content = ctx.compile.optimize
 
 			new ASM(gameImpl.name, content)
-		} catch (NullExpressionException e) {
-			System::err.println('''Got a null expression. Is eclipse cleaning?''')
+		} catch (Throwable e) {
+			System::err.println('''Got a «e». Is eclipse cleaning?''')
+			e.printStackTrace(System::err)
 		}
 	}
 
@@ -167,11 +167,14 @@ class NoopGenerator extends AbstractGenerator {
 		; Static variables
 		;----------------------------------------------------------------
 		«FOR page : 0..< ctx.counters.size»
-			«val counter = ctx.counters.get(page)»
-			«counter.set(page * 256)»
+			«IF ctx.resetCounter(page) == 0»
+				«noop»
+			«ENDIF»
+		«ENDFOR»
+		«FOR page : 0..< ctx.counters.size»
 			«val staticVars = ctx.statics.values.filter[(storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE) === page]»
 			«FOR staticVar : staticVars»
-				«staticVar.nameOfStatic» = «counter.getAndAdd(staticVar.sizeOf).toHexString(4)»
+				«staticVar.nameOfStatic» = «ctx.getAndMoveCounter(page, staticVar.sizeOf).toHexString(4)»
 			«ENDFOR»
 		«ENDFOR»
 		
@@ -182,7 +185,7 @@ class NoopGenerator extends AbstractGenerator {
 		«Members::TEMP_VAR_NAME2» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
 		«Members::TEMP_VAR_NAME3» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
 		«FOR chunk : ctx.pointers.values.flatten.sort + ctx.variables.values.flatten.sort»
-			«val delta = ctx.counters.get(chunk.page).get - chunk.page * 256»
+			«val delta = ctx.counters.get(chunk.page).get - chunk.page * 0x0100»
 			«chunk.shiftTo(delta)»
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
@@ -204,20 +207,6 @@ class NoopGenerator extends AbstractGenerator {
 		«FOR rom : ctx.prgRoms.values.filter[nonDMC]»
 			«rom.compile(new CompileContext)»
 		«ENDFOR»
-		
-		;-- Macros ------------------------------------------------------
-		;macro mult8x8to8 ; A = A + «Members::TEMP_VAR_NAME1» * «Members::TEMP_VAR_NAME2»
-		;  JMP +loop:
-		;-add:
-		;  CLC
-		;  ADC «Members::TEMP_VAR_NAME1»
-		;-loop:
-		;  ASL «Members::TEMP_VAR_NAME1»
-		;+loop:
-		;  LSR «Members::TEMP_VAR_NAME2»
-		;  BCS -add:
-		;  BNE -loop:
-		;endm
 		
 		;-- Methods -----------------------------------------------------
 		«FOR method : ctx.methods.values.sortBy[fullyQualifiedName]»
@@ -278,5 +267,8 @@ class NoopGenerator extends AbstractGenerator {
 			name == fieldname
 		].valueOf
 
+	}
+
+	private def void noop() {
 	}
 }

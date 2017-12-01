@@ -26,14 +26,29 @@ class AllocContext {
 		new AtomicInteger(0x0600), new AtomicInteger(0x0700))
 	@Accessors var String container
 	@Accessors var boolean allocStatic = false
-
+	@Accessors val types = <NoopClass>newArrayList
+	
 	def resetCounter(int page) {
-		counters.get(page).set(page * 256)
+		counters.get(page).set(page * 0x0100)
 		counters.get(page).get
 	}
 
 	def chunkFor(int page, String variable, int size) {
-		new MemChunk(variable, counters.get(page).getAndAdd(size), size)
+		new MemChunk(variable, page.getAndMoveCounter(size), size)
+	}
+
+	def getAndMoveCounter(int page, int size) {
+		val cur = counters.get(page).get
+		val max = page * 0x0100 + 0x00FF
+
+		if (cur + size <= max) {
+			counters.get(page).getAndAdd(size)
+		} else {
+			counters.get(page).set(max)
+			counters.get(page + 1).getAndAdd(cur + size - max)
+		}
+
+		return cur
 	}
 
 	def snapshot() {
@@ -53,7 +68,7 @@ class AllocContext {
 	}
 
 	override toString() '''
-		MetaData{
+		AllocContext{
 			«FOR i : 0..< counters.size»
 				counter«i» : «Integer.toHexString(counters.get(i).get)»
 			«ENDFOR»

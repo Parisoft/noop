@@ -9,8 +9,6 @@ import org.parisoft.noop.scoping.NoopIndex
 
 class TypeSystem {
 
-	private static val typeCache = <String, NoopClass>newHashMap()
-
 	public static val LIB_PACKAGE = 'noop.lang'
 	public static val LIB_OBJECT = 'Object' // LIB_PACKAGE + '.Object'
 	public static val LIB_PRIMITIVE = 'Primitive'
@@ -99,11 +97,11 @@ class TypeSystem {
 	}
 
 	def toClassOrDefault(EObject context, String type, NoopClass ^default) {
-		typeCache.computeIfAbsent(type, [
-			if (context.fullyQualifiedName == type && context instanceof NoopClass) {
-				return context as NoopClass;
-			}
+		if (context.fullyQualifiedName == type && context instanceof NoopClass) {
+			return context as NoopClass;
+		}
 
+		try {
 			val desc = context.getVisibleClassesDescriptions.findFirst[qualifiedName.toString == type]
 
 			if (desc === null) {
@@ -116,7 +114,9 @@ class TypeSystem {
 				o = context.eResource.resourceSet.getEObject(desc.EObjectURI, true)
 			}
 
-			o as NoopClass
-		]) ?: ^default
+			o as NoopClass ?: ^default
+		} catch (Exception exception) {
+			^default
+		}
 	}
 }
