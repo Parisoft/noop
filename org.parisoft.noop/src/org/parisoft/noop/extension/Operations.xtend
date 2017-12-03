@@ -146,10 +146,6 @@ class Operations {
 	def multiply(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.multiplyImmediate(operand)
-		} else if (operand.absolute !== null) {
-			acc.multiplyAbsolute(operand)
-		} else if (operand.indirect !== null) {
-			acc.multiplyIndirect(operand)
 		}
 	}
 
@@ -239,17 +235,15 @@ class Operations {
 	def signum(CompileContext acc) '''
 		«IF acc.sizeOf > 1»
 			«noop»
-				SEC
-				STA «Members::TEMP_VAR_NAME1»
-				LDA #$00
-				SBC «Members::TEMP_VAR_NAME1»
-				STA «Members::TEMP_VAR_NAME1»
+				CLC
+				EOR #$FF
+				ADC #$01
+				TAX
 				PLA
-				STA «Members::TEMP_VAR_NAME1» + 1
-				LDA #$00
-				SBC «Members::TEMP_VAR_NAME1» + 1
+				EOR #$FF
+				ADC #$00
 				PHA
-				LDA «Members::TEMP_VAR_NAME1»
+				TXA
 		«ELSE»
 			«noop»
 				CLC
@@ -1239,19 +1233,9 @@ class Operations {
 		«ENDIF»
 	'''
 
-	private def multiplyAbsolute(CompileContext multiplicand, CompileContext multiplier) '''
-		; TODO multiplyAbsolute
-	'''
-
-	private def multiplyIndirect(CompileContext multiplicand, CompileContext multiplier) '''
-		; TODO multiplyIndirect
-	'''
-
 	private def divideImmediate(CompileContext dividend, CompileContext divisor) '''
 		«val const = divisor.immediate.parseInt»
-		«IF dividend.sizeOfOp > 1 || dividend.sizeOf > 1»
-			; TODO divide 16bits
-		«ELSE»
+		«IF dividend.sizeOfOp == 1 && dividend.sizeOf == 1»
 			«val divStart = '''div@«dividend.hashCode.toHexString».start'''»
 			«val divDone = '''div@«dividend.hashCode.toHexString».done'''»
 			«val divEnd = '''div@«dividend.hashCode.toHexString».end'''»
