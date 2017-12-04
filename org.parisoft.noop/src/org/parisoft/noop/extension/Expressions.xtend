@@ -137,6 +137,47 @@ class Expressions {
 			}
 		}
 	}
+	
+	private def getDivideMethod(Expression left, Expression right, NoopClass type) {
+		try {
+			if (left.sizeOf == 1 && type.sizeOf == 1) {
+				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+				new MethodReference => [args = newArrayList(left, const)]
+			} else {
+				throw new NonConstantExpressionException(left)
+			}
+		} catch (NonConstantExpressionException exception) {
+			val lhsType = if (left.sizeOf < right.sizeOf) {
+						if (left.typeOf.isSigned) {
+							left.typeOf.toIntClass
+						} else {
+							left.typeOf.toUIntClass
+						}
+					} else {
+						left.typeOf
+					}
+					
+			val rhsType = right.typeOf
+			
+			if (lhsType.sizeOf > 1 || (lhsType.isUnsigned && rhsType.isSigned)) {
+				new MethodReference => [
+						method = type.toMathClass().declaredMethods.findFirst [
+							name == '''«Members::STATIC_PREFIX»divide'''.toString && params.isNotEmpty &&
+								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+						]
+						args = newArrayList(left, right)
+					]
+			} else {
+				new MethodReference => [
+						method = type.toMathClass().declaredMethods.findFirst [
+							name == '''«Members::STATIC_PREFIX»divide8Bit'''.toString && params.isNotEmpty &&
+								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+						]
+						args = newArrayList(left, right)
+					]
+			}
+		}
+	}
 
 	def isThisOrSuperReference(MemberSelect selection) {
 		selection.member instanceof This || selection.member instanceof Super
@@ -227,9 +268,9 @@ class Expressions {
 			SubExpression:
 				expression.typeOfValueOrInt
 			MulExpression:
-				expression.typeOfValueOr16Bit(expression.left, expression.right)
+				expression.typeOfValueOrMul(expression.left, expression.right)
 			DivExpression:
-				expression.typeOfValueOrMerge(expression.left, expression.right)
+				expression.typeOfValueOrDiv(expression.left, expression.right)
 			BOrExpression:
 				expression.typeOfValueOrMerge(expression.left, expression.right)
 			BAndExpression:
@@ -334,7 +375,7 @@ class Expressions {
 		}
 	}
 
-	private def typeOfValueOr16Bit(Expression expression, Expression left, Expression right) {
+	private def typeOfValueOrMul(Expression expression, Expression left, Expression right) {
 		try {
 			expression.typeOfValue
 		} catch (Exception e) {
@@ -342,6 +383,23 @@ class Expressions {
 				expression.toIntClass
 			} else {
 				expression.toUIntClass
+			}
+		}
+	}
+	
+	private def typeOfValueOrDiv(Expression expression, Expression left, Expression right) {
+		try {
+			expression.typeOfValue
+		} catch (Exception exception) {
+			val lhsType = left.typeOf
+			val rhsType = right.typeOf
+			
+			if (rhsType.isUnsigned) {
+				lhsType
+			} else if (lhsType.isSigned && lhsType.sizeOf <= rhsType.sizeOf) {
+				rhsType
+			} else {
+				lhsType.toIntClass
 			}
 		}
 	}
@@ -598,6 +656,8 @@ class Expressions {
 			AssignmentExpression: {
 				if (expression.assignment === AssignmentType::MUL_ASSIGN) {
 					getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
+				} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
+					getDivideMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
 				}
 				
 				try {
@@ -1286,8 +1346,15 @@ class Expressions {
 			} else {
 				operation.compileBinary(mult.args.head, mult.args.last, ctx)
 			}
+		} if (operation === Operation::DIVISION) {
+			val div = getDivideMethod(left, right, ctx.type)
+
+			if (div.method !== null) {
+				div.method.compileInvocation(div.args, ctx)
+			} else {
+				operation.compileBinary(div.args.head, div.args.last, ctx)
+			}
 		} else {
-			// TODO call division methods like mult does above
 			try {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
 				operation.compileBinary(const, right, ctx)
