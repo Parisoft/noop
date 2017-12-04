@@ -253,7 +253,7 @@ class Operations {
 	'''
 
 	private def equalsImmediate(CompileContext acc, boolean diff, CompileContext operand) '''
-		«val comparisonIsTrue = labelForComparisonIsTrue»
+		«val comparisonIsTrue = if (acc.relative !== null) acc.relative else labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«val comparisonEnd = labelForComparisonEnd»
 		«IF acc.sizeOf > 1 && operand.sizeOf > 1»
@@ -301,12 +301,14 @@ class Operations {
 		«ELSE»
 			«noop»
 				B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
-			+«comparisonIsFalse»:
+			«IF !diff»
+				+«comparisonIsFalse»:
+			«ENDIF»
 		«ENDIF»
 	'''
 
 	private def equalsAbsolute(CompileContext acc, boolean diff, CompileContext operand) '''
-		«val comparisonIsTrue = labelForComparisonIsTrue»
+		«val comparisonIsTrue = if (acc.relative !== null) acc.relative else labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«val comparisonEnd = labelForComparisonEnd»
 			«IF operand.isIndexed»
@@ -360,12 +362,14 @@ class Operations {
 		«ELSE»
 			«noop»
 				B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
-			+«comparisonIsFalse»:
+			«IF !diff»
+				+«comparisonIsFalse»:
+			«ENDIF»
 		«ENDIF»
 	'''
 
 	private def equalsIndirect(CompileContext acc, boolean diff, CompileContext operand) '''
-		«val comparisonIsTrue = labelForComparisonIsTrue»
+		«val comparisonIsTrue = if (acc.relative !== null) acc.relative else labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«val comparisonEnd = labelForComparisonEnd»
 			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
@@ -413,7 +417,9 @@ class Operations {
 		«ELSE»
 			«noop»
 				B«IF diff»NE«ELSE»EQ«ENDIF» +«acc.relative»
-			+«comparisonIsFalse»:
+			«IF !diff»
+				+«comparisonIsFalse»:
+			«ENDIF»
 		«ENDIF»
 	'''
 
@@ -421,7 +427,7 @@ class Operations {
 		«var branch = new AtomicReference(ubranch)»
 		«val comparison = labelForComparison»
 		«val comparisonEnd = labelForComparisonEnd»
-		«val comparisonIsTrue = labelForComparisonIsTrue»
+		«val comparisonIsTrue = if (acc.relative !== null) acc.relative else labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«IF acc.type.isSigned && operand.type.isSigned»
 			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
@@ -527,7 +533,7 @@ class Operations {
 		«var branch = new AtomicReference(ubranch)»
 		«val comparison = labelForComparison»
 		«val comparisonEnd = labelForComparisonEnd»
-		«val comparisonIsTrue = labelForComparisonIsTrue»
+		«val comparisonIsTrue = if (acc.relative !== null) acc.relative else labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«IF acc.type.isSigned && operand.type.isSigned»
 			«noop»
@@ -634,7 +640,7 @@ class Operations {
 		«var branch = new AtomicReference(ubranch)»
 		«val comparison = labelForComparison»
 		«val comparisonEnd = labelForComparisonEnd»
-		«val comparisonIsTrue = labelForComparisonIsTrue»
+		«val comparisonIsTrue = if (acc.relative !== null) acc.relative else labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«IF acc.type.isSigned && operand.type.isSigned»
 			«noop»
@@ -1247,6 +1253,7 @@ class Operations {
 			«ENDIF»
 			+«divStart»:
 				LDX #$00
+				STX «Members::MATH_MOD» + 1
 				STX «Members::TEMP_VAR_NAME1»
 				«IF const.abs > 0xFF»
 					CPX #>«const.abs»
@@ -1265,6 +1272,7 @@ class Operations {
 				«ENDIF»
 			«ENDFOR»
 			+«divDone»:
+				STA «Members::MATH_MOD»
 				LDA «Members::TEMP_VAR_NAME1»
 			«IF dividend.type.isSigned»
 				«noop»

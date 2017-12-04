@@ -41,6 +41,7 @@ public class Members {
 	public static val FILE_ASM_EXTENSION = '.asm'
 	public static val FILE_INC_EXTENSION = '.inc'
 	public static val FILE_DMC_EXTENSION = '.dmc'
+	public static val MATH_MOD = '''«TypeSystem::LIB_MATH».«STATIC_PREFIX»mod'''
 	public static val METHOD_ARRAY_LENGTH = 'length'
 	
 	@Inject extension Datas

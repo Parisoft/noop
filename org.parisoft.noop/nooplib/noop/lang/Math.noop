@@ -1,7 +1,7 @@
 Math {
 	
-	/* Modulo of the last division */
-	$mod : Int
+	/* Absolute modulus of the last non constant division */
+	$mod : UInt
 	
 	$divide8Bit(Byte a, SByte b) {
 		return $divide(a as UInt, b)
@@ -18,7 +18,7 @@ Math {
 		!+div:       !
 		a : $divide8Bit(a as Byte, b as Byte)
 		!	PLA      !
-		!	BPL +done!
+		!	BPL +end !
 		return -a as SByte
 		!+end:       !
 		return a
@@ -43,7 +43,7 @@ Math {
 		!+div:       !
 		a : $divide8Bit(a as Byte, b as Byte)
 		!	PLP      !
-		!	BPL +done!
+		!	BPL +end !
 		return -a as SByte
 		!+end:       !
 		return a
