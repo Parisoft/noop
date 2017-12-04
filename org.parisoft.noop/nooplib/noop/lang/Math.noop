@@ -1,5 +1,313 @@
 Math {
 	
+	/* Modulo of the last division */
+	$mod : Int
+	
+	$divide8Bit(Byte a, SByte b) {
+		return $divide(a as UInt, b)
+	}
+	
+	$divide8Bit(SByte a, Byte b) {
+		!	LDA ?a?  !
+		!	PHA      !
+		!	BPL +div !
+		!	CLC      !
+		!	EOR #$FF !
+		!	ADC #$01 !
+		!	STA ?a?  !
+		!+div:       !
+		a : $divide8Bit(a as Byte, b as Byte)
+		!	PLA      !
+		!	BPL +done!
+		return -a as SByte
+		!+end:       !
+		return a
+	}
+	
+	$divide8Bit(SByte a, SByte b) {
+		!	LDA ?a?  !
+		!	EOR ?b?  !
+		!	PHP 	 !
+		!	LDA ?a?  !
+		!	BPL +    !
+		!	CLC      !
+		!	EOR #$FF !
+		!	ADC #$01 !
+		!	STA ?a?  !
+		!+	LDA ?b?  !
+		!	BPL +div !
+		!	CLC      !
+		!	EOR #$FF !
+		!	ADC #$01 !
+		!	STA ?b?  !
+		!+div:       !
+		a : $divide8Bit(a as Byte, b as Byte)
+		!	PLP      !
+		!	BPL +done!
+		return -a as SByte
+		!+end:       !
+		return a
+	}
+	
+	$divide8Bit(Byte a, Byte b) {
+		!	LDA #0         !
+		!	STA ?$mod? + 1 !
+		!	LDX #7         !
+		!	CLC            !
+		!-	ROL ?a?        !
+		!	ROL            !
+		!	CMP ?b?        !
+		!	BCC +          !
+		!	SBC ?b?        !
+		!+	DEX            !
+		!	BPL -          !
+		!	ROL ?a?        !
+		!	STA ?$mod?     !
+		return a
+	}
+	
+	$divide(Int a, Byte b) {
+		!	LDA ?a? + 1 !
+		!	PHA         !
+		!	BPL +div    !
+		!	LDA ?a?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?a?     !
+		!	LDA ?a? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?a? + 1 !
+		!+div:          !
+		a := $divide(a as UInt, b as Byte)
+		!	PLA         !
+		!	BPL +end    !
+		!	LDA ?a?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?a?     !
+		!	LDA ?a? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?a? + 1 !
+		!+end:          !
+		return a
+	}
+	
+	$divide(UInt a, SByte b) {
+		!	LDA ?b?     !
+		!	PHA         !
+		!	BPL +div    !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?b?     !
+		!+div:          !
+		a := $divide(a as UInt, b as Byte)
+		!	PLA         !
+		!	BPL +end    !
+		!	LDA ?a?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?a?     !
+		!	LDA ?a? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?a? + 1 !
+		!+end:          !
+		return a as Int
+	}
+	
+	$divide(Int a, SByte b) {
+		!	LDA ?a? + 1 !
+		!	EOR ?b?     !
+		!	PHP         !
+		!	LDA ?a? + 1 !
+		!	BPL +       !
+		!	LDA ?a?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?a?     !
+		!	LDA ?a? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?a? + 1 !
+		!+	LDA ?b?     !
+		!	BPL +div    !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?b?     !
+		!+div:          !
+		a := $divide(a as UInt, b as Byte)
+		!	PLP         !
+		!	BPL +end    !
+		!	LDA ?a?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?a?     !
+		!	LDA ?a? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?a? + 1 !
+		!+end:          !
+		return a
+	}
+	
+	$divide(UInt a, Byte b) {
+		!	LDA #0         !
+		!	STA ?$mod? + 1 !
+		!	LDY #16        !
+		!-	ASL ?a?        !
+		!	ROL ?a? + 1    !
+		!	ROL A          !
+		!	BCS +          !
+		!	CMP ?b?        !
+		!	BCC ++         !
+		!+	SBC ?b?        !
+		!	INC ?a?        !
+		!++	DEY            !
+		!	BNE -          !
+		!	STA ?$mod?     !
+		return a
+	}
+	
+	$divide(UInt a, Int b) {
+		!	LDA ?b? + 1 !
+		!	PHA         !
+		!	BPL +div    !
+		!	LDA ?b?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?b?     !
+		!	LDA ?b? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?b? + 1 !
+		!+div:          !
+		a := $divide(a as UInt, b as UInt)
+		!	PLA         !
+		!	BPL +end    !
+		!	LDA ?a?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?a?     !
+		!	LDA ?a? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?a? + 1 !
+		!+end:          !
+		return a as Int
+	}
+	
+	$divide(Int a, UInt b) {
+		!	LDA ?a? + 1 !
+		!	PHA         !
+		!	BPL +div    !
+		!	LDA ?a?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?a?     !
+		!	LDA ?a? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?a? + 1 !
+		!+div:          !
+		a := $divide(a as UInt, b as UInt)
+		!	PLA         !
+		!	BPL +end    !
+		!	LDA ?a?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?a?     !
+		!	LDA ?a? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?a? + 1 !
+		!+end:          !
+		return a
+	}
+	
+	$divide(Int a, Int b) {
+		!	LDA ?a? + 1 !
+		!	EOR ?b? + 1 !
+		!	PHP         !
+		!	LDA ?a? + 1 !
+		!	BPL +       !
+		!	LDA ?a?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?a?     !
+		!	LDA ?a? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?a? + 1 !
+		!+	LDA ?b? + 1 !
+		!	BPL +div    !
+		!	LDA ?b?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?b?     !
+		!	LDA ?b? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?b? + 1 !
+		!+div:          !
+		a := $divide(a as UInt, b as UInt)
+		!	PLP         !
+		!	BPL +end    !
+		!	LDA ?a?     !
+		!	CLC         !
+		!	EOR #$FF    !
+		!	ADC #$01    !
+		!	STA ?a?     !
+		!	LDA ?a? + 1 !
+		!	EOR #$FF    !
+		!	ADC #$00    !
+		!	STA ?a? + 1 !
+		!+end:          !
+		return a
+	}
+	
+	$divide(UInt a, UInt b) {
+		!	LDX ?b? + 1    !
+		!	BNE +          !
+		return $divide(a, b as Byte)
+		!+	LDA #0         !
+		!	STA ?$mod? + 1 !
+		!	LDY #16        !
+		!-	ASL ?a?        !
+		!	ROL ?a? + 1    !
+		!	ROL A          !
+		!	ROL ?$mod? + 1 !
+		!	PHA            !
+		!	CMP ?b?        !
+		!	LDA ?$mod? + 1 !
+		!	SBC ?b? + 1    !
+		!	BCC ++         !
+		!	STA ?$mod? + 1 !
+		!	PLA            !
+		!	SBC ?b?        !
+		!	PHA            !
+		!	INC ?a?        !
+		!++	PLA            !
+		!	DEY            !
+		!	BNE -          !
+		!	STA ?$mod?     !
+		return a
+	}
+	
 	$multiply8Bit(Byte a @RAM[0], Byte b @RAM[0]) {
 		r @RAM[0] : 0
 		!	JMP +   !
@@ -16,12 +324,12 @@ Math {
 	$multiply(Byte a @RAM[0], SByte b @RAM[0]) {
 		r @RAM[0] : $multiply(a as Byte, b as Byte)
 		!	LDA ?b?    !
-		!	BPL +done  !
+		!	BPL +end   !
 		!	SEC        !
 		!	LDA ?r? + 1!
 		!	SBC ?a?    !
 		!	STA ?r? + 1!
-		!+done:        !
+		!+end:         !
 		return r as Int
 	}
 	
@@ -33,18 +341,18 @@ Math {
 		r @RAM[0] : $multiply(a as Byte, b as Byte)
 		!	LDA ?a?    !
 		!	EOR ?b?    !
-		!	BPL +done  !
+		!	BPL +end   !
 		!	SEC        !
 		!	LDA ?a?    !
 		!	BPL +      !
 		!	LDA ?r? + 1!
 		!	SBC ?b?    !
 		!	STA ?r? + 1!
-		!	JMP +done  !
+		!	JMP +end   !
 		!+	LDA ?r? + 1!
 		!	SBC ?a?    !
 		!	STA ?r? + 1!
-		!+done:        !
+		!+end:         !
 		return r as Int
 	}
 	
@@ -67,12 +375,12 @@ Math {
 	$multiply(UInt a @RAM[0], Int b @RAM[0]) {
 		r @RAM[0] : $multiply(a, b as UInt)
 		!	LDA ?b? + 1!
-		!	BPL +done  !
+		!	BPL +end   !
 		!	SEC        !
 		!	LDA ?r? + 1!
 		!	SBC ?a? + 1!
 		!	STA ?r? + 1!
-		!+done:        !
+		!+end:         !
 		return r as Int
 	}
 	
@@ -84,18 +392,18 @@ Math {
 		r @RAM[0] : $multiply(a as UInt, b as UInt)
 		!	LDA ?a? + 1!
 		!	EOR ?b? + 1!
-		!	BPL +done  !
+		!	BPL +end   !
 		!	SEC        !
 		!	LDA ?a? + 1!
 		!	BPL +      !
 		!	LDA ?r? + 1!
 		!	SBC ?b? + 1!
 		!	STA ?r? + 1!
-		!	JMP +done  !
+		!	JMP +end   !
 		!+	LDA ?r? + 1!
 		!	SBC ?a? + 1!
 		!	STA ?r? + 1!
-		!+done:        !
+		!+end:         !
 		return r as Int
 	}
 	
