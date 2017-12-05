@@ -110,10 +110,11 @@
     <eLiterals name="SUB_ASSIGN" value="2" literal="-="/>
     <eLiterals name="MUL_ASSIGN" value="3" literal="*="/>
     <eLiterals name="DIV_ASSIGN" value="4" literal="/="/>
-    <eLiterals name="BOR_ASSIGN" value="5" literal="|="/>
-    <eLiterals name="BAN_ASSIGN" value="6" literal="&amp;="/>
-    <eLiterals name="BLS_ASSIGN" value="7" literal="&lt;&lt;="/>
-    <eLiterals name="BRS_ASSIGN" value="8" literal=">>="/>
+    <eLiterals name="MOD_ASSIGN" value="5" literal="%="/>
+    <eLiterals name="BOR_ASSIGN" value="6" literal="|="/>
+    <eLiterals name="BAN_ASSIGN" value="7" literal="&amp;="/>
+    <eLiterals name="BLS_ASSIGN" value="8" literal="&lt;&lt;="/>
+    <eLiterals name="BRS_ASSIGN" value="9" literal=">>="/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EEnum" name="StorageType">
     <eLiterals name="PRGROM" literal="@PRG-ROM"/>
@@ -224,6 +225,12 @@
         containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="DivExpression" eSuperTypes="#//Expression">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"
+        containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="right" eType="#//Expression"
+        containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ModExpression" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"
         containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="right" eType="#//Expression"

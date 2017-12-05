@@ -16,6 +16,7 @@ class CompileContext {
 		SUBTRACTION,
 		MULTIPLICATION,
 		DIVISION,
+		MODULO,
 		BIT_OR,
 		BIT_AND,
 		BIT_SHIFT_LEFT,

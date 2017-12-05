@@ -3,6 +3,134 @@ Math {
 	/* Absolute modulus of the last non constant division */
 	$mod : UInt
 	
+	$modulo(Byte a, SByte b) {
+		$divide(a as UInt, b)
+		return $mod as Byte
+	}
+	
+	$modulo(SByte a, Byte b) {
+		$divide8Bit(a, b)
+		!	BIT ?a?        !
+		!	BPL +end       !
+		!	CLC            !
+		!	LDA ?$mod?     !
+		!	EOR #$FF       !
+		!	ADC #$01       !
+		!	STA ?$mod?     !
+		!	LDA #$FF       !
+		!	STA ?$mod? + 1 !
+		!+end:             !
+		return $mod as SByte
+	}
+	
+	$modulo(SByte a, SByte b) {
+		$divide8Bit(a, b)
+		!	BIT ?a?        !
+		!	BPL +end       !
+		!	CLC            !
+		!	LDA ?$mod?     !
+		!	EOR #$FF       !
+		!	ADC #$01       !
+		!	STA ?$mod?     !
+		!	LDA #$FF       !
+		!	STA ?$mod? + 1 !
+		!+end:             !
+		return $mod as SByte
+	}
+	
+	$modulo(Byte a, Byte b) {
+		$divide8Bit(a, b)
+		return $mod as Byte
+	}
+	
+	$modulo(Int a, Byte b) {
+		$divide(a, b)
+		!	BIT ?a? + 1    !
+		!	BPL +end       !
+		!	CLC            !
+		!	LDA ?$mod?     !
+		!	EOR #$FF       !
+		!	ADC #$01       !
+		!	STA ?$mod?     !
+		!	LDA ?$mod? + 1 !
+		!	EOR #$FF       !
+		!	ADC #$00       !
+		!	STA ?$mod? + 1 !
+		!+end:             !
+		return $mod as Int
+	}
+	
+	$modulo(UInt a, SByte b) {
+		$divide(a, b)
+		return $mod
+	}
+	
+	$modulo(Int a, SByte b) {
+		$divide(a, b)
+		!	BIT ?a? + 1    !
+		!	BPL +end       !
+		!	CLC            !
+		!	LDA ?$mod?     !
+		!	EOR #$FF       !
+		!	ADC #$01       !
+		!	STA ?$mod?     !
+		!	LDA ?$mod? + 1 !
+		!	EOR #$FF       !
+		!	ADC #$00       !
+		!	STA ?$mod? + 1 !
+		!+end:             !
+		return $mod as Int
+	}
+	
+	$modulo(UInt a, Byte b) {
+		$divide(a, b)
+		return $mod
+	}
+	
+	$modulo(Int a, UInt b) {
+		$divide(a, b)
+		!	BIT ?a? + 1    !
+		!	BPL +end       !
+		!	CLC            !
+		!	LDA ?$mod?     !
+		!	EOR #$FF       !
+		!	ADC #$01       !
+		!	STA ?$mod?     !
+		!	LDA ?$mod? + 1 !
+		!	EOR #$FF       !
+		!	ADC #$00       !
+		!	STA ?$mod? + 1 !
+		!+end:             !
+		return $mod as Int
+	}
+	
+	$modulo(UInt a, Int b) {
+		$divide(a, b)
+		return $mod
+	}
+	
+	$modulo(Int a, Int b) {
+		$divide(a, b)
+		!	BIT ?a? + 1    !
+		!	BPL +end       !
+		!	CLC            !
+		!	LDA ?$mod?     !
+		!	EOR #$FF       !
+		!	ADC #$01       !
+		!	STA ?$mod?     !
+		!	LDA ?$mod? + 1 !
+		!	EOR #$FF       !
+		!	ADC #$00       !
+		!	STA ?$mod? + 1 !
+		!+end:             !
+		return $mod as Int
+	}
+	
+	$modulo(UInt a, UInt b) {
+		$divide(a, b)
+		return $mod
+	}
+	
 	$divide8Bit(Byte a, SByte b) {
 		return $divide(a as UInt, b)
 	}

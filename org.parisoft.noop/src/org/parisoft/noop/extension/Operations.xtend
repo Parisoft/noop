@@ -44,6 +44,7 @@ class Operations {
 			case SUBTRACTION: acc.subtract(operand)
 			case MULTIPLICATION: acc.multiply(operand)
 			case DIVISION: acc.divide(operand)
+			case MODULO: acc.modulo(operand)
 			case BIT_OR: acc.bitOr(operand)
 			case BIT_AND: acc.bitAnd(operand)
 			case BIT_SHIFT_LEFT: acc.bitShiftLeft(operand)
@@ -152,6 +153,12 @@ class Operations {
 	def divide(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.divideImmediate(operand)
+		}
+	}
+
+	def modulo(CompileContext acc, CompileContext operand) {
+		if (operand.immediate !== null) {
+			acc.moduloImmediate(operand)
 		}
 	}
 
@@ -1241,7 +1248,7 @@ class Operations {
 
 	private def divideImmediate(CompileContext dividend, CompileContext divisor) '''
 		«val const = divisor.immediate.parseInt»
-		«IF dividend.sizeOfOp == 1 && dividend.sizeOf == 1»
+		«IF dividend.sizeOf == 1»
 			«val divStart = '''div@«dividend.hashCode.toHexString».start'''»
 			«val divDone = '''div@«dividend.hashCode.toHexString».done'''»
 			«val divEnd = '''div@«dividend.hashCode.toHexString».end'''»
@@ -1290,6 +1297,22 @@ class Operations {
 				«dividend.signum»
 			«ENDIF»
 			+«divEnd»:
+		«ENDIF»
+	'''
+
+	private def moduloImmediate(CompileContext dividend, CompileContext divisor) '''
+		«IF dividend.sizeOf == 1»
+			«val modEnd = '''mod@«dividend.hashCode.toHexString».end'''»
+				PHA
+			«dividend.divideImmediate(divisor)»
+				PLA
+				BPL +«modEnd»
+				LDA «Members::MATH_MOD»
+			«dividend.signum»
+				STA «Members::MATH_MOD»
+				LDA #$FF
+				STA «Members::MATH_MOD» + 1
+			+«modEnd»:
 		«ENDIF»
 	'''
 

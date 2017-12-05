@@ -62,6 +62,7 @@ import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.^extension.Expressions.MethodReference
+import org.parisoft.noop.noop.ModExpression
 
 class Expressions {
 
@@ -179,6 +180,41 @@ class Expressions {
 		}
 	}
 
+	private def getModuloMethod(Expression left, Expression right, NoopClass type) {
+		try {
+			if (left.sizeOf == 1 && type.sizeOf == 1) {
+				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+				new MethodReference => [args = newArrayList(left, const)]
+			} else {
+				throw new NonConstantExpressionException(left)
+			}
+		} catch (NonConstantExpressionException exception) {
+			val lhsType = if (left.sizeOf < right.sizeOf) {
+					if (left.typeOf.isSigned) {
+						left.typeOf.toIntClass
+					} else {
+						left.typeOf.toUIntClass
+					}
+				} else {
+					left.typeOf
+				}
+
+			val rhsType = right.typeOf
+
+			new MethodReference => [
+				method = type.toMathClass().declaredMethods.findFirst [
+					name == '''«Members::STATIC_PREFIX»modulo'''.toString && params.isNotEmpty &&
+						params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+				]
+				args = newArrayList(left, right)
+			]
+		}
+	}
+
+	def getModuloVariable(Expression expression) {
+		expression.toMathClass.declaredFields.findFirst[name == '''«Members::STATIC_PREFIX»mod'''.toString]
+	}
+
 	def isThisOrSuperReference(MemberSelect selection) {
 		selection.member instanceof This || selection.member instanceof Super
 	}
@@ -271,6 +307,8 @@ class Expressions {
 				expression.typeOfValueOrMul(expression.left, expression.right)
 			DivExpression:
 				expression.typeOfValueOrDiv(expression.left, expression.right)
+			ModExpression:
+				expression.left.typeOf
 			BOrExpression:
 				expression.typeOfValueOrMerge(expression.left, expression.right)
 			BAndExpression:
@@ -443,6 +481,8 @@ class Expressions {
 					(expression.left.valueOf as Integer) * (expression.right.valueOf as Integer)
 				DivExpression:
 					(expression.left.valueOf as Integer) / (expression.right.valueOf as Integer)
+				ModExpression:
+					(expression.left.valueOf as Integer) % (expression.right.valueOf as Integer)
 				BOrExpression:
 					(expression.left.valueOf as Integer).bitwiseOr(expression.right.valueOf as Integer)
 				BAndExpression:
@@ -528,10 +568,19 @@ class Expressions {
 	def void prepare(Expression expression, AllocContext ctx) {
 		switch (expression) {
 			AssignmentExpression: {
-				if (expression.assignment === AssignmentType::MUL_ASSIGN) {
-					getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method?.prepare(ctx)
-				} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
-					getDivideMethod(expression.left, expression.right, expression.left.typeOf).method?.prepare(ctx)
+				val method = if (expression.assignment === AssignmentType::MUL_ASSIGN) {
+						getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method
+					} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
+						getDivideMethod(expression.left, expression.right, expression.left.typeOf).method
+					} else if (expression.assignment === AssignmentType::MOD_ASSIGN) {
+						getModuloMethod(expression.left, expression.right, expression.left.typeOf).method
+					}
+
+				if (method !== null) {
+					method.prepare(ctx)
+				} else if (expression.assignment === AssignmentType::DIV_ASSIGN ||
+					expression.assignment === AssignmentType::MOD_ASSIGN) {
+					expression.moduloVariable.prepare(ctx)
 				}
 
 				expression.right.prepare(ctx)
@@ -587,8 +636,26 @@ class Expressions {
 				expression.right.prepare(ctx)
 			}
 			DivExpression: {
-				getDivideMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).method?.
-					prepare(ctx)
+				val div = getDivideMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).method
+				
+				if (div !== null) {
+					div.prepare(ctx)
+				} else {
+					expression.moduloVariable.prepare(ctx)
+				}
+				
+				expression.left.prepare(ctx)
+				expression.right.prepare(ctx)
+			}
+			ModExpression: {
+				val mod = getModuloMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).method
+				
+				if (mod !== null) {
+					mod.prepare(ctx)
+				} else {
+					expression.moduloVariable.prepare(ctx)
+				}
+				
 				expression.left.prepare(ctx)
 				expression.right.prepare(ctx)
 			}
@@ -669,6 +736,8 @@ class Expressions {
 					getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
 				} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
 					getDivideMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
+				} else if (expression.assignment === AssignmentType::MOD_ASSIGN) {
+					getModuloMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
 				}
 
 				try {
@@ -711,6 +780,16 @@ class Expressions {
 			}
 			DivExpression: {
 				val method = getDivideMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).
+					method
+
+				if (method !== null) {
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
+				} else {
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				}
+			}
+			ModExpression: {
+				val method = getModuloMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).
 					method
 
 				if (method !== null) {
@@ -931,6 +1010,12 @@ class Expressions {
 							right = expression.right
 						]»
 						«div.compile(ref => [mode = Mode::COPY])»
+					«ELSEIF expression.assignment === AssignmentType::MOD_ASSIGN»
+						«val mod = NoopFactory::eINSTANCE.createModExpression => [
+							left = expression.left
+							right = expression.right
+						]»
+						«mod.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BOR_ASSIGN»
 						«val bor = NoopFactory::eINSTANCE.createBOrExpression => [
 							left = expression.left
@@ -970,6 +1055,7 @@ class Expressions {
 				SubExpression: '''«Operation::SUBTRACTION.compileBinary(expression.left, expression.right, ctx)»'''
 				MulExpression: '''«Operation::MULTIPLICATION.compileMultiplication(expression.left, expression.right, ctx)»'''
 				DivExpression: '''«Operation::DIVISION.compileMultiplication(expression.left, expression.right, ctx)»'''
+				ModExpression: '''«Operation::MODULO.compileMultiplication(expression.left, expression.right, ctx)»'''
 				BOrExpression: '''«Operation::BIT_OR.compileBinary(expression.left, expression.right, ctx)»'''
 				BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, ctx)»'''
 				LShiftExpression: '''«Operation::BIT_SHIFT_LEFT.compileMultiplication(expression.left, expression.right, ctx)»'''
@@ -1264,6 +1350,7 @@ class Expressions {
 				SubExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» - «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				MulExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» * «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				DivExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» / «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				ModExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» % «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				BOrExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» | «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				BAndExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» & «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				LShiftExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» << «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
@@ -1357,36 +1444,47 @@ class Expressions {
 	'''
 
 	private def compileMultiplication(Operation operation, Expression left, Expression right, CompileContext ctx) {
-		if (operation === Operation::MULTIPLICATION) {
-			val mult = getMultiplyMethod(left, right, ctx.type)
+		switch (operation) {
+			case MULTIPLICATION: {
+				val mult = getMultiplyMethod(left, right, ctx.type)
 
-			if (mult.method !== null) {
-				mult.method.compileInvocation(mult.args, ctx)
-			} else {
-				operation.compileBinary(mult.args.head, mult.args.last, ctx)
-			}
-		} else if (operation === Operation::DIVISION) {
-			val div = getDivideMethod(left, right, ctx.type)
-
-			if (div.method !== null) {
-				div.method.compileInvocation(div.args, ctx)
-			} else {
-				operation.compileBinary(div.args.head, div.args.last, ctx)
-			}
-		} else {
-			try {
-				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
-				operation.compileBinary(const, right, ctx)
-			} catch (NonConstantExpressionException exception) {
-				try {
-					val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
-					operation.compileBinary(left, const, ctx)
-				} catch (NonConstantExpressionException exception2) {
-					operation.compileBinary(left, right, ctx)
+				if (mult.method !== null) {
+					mult.method.compileInvocation(mult.args, ctx)
+				} else {
+					operation.compileBinary(mult.args.head, mult.args.last, ctx)
 				}
 			}
-		}
+			case DIVISION: {
+				val div = getDivideMethod(left, right, ctx.type)
 
+				if (div.method !== null) {
+					div.method.compileInvocation(div.args, ctx)
+				} else {
+					operation.compileBinary(div.args.head, div.args.last, ctx)
+				}
+			}
+			case MODULO: {
+				val mod = getModuloMethod(left, right, ctx.type)
+
+				if (mod.method !== null) {
+					mod.method.compileInvocation(mod.args, ctx)
+				} else {
+					operation.compileBinary(mod.args.head, mod.args.last, ctx)
+				}
+			}
+			default:
+				try {
+					val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
+					operation.compileBinary(const, right, ctx)
+				} catch (NonConstantExpressionException exception) {
+					try {
+						val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+						operation.compileBinary(left, const, ctx)
+					} catch (NonConstantExpressionException exception2) {
+						operation.compileBinary(left, right, ctx)
+					}
+				}
+		}
 	}
 
 	private def compileOr(Expression left, Expression right, CompileContext ctx) '''
