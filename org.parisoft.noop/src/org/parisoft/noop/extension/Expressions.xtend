@@ -137,7 +137,7 @@ class Expressions {
 			}
 		}
 	}
-	
+
 	private def getDivideMethod(Expression left, Expression right, NoopClass type) {
 		try {
 			if (left.sizeOf == 1 && type.sizeOf == 1) {
@@ -148,33 +148,33 @@ class Expressions {
 			}
 		} catch (NonConstantExpressionException exception) {
 			val lhsType = if (left.sizeOf < right.sizeOf) {
-						if (left.typeOf.isSigned) {
-							left.typeOf.toIntClass
-						} else {
-							left.typeOf.toUIntClass
-						}
+					if (left.typeOf.isSigned) {
+						left.typeOf.toIntClass
 					} else {
-						left.typeOf
+						left.typeOf.toUIntClass
 					}
-					
+				} else {
+					left.typeOf
+				}
+
 			val rhsType = right.typeOf
-			
+
 			if (lhsType.sizeOf > 1 || (lhsType.isUnsigned && rhsType.isSigned)) {
 				new MethodReference => [
-						method = type.toMathClass().declaredMethods.findFirst [
-							name == '''«Members::STATIC_PREFIX»divide'''.toString && params.isNotEmpty &&
-								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
-						]
-						args = newArrayList(left, right)
+					method = type.toMathClass().declaredMethods.findFirst [
+						name == '''«Members::STATIC_PREFIX»divide'''.toString && params.isNotEmpty &&
+							params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
 					]
+					args = newArrayList(left, right)
+				]
 			} else {
 				new MethodReference => [
-						method = type.toMathClass().declaredMethods.findFirst [
-							name == '''«Members::STATIC_PREFIX»divide8Bit'''.toString && params.isNotEmpty &&
-								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
-						]
-						args = newArrayList(left, right)
+					method = type.toMathClass().declaredMethods.findFirst [
+						name == '''«Members::STATIC_PREFIX»divide8Bit'''.toString && params.isNotEmpty &&
+							params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
 					]
+					args = newArrayList(left, right)
+				]
 			}
 		}
 	}
@@ -386,14 +386,14 @@ class Expressions {
 			}
 		}
 	}
-	
+
 	private def typeOfValueOrDiv(Expression expression, Expression left, Expression right) {
 		try {
 			expression.typeOfValue
 		} catch (Exception exception) {
 			val lhsType = left.typeOf
 			val rhsType = right.typeOf
-			
+
 			if (rhsType.isUnsigned) {
 				lhsType
 			} else if (lhsType.isSigned && lhsType.sizeOf <= rhsType.sizeOf) {
@@ -527,8 +527,15 @@ class Expressions {
 
 	def void prepare(Expression expression, AllocContext ctx) {
 		switch (expression) {
-			AssignmentExpression:
+			AssignmentExpression: {
+				if (expression.assignment === AssignmentType::MUL_ASSIGN) {
+					getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method?.prepare(ctx)
+				} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
+					getDivideMethod(expression.left, expression.right, expression.left.typeOf).method?.prepare(ctx)
+				}
+
 				expression.right.prepare(ctx)
+			}
 			OrExpression: {
 				expression.left.prepare(ctx)
 				expression.right.prepare(ctx)
@@ -574,10 +581,14 @@ class Expressions {
 				expression.right.prepare(ctx)
 			}
 			MulExpression: {
+				getMultiplyMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).method?.
+					prepare(ctx)
 				expression.left.prepare(ctx)
 				expression.right.prepare(ctx)
 			}
 			DivExpression: {
+				getDivideMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).method?.
+					prepare(ctx)
 				expression.left.prepare(ctx)
 				expression.right.prepare(ctx)
 			}
@@ -659,7 +670,7 @@ class Expressions {
 				} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
 					getDivideMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
 				}
-				
+
 				try {
 					expression.right.alloc(ctx => [types.put(expression.left.typeOf)])
 				} finally {
@@ -698,8 +709,16 @@ class Expressions {
 					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 				}
 			}
-			DivExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+			DivExpression: {
+				val method = getDivideMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).
+					method
+
+				if (method !== null) {
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
+				} else {
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				}
+			}
 			BOrExpression:
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 			BAndExpression:
@@ -1346,7 +1365,7 @@ class Expressions {
 			} else {
 				operation.compileBinary(mult.args.head, mult.args.last, ctx)
 			}
-		} if (operation === Operation::DIVISION) {
+		} else if (operation === Operation::DIVISION) {
 			val div = getDivideMethod(left, right, ctx.type)
 
 			if (div.method !== null) {
