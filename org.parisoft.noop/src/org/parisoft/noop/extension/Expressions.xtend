@@ -872,6 +872,7 @@ class Expressions {
 				val snapshot = ctx.snapshot
 				val chunks = newArrayList
 
+				
 				if (expression.member instanceof Method) {
 					val method = expression.member as Method
 
@@ -908,6 +909,14 @@ class Expressions {
 						if (expression.isNonThisNorSuperReference && variable.overriders.isNotEmpty) {
 							chunks += ctx.computePtr(expression.receiver.nameOfTmpVar(ctx.container))
 						}
+						
+						//debug for index impl
+						val rcv = new CompileContext => [
+							container = ctx.container
+							type = expression.receiver.typeOf
+						]
+						expression.receiver.compile(rcv => [mode = Mode::REFERENCE])
+						println('''rcv = «rcv»''')
 					}
 
 					if (expression.indexes.isNotEmpty) {

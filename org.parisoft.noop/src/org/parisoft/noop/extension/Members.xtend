@@ -25,6 +25,7 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.MemChunk
 
 public class Members {
 
@@ -428,7 +429,7 @@ public class Members {
 			newArrayList
 		}
 	}
-
+	
 	def compile(Method method, CompileContext ctx) '''
 		«IF method.isNonNative»
 			«method.nameOf»:
@@ -537,6 +538,69 @@ public class Members {
 			}
 		}
 	}
+	
+	def allocReference(Variable variable, Expression receiver, List<Index> indexes, AllocContext ctx) {
+		val chunks = receiver.alloc(ctx)
+		
+		if (variable.overriders.isNotEmpty && !(receiver instanceof This) && !(receiver instanceof Super)) {
+			chunks += ctx.computePtr(receiver.nameOfTmpVar(ctx.container))
+		}
+		
+		val rcv = new CompileContext => [
+			container = ctx.container
+			type = receiver.typeOf
+			mode = Mode::REFERENCE
+		]
+		
+		receiver.compile(rcv)
+		
+		val ref = rcv => [
+			if (absolute !== null) {
+				absolute = '''«rcv.absolute» + #«variable.nameOfOffset»'''
+			} else if (indirect !== null) {
+				index = '''«IF rcv.index !== null»«rcv.index» + «ENDIF»#«variable.nameOfOffset»'''
+			}
+		]
+		
+		chunks += variable.allocIndexes(indexes, ref, ctx)		
+		chunks += variable.alloc(ctx)
+		
+		return chunks
+	}
+	
+	def allocStaticReference(Variable variable, List<Index> indexes, AllocContext ctx) {
+		val ref = new CompileContext => [absolute = variable.nameOfStatic]
+		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
+	}
+	
+	def allocPointerReference(Variable variable, String receiver, List<Index> indexes, AllocContext ctx) {
+		val ref = new CompileContext => [
+			indirect = receiver
+			index = '''#«variable.nameOfOffset»'''
+		]
+		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
+	}
+	
+	def allocLocalReference(Variable variable, List<Index> indexes, AllocContext ctx) {
+		val ref = new CompileContext => [absolute = variable.nameOf]
+		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
+	}
+	
+	def allocInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) {
+		
+	}
+	
+	def allocInvocation(Method method, List<Expression> args, AllocContext ctx) {
+		
+	}
+	
+	def allocIndexes(Member member, List<Index> indexes, CompileContext ref, AllocContext ctx) {
+		val chunks = indexes.map[value.alloc(ctx)].flatten
+		
+		
+		
+		return chunks
+	}
 
 	def compileReference(Variable variable, Expression receiver, List<Index> indexes, CompileContext ctx) '''
 		«val overriders = if (receiver instanceof This || receiver instanceof Super) emptyList else variable.overriders»
@@ -585,28 +649,12 @@ public class Members {
 		«val ref = new CompileContext => [
 			container = receiver.container
 			operation = receiver.operation
-			absolute = receiver.absolute
+			accLoaded = receiver.accLoaded
+			absolute = '''«receiver.absolute» + #«variable.nameOfOffset»'''
 			index = receiver.index
 			type = variable.typeOf
 		]»
-		«IF indexes.isNotEmpty»
-			«variable.compileIndexes(indexes, ctx)»
-			«val tmpIndex = indexes.nameOfTmp(ctx.container)»
-			«IF ref.index === null»
-				«ref.index = tmpIndex»
-			«ELSE»
-				«ctx.pushAccIfOperating»
-					CLC
-					LDA «tmpIndex»
-					ADC «ref.index»
-					STA «tmpIndex»
-				«ctx.pullAccIfOperating»
-				«ref.index = tmpIndex»
-			«ENDIF»
-		«ELSE»
-			«val tmpIndex = '''#«variable.nameOfOffset»'''»
-			«ref.absolute = '''«ref.absolute» + «tmpIndex»'''»
-		«ENDIF»
+		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
 			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
 		«ELSE»
@@ -618,50 +666,12 @@ public class Members {
 		«val ref = new CompileContext => [
 			container = receiver.container
 			operation = receiver.operation
+			accLoaded = receiver.accLoaded
 			indirect = receiver.indirect
-			index = receiver.index
+			index = '''«IF receiver.index !== null»«receiver.index» + «ENDIF»#«variable.nameOfOffset»'''
 			type = variable.typeOf
 		]»
-		«IF indexes.isNotEmpty»
-			«variable.compileIndexes(indexes, ctx)»
-			«val tmpIndex = indexes.nameOfTmp(ctx.container)»
-			«IF ref.index === null»
-				«ref.index = tmpIndex»
-			«ELSEIF ref.index.contains(STATIC_PREFIX)»
-				«ctx.pushAccIfOperating»
-					CLC
-					LDA «tmpIndex»
-					«FOR immediate : ref.index.split(' + ')»
-						ADC «immediate»
-					«ENDFOR»
-					STA «tmpIndex»
-				«ctx.pullAccIfOperating»
-				«ref.index = tmpIndex»
-			«ELSE»
-				«ctx.pushAccIfOperating»
-					CLC
-					LDA «tmpIndex»
-					ADC «ref.index»
-					STA «tmpIndex»
-				«ctx.pullAccIfOperating»
-				«ref.index = tmpIndex»
-			«ENDIF»
-		«ELSE»
-			«val tmpIndex = '''#«variable.nameOfOffset»'''»
-			«IF ref.index === null»
-				«ref.index = tmpIndex»
-			«ELSEIF ref.index.contains(STATIC_PREFIX)»
-				«ref.index = '''«ref.index» + «tmpIndex»'''»
-			«ELSE»
-				«ctx.pushAccIfOperating»
-					CLC
-					LDA «tmpIndex»
-					ADC «ref.index»
-					STA «tmpIndex»
-				«ctx.pullAccIfOperating»
-				«ref.index = tmpIndex»
-			«ENDIF»
-		«ENDIF»
+		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
 			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
 		«ELSE»
@@ -670,19 +680,15 @@ public class Members {
 	'''
 
 	def compilePointerReference(Variable variable, String receiver, List<Index> indexes, CompileContext ctx) '''
-		«IF indexes.isNotEmpty»
-			«variable.compileIndexes(indexes, ctx)»
-		«ENDIF»
 		«val ref = new CompileContext => [
 			container = ctx.container
+			operation = ctx.operation
+			accLoaded = ctx.accLoaded
 			type = variable.typeOf
 			indirect = receiver
-			index = if (indexes.isNotEmpty) {
-				indexes.nameOfTmp(ctx.container)
-			} else {
-				'''#«variable.nameOfOffset»'''
-			}
+			index = '''#«variable.nameOfOffset»'''
 		]»
+		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
 			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
 		«ELSE»
@@ -691,17 +697,14 @@ public class Members {
 	'''
 
 	def compileStaticReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
-		«IF indexes.isNotEmpty»
-			«variable.compileIndexes(indexes, ctx)»
-		«ENDIF»
 		«val ref = new CompileContext => [
 			container = ctx.container
+			operation = ctx.operation
+			accLoaded = ctx.accLoaded
 			type = variable.typeOf
 			absolute = variable.nameOfStatic
-			index = if (indexes.isNotEmpty) {
-				indexes.nameOfTmp(ctx.container)
-			}
 		]»
+		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
 			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
 		«ELSE»
@@ -710,17 +713,14 @@ public class Members {
 	'''
 	
 	def compileLocalReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
-		«IF indexes.isNotEmpty»
-			«variable.compileIndexes(indexes, ctx)»
-		«ENDIF»
 		«val ref = new CompileContext => [
 			container = ctx.container
+			operation = ctx.operation
+			accLoaded = ctx.accLoaded
 			type = variable.typeOf
 			absolute = variable.nameOf
-			index = if (indexes.isNotEmpty) {
-				indexes.nameOfTmp(ctx.container)
-			}
 		]»
+		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
 			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
 		«ELSE»
@@ -853,62 +853,8 @@ public class Members {
 			«ENDIF»
 		«ENDIF»
 	'''
-
-	def compileIndexes(Variable variable, List<Index> indexes, CompileContext ctx) '''
-		«val indexName = indexes.nameOfTmp(ctx.container)»
-		«val dimension = variable.dimensionOf»
-		«val sizeOfVar = variable.typeOf.sizeOf»
-		«ctx.pushAccIfOperating»
-		«IF dimension.size === 1 && sizeOfVar === 1»
-			«indexes.head.value.compile(new CompileContext => [
-				container = ctx.container
-				type = ctx.type.toByteClass
-				register = 'A'
-			])»
-				«IF variable.isField && variable.isNonStatic»
-					CLC
-					ADC #«variable.nameOfOffset»
-				«ENDIF»
-				STA «indexName»
-		«ELSE»
-			«FOR i : 0..< indexes.size»
-				«indexes.get(i).value.compile(new CompileContext => [
-					container = ctx.container
-					operation = ctx.operation
-					type = ctx.type.toByteClass
-					register = 'A'
-				])»
-					«FOR len : (i + 1)..< dimension.size»
-						STA «Members::TEMP_VAR_NAME1»
-						LDA «IF variable.isParameter»«variable.nameOfLen(len)»«ELSE»#«dimension.get(len).toHex»«ENDIF»
-						STA «Members::TEMP_VAR_NAME2»
-						LDA #$00
-						mult8x8to8
-					«ENDFOR»
-					«IF (i + 1) < indexes.size»
-						PHA
-					«ENDIF»
-			«ENDFOR»
-			«FOR i : 1..< indexes.size»
-				«noop»
-					STA «Members::TEMP_VAR_NAME1»
-					PLA
-					ADC «Members::TEMP_VAR_NAME1»
-			«ENDFOR»
-			«noop»
-				«IF sizeOfVar > 1»
-					STA «Members::TEMP_VAR_NAME1»
-					LDA #«sizeOfVar.toHex»
-					STA «Members::TEMP_VAR_NAME2»
-					LDA #$00
-					mult8x8to8
-				«ENDIF»
-				«IF variable.isField && variable.isNonStatic»
-					ADC #«variable.nameOfOffset»
-				«ENDIF»
-				STA «indexName»
-		«ENDIF»
-		«ctx.pullAccIfOperating»
+	
+	def compileIndexes(Member member, List<Index> indexes, CompileContext ref)'''
 	'''
 	
 	private def void noop() {
