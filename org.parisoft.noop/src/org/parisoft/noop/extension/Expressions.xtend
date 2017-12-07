@@ -215,12 +215,20 @@ class Expressions {
 		expression.toMathClass.declaredFields.findFirst[name == '''«Members::STATIC_PREFIX»mod'''.toString]
 	}
 
-	def isThisOrSuperReference(MemberSelect selection) {
-		selection.member instanceof This || selection.member instanceof Super
+	def isConstant(Expression expression) {
+		try {
+			expression.valueOf !== null
+		} catch (NonConstantExpressionException exception) {
+			false
+		}
 	}
 
-	def isNonThisNorSuperReference(MemberSelect selection) {
-		!selection.isThisOrSuperReference
+	def isThisOrSuper(Expression expression) {
+		expression instanceof This || expression instanceof Super
+	}
+
+	def isNonThisNorSuper(Expression expression) {
+		!expression.isThisOrSuper
 	}
 
 	def isOnMemberSelectionOrReference(Expression expression) {
@@ -249,8 +257,12 @@ class Expressions {
 		'''«containerName».tmp«instance.typeOf.name»@«instance.hashCode.toHexString»'''.toString
 	}
 
-	def nameOfTmp(List<Index> indexes, String containerName) {
+	def nameOfIndex(List<Index> indexes, String containerName) {
 		'''«containerName».idx@«indexes.hashCode.toHexString»'''.toString
+	}
+
+	def nameOfElement(List<Index> indexes, String containerName) {
+		'''«containerName».element@«indexes.hashCode.toHexString»'''.toString
 	}
 
 	def nameOfTmp(ArrayLiteral array, String containerName) {
@@ -637,25 +649,25 @@ class Expressions {
 			}
 			DivExpression: {
 				val div = getDivideMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).method
-				
+
 				if (div !== null) {
 					div.prepare(ctx)
 				} else {
 					expression.moduloVariable.prepare(ctx)
 				}
-				
+
 				expression.left.prepare(ctx)
 				expression.right.prepare(ctx)
 			}
 			ModExpression: {
 				val mod = getModuloMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).method
-				
+
 				if (mod !== null) {
 					mod.prepare(ctx)
 				} else {
 					expression.moduloVariable.prepare(ctx)
 				}
-				
+
 				expression.left.prepare(ctx)
 				expression.right.prepare(ctx)
 			}
@@ -871,60 +883,28 @@ class Expressions {
 			MemberSelect: {
 				val snapshot = ctx.snapshot
 				val chunks = newArrayList
+				val member = expression.member
+				val receiver = expression.receiver
 
-				
-				if (expression.member instanceof Method) {
-					val method = expression.member as Method
+				if (member instanceof Method && (member as Method).isDispose) {
+					receiver.dispose(ctx)
+					return chunks
+				}
 
-					if (method.isDispose) {
-						expression.receiver.dispose(ctx)
-						return chunks
+				if (member instanceof Variable) {
+					if (member.isConstant) {
+						chunks += member.allocConstantReference(ctx)
+					} else if (member.isStatic) {
+						chunks += member.allocStaticReference(expression.indexes, ctx)
+					} else {
+						chunks += member.allocReference(receiver, expression.indexes, ctx)
 					}
-
-					val methodChunks = method.alloc(ctx)
-
-					if (method.isNonStatic) {
-						if (expression.isNonThisNorSuperReference) {
-							methodChunks += method.overriders.map[alloc(ctx)].flatten
-						}
-
-						chunks += expression.receiver.alloc(ctx)
+				} else if (member instanceof Method) {
+					if (member.isStatic) {
+						chunks += member.allocInvocation(expression.args, expression.indexes, ctx)
+					} else {
+						chunks += member.allocInvocation(receiver, expression.args, expression.indexes, ctx)
 					}
-
-					expression.args.forEach [ arg, i |
-						try {
-							chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
-						} finally {
-							ctx.types.pop
-						}
-					]
-
-					chunks += methodChunks
-				} else if (expression.member instanceof Variable) {
-					val variable = expression.member as Variable
-
-					if (variable.isNonStatic) {
-						chunks += expression.receiver.alloc(ctx)
-
-						if (expression.isNonThisNorSuperReference && variable.overriders.isNotEmpty) {
-							chunks += ctx.computePtr(expression.receiver.nameOfTmpVar(ctx.container))
-						}
-						
-						//debug for index impl
-						val rcv = new CompileContext => [
-							container = ctx.container
-							type = expression.receiver.typeOf
-						]
-						expression.receiver.compile(rcv => [mode = Mode::REFERENCE])
-						println('''rcv = «rcv»''')
-					}
-
-					if (expression.indexes.isNotEmpty) {
-						chunks += expression.indexes.map[value.alloc(ctx)].flatten
-						chunks += ctx.computeTmp(expression.indexes.nameOfTmp(ctx.container), 1)
-					}
-
-					chunks += variable.alloc(ctx)
 				}
 
 				chunks.disoverlap(ctx.container)
@@ -936,25 +916,22 @@ class Expressions {
 			MemberRef: {
 				val snapshot = ctx.snapshot
 				val chunks = newArrayList
+				val member = expression.member
 
-				if (expression.member instanceof Method) {
-					val method = expression.member as Method
-					val methodChunks = method.alloc(ctx)
-
-					expression.args.forEach [ arg, i |
-						try {
-							chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
-						} finally {
-							ctx.types.pop
-						}
-					]
-
-					chunks += methodChunks
-				}
-
-				if (expression.indexes.isNotEmpty) {
-					chunks += expression.indexes.map[value.alloc(ctx)].flatten
-					chunks += ctx.computeTmp(expression.indexes.nameOfTmp(ctx.container), 1)
+				if (member instanceof Variable) {
+					if (member.isField && member.isNonStatic) {
+						chunks += member.allocPointerReference('''«ctx.container».rcv''', expression.indexes, ctx)
+					} else if (member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)) {
+						chunks += member.allocPointerReference(member.nameOf, expression.indexes, ctx)
+					} else if (member.isConstant) {
+						chunks += member.allocConstantReference(ctx)
+					} else if (member.isStatic) {
+						chunks += member.allocStaticReference(expression.indexes, ctx)
+					} else {
+						chunks += member.allocLocalReference(expression.indexes, ctx)
+					}
+				} else if (member instanceof Method) {
+					chunks += member.allocInvocation(expression.args, expression.indexes, ctx)
 				}
 
 				chunks.disoverlap(ctx.container)
@@ -1279,28 +1256,19 @@ class Expressions {
 				MemberSelect: '''
 					«val member = expression.member»
 					«val receiver = expression.receiver»
-					«IF member.isStatic»
-						«IF !(receiver instanceof NewInstance)»
-							«receiver.compile(new CompileContext => [
-								container = ctx.container
-								operation = ctx.operation
-							])»
-						«ENDIF»
-						«IF member instanceof Variable»
-							«IF member.isConstant»
-								«member.compileConstantReference(ctx)»
-							«ELSE»
-								«member.compileStaticReference(expression.indexes, ctx)»
-							«ENDIF»
-						«ELSEIF member instanceof Method»
-							«val method = member as Method»
-							«method.compileInvocation(expression.args, ctx)»
-						«ENDIF»
-					«ELSE»
-						«IF member instanceof Variable»
+					«IF member instanceof Variable»
+						«IF member.isConstant»
+							«member.compileConstantReference(ctx)»
+						«ELSEIF member.isStatic»
+							«member.compileStaticReference(expression.indexes, ctx)»
+						«ELSE»
 							«member.compileReference(receiver, expression.indexes, ctx)»
-						«ELSEIF member instanceof Method»
-							«val method = member as Method»
+						«ENDIF»
+					«ELSEIF member instanceof Method»
+						«val method = member as Method»
+						«IF method.isStatic»
+							«method.compileInvocation(expression.args, ctx)»
+						«ELSE»
 							«method.compileInvocation(receiver, expression.args, ctx)»
 						«ENDIF»
 					«ENDIF»

@@ -18,14 +18,12 @@ import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.StringLiteral
-import org.parisoft.noop.noop.Super
-import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.MemChunk
+import org.parisoft.noop.noop.NoopFactory
 
 public class Members {
 
@@ -156,8 +154,11 @@ public class Members {
 		!parameter.isBounded
 	}
 	
-	def isBounded(Variable parameter) {
-		parameter.dimension?.forall[value !== null]
+	def isBounded(Member member) {
+		switch (member) {
+			Variable: member.dimension?.forall[value !== null]
+			Method: true 
+		}
 	}
 
 	def isOverrideOf(Method m1, Method m2) {
@@ -542,7 +543,7 @@ public class Members {
 	def allocReference(Variable variable, Expression receiver, List<Index> indexes, AllocContext ctx) {
 		val chunks = receiver.alloc(ctx)
 		
-		if (variable.overriders.isNotEmpty && !(receiver instanceof This) && !(receiver instanceof Super)) {
+		if (variable.overriders.isNotEmpty && receiver.isNonThisNorSuper) {
 			chunks += ctx.computePtr(receiver.nameOfTmpVar(ctx.container))
 		}
 		
@@ -568,6 +569,10 @@ public class Members {
 		return chunks
 	}
 	
+	def allocConstantReference(Variable variable, AllocContext ctx) {
+		variable.alloc(ctx)
+	}
+	
 	def allocStaticReference(Variable variable, List<Index> indexes, AllocContext ctx) {
 		val ref = new CompileContext => [absolute = variable.nameOfStatic]
 		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
@@ -586,24 +591,77 @@ public class Members {
 		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
 	}
 	
-	def allocInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) {
+	def allocInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
+		val chunks = newArrayList
 		
+		val methodChunks = method.alloc(ctx)
+		
+		if (method.overriders.isNotEmpty && receiver.isNonThisNorSuper) {
+			methodChunks += method.overriders.map[alloc(ctx)].flatten
+		}
+		
+		chunks += receiver.alloc(ctx)
+
+		args.forEach [ arg, i |
+			try {
+				chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
+			} finally {
+				ctx.types.pop
+			}
+		]
+
+		chunks += method.allocIndexes(indexes, new CompileContext => [indirect = method.nameOfReturn], ctx)
+		chunks += methodChunks
+
+		return chunks
 	}
 	
-	def allocInvocation(Method method, List<Expression> args, AllocContext ctx) {
+	def allocInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
+		val chunks = newArrayList
 		
+		val methodChunks = method.alloc(ctx)
+		
+		args.forEach [ arg, i |
+			try {
+				chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
+			} finally {
+				ctx.types.pop
+			}
+		]
+
+		chunks += method.allocIndexes(indexes, new CompileContext => [indirect = method.nameOfReturn], ctx)
+		chunks += methodChunks
+
+		return chunks
 	}
 	
 	def allocIndexes(Member member, List<Index> indexes, CompileContext ref, AllocContext ctx) {
-		val chunks = indexes.map[value.alloc(ctx)].flatten
+		val chunks = newArrayList
 		
-		
+		if (indexes.isNotEmpty) {
+			chunks += indexes.map[value.alloc(ctx)].flatten
+			
+			val isIndexImmediate = member.isBounded && indexes.forall[value.isConstant]
+			val isIndexAbsolute = !isIndexImmediate
+			val indexSize = if (member.isBounded && member.sizeOf <= 0xFF) 1 else 2
+			
+			if (indexSize > 1) {
+				if (isIndexImmediate && ref.indirect !== null) {
+					chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
+				} else if (isIndexAbsolute) {
+					chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
+					chunks += ctx.computeTmp(indexes.nameOfIndex(ctx.container), indexSize)
+				}
+			} else if (isIndexAbsolute && ref.index.isAbsolute) {
+				chunks += ctx.computeTmp(indexes.nameOfIndex(ctx.container), indexSize)
+			}
+		}
 		
 		return chunks
 	}
-
+	
 	def compileReference(Variable variable, Expression receiver, List<Index> indexes, CompileContext ctx) '''
-		«val overriders = if (receiver instanceof This || receiver instanceof Super) emptyList else variable.overriders»
+		«val overriders = if (receiver.isNonThisNorSuper) variable.overriders else emptyList»
 		«val rcv = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
@@ -745,7 +803,7 @@ public class Members {
 		«IF method.isNative»
 			«method.compileNativeInvocation(receiver, args, ctx)»
 		«ELSE»
-			«val overriders = if (receiver instanceof This || receiver instanceof Super) emptyList else method.overriders»
+			«val overriders = if (receiver.isNonThisNorSuper) method.overriders else emptyList»
 			«receiver.compile(new CompileContext => [
 				container = ctx.container
 				operation = ctx.operation
@@ -855,7 +913,116 @@ public class Members {
 	'''
 	
 	def compileIndexes(Member member, List<Index> indexes, CompileContext ref)'''
+		«IF indexes.isNotEmpty»
+			«val isIndexImmediate = member.isBounded && indexes.forall[value.isConstant]»
+			«val isIndexAbsolute = !isIndexImmediate»
+			«val indexSize = if (member.isBounded && member.sizeOf <= 0xFF) 1 else 2»
+			«val index = if (isIndexImmediate) {
+				val dimension = member.dimensionOf
+				var immediate = ''
+				
+				for (i : 0 ..< indexes.size) {
+					if (i > 0) {
+						immediate += ' + '
+					}
+					
+					immediate += indexes.get(i).value.valueOf.toString
+					
+					for (j : i + 1 ..< indexes.size) {
+						immediate += '''*«dimension.get(j)»'''
+					}
+				}
+
+				'''(«immediate») * «member.typeOf.sizeOf»'''				
+			} else {
+				val absolute = indexes.nameOfIndex(ref.container)
+				
+				val expression = if (member.isBounded) {
+					NoopFactory::eINSTANCE.createMulExpression => [
+						left = indexes.sum(member.dimensionOf, 0)
+						right = NoopFactory::eINSTANCE.createByteLiteral => [value = member.typeOf.sizeOf]
+					]
+				} else {
+					NoopFactory::eINSTANCE.createMulExpression => [
+						left = indexes.sum(member as Variable, 0)
+						right = NoopFactory::eINSTANCE.createByteLiteral => [value = member.typeOf.sizeOf]
+					]
+				}
+				
+				val idx = new CompileContext => [
+					it.container = ref.container
+					it.operation = ref.operation
+					it.accLoaded = ref.accLoaded
+					it.type = if (indexSize > 1) ref.type.toIntClass else ref.type.toByteClass
+					it.absolute = absolute
+				]
+				
+				expression.compile(idx)
+				
+				absolute
+			}»
+		«ENDIF»
 	'''
+	private def Expression mult(List<Index> indexes, Variable parameter, int i, int j) {
+		if (j < indexes.size) {
+			NoopFactory::eINSTANCE.createMulExpression => [
+				left = NoopFactory::eINSTANCE.createMemberSelect => [
+					receiver = NoopFactory::eINSTANCE.createMemberRef => [
+						member = parameter
+						
+						for (x : 0 ..< j) {
+							it.indexes.add(NoopFactory::eINSTANCE.createIndex)
+						}
+					]
+					member = parameter.type.allMethodsTopDown.findFirst[arrayNative && name == METHOD_ARRAY_LENGTH]
+				]
+				right = indexes.mult(parameter, i, j + 1)
+			]
+		} else {
+			indexes.get(i).value
+		}
+	}
+	
+	private def Expression sum(List<Index> indexes, Variable parameter, int i) {
+		if (i + 1 < indexes.size) {
+			NoopFactory::eINSTANCE.createAddExpression => [
+				left = indexes.mult(parameter, i, i + 1)
+				right = indexes.sum(parameter, i + 1)
+			]
+		} else {
+			indexes.mult(parameter, i, i + 1)
+		}
+	}
+	
+	private def Expression mult(List<Index> indexes, List<Integer> dimension, int i, int j) {
+		if (j < indexes.size) {
+			NoopFactory::eINSTANCE.createMulExpression => [
+				left = NoopFactory::eINSTANCE.createByteLiteral => [value = dimension.get(j)]
+				right = indexes.mult(dimension, i, j + 1)
+			]
+		} else {
+			indexes.get(i).value
+		}
+	}
+	
+	private def Expression sum(List<Index> indexes, List<Integer> dimension, int i) {
+		if (i + 1 < indexes.size) {
+			NoopFactory::eINSTANCE.createAddExpression => [
+				left = indexes.mult(dimension, i, i + 1)
+				right = indexes.sum(dimension, i + 1)
+			]
+		} else {
+			indexes.mult(dimension, i, i + 1)
+		}
+	}
+	
+	private def isAbsolute(String index) {
+		index !== null && index.split('+').exists[!trim.startsWith('#')]
+	}
+	
+	private def isImmediate(String index) {
+		index !== null && index.split('+').forall[trim.startsWith('#')]
+	}
 	
 	private def void noop() {
 	}
