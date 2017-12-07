@@ -103,18 +103,13 @@ class TypeSystem {
 
 		try {
 			val desc = context.getVisibleClassesDescriptions.findFirst[qualifiedName.toString == type]
+			var obj = desc.EObjectOrProxy
 
-			if (desc === null) {
-				return null
+			if (obj.eIsProxy) {
+				obj = context.eResource.resourceSet.getEObject(desc.EObjectURI, true)
 			}
 
-			var o = desc.EObjectOrProxy
-
-			if (o.eIsProxy) {
-				o = context.eResource.resourceSet.getEObject(desc.EObjectURI, true)
-			}
-
-			o as NoopClass ?: ^default
+			obj as NoopClass ?: ^default
 		} catch (Exception exception) {
 			^default
 		}

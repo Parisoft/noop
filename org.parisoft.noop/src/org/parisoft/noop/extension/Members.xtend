@@ -581,7 +581,7 @@ public class Members {
 	def allocPointerReference(Variable variable, String receiver, List<Index> indexes, AllocContext ctx) {
 		val ref = new CompileContext => [
 			indirect = receiver
-			index = '''#«variable.nameOfOffset»'''
+			index = if (variable.isNonParameter) '''#«variable.nameOfOffset»'''
 		]
 		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
 	}
@@ -652,7 +652,7 @@ public class Members {
 					chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
 					chunks += ctx.computeTmp(indexes.nameOfIndex(ctx.container), indexSize)
 				}
-			} else if (isIndexAbsolute && ref.index.isAbsolute) {
+			} else if (isIndexAbsolute) {
 				chunks += ctx.computeTmp(indexes.nameOfIndex(ctx.container), indexSize)
 			}
 		}
@@ -744,7 +744,7 @@ public class Members {
 			accLoaded = ctx.accLoaded
 			type = variable.typeOf
 			indirect = receiver
-			index = '''#«variable.nameOfOffset»'''
+			index = if (variable.isNonParameter) '''#«variable.nameOfOffset»'''
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
@@ -918,8 +918,8 @@ public class Members {
 			«val isIndexAbsolute = !isIndexImmediate»
 			«val indexSize = if (member.isBounded && member.sizeOf <= 0xFF) 1 else 2»
 			«val index = if (isIndexImmediate) {
-				val dimension = member.dimensionOf
 				var immediate = ''
+				val dimension = member.dimensionOf
 				
 				for (i : 0 ..< indexes.size) {
 					if (i > 0) {
@@ -935,34 +935,93 @@ public class Members {
 
 				'''(«immediate») * «member.typeOf.sizeOf»'''				
 			} else {
-				val absolute = indexes.nameOfIndex(ref.container)
-				
-				val expression = if (member.isBounded) {
-					NoopFactory::eINSTANCE.createMulExpression => [
-						left = indexes.sum(member.dimensionOf, 0)
-						right = NoopFactory::eINSTANCE.createByteLiteral => [value = member.typeOf.sizeOf]
-					]
-				} else {
-					NoopFactory::eINSTANCE.createMulExpression => [
-						left = indexes.sum(member as Variable, 0)
-						right = NoopFactory::eINSTANCE.createByteLiteral => [value = member.typeOf.sizeOf]
-					]
-				}
-				
-				val idx = new CompileContext => [
-					it.container = ref.container
-					it.operation = ref.operation
-					it.accLoaded = ref.accLoaded
-					it.type = if (indexSize > 1) ref.type.toIntClass else ref.type.toByteClass
-					it.absolute = absolute
-				]
-				
-				expression.compile(idx)
-				
-				absolute
+				indexes.nameOfIndex(ref.container)
 			}»
+			«IF isIndexAbsolute»
+				«val expression = NoopFactory::eINSTANCE.createMulExpression => [
+					left = if (member.isBounded) indexes.sum(member.dimensionOf, 0) else indexes.sum(member as Variable, 0)
+					right = NoopFactory::eINSTANCE.createByteLiteral => [value = member.typeOf.sizeOf]
+				]»
+				«val idx = new CompileContext => [
+					container = ref.container
+					operation = ref.operation
+					accLoaded = ref.accLoaded
+					type = if (indexSize > 1) ref.type.toIntClass else ref.type.toByteClass
+					absolute = index
+				]»
+				«expression.compile(idx)»
+			«ENDIF»
+			«IF indexSize > 1»
+				«IF isIndexImmediate»
+					«IF ref.absolute !== null»
+						«ref.absolute = '''«ref.absolute» + #«index»'''»
+					«ELSEIF ref.indirect !== null»
+						«val ptr = indexes.nameOfElement(ref.container)»
+						«ref.pushAccIfOperating»
+							CLC
+							LDA «ref.indirect»
+							ADC #<«index»
+							STA «ptr»
+							LDA «ref.indirect» + 1
+							ADC #>«index»
+							STA «ptr» + 1
+						«ref.pullAccIfOperating»
+						«ref.indirect = ptr»
+					«ENDIF»
+				«ELSEIF isIndexAbsolute»
+					«IF ref.absolute !== null»
+						«val ptr = indexes.nameOfElement(ref.container)»
+						«ref.pushAccIfOperating»
+							CLC
+							LDA <«ref.absolute»
+							ADC «index»
+							STA «ptr»
+							LDA >«ref.absolute»
+							ADC «index» + 1
+							STA «ptr» + 1
+						«ref.pullAccIfOperating»
+						«ref.absolute = null»
+						«ref.indirect = ptr»
+					«ELSEIF ref.indirect !== null»
+						«val ptr = indexes.nameOfElement(ref.container)»
+						«ref.pushAccIfOperating»
+							CLC
+							LDA «ref.indirect»
+							ADC «index»
+							STA «ptr»
+							LDA «ref.indirect» + 1
+							ADC «index» + 1
+							STA «ptr» + 1
+						«ref.pullAccIfOperating»
+						«ref.indirect = ptr»
+					«ENDIF»
+				«ENDIF»
+			«ELSE»
+				«IF isIndexImmediate»
+					«IF ref.absolute !== null»
+						«ref.absolute = '''«ref.absolute» + #(«index»)'''»
+					«ELSEIF ref.indirect !== null»
+						«ref.index = '''«ref.index» + #(«index»)'''»
+					«ENDIF»
+				«ELSEIF isIndexAbsolute»
+					«IF ref.index.isImmediate»
+						«ref.index = '''«index» + «ref.index»'''»
+					«ELSEIF ref.index.isAbsolute»
+						«ref.pushAccIfOperating»
+							CLC
+							LDA «index»
+							ADC «ref.index»
+							STA «index»
+						«ref.pullAccIfOperating»
+						«ref.index = index»
+					«ELSE»
+						«ref.index = index»
+					«ENDIF»
+				«ENDIF»
+			«ENDIF»
 		«ENDIF»
 	'''
+	
 	private def Expression mult(List<Index> indexes, Variable parameter, int i, int j) {
 		if (j < indexes.size) {
 			NoopFactory::eINSTANCE.createMulExpression => [
