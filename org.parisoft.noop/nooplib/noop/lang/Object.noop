@@ -13,7 +13,7 @@ Object {
     //-- Arrays methods ---
     
     length() {
-    	return Int
+    	return UInt
     }
     
 }

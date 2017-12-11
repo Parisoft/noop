@@ -203,9 +203,9 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	private def filterNative(Iterable<Method> methods, boolean isArrayRecevier) {
 		methods.filter [
 			if (isArrayRecevier) {
-				it.isArrayNative
+				it.isNativeArray
 			} else {
-				it.isNonArrayNative
+				it.isNonNativeArray
 			}
 		]
 	}

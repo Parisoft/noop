@@ -7,6 +7,6 @@ Primitive {
     //-- Arrays methods ---
     
     length() {
-    	return Int
+    	return UInt
     }
 }

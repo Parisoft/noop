@@ -121,9 +121,13 @@ class Expressions {
 					]
 				} else {
 					new MethodReference => [
-						method = type.toMathClass().declaredMethods.findFirst [
-							name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
+						val dms = type.toMathClass().declaredMethods
+						println(dms.map['''«name»«params.map[type.name]»'''])
+						method = dms.findFirst [
+							val match = name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
 								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+							println('''«name»«params.map[type.name]» ? «match»''')
+							match
 						]
 						args = newArrayList(left, right)
 					]
@@ -223,6 +227,10 @@ class Expressions {
 		}
 	}
 
+	def isNonConstant(Expression expression) {
+		!expression.isConstant
+	}
+
 	def isThisOrSuper(Expression expression) {
 		expression instanceof This || expression instanceof Super
 	}
@@ -251,6 +259,61 @@ class Expressions {
 
 	def isDmcFile(StringLiteral string) {
 		string.isFileInclude && string.value.toLowerCase.endsWith(Members::FILE_DMC_EXTENSION)
+	}
+
+	def boolean containsMulDivMod(Expression expression) {
+		switch (expression) {
+			OrExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			AndExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			EqualsExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			DifferExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			GtExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			GeExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			LtExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			LeExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			AddExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			SubExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			MulExpression:
+				true
+			DivExpression:
+				true
+			ModExpression:
+				true
+			BOrExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			BAndExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			LShiftExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			RShiftExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			EorExpression:
+				expression.right.containsMulDivMod
+			NotExpression:
+				expression.right.containsMulDivMod
+			SigNegExpression:
+				expression.right.containsMulDivMod
+			SigPosExpression:
+				expression.right.containsMulDivMod
+			DecExpression:
+				expression.right.containsMulDivMod
+			IncExpression:
+				expression.right.containsMulDivMod
+			CastExpression:
+				expression.left.containsMulDivMod
+			default:
+				false
+		}
 	}
 
 	def nameOfTmpVar(Expression instance, String containerName) {
@@ -595,7 +658,15 @@ class Expressions {
 					expression.moduloVariable.prepare(ctx)
 				}
 
-				expression.right.prepare(ctx)
+				if (expression.right.containsMulDivMod) {
+					try {
+						expression.right.prepare(ctx => [types.put(expression.left.typeOf)])
+					} finally {
+						ctx.types.pop
+					}
+				} else {
+					expression.right.prepare(ctx)
+				}
 			}
 			OrExpression: {
 				expression.left.prepare(ctx)
@@ -701,7 +772,16 @@ class Expressions {
 				expression.right.prepare(ctx)
 			CastExpression: {
 				expression.type.prepare(ctx)
-				expression.left.prepare(ctx)
+				
+				if (expression.left.containsMulDivMod) {
+					try {
+						expression.left.prepare(ctx => [types.put(expression.type)])
+					} finally {
+						ctx.types.pop
+					}
+				} else {
+					expression.left.prepare(ctx)
+				}
 			}
 			ArrayLiteral:
 				expression.typeOf.prepare(ctx)
@@ -716,27 +796,22 @@ class Expressions {
 					}
 				}
 			MemberSelect: {
-				expression.receiver.prepare(ctx)
+				val member = expression.member
 
-				if (expression.member instanceof Variable) {
-					(expression.member as Variable).prepare(ctx)
-				} else if (expression.member instanceof Method) {
-					expression.args.forEach[prepare(ctx)]
-					(expression.member as Method).prepare(ctx)
-					(expression.member as Method).overriders.forEach[prepare(ctx)]
+				if (member instanceof Variable) {
+					member.prepareReference(expression.receiver, expression.indexes, ctx)
+				} else if (member instanceof Method) {
+					member.prepareInvocation(expression.receiver, expression.args, expression.indexes, ctx)
 				}
-
-				expression.indexes.forEach[value.prepare(ctx)]
 			}
 			MemberRef: {
-				if (expression.member instanceof Variable) {
-					(expression.member as Variable).prepare(ctx)
-				} else if (expression.member instanceof Method) {
-					expression.args.forEach[prepare(ctx)]
-					(expression.member as Method).prepare(ctx)
-				}
+				val member = expression.member
 
-				expression.indexes.forEach[value.prepare(ctx)]
+				if (member instanceof Variable) {
+					member.prepareReference(expression.indexes, ctx)
+				} else if (member instanceof Method) {
+					member.prepareInvocation(expression.args, expression.indexes, ctx)
+				}
 			}
 		}
 	}
@@ -752,10 +827,14 @@ class Expressions {
 					getModuloMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
 				}
 
-				try {
-					expression.right.alloc(ctx => [types.put(expression.left.typeOf)])
-				} finally {
-					ctx.types.pop
+				if (expression.right.containsMulDivMod) {
+					try {
+						expression.right.alloc(ctx => [types.put(expression.left.typeOf)])
+					} finally {
+						ctx.types.pop
+					}
+				} else {
+					expression.right.alloc(ctx)
 				}
 			}
 			OrExpression:
@@ -831,10 +910,14 @@ class Expressions {
 			IncExpression:
 				expression.right.alloc(ctx)
 			CastExpression:
-				try {
-					expression.left.alloc(ctx => [types.put(expression.type)])
-				} finally {
-					ctx.types.pop
+				if (expression.left.containsMulDivMod) {
+					try {
+						expression.left.alloc(ctx => [types.put(expression.type)])
+					} finally {
+						ctx.types.pop
+					}
+				} else {
+					expression.left.alloc(ctx)
 				}
 			ArrayLiteral: {
 				val chunks = expression.values.map[alloc(ctx)].flatten.toList
@@ -885,11 +968,6 @@ class Expressions {
 				val chunks = newArrayList
 				val member = expression.member
 				val receiver = expression.receiver
-
-				if (member instanceof Method && (member as Method).isDispose) {
-					receiver.dispose(ctx)
-					return chunks
-				}
 
 				if (member instanceof Variable) {
 					if (member.isConstant) {

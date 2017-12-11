@@ -150,8 +150,8 @@ public class Members {
 		!variable.isDMC
 	}
 	
-	def isUnbounded(Variable parameter) {
-		!parameter.isBounded
+	def isUnbounded(Member member) {
+		!member.isBounded
 	}
 	
 	def isBounded(Member member) {
@@ -162,7 +162,7 @@ public class Members {
 	}
 
 	def isOverrideOf(Method m1, Method m2) {
-		if (m1.params.size === m2.params.size) {
+		if (m1.isNonStatic && m2.isNonStatic && m1.name == m2.name && m1.params.size == m2.params.size) {
 			for (i : 0 ..< m1.params.size) {
 				val p1 = m1.params.get(i)
 				val p2 = m2.params.get(i)
@@ -176,7 +176,7 @@ public class Members {
 				}
 			}
 
-			return m1.name == m2.name
+			return true
 		}
 		
 		return false
@@ -207,16 +207,24 @@ public class Members {
 		!method.isNative
 	}
 	
-	def isArrayNative(Method method) {
-		method.isNative && (method.name == METHOD_ARRAY_LENGTH)
+	def isNativeArray(Method method) {
+		method.isNative && (method.name == METHOD_ARRAY_LENGTH /*put other array methods here separated by || */)
 	}
 	
-	def isNonArrayNative(Method method) {
-		!method.isArrayNative
+	def isNonNativeArray(Method method) {
+		!method.isNativeArray
 	}
 	
 	def isDispose(Method method) {
 		method.isNative && method.name == 'dispose'
+	}
+	
+	def isArrayLength(Method method) {
+		method.isNativeArray && method.name == METHOD_ARRAY_LENGTH
+	}
+	
+	def isNonArrayLength(Method method) {
+		!method.isArrayLength
 	}
 	
 	def isArrayReference(Variable variable, List<Index> indexes) {
@@ -378,6 +386,68 @@ public class Members {
 			}
 		}
 	}
+	
+	def prepareReference(Variable variable, Expression receiver, List<Index> indexes, AllocContext ctx) {
+		receiver.prepare(ctx)
+		variable.prepare(ctx)
+		variable.prepareIndexes(indexes, ctx)
+	}
+	
+	def prepareReference(Variable variable, List<Index> indexes, AllocContext ctx) {
+		variable.prepare(ctx)
+		variable.prepareIndexes(indexes, ctx)
+	}
+	
+	def prepareInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
+		if (method.isArrayLength) {
+			return
+		}
+		
+		receiver.prepare(ctx)
+		
+		args.forEach [ arg, i |
+			if (arg.containsMulDivMod) {
+				try {
+					arg.prepare(ctx => [types.put(method.params.get(i).type)])
+				} finally {
+					ctx.types.pop
+				}
+			} else {
+				arg.prepare(ctx)
+			}
+		]
+		
+		method.prepare(ctx)
+		method.overriders.forEach[prepare(ctx)]
+		method.prepareIndexes(indexes, ctx)
+	}
+	
+	def prepareInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
+		args.forEach [ arg, i |
+			if (arg.containsMulDivMod) {
+				try {
+					arg.prepare(ctx => [types.put(method.params.get(i).type)])
+				} finally {
+					ctx.types.pop
+				}
+			} else {
+				arg.prepare(ctx)
+			}
+		]
+		
+		method.prepare(ctx)
+		method.prepareIndexes(indexes, ctx)
+	}
+	
+	def prepareIndexes(Member member, List<Index> indexes, AllocContext ctx) {
+		if (indexes.isNotEmpty) {
+			if (member.isIndexImmediate(indexes)) {
+				indexes.forEach[value.prepare(ctx)]
+			} else {
+				member.getIndexExpression(indexes).prepare(ctx)
+			}
+		}
+	}
 
 	def dispose(Member member, AllocContext ctx) {
 		if (member instanceof Variable) {
@@ -429,6 +499,147 @@ public class Members {
 		} else {
 			newArrayList
 		}
+	}
+	
+	def allocReference(Variable variable, Expression receiver, List<Index> indexes, AllocContext ctx) {
+		val chunks = receiver.alloc(ctx)
+		
+		if (variable.overriders.isNotEmpty && receiver.isNonThisNorSuper) {
+			chunks += ctx.computePtr(receiver.nameOfTmpVar(ctx.container))
+		}
+		
+		val rcv = new CompileContext => [
+			container = ctx.container
+			type = receiver.typeOf
+			mode = Mode::REFERENCE
+		]
+		
+		receiver.compile(rcv)
+		
+		val ref = rcv => [
+			if (absolute !== null) {
+				absolute = '''«rcv.absolute» + #«variable.nameOfOffset»'''
+			} else if (indirect !== null) {
+				index = '''«IF rcv.index !== null»«rcv.index» + «ENDIF»#«variable.nameOfOffset»'''
+			}
+		]
+		
+		chunks += variable.allocIndexes(indexes, ref, ctx)		
+		chunks += variable.alloc(ctx)
+		
+		return chunks
+	}
+	
+	def allocConstantReference(Variable variable, AllocContext ctx) {
+		variable.alloc(ctx)
+	}
+	
+	def allocStaticReference(Variable variable, List<Index> indexes, AllocContext ctx) {
+		val ref = new CompileContext => [absolute = variable.nameOfStatic]
+		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
+	}
+	
+	def allocPointerReference(Variable variable, String receiver, List<Index> indexes, AllocContext ctx) {
+		val ref = new CompileContext => [
+			indirect = receiver
+			index = if (variable.isNonParameter) '''#«variable.nameOfOffset»'''
+		]
+		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
+	}
+	
+	def allocLocalReference(Variable variable, List<Index> indexes, AllocContext ctx) {
+		val ref = new CompileContext => [absolute = variable.nameOf]
+		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
+	}
+	
+	def allocInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
+		val chunks = newArrayList
+		
+		if (method.isDispose) {
+			receiver.dispose(ctx)
+			return chunks
+		}
+		
+		if (method.isArrayLength) {
+			return chunks
+		}
+		
+		val methodChunks = method.alloc(ctx)
+		
+		if (method.overriders.isNotEmpty && receiver.isNonThisNorSuper) {
+			methodChunks += method.overriders.map[alloc(ctx)].flatten
+		}
+		
+		chunks += receiver.alloc(ctx)
+
+		args.forEach [ arg, i |
+			if (arg.containsMulDivMod) {
+				try {
+					chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
+				} finally {
+					ctx.types.pop
+				}
+			} else {
+				chunks += arg.alloc(ctx)
+			}
+		]
+
+		chunks += method.allocIndexes(indexes, new CompileContext => [indirect = method.nameOfReturn], ctx)
+		chunks += methodChunks
+
+		return chunks
+	}
+	
+	def allocInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
+		val chunks = newArrayList
+		
+		val methodChunks = method.alloc(ctx)
+		
+		args.forEach [ arg, i |
+			if (arg.containsMulDivMod) {
+				try {
+					chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
+				} finally {
+					ctx.types.pop
+				}
+			} else {
+				chunks += arg.alloc(ctx)
+			}
+		]
+
+		chunks += method.allocIndexes(indexes, new CompileContext => [indirect = method.nameOfReturn], ctx)
+		chunks += methodChunks
+
+		return chunks
+	}
+	
+	def allocIndexes(Member member, List<Index> indexes, CompileContext ref, AllocContext ctx) {
+		val chunks = newArrayList
+		
+		if (indexes.isNotEmpty) {
+			val isIndexImmediate = member.isIndexImmediate(indexes)
+			val isIndexAbsolute = !isIndexImmediate
+			val indexSize = if (member.isBounded && member.sizeOf <= 0xFF) 1 else 2
+			
+			if (isIndexImmediate) {
+				chunks += indexes.map[value.alloc(ctx)].flatten
+			} else {
+				chunks += member.getIndexExpression(indexes).alloc(ctx)				
+			}
+			
+			if (indexSize > 1) {
+				if (isIndexImmediate && ref.indirect !== null) {
+					chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
+				} else if (isIndexAbsolute) {
+					chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
+					chunks += ctx.computeTmp(indexes.nameOfIndex(ctx.container), indexSize)
+				}
+			} else if (isIndexAbsolute) {
+				chunks += ctx.computeTmp(indexes.nameOfIndex(ctx.container), indexSize)
+			}
+		}
+		
+		return chunks
 	}
 	
 	def compile(Method method, CompileContext ctx) '''
@@ -539,127 +750,7 @@ public class Members {
 			}
 		}
 	}
-	
-	def allocReference(Variable variable, Expression receiver, List<Index> indexes, AllocContext ctx) {
-		val chunks = receiver.alloc(ctx)
 		
-		if (variable.overriders.isNotEmpty && receiver.isNonThisNorSuper) {
-			chunks += ctx.computePtr(receiver.nameOfTmpVar(ctx.container))
-		}
-		
-		val rcv = new CompileContext => [
-			container = ctx.container
-			type = receiver.typeOf
-			mode = Mode::REFERENCE
-		]
-		
-		receiver.compile(rcv)
-		
-		val ref = rcv => [
-			if (absolute !== null) {
-				absolute = '''«rcv.absolute» + #«variable.nameOfOffset»'''
-			} else if (indirect !== null) {
-				index = '''«IF rcv.index !== null»«rcv.index» + «ENDIF»#«variable.nameOfOffset»'''
-			}
-		]
-		
-		chunks += variable.allocIndexes(indexes, ref, ctx)		
-		chunks += variable.alloc(ctx)
-		
-		return chunks
-	}
-	
-	def allocConstantReference(Variable variable, AllocContext ctx) {
-		variable.alloc(ctx)
-	}
-	
-	def allocStaticReference(Variable variable, List<Index> indexes, AllocContext ctx) {
-		val ref = new CompileContext => [absolute = variable.nameOfStatic]
-		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
-	}
-	
-	def allocPointerReference(Variable variable, String receiver, List<Index> indexes, AllocContext ctx) {
-		val ref = new CompileContext => [
-			indirect = receiver
-			index = if (variable.isNonParameter) '''#«variable.nameOfOffset»'''
-		]
-		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
-	}
-	
-	def allocLocalReference(Variable variable, List<Index> indexes, AllocContext ctx) {
-		val ref = new CompileContext => [absolute = variable.nameOf]
-		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
-	}
-	
-	def allocInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
-		val chunks = newArrayList
-		
-		val methodChunks = method.alloc(ctx)
-		
-		if (method.overriders.isNotEmpty && receiver.isNonThisNorSuper) {
-			methodChunks += method.overriders.map[alloc(ctx)].flatten
-		}
-		
-		chunks += receiver.alloc(ctx)
-
-		args.forEach [ arg, i |
-			try {
-				chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
-			} finally {
-				ctx.types.pop
-			}
-		]
-
-		chunks += method.allocIndexes(indexes, new CompileContext => [indirect = method.nameOfReturn], ctx)
-		chunks += methodChunks
-
-		return chunks
-	}
-	
-	def allocInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
-		val chunks = newArrayList
-		
-		val methodChunks = method.alloc(ctx)
-		
-		args.forEach [ arg, i |
-			try {
-				chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
-			} finally {
-				ctx.types.pop
-			}
-		]
-
-		chunks += method.allocIndexes(indexes, new CompileContext => [indirect = method.nameOfReturn], ctx)
-		chunks += methodChunks
-
-		return chunks
-	}
-	
-	def allocIndexes(Member member, List<Index> indexes, CompileContext ref, AllocContext ctx) {
-		val chunks = newArrayList
-		
-		if (indexes.isNotEmpty) {
-			chunks += indexes.map[value.alloc(ctx)].flatten
-			
-			val isIndexImmediate = member.isBounded && indexes.forall[value.isConstant]
-			val isIndexAbsolute = !isIndexImmediate
-			val indexSize = if (member.isBounded && member.sizeOf <= 0xFF) 1 else 2
-			
-			if (indexSize > 1) {
-				if (isIndexImmediate && ref.indirect !== null) {
-					chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
-				} else if (isIndexAbsolute) {
-					chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
-					chunks += ctx.computeTmp(indexes.nameOfIndex(ctx.container), indexSize)
-				}
-			} else if (isIndexAbsolute) {
-				chunks += ctx.computeTmp(indexes.nameOfIndex(ctx.container), indexSize)
-			}
-		}
-		
-		return chunks
-	}
-	
 	def compileReference(Variable variable, Expression receiver, List<Index> indexes, CompileContext ctx) '''
 		«val overriders = if (receiver.isNonThisNorSuper) variable.overriders else emptyList»
 		«val rcv = new CompileContext => [
@@ -914,7 +1005,7 @@ public class Members {
 	
 	def compileIndexes(Member member, List<Index> indexes, CompileContext ref)'''
 		«IF indexes.isNotEmpty»
-			«val isIndexImmediate = member.isBounded && indexes.forall[value.isConstant]»
+			«val isIndexImmediate = member.isIndexImmediate(indexes)»
 			«val isIndexAbsolute = !isIndexImmediate»
 			«val indexSize = if (member.isBounded && member.sizeOf <= 0xFF) 1 else 2»
 			«val index = if (isIndexImmediate) {
@@ -938,18 +1029,13 @@ public class Members {
 				indexes.nameOfIndex(ref.container)
 			}»
 			«IF isIndexAbsolute»
-				«val expression = NoopFactory::eINSTANCE.createMulExpression => [
-					left = if (member.isBounded) indexes.sum(member.dimensionOf, 0) else indexes.sum(member as Variable, 0)
-					right = NoopFactory::eINSTANCE.createByteLiteral => [value = member.typeOf.sizeOf]
-				]»
-				«val idx = new CompileContext => [
+				«member.getIndexExpression(indexes).compile(new CompileContext => [
 					container = ref.container
 					operation = ref.operation
 					accLoaded = ref.accLoaded
-					type = if (indexSize > 1) ref.type.toIntClass else ref.type.toByteClass
+					type = if (indexSize > 1) ref.type.toUIntClass else ref.type.toByteClass
 					absolute = index
-				]»
-				«expression.compile(idx)»
+				])»
 			«ENDIF»
 			«IF indexSize > 1»
 				«IF isIndexImmediate»
@@ -1022,6 +1108,13 @@ public class Members {
 		«ENDIF»
 	'''
 	
+	private def getIndexExpression(Member member, List<Index> indexes) {
+		NoopFactory::eINSTANCE.createMulExpression => [
+			left = if (member.isBounded) indexes.sum(member.dimensionOf, 0) else indexes.sum(member as Variable, 0)
+			right = NoopFactory::eINSTANCE.createByteLiteral => [value = member.typeOf.sizeOf]
+		]
+	}
+	
 	private def Expression mult(List<Index> indexes, Variable parameter, int i, int j) {
 		if (j < indexes.size) {
 			NoopFactory::eINSTANCE.createMulExpression => [
@@ -1030,15 +1123,17 @@ public class Members {
 						member = parameter
 						
 						for (x : 0 ..< j) {
-							it.indexes.add(NoopFactory::eINSTANCE.createIndex)
+							it.indexes.add(NoopFactory::eINSTANCE.createIndex => [
+								value = NoopFactory::eINSTANCE.createByteLiteral => [value = 0]
+							])
 						}
 					]
-					member = parameter.type.allMethodsTopDown.findFirst[arrayNative && name == METHOD_ARRAY_LENGTH]
+					member = parameter.type.allMethodsTopDown.findFirst[arrayLength]
 				]
 				right = indexes.mult(parameter, i, j + 1)
 			]
 		} else {
-			indexes.get(i).value
+			indexes.get(i).value.copy
 		}
 	}
 	
@@ -1073,6 +1168,10 @@ public class Members {
 		} else {
 			indexes.mult(dimension, i, i + 1)
 		}
+	}
+	
+	private def isIndexImmediate(Member member, List<Index> indexes) {
+		(member.isBounded || indexes.size == 1) && indexes.forall[value.isConstant]
 	}
 	
 	private def isAbsolute(String index) {
