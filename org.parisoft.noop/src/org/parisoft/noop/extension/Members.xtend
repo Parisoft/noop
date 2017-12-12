@@ -623,9 +623,9 @@ public class Members {
 		val chunks = newArrayList
 		
 		if (indexes.isNotEmpty) {
-			val isIndexImmediate = member.isIndexImmediate(indexes)
-			val isIndexAbsolute = !isIndexImmediate
 			val indexSize = if (member.isBounded && member.sizeOf <= 0xFF) 1 else 2
+			val isIndexImmediate = member.isIndexImmediate(indexes)
+			val isIndexAbsolute = !isIndexImmediate && indexSize == 1 && !ref.index.isAbsolute 
 			
 			if (isIndexImmediate) {
 				chunks += indexes.map[value.alloc(ctx)].flatten
@@ -639,13 +639,8 @@ public class Members {
 				}
 			}
 			
-			if (indexSize > 1) {
-				if (isIndexImmediate && ref.indirect !== null) {
-					chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
-				} else if (isIndexAbsolute) {
-					chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
-					chunks += ctx.computeTmp(indexes.nameOfIndex(ctx.container), indexSize)
-				}
+			if (isIndexImmediate && indexSize > 1 && ref.indirect !== null) {
+				chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
 			} else if (isIndexAbsolute) {
 				chunks += ctx.computeTmp(indexes.nameOfIndex(ctx.container), indexSize)
 			}
@@ -1017,9 +1012,9 @@ public class Members {
 	
 	def compileIndexes(Member member, List<Index> indexes, CompileContext ref)'''
 		«IF indexes.isNotEmpty»
-			«val isIndexImmediate = member.isIndexImmediate(indexes)»
-			«val isIndexAbsolute = !isIndexImmediate»
 			«val indexSize = if (member.isBounded && member.sizeOf <= 0xFF) 1 else 2»
+			«val isIndexImmediate = member.isIndexImmediate(indexes)»
+			«val isIndexAbsolute = !isIndexImmediate && indexSize == 1 && !ref.index.isAbsolute»
 			«val index = if (isIndexImmediate) {
 				var immediate = ''
 				val dimension = member.dimensionOf
@@ -1037,7 +1032,7 @@ public class Members {
 				}
 
 				'''(«immediate») * «member.typeOf.sizeOf»'''				
-			} else {
+			} else if (isIndexAbsolute) {
 				indexes.nameOfIndex(ref.container)
 			}»
 			«IF isIndexAbsolute»
@@ -1047,6 +1042,14 @@ public class Members {
 					accLoaded = ref.accLoaded
 					type = if (indexSize > 1) ref.type.toUIntClass else ref.type.toByteClass
 					absolute = index
+				])»
+			«ELSEIF index === null»
+				«member.getIndexExpression(indexes).compile(new CompileContext => [
+					container = ref.container
+					operation = ref.operation
+					accLoaded = ref.accLoaded
+					type = if (indexSize > 1) ref.type.toUIntClass else ref.type.toByteClass
+					register = 'A'
 				])»
 			«ENDIF»
 			«IF indexSize > 1»
@@ -1066,16 +1069,15 @@ public class Members {
 						«ref.pullAccIfOperating»
 						«ref.indirect = ptr»
 					«ENDIF»
-				«ELSEIF isIndexAbsolute»
+				«ELSE»
 					«IF ref.absolute !== null»
 						«val ptr = indexes.nameOfElement(ref.container)»
 						«ref.pushAccIfOperating»
 							CLC
-							LDA <«ref.absolute»
-							ADC «index»
+							ADC #<«ref.absolute»
 							STA «ptr»
-							LDA >«ref.absolute»
-							ADC «index» + 1
+							PLA
+							ADC #>«ref.absolute»
 							STA «ptr» + 1
 						«ref.pullAccIfOperating»
 						«ref.absolute = null»
@@ -1084,11 +1086,10 @@ public class Members {
 						«val ptr = indexes.nameOfElement(ref.container)»
 						«ref.pushAccIfOperating»
 							CLC
-							LDA «ref.indirect»
-							ADC «index»
+							ADC «ref.indirect»
 							STA «ptr»
-							LDA «ref.indirect» + 1
-							ADC «index» + 1
+							PLA
+							ADC «ref.indirect» + 1
 							STA «ptr» + 1
 						«ref.pullAccIfOperating»
 						«ref.indirect = ptr»
@@ -1102,29 +1103,35 @@ public class Members {
 						«ref.index = '''«ref.index» + #(«index»)'''»
 					«ENDIF»
 				«ELSEIF isIndexAbsolute»
-					«IF ref.index.isImmediate»
-						«ref.index = '''«index» + «ref.index»'''»
-					«ELSEIF ref.index.isAbsolute»
-						«ref.pushAccIfOperating»
-							CLC
-							LDA «index»
-							ADC «ref.index»
-							STA «index»
-						«ref.pullAccIfOperating»
+					«IF ref.index === null»
 						«ref.index = index»
 					«ELSE»
-						«ref.index = index»
+						«ref.index = '''«index» + «ref.index»'''»
 					«ENDIF»
+				«ELSE»
+					«ref.pushAccIfOperating»
+						CLC
+						ADC «ref.index»
+						STA «ref.index»
+					«ref.pullAccIfOperating»
 				«ENDIF»
 			«ENDIF»
 		«ENDIF»
 	'''
 	
 	private def getIndexExpression(Member member, List<Index> indexes) {
-		NoopFactory::eINSTANCE.createMulExpression => [
-			left = if (member.isBounded) indexes.sum(member.dimensionOf, 0) else indexes.sum(member as Variable, 0)
-			right = NoopFactory::eINSTANCE.createByteLiteral => [value = member.typeOf.sizeOf]
-		]
+		val memberTypeSize = member.typeOf.sizeOf
+		
+		if (memberTypeSize > 1) {
+			NoopFactory::eINSTANCE.createMulExpression => [
+				left = if (member.isBounded) indexes.sum(member.dimensionOf, 0) else indexes.sum(member as Variable, 0)
+				right = NoopFactory::eINSTANCE.createByteLiteral => [value = memberTypeSize]
+			]
+		} else if (member.isBounded) {
+			indexes.sum(member.dimensionOf, 0)
+		} else {
+			indexes.sum(member as Variable, 0)
+		}
 	}
 	
 	private def Expression mult(List<Index> indexes, Variable parameter, int i, int j) {
@@ -1167,7 +1174,7 @@ public class Members {
 				right = indexes.mult(dimension, i, j + 1)
 			]
 		} else {
-			indexes.get(i).value
+			indexes.get(i).value.copy
 		}
 	}
 	
@@ -1188,10 +1195,6 @@ public class Members {
 	
 	private def isAbsolute(String index) {
 		index !== null && index.split('+').exists[!trim.startsWith('#')]
-	}
-	
-	private def isImmediate(String index) {
-		index !== null && index.split('+').forall[trim.startsWith('#')]
 	}
 	
 	private def void noop() {

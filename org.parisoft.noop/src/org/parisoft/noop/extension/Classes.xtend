@@ -234,6 +234,8 @@ class Classes {
 	}
 
 	def prepare(NoopClass gameImplClass) {
+		TypeSystem::context.set(gameImplClass)
+		
 		val ctx = new AllocContext
 
 		gameImplClass.prepare(ctx)
