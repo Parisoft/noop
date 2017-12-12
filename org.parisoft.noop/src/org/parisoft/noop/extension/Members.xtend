@@ -444,7 +444,13 @@ public class Members {
 			if (member.isIndexImmediate(indexes)) {
 				indexes.forEach[value.prepare(ctx)]
 			} else {
-				member.getIndexExpression(indexes).prepare(ctx)
+				val indexType = if (member.isBounded && member.sizeOf <= 0xFF) member.toByteClass else member.toUIntClass
+				
+				try {
+					member.getIndexExpression(indexes).prepare(ctx => [types.put(indexType)])				
+				} finally {
+					ctx.types.pop
+				}
 			}
 		}
 	}
@@ -624,7 +630,13 @@ public class Members {
 			if (isIndexImmediate) {
 				chunks += indexes.map[value.alloc(ctx)].flatten
 			} else {
-				chunks += member.getIndexExpression(indexes).alloc(ctx)				
+				val indexType = if (indexSize > 1) member.toUIntClass else member.toByteClass
+				
+				try {
+					chunks += member.getIndexExpression(indexes).alloc(ctx => [types.put(indexType)])				
+				} finally {
+					ctx.types.pop
+				}
 			}
 			
 			if (indexSize > 1) {

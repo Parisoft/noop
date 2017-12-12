@@ -120,6 +120,7 @@ class Expressions {
 						args = newArrayList(right, left)
 					]
 				} else {
+					println(type)
 					new MethodReference => [
 						val dms = type.toMathClass().declaredMethods
 						println(dms.map['''«name»«params.map[type.name]»'''])

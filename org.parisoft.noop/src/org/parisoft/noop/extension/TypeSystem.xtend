@@ -6,7 +6,6 @@ import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.scoping.NoopIndex
-import org.parisoft.noop.noop.NoopPackage
 
 class TypeSystem {
 
@@ -103,7 +102,7 @@ class TypeSystem {
 		}
 
 		try {
-			val desc = context.visibleClassesDescriptions.findFirst[qualifiedName.toString == type] ?: NoopPackage::eINSTANCE.noopClass.visibleClassesDescriptions.findFirst[qualifiedName.toString == type] 
+			val desc = context.visibleClassesDescriptions.findFirst[qualifiedName.toString == type]
 			var obj = desc.EObjectOrProxy
 
 			if (obj.eIsProxy) {
