@@ -120,15 +120,10 @@ class Expressions {
 						args = newArrayList(right, left)
 					]
 				} else {
-					println(type)
 					new MethodReference => [
-						val dms = type.toMathClass().declaredMethods
-						println(dms.map['''«name»«params.map[type.name]»'''])
-						method = dms.findFirst [
-							val match = name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
+						method = type.toMathClass().declaredMethods.findFirst [
+							name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
 								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
-							println('''«name»«params.map[type.name]» ? «match»''')
-							match
 						]
 						args = newArrayList(left, right)
 					]
@@ -773,7 +768,7 @@ class Expressions {
 				expression.right.prepare(ctx)
 			CastExpression: {
 				expression.type.prepare(ctx)
-				
+
 				if (expression.left.containsMulDivMod) {
 					try {
 						expression.left.prepare(ctx => [types.put(expression.type)])

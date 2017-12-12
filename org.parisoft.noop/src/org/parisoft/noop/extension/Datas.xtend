@@ -809,13 +809,13 @@ class Datas {
 
 	private def pointIndirectToAbsolute(CompileContext ptr, CompileContext src) '''
 		«noop»
-			LDA <(«src.absolute»)
+			LDA #<(«src.absolute»)
 			«IF src.isIndexed»
 				CLC
 				ADC «src.index»
 			«ENDIF»
 			STA «ptr.indirect»
-			LDA >(«src.absolute»)
+			LDA #>(«src.absolute»)
 			«IF src.isIndexed»
 				ADC #$00
 			«ENDIF»
