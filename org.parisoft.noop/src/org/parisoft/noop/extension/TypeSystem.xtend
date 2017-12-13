@@ -60,7 +60,7 @@ class TypeSystem {
 		name = LIB_MATH
 		superClass = TYPE_OBJECT
 	]
-	
+
 	public static val context = new ThreadLocal<NoopClass>
 
 	@Inject extension IQualifiedNameProvider
@@ -104,11 +104,13 @@ class TypeSystem {
 		}
 
 		try {
-			val desc = TypeSystem::context.get.visibleClassesDescriptions.findFirst[qualifiedName.toString == type]
+			val desc = context.visibleClassesDescriptions.findFirst[qualifiedName.toString == type] ?:
+				TypeSystem::context.get.visibleClassesDescriptions.findFirst[qualifiedName.toString == type]
 			var obj = desc.EObjectOrProxy
 
 			if (obj.eIsProxy) {
-				obj = TypeSystem::context.get.eResource.resourceSet.getEObject(desc.EObjectURI, true)
+				obj = context.eResource.resourceSet.getEObject(desc.EObjectURI, true) ?:
+					TypeSystem::context.get.eResource.resourceSet.getEObject(desc.EObjectURI, true)
 			}
 
 			obj as NoopClass ?: ^default

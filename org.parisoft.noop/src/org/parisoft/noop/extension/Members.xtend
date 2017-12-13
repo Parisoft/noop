@@ -994,7 +994,7 @@ public class Members {
 				val dimension = member.dimensionOf
 				
 				for (i : 0 ..< indexes.size) {
-					if (i > 0) {
+					if (!immediate.isNullOrEmpty) {
 						immediate += ' + '
 					}
 					
@@ -1074,14 +1074,10 @@ public class Members {
 					«IF ref.absolute !== null»
 						«ref.absolute = '''«ref.absolute» + #(«index»)'''»
 					«ELSEIF ref.indirect !== null»
-						«ref.index = '''«ref.index» + #(«index»)'''»
+						«ref.index = '''«IF ref.index !== null»«ref.index» + «ENDIF»#(«index»)'''»;FIXME
 					«ENDIF»
 				«ELSEIF isIndexAbsolute»
-					«IF ref.index === null»
-						«ref.index = index»
-					«ELSE»
-						«ref.index = '''«index» + «ref.index»'''»
-					«ENDIF»
+					«ref.index = '''«index»«IF ref.index !== null» + «ref.index»«ENDIF»'''»;FIXME
 				«ELSE»
 					«ref.pushAccIfOperating»
 						CLC
@@ -1168,7 +1164,7 @@ public class Members {
 	}
 	
 	private def isAbsolute(String index) {
-		index !== null && index.split('+').exists[!trim.startsWith('#')]
+		index !== null && index.split('\\+').exists[!trim.startsWith('#')]
 	}
 	
 	private def void noop() {
