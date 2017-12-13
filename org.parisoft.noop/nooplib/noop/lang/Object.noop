@@ -5,11 +5,7 @@ Object {
         //native implementation
         return false
     }
-    
-    dispose() {
-    	//native
-    }
-    
+
     //-- Arrays methods ---
     
     length() {

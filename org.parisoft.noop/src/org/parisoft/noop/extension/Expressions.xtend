@@ -981,8 +981,6 @@ class Expressions {
 					}
 				}
 
-				chunks.disoverlap(ctx.container)
-
 				ctx.restoreTo(snapshot)
 
 				return chunks
@@ -1008,20 +1006,12 @@ class Expressions {
 					chunks += member.allocInvocation(expression.args, expression.indexes, ctx)
 				}
 
-				chunks.disoverlap(ctx.container)
-
 				ctx.restoreTo(snapshot)
 
 				return chunks
 			}
 			default:
 				newArrayList
-		}
-	}
-
-	def dispose(Expression expression, AllocContext ctx) {
-		if (expression instanceof MemberRef) {
-			expression.member.dispose(ctx)
 		}
 	}
 

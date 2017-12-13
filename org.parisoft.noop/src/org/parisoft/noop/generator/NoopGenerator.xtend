@@ -86,7 +86,7 @@ class NoopGenerator extends AbstractGenerator {
 		val AtomicInteger skip = new AtomicInteger
 
 		lines.forEach [ line, i |
-			var next = if(i + 1 < lines.length) lines.get(i + 1) else ''
+			var next = if (i + 1 < lines.length) lines.get(i + 1) else ''
 
 			if (skip.get > 0) {
 				skip.decrementAndGet
@@ -167,9 +167,7 @@ class NoopGenerator extends AbstractGenerator {
 		; Static variables
 		;----------------------------------------------------------------
 		«FOR page : 0..< ctx.counters.size»
-			«IF ctx.resetCounter(page) == 0»
-				«noop»
-			«ENDIF»
+			«IF ctx.resetCounter(page) == 0»«noop»«ENDIF»
 		«ENDFOR»
 		«FOR page : 0..< ctx.counters.size»
 			«val staticVars = ctx.statics.values.filter[(storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE) === page]»
@@ -184,9 +182,19 @@ class NoopGenerator extends AbstractGenerator {
 		«Members::TEMP_VAR_NAME1» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
 		«Members::TEMP_VAR_NAME2» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
 		«Members::TEMP_VAR_NAME3» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
-		«FOR chunk : ctx.pointers.values.flatten.sort + ctx.variables.values.flatten.sort»
+		«val chunks = ctx.pointers.values.flatten.sort + ctx.variables.values.flatten.sort»
+		«FOR chunk : chunks»
 			«val delta = ctx.counters.get(chunk.page).get - chunk.page * 0x0100»
 			«chunk.shiftTo(delta)»
+		«ENDFOR»
+		«FOR i : 1 ..< chunks.size»
+			«val c0 = chunks.get(i - 1)»
+			«val c1 = chunks.get(i)»
+			«IF c0.ZP == c1.ZP»
+				«IF c1.shiftTo(c0) == 0»«noop»«ENDIF»
+			«ENDIF»
+		«ENDFOR»
+		«FOR chunk : chunks»
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
 		

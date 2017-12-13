@@ -215,10 +215,6 @@ public class Members {
 		!method.isNativeArray
 	}
 	
-	def isDispose(Method method) {
-		method.isNative && method.name == 'dispose'
-	}
-	
 	def isArrayLength(Method method) {
 		method.isNativeArray && method.name == METHOD_ARRAY_LENGTH
 	}
@@ -455,28 +451,6 @@ public class Members {
 		}
 	}
 
-	def dispose(Member member, AllocContext ctx) {
-		if (member instanceof Variable) {
-			if (member.isNonStatic && member.isNonField && member.isNonParameter) { // TODO check for non for/forEach/while variables
-				val allChunks = ctx.pointers.get(member.nameOf) + ctx.variables.get(member.nameOf)
-				
-				ctx.counters.forEach[counter, page|
-					val chunks = allChunks.filter[hi < (page + 1) * 256]
-					val last = chunks.last
-					
-					if (last.hi + 1 === counter.get) {
-						if (last.lo < (page + 1) * 256) {
-							counter.set(last.lo)
-						} else {
-							ctx.resetCounter(page)
-							ctx.counters.get(page - 1).set(last.lo)
-						}
-					}
-				]
-			}
-		}
-	}
-
 	def alloc(Method method, AllocContext ctx) {
 		if (allocating.get.add(method)) {
 			try {
@@ -531,7 +505,6 @@ public class Members {
 		]
 		
 		chunks += variable.allocIndexes(indexes, ref, ctx)		
-		chunks += variable.alloc(ctx)
 		
 		return chunks
 	}
@@ -550,21 +523,16 @@ public class Members {
 			indirect = receiver
 			index = if (variable.isNonParameter) '''#«variable.nameOfOffset»'''
 		]
-		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
+		variable.allocIndexes(indexes, ref, ctx)
 	}
 	
 	def allocLocalReference(Variable variable, List<Index> indexes, AllocContext ctx) {
 		val ref = new CompileContext => [absolute = variable.nameOf]
-		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
+		variable.allocIndexes(indexes, ref, ctx)
 	}
 	
 	def allocInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
 		val chunks = newArrayList
-		
-		if (method.isDispose) {
-			receiver.dispose(ctx)
-			return chunks
-		}
 		
 		if (method.isArrayLength) {
 			return chunks
@@ -639,8 +607,14 @@ public class Members {
 				}
 			}
 			
-			if (isIndexImmediate && indexSize > 1 && ref.indirect !== null) {
-				chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
+			if (indexSize > 1) {
+				if (isIndexImmediate) {
+					if (ref.indirect !== null) {
+						chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
+					}
+				} else {
+					chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
+				}
 			} else if (isIndexAbsolute) {
 				chunks += ctx.computeTmp(indexes.nameOfIndex(ctx.container), indexSize)
 			}

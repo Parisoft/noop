@@ -1,9 +1,5 @@
 Primitive {
 
-	dispose() {
-    	//native
-    }
-    
     //-- Arrays methods ---
     
     length() {

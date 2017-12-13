@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.AllocContext
+import java.util.concurrent.atomic.AtomicBoolean
 
 class Datas {
 
@@ -22,7 +23,7 @@ class Datas {
 	def sizeOf(CompileContext ctx) {
 		ctx.type.sizeOf
 	}
-	
+
 	def sizeOfOp(CompileContext ctx) {
 		ctx.opType.sizeOf
 	}
@@ -871,7 +872,7 @@ class Datas {
 	}
 
 	def computeVar(AllocContext ctx, String varName, int page, int size) {
-		val chunksByVarName = if (page === PTR_PAGE) ctx.pointers else ctx.variables
+		val chunksByVarName = if(page === PTR_PAGE) ctx.pointers else ctx.variables
 
 		chunksByVarName.compute(varName, [ name, value |
 			var chunks = value
@@ -888,60 +889,55 @@ class Datas {
 
 	def computeTmp(AllocContext ctx, String varName, int size) {
 		if (size > 2) {
-			ctx.variables.compute(varName, [ name, value |
-				var chunks = value
-
-				if (chunks === null) {
-					chunks = newArrayList(ctx.chunkFor(VAR_PAGE, name, size) => [tmp = true])
-				} else if (ctx.counters.get(VAR_PAGE).get < chunks.last.hi) {
-					ctx.counters.get(VAR_PAGE).set(chunks.last.hi + 1)
-				}
-
-				return chunks
-			])
+			ctx.computeVar(varName, VAR_PAGE, size)
 		} else {
-			ctx.pointers.compute(varName, [ name, value |
-				var chunks = value
-
-				if (chunks === null) {
-					chunks = newArrayList(ctx.chunkFor(PTR_PAGE, name, size) => [tmp = true])
-				} else if (ctx.counters.get(PTR_PAGE).get < chunks.last.hi) {
-					ctx.counters.get(PTR_PAGE).set(chunks.last.hi + 1)
-				}
-
-				return chunks
-			])
+			ctx.computeVar(varName, PTR_PAGE, size)
 		}
 	}
 
 	def void disoverlap(Iterable<MemChunk> chunks, String methodName) {
-//		println('--------------------------------')
-//		println('''disoverlaping «methodName» chunks «chunks»''')
-		chunks.forEach [ chunk, index |
-			if (chunk.variable.startsWith(methodName) && chunk.isNonDisposed) {
-				chunks.drop(index).reject [
-					it.variable.startsWith(methodName)
-				].forEach [ outer |
-					if (chunk.overlap(outer)) {
-//						println('''«chunk» overlaps «outer»''')
-						val delta = chunk.deltaFrom(outer)
+		methodName.debug('--------------------------------')
+		methodName.debug('''disoverlaping «methodName»''')
+		methodName.debug('''«chunks»:''')
 
-						chunks.drop(index).filter [
-							it.variable.startsWith(methodName)
-						].filter [
-							it.ZP == chunk.ZP
-						].forEach [ inner |
-//							println('''«inner» shift to «delta»''')
-							inner.shiftTo(delta)
-						]
+		chunks.forEach [ chunk, index |
+			if (chunk.variable.startsWith(methodName)) {
+				val outers = chunks.drop(index).reject[variable.startsWith(methodName)]
+				var overlapped = true
+
+				while (overlapped) {
+					overlapped = false
+					
+					for (outer : outers) {
+						if (chunk.overlap(outer)) {
+							methodName.debug('''«chunk» overlaps «outer»''')
+							overlapped = true
+					
+							val delta = chunk.deltaFrom(outer)
+
+							chunks.drop(index).filter [
+								it.variable.startsWith(methodName)
+							].filter [
+								it.ZP == chunk.ZP
+							].forEach [ inner |
+								methodName.debug('''«inner» shift to «delta»''')
+								inner.shiftTo(delta)
+							]
+						}
 					}
-				]
+				} 
 			}
 		]
 
-		chunks.filter[tmp].filter[variable.startsWith(methodName)].forEach[disposed = true]
-
 //		println('''disoverlapped «methodName» to «chunks»''')
 //		println('--------------------------------')
+	}
+
+	private def debug(String methodName, CharSequence message) {
+		val enabled = message === null
+
+		if (enabled && methodName?.contains('$reset')) {
+			println(message)
+		}
 	}
 }

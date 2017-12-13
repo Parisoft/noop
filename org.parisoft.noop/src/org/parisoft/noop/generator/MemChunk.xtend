@@ -7,8 +7,6 @@ class MemChunk implements Comparable<MemChunk> {
 	@Accessors var int lo
 	@Accessors var int hi
 	@Accessors var String variable
-	@Accessors var boolean disposed = false
-	@Accessors var boolean tmp = false
 
 	new(String variable, int addr, int size) {
 		this.variable = variable
@@ -26,10 +24,6 @@ class MemChunk implements Comparable<MemChunk> {
 
 	def nonZP() {
 		!isZP
-	}
-
-	def isNonDisposed() {
-		!isDisposed
 	}
 
 	def overlap(MemChunk other) {
@@ -68,9 +62,7 @@ class MemChunk implements Comparable<MemChunk> {
 		MemChunk{
 			variable:«variable»,
 			lo:«Integer.toHexString(lo)», 
-			hi:«Integer.toHexString(hi)»,
-			disposed:«disposed»,
-			tmp:«tmp»
+			hi:«Integer.toHexString(hi)»
 		}
 	'''
 

@@ -251,8 +251,6 @@ class Statements {
 			}
 			Expression:
 				statement.alloc(ctx)
-			AsmStatement:
-				statement.vars.map[alloc(ctx)].flatten.toList
 			default:
 				newArrayList
 		}
