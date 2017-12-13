@@ -883,7 +883,7 @@ public class Members {
 		«ENDIF»
 	'''
 
-	def compileInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
+	def compileInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, CompileContext ctx) '''
 		«IF method.isNative»
 			«method.compileNativeInvocation(receiver, args, ctx)»
 		«ELSE»
@@ -897,7 +897,7 @@ public class Members {
 				mode = Mode::POINT
 			])»
 			«IF overriders.isEmpty»
-				«method.compileInvocation(args, ctx)»
+				«method.compileInvocation(args, indexes, ctx)»
 			«ELSE»
 				«ctx.pushAccIfOperating»
 					LDY #$00
@@ -917,16 +917,16 @@ public class Members {
 						indirect = overrider.nameOfReceiver
 					]»
 					++«realReceiver.pointTo(falseReceiver)»
-					«overrider.compileInvocation(args, ctx)»
+					«overrider.compileInvocation(args, indexes, ctx)»
 						JMP +«invocationEnd»
 				«ENDFOR»
-				+«method.compileInvocation(args, ctx)»
+				+«method.compileInvocation(args, indexes, ctx)»
 				+«invocationEnd»:
 			«ENDIF»
 		«ENDIF»
 	'''
 
-	def compileInvocation(Method method, List<Expression> args, CompileContext ctx) '''
+	def compileInvocation(Method method, List<Expression> args, List<Index> indexes, CompileContext ctx) '''
 		«IF method.isNonNative»
 			«ctx.pushAccIfOperating»
 			«val methodName = method.nameOf»
@@ -970,6 +970,7 @@ public class Members {
 						indirect = method.nameOfReturn
 					}
 				]»
+				«method.compileIndexes(indexes, ret)»
 				«ret.resolveTo(ctx)»
 			«ENDIF»
 		«ENDIF»

@@ -1331,9 +1331,9 @@ class Expressions {
 					«ELSEIF member instanceof Method»
 						«val method = member as Method»
 						«IF method.isStatic»
-							«method.compileInvocation(expression.args, ctx)»
+							«method.compileInvocation(expression.args, expression.indexes, ctx)»
 						«ELSE»
-							«method.compileInvocation(receiver, expression.args, ctx)»
+							«method.compileInvocation(receiver, expression.args, expression.indexes, ctx)»
 						«ENDIF»
 					«ENDIF»
 				'''
@@ -1364,7 +1364,7 @@ class Expressions {
 							]»
 							«innerReceiver.pointTo(outerReceiver)»
 						«ENDIF»
-						«method.compileInvocation(expression.args, ctx)»
+						«method.compileInvocation(expression.args, expression.indexes, ctx)»
 					«ENDIF»					
 				'''
 				default:
@@ -1490,7 +1490,7 @@ class Expressions {
 				val mult = getMultiplyMethod(left, right, ctx.type)
 
 				if (mult.method !== null) {
-					mult.method.compileInvocation(mult.args, ctx)
+					mult.method.compileInvocation(mult.args, null, ctx)
 				} else {
 					operation.compileBinary(mult.args.head, mult.args.last, ctx)
 				}
@@ -1499,7 +1499,7 @@ class Expressions {
 				val div = getDivideMethod(left, right, ctx.type)
 
 				if (div.method !== null) {
-					div.method.compileInvocation(div.args, ctx)
+					div.method.compileInvocation(div.args, null, ctx)
 				} else {
 					operation.compileBinary(div.args.head, div.args.last, ctx)
 				}
@@ -1508,7 +1508,7 @@ class Expressions {
 				val mod = getModuloMethod(left, right, ctx.type)
 
 				if (mod.method !== null) {
-					mod.method.compileInvocation(mod.args, ctx)
+					mod.method.compileInvocation(mod.args, null, ctx)
 				} else {
 					operation.compileBinary(mod.args.head, mod.args.last, ctx)
 				}

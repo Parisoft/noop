@@ -5,7 +5,7 @@ import java.util.List
 class Collections {
 
 	def isNotEmpty(Iterable<?> collection) {
-		!collection.isEmpty
+		collection !== null && !collection.isEmpty
 	}
 
 	def <T> put(List<T> list, T element) {
