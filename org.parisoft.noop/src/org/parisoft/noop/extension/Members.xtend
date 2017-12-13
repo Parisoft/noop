@@ -798,9 +798,21 @@ public class Members {
 			operation = receiver.operation
 			accLoaded = receiver.accLoaded
 			indirect = receiver.indirect
-			index = '''«IF receiver.index !== null»«receiver.index» + «ENDIF»#«variable.nameOfOffset»'''
 			type = variable.typeOf
 		]»
+		«IF receiver.index.isAbsolute»
+			«ref.index = receiver.index»
+			«ctx.pushAccIfOperating»
+				CLC
+				LDA «ref.index»
+				ADC #«variable.nameOfOffset»
+				STA «ref.index»
+			«ctx.pullAccIfOperating»
+		«ELSEIF receiver.index !== null»
+			«ref.index = '''«receiver.index» + #«variable.nameOfOffset»'''»
+		«ELSE»
+			«ref.index = '''#«variable.nameOfOffset»'''»
+		«ENDIF»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
 			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
@@ -1074,10 +1086,27 @@ public class Members {
 					«IF ref.absolute !== null»
 						«ref.absolute = '''«ref.absolute» + #(«index»)'''»
 					«ELSEIF ref.indirect !== null»
-						«ref.index = '''«IF ref.index !== null»«ref.index» + «ENDIF»#(«index»)'''»;FIXME
+						«IF ref.index.isAbsolute»
+							«ref.pushAccIfOperating»
+								CLC
+								LDA «ref.index»
+								ADC «index»
+								STA «ref.index»
+							«ref.pullAccIfOperating»
+						«ELSE»
+							«ref.index = '''«IF ref.index !== null»«ref.index» + «ENDIF»#(«index»)'''»
+						«ENDIF»
 					«ENDIF»
 				«ELSEIF isIndexAbsolute»
-					«ref.index = '''«index»«IF ref.index !== null» + «ref.index»«ENDIF»'''»;FIXME
+					«IF ref.index !== null»
+						«ref.pushAccIfOperating»
+							CLC
+							LDA «index»
+							ADC «ref.index»
+							STA «index»
+						«ref.pullAccIfOperating»
+					«ENDIF»
+					«ref.index = index»
 				«ELSE»
 					«ref.pushAccIfOperating»
 						CLC
