@@ -134,13 +134,15 @@ class Datas {
 					LDA «src.absolute»«IF i > 0» + «i»«ENDIF»«IF src.isIndexed», Y«ENDIF»
 					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
 			«ENDFOR»
-			«IF src.sizeOf < dst.sizeOf»
-				«src.loadMSBFromAcc»
+			«IF src.type.isNumeric»
+				«IF src.sizeOf < dst.sizeOf»
+					«src.loadMSBFromAcc»
+				«ENDIF»
+				«FOR i : src.sizeOf ..< dst.sizeOf»
+					«noop»
+						STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
+				«ENDFOR»
 			«ENDIF»
-			«FOR i : src.sizeOf ..< dst.sizeOf»
-				«noop»
-					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
-			«ENDFOR»
 		«ELSE»
 			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).toHex»'''»
 			«val copyLoop = labelForCopyLoop»
@@ -149,12 +151,12 @@ class Datas {
 					CLC
 					LDA «src.index»
 					ADC «minSize»
-					TAY «src.index»
+					TAY
 					CLC
 					LDA «dst.index»
 					ADC «minSize»
-					TAX «dst.index»
-				-«copyLoop»
+					TAX
+				-«copyLoop»:
 					DEY
 					DEX
 					LDA «src.absolute», Y
@@ -165,7 +167,7 @@ class Datas {
 				«noop»
 					LDY «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
 					LDX #$00
-				-«copyLoop»
+				-«copyLoop»:
 					LDA «src.absolute»«IF src.isIndexed», Y«ELSE», X«ENDIF»
 					STA «dst.absolute»«IF dst.isIndexed», Y«ELSE», X«ENDIF»
 					INY
@@ -175,7 +177,7 @@ class Datas {
 			«ELSE»
 				«noop»
 					LDX #$00
-				-«copyLoop»
+				-«copyLoop»:
 					LDA «src.absolute», X
 					STA «dst.absolute», X
 					INX
@@ -206,17 +208,19 @@ class Datas {
 						INY
 					«ENDIF»
 			«ENDFOR»
-			«IF src.sizeOf < dst.sizeOf»
-				«src.loadMSBFromAcc»
-					INY
-			«ENDIF»
-			«FOR i : src.sizeOf ..< dst.sizeOf»
-				«noop»
-					STA («dst.indirect»), Y
-					«IF i < dst.sizeOf - 1»
+			«IF src.type.isNumeric»
+				«IF src.sizeOf < dst.sizeOf»
+					«src.loadMSBFromAcc»
 						INY
-					«ENDIF»
-			«ENDFOR»
+				«ENDIF»
+				«FOR i : src.sizeOf ..< dst.sizeOf»
+					«noop»
+						STA («dst.indirect»), Y
+						«IF i < dst.sizeOf - 1»
+							INY
+						«ENDIF»
+				«ENDFOR»
+			«ENDIF»
 		«ELSE»
 			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).toHex»'''»
 			«val copyLoop = labelForCopyLoop»
@@ -225,12 +229,12 @@ class Datas {
 					CLC
 					LDA «src.index»
 					ADC «minSize»
-					TAX «src.index»
+					TAX
 					CLC
 					LDA «dst.index»
 					ADC «minSize»
-					TAY «dst.index»
-				-«copyLoop»
+					TAY
+				-«copyLoop»:
 					DEY
 					DEX
 					LDA «src.absolute», X
@@ -241,7 +245,7 @@ class Datas {
 				«noop»
 					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
 					LDY #$00
-				-«copyLoop»
+				-«copyLoop»:
 					LDA «src.absolute»«IF src.isIndexed», X«ELSE», Y«ENDIF»
 					STA («dst.indirect»«IF dst.isIndexed», X)«ELSE»), Y«ENDIF»
 					INX
@@ -302,13 +306,15 @@ class Datas {
 						INY
 					«ENDIF»
 			«ENDFOR»
-			«IF src.sizeOf < dst.sizeOf»
-				«src.loadMSBFromAcc»
+			«IF src.type.isNumeric»
+				«IF src.sizeOf < dst.sizeOf»
+					«src.loadMSBFromAcc»
+				«ENDIF»
+				«FOR i : src.sizeOf ..< dst.sizeOf»
+					«noop»
+						STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
+				«ENDFOR»
 			«ENDIF»
-			«FOR i : src.sizeOf ..< dst.sizeOf»
-				«noop»
-					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
-			«ENDFOR»
 		«ELSE»
 			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).toHex»'''»
 			«val copyLoop = labelForCopyLoop»
@@ -317,12 +323,12 @@ class Datas {
 					CLC
 					LDA «src.index»
 					ADC «minSize»
-					TAY «src.index»
+					TAY
 					CLC
 					LDA «dst.index»
 					ADC «minSize»
-					TAX «dst.index»
-				-«copyLoop»
+					TAX
+				-«copyLoop»:
 					DEY
 					DEX
 					LDA («src.indirect»), Y
@@ -333,7 +339,7 @@ class Datas {
 				«noop»
 					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
 					LDY #$00
-				-«copyLoop»
+				-«copyLoop»:
 					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
 					STA «dst.absolute»«IF dst.isIndexed», X«ELSE», Y«ENDIF»
 					INX
@@ -342,8 +348,8 @@ class Datas {
 					BNE -«copyLoop»
 			«ELSE»
 				«noop»
-					LDY «minSize» - 1
-				-«copyLoop»
+					LDY #$00
+				-«copyLoop»:
 					LDA («src.indirect»), Y
 					STA «dst.absolute», Y
 					INY
@@ -369,17 +375,19 @@ class Datas {
 						INY
 					«ENDIF»
 			«ENDFOR»
-			«IF src.sizeOf < dst.sizeOf»
-				«src.loadMSBFromAcc»
-					INY
-			«ENDIF»
-			«FOR i : src.sizeOf ..< dst.sizeOf»
-				«noop»
-					STA («dst.indirect»), Y
-					«IF i < dst.sizeOf - 1»
+			«IF src.type.isNumeric»
+				«IF src.sizeOf < dst.sizeOf»
+					«src.loadMSBFromAcc»
 						INY
-					«ENDIF»
-			«ENDFOR»
+				«ENDIF»
+				«FOR i : src.sizeOf ..< dst.sizeOf»
+					«noop»
+						STA («dst.indirect»), Y
+						«IF i < dst.sizeOf - 1»
+							INY
+						«ENDIF»
+				«ENDFOR»
+			«ENDIF»
 		«ELSE»
 			«val minSize = '''#«Math::min(src.sizeOf, dst.sizeOf).toHex»'''»
 			«val copyLoop = labelForCopyLoop»
@@ -388,12 +396,12 @@ class Datas {
 					CLC
 					LDA «src.index»
 					ADC «minSize»
-					TAX «src.index»
+					TAX
 					CLC
 					LDA «dst.index»
 					ADC «minSize»
-					TAY «dst.index»
-				-«copyLoop»
+					TAY
+				-«copyLoop»:
 					DEY
 					DEX
 					LDA («src.indirect», X)
@@ -404,7 +412,7 @@ class Datas {
 				«noop»
 					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
 					LDY #$00
-				-«copyLoop»
+				-«copyLoop»:
 					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
 					STA («dst.indirect»«IF dst.isIndexed», X)«ELSE»), Y«ENDIF»
 					INX
@@ -414,7 +422,7 @@ class Datas {
 			«ELSE»
 				«noop»
 					LDY #$00
-				-«copyLoop»
+				-«copyLoop»:
 					LDA («src.indirect»), Y
 					STA («dst.indirect»), Y
 					INY
@@ -497,7 +505,7 @@ class Datas {
 	private def branchImmediateToRelative(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
 			LDA #(«src.immediate»)
-			BNE +«dst.relative»:
+			BNE +«dst.relative»
 		«dst.pullAccIfOperating»
 	'''
 
@@ -507,7 +515,7 @@ class Datas {
 				LDX «src.index»
 			«ENDIF»
 			LDA «src.absolute»«IF src.isIndexed», X«ENDIF»
-			BNE +«dst.relative»:
+			BNE +«dst.relative»
 		«dst.pullAccIfOperating»
 	'''
 
@@ -515,13 +523,13 @@ class Datas {
 		«dst.pushAccIfOperating»
 			LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
 			LDA («src.indirect»), Y
-			BNE +«dst.relative»:
+			BNE +«dst.relative»
 		«dst.pullAccIfOperating»
 	'''
 
 	private def branchRegisterToRelative(CompileContext src, CompileContext dst) '''
 		«noop»
-			BNE +«dst.relative»:
+			BNE +«dst.relative»
 	'''
 
 	def copyArrayTo(CompileContext src, CompileContext dst, int len) '''
@@ -552,47 +560,40 @@ class Datas {
 					LDA «src.absolute»«IF i > 0» + «i»«ENDIF»«IF src.isIndexed», Y«ENDIF»
 					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
 			«ENDFOR»
-		«ELSE»
-			«val limit = '''#«bytes.toHex»'''»
+		«ELSEIF bytes < 0x0100»
 			«val copyLoop = labelForCopyLoop»
-			«IF src.isIndexed && dst.isIndexed»
-				«noop»
+			«val limit = '''#«bytes.toHex»'''»
+				LDA #<«src.absolute»
+				«IF src.isIndexed»
 					CLC
-					LDA «src.index»
-					ADC «limit»
-					TAY «src.index»
+					ADC «src.index»
+				«ENDIF»
+				STA «Members::TEMP_VAR_NAME1»
+				LDA #>«src.absolute»
+				«IF src.isIndexed»
+					ADC #0
+				«ENDIF»
+				STA «Members::TEMP_VAR_NAME1» + 1
+				LDA #<«dst.absolute»
+				«IF dst.isIndexed»
 					CLC
-					LDA «dst.index»
-					ADC «limit»
-					TAX «dst.index»
-				-«copyLoop»
-					DEY
-					DEX
-					LDA «src.absolute», Y
-					STA «dst.absolute», X
-					CPY «src.index»
-					BNE -«copyLoop»
-			«ELSEIF src.isIndexed || dst.isIndexed»
-				«noop»
-					LDY «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
-					LDX #$00
-				-«copyLoop»
-					LDA «src.absolute»«IF src.isIndexed», Y«ELSE», X«ENDIF»
-					STA «dst.absolute»«IF dst.isIndexed», Y«ELSE», X«ENDIF»
-					INY
-					INX
-					CPX «limit»
-					BNE -«copyLoop»
-			«ELSE»
-				«noop»
-					LDX #$00
-				-«copyLoop»
-					LDA «src.absolute», X
-					STA «dst.absolute», X
-					INX
-					CPX «limit»
-					BNE -«copyLoop»
-			«ENDIF»
+					ADC «dst.index»
+				«ENDIF»
+				STA «Members::TEMP_VAR_NAME3»
+				LDA #>«dst.absolute»
+				«IF dst.isIndexed»
+					ADC #0
+				«ENDIF»
+				STA «Members::TEMP_VAR_NAME3» + 1
+				LDY #0
+			-«copyLoop»:
+				LDA («Members::TEMP_VAR_NAME1»), Y
+				STA («Members::TEMP_VAR_NAME3»), Y
+				INY
+				CPY «limit»
+				BNE -«copyLoop»
+		«ELSE»
+			«val copyLoop = labelForCopyLoop»
 		«ENDIF»
 		«dst.pullAccIfOperating»
 	'''
@@ -858,7 +859,7 @@ class Datas {
 		«ENDIF»
 	'''
 
-	private def labelForCopyLoop() '''copyLoop«labelCounter.andIncrement»:'''
+	private def labelForCopyLoop() '''copyLoop«labelCounter.andIncrement»'''
 
 	private def void noop() {
 	}

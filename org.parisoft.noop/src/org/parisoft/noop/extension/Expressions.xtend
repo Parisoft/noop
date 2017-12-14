@@ -316,12 +316,8 @@ class Expressions {
 		'''«containerName».tmp«instance.typeOf.name»@«instance.hashCode.toHexString»'''.toString
 	}
 
-	def nameOfIndex(List<Index> indexes, String containerName) {
-		'''«containerName».idx@«indexes.hashCode.toHexString»'''.toString
-	}
-
 	def nameOfElement(List<Index> indexes, String containerName) {
-		'''«containerName».element@«indexes.hashCode.toHexString»'''.toString
+		'''«containerName».ref@«indexes.hashCode.toHexString»'''.toString
 	}
 
 	def nameOfTmp(ArrayLiteral array, String containerName) {
