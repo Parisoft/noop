@@ -2,10 +2,10 @@ package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
 import java.util.concurrent.atomic.AtomicInteger
-import org.parisoft.noop.generator.MemChunk
-import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.AllocContext
-import java.util.concurrent.atomic.AtomicBoolean
+import org.parisoft.noop.generator.CompileContext
+import org.parisoft.noop.generator.MemChunk
+import org.parisoft.noop.noop.NoopClass
 
 class Datas {
 
@@ -560,273 +560,113 @@ class Datas {
 					LDA «src.absolute»«IF i > 0» + «i»«ENDIF»«IF src.isIndexed», Y«ENDIF»
 					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
 			«ENDFOR»
-		«ELSEIF bytes < 0x0100»
-			«val copyLoop = labelForCopyLoop»
-			«val limit = '''#«bytes.toHex»'''»
-				LDA #<«src.absolute»
-				«IF src.isIndexed»
-					CLC
-					ADC «src.index»
-				«ENDIF»
-				STA «Members::TEMP_VAR_NAME1»
-				LDA #>«src.absolute»
-				«IF src.isIndexed»
-					ADC #0
-				«ENDIF»
-				STA «Members::TEMP_VAR_NAME1» + 1
-				LDA #<«dst.absolute»
-				«IF dst.isIndexed»
-					CLC
-					ADC «dst.index»
-				«ENDIF»
-				STA «Members::TEMP_VAR_NAME3»
-				LDA #>«dst.absolute»
-				«IF dst.isIndexed»
-					ADC #0
-				«ENDIF»
-				STA «Members::TEMP_VAR_NAME3» + 1
-				LDY #0
-			-«copyLoop»:
-				LDA («Members::TEMP_VAR_NAME1»), Y
-				STA («Members::TEMP_VAR_NAME3»), Y
-				INY
-				CPY «limit»
-				BNE -«copyLoop»
 		«ELSE»
-			«val copyLoop = labelForCopyLoop»
-			«val pages = bytes / 0xFF»
-			«val frags = bytes % 0xFF»
-				LDA #<«src.absolute»
-				«IF src.isIndexed»
-					CLC
-					ADC «src.index»
-				«ENDIF»
-				STA «Members::TEMP_VAR_NAME1»
-				LDA #>«src.absolute»
-				«IF src.isIndexed»
-					ADC #0
-				«ENDIF»
-				STA «Members::TEMP_VAR_NAME1» + 1
-				LDA #<«dst.absolute»
-				«IF dst.isIndexed»
-					CLC
-					ADC «dst.index»
-				«ENDIF»
-				STA «Members::TEMP_VAR_NAME3»
-				LDA #>«dst.absolute»
-				«IF dst.isIndexed»
-					ADC #0
-				«ENDIF»
-				STA «Members::TEMP_VAR_NAME3» + 1
-				LDY #0
-				LDX #«pages»
-			-«copyLoop»:
-				LDA («Members::TEMP_VAR_NAME1»), Y
-				STA («Members::TEMP_VAR_NAME3»), Y
-				INY
-				BNE -«copyLoop»
-				STY «Members::TEMP_VAR_NAME1»
-				STY «Members::TEMP_VAR_NAME3»
-				INC «Members::TEMP_VAR_NAME1»
-				INC «Members::TEMP_VAR_NAME3»
-				DEX
-				BNE -«copyLoop»
-			--«copyLoop»:
-				LDA («Members::TEMP_VAR_NAME1»), Y
-				STA («Members::TEMP_VAR_NAME3»), Y
-				INY
-				CPY #«frags»
-				BNE --«copyLoop»
+			«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToAbsolute(src)»
+			«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToAbsolute(dst)»
+			«bytes.copyArrayIndirectToIndirect»
 		«ENDIF»
 		«dst.pullAccIfOperating»
 	'''
 
 	private def copyArrayAbsoluteToIndirect(CompileContext src, CompileContext dst, int len) '''
 		«dst.pushAccIfOperating»
+		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToAbsolute(src)»
+		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToIndirect(dst)»
 		«val bytes = len * dst.sizeOf»
-		«val pages = bytes / 0xFF»
-		«val frags = bytes % 0xFF»
-		«val copyLoop = labelForCopyLoop»
-			LDA #<«src.absolute»
-			«IF src.isIndexed»
-				CLC
-				ADC «src.index»
-			«ENDIF»
-			STA «Members::TEMP_VAR_NAME1»
-			LDA #>«src.absolute»
-			«IF src.isIndexed»
-				ADC #0
-			«ENDIF»
-			STA «Members::TEMP_VAR_NAME1» + 1
-			LDA «dst.indirect»
-			«IF dst.isIndexed»
-				CLC
-				ADC «dst.index»
-			«ENDIF»
-			STA «Members::TEMP_VAR_NAME3»
-			LDA «dst.indirect» + 1
-			«IF dst.isIndexed»
-				ADC #0
-			«ENDIF»
-			STA «Members::TEMP_VAR_NAME3» + 1
-			LDY #0
-		«IF pages > 0»
-			«noop»
-				LDX #«pages»
-			-«copyLoop»:
-				LDA («Members::TEMP_VAR_NAME1»), Y
-				STA («Members::TEMP_VAR_NAME3»), Y
-				INY
-				BNE -«copyLoop»
-				STY «Members::TEMP_VAR_NAME1»
-				STY «Members::TEMP_VAR_NAME3»
-				INC «Members::TEMP_VAR_NAME1»
-				INC «Members::TEMP_VAR_NAME3»
-				DEX
-				BNE -«copyLoop»
-		«ENDIF»
-		«IF frags > 0»
-			--«copyLoop»:
-				LDA («Members::TEMP_VAR_NAME1»), Y
-				STA («Members::TEMP_VAR_NAME3»), Y
-				INY
-				CPY #«frags»
-				BNE --«copyLoop»
-		«ENDIF»
+		«bytes.copyArrayIndirectToIndirect»
 		«dst.pullAccIfOperating»
 	'''
 
 	private def copyArrayIndirectToAbsolute(CompileContext src, CompileContext dst, int len) '''
 		«dst.pushAccIfOperating»
+		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToIndirect(src)»
+		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToAbsolute(dst)»
 		«val bytes = len * dst.sizeOf»
-		«IF bytes < loopThreshold»
-			«noop»
-				«IF src.isIndexed»
-					LDY «src.index»
-				«ELSE»
-					LDY #$00
-				«ENDIF»
-				«IF dst.isIndexed»
-					LDX «dst.index»
-				«ENDIF»
-			«FOR i : 0 ..< bytes»
-				«noop»
-					LDA («src.indirect»), Y
-					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
-					«IF i < bytes - 1»
-						INY
-					«ENDIF»
-			«ENDFOR»
-		«ELSE»
-			«val limit = '''#«bytes.toHex»'''»
-			«val copyLoop = labelForCopyLoop»
-			«IF src.isIndexed && dst.isIndexed»
-				«noop»
-					CLC
-					LDA «src.index»
-					ADC «limit»
-					TAY «src.index»
-					CLC
-					LDA «dst.index»
-					ADC «limit»
-					TAX «dst.index»
-				-«copyLoop»
-					DEY
-					DEX
-					LDA («src.indirect»), Y
-					STA «dst.absolute», X
-					CPY «src.index»
-					BNE -«copyLoop»
-			«ELSEIF src.isIndexed || dst.isIndexed»
-				«noop»
-					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
-					LDY #$00
-				-«copyLoop»
-					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
-					STA «dst.absolute»«IF dst.isIndexed», X«ELSE», Y«ENDIF»
-					INX
-					INY
-					CPY «limit»
-					BNE -«copyLoop»
-			«ELSE»
-				«noop»
-					LDY «limit» - 1
-				-«copyLoop»
-					LDA («src.indirect»), Y
-					STA «dst.absolute», Y
-					INY
-					CPY «limit»
-					BNE -«copyLoop»
-			«ENDIF»
-		«ENDIF»
+		«bytes.copyArrayIndirectToIndirect»
 		«dst.pullAccIfOperating»
 	'''
 
 	private def copyArrayIndirectToIndirect(CompileContext src, CompileContext dst, int len) '''
 		«dst.pushAccIfOperating»
+		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToIndirect(src)»
+		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToIndirect(dst)»
 		«val bytes = len * dst.sizeOf»
-		«IF bytes < loopThreshold»
-			«noop»
-				LDX «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
-				LDY «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
-			«FOR i : 0 ..< bytes»
-				«noop»
-					LDA («src.indirect», X)
-					STA («dst.indirect»), Y
-					«IF i < bytes - 1»
-						INX
-						INY
-					«ENDIF»
-			«ENDFOR»
-		«ELSE»
-			«val limit = '''#«bytes.toHex»'''»
-			«val copyLoop = labelForCopyLoop»
-			«IF src.isIndexed && dst.isIndexed»
-				«noop»
-					CLC
-					LDA «src.index»
-					ADC «limit»
-					TAX «src.index»
-					CLC
-					LDA «dst.index»
-					ADC «limit»
-					TAY «dst.index»
-				-«copyLoop»
-					DEY
-					DEX
-					LDA («src.indirect», X)
-					STA («dst.indirect»), Y
-					CPX «src.index»
-					BNE -«copyLoop»
-			«ELSEIF src.isIndexed || dst.isIndexed»
-				«noop»
-					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
-					LDY #$00
-				-«copyLoop»
-					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
-					STA («dst.indirect»«IF dst.isIndexed», X)«ELSE»), Y«ENDIF»
-					INX
-					INY
-					CPY «limit»
-					BNE -«copyLoop»
-			«ELSE»
-				«noop»
-					LDY #$00
-				-«copyLoop»
-					LDA («src.indirect»), Y
-					STA («dst.indirect»), Y
-					INY
-					CPY «limit»
-					BNE -«copyLoop»
-			«ENDIF»
-		«ENDIF»
+		«bytes.copyArrayIndirectToIndirect»
 		«dst.pullAccIfOperating»
+	'''
+	
+	private def copyArrayIndirectToIndirect(int bytes) '''
+		«val pages = bytes / 0xFF»
+		«val frags = bytes % 0xFF»
+		«val copyLoop = labelForCopyLoop»
+			LDY #0
+		«IF pages > 0»
+			«noop»
+				LDX #«pages»
+			--«copyLoop»:
+				LDA («Members::TEMP_VAR_NAME1»), Y
+				STA («Members::TEMP_VAR_NAME3»), Y
+				INY
+				BNE -«copyLoop»
+				INC «Members::TEMP_VAR_NAME1»
+				INC «Members::TEMP_VAR_NAME3»
+				DEX
+				BNE --«copyLoop»
+		«ENDIF»
+		«IF frags > 0»
+			-«copyLoop»:
+				LDA («Members::TEMP_VAR_NAME1»), Y
+				STA («Members::TEMP_VAR_NAME3»), Y
+				INY
+				CPY #«frags»
+				BNE -«copyLoop»
+		«ENDIF»
 	'''
 
 	def fillArrayWith(CompileContext array, CompileContext identity, int len) '''
 	'''
 
 	private def fillArrayAbsoluteWithAbsolute(CompileContext array, CompileContext identity, int len) '''
+	'''
+	
+	private def fillArrayIndirect(NoopClass type, int len)'''
+		«val copyLoop = labelForCopyLoop»
+		«val loops = len - 1»
+			LDA #<«loops»
+			STA «Members::TEMP_VAR_NAME2»
+			«IF loops > 0xFF»
+				LDA #>«loops»
+				STA «Members::TEMP_VAR_NAME2» + 1
+			«ENDIF»
+			LDX #<«type.sizeOf»
+			LDY #0
+		--«copyLoop»:
+			LDA («Members::TEMP_VAR_NAME1»), Y
+			STA («Members::TEMP_VAR_NAME3»), Y
+			DEX
+			BEQ +«copyLoop»
+		-«copyLoop»:
+			INY
+			BNE --
+			INC «Members::TEMP_VAR_NAME1» + 1
+			INC «Members::TEMP_VAR_NAME3» + 1
+		+«copyLoop»:
+			«IF loops > 0xFF»
+				SEC
+				LDA «Members::TEMP_VAR_NAME2»
+				SBC #1
+				SDA «Members::TEMP_VAR_NAME2»
+				LDA «Members::TEMP_VAR_NAME2» + 1
+				SBC #0
+				STA «Members::TEMP_VAR_NAME2» + 1
+				CMP #>«loops»
+				BNE --«copyLoop»
+				LDA «Members::TEMP_VAR_NAME2»
+			«ELSE»
+				DEC «Members::TEMP_VAR_NAME2»
+			«ENDIF»
+			CMP #<«loops»
+			BNE --«copyLoop»
 	'''
 
 	def pointTo(CompileContext ptr, CompileContext src) '''
@@ -940,12 +780,12 @@ class Datas {
 
 				while (overlapped) {
 					overlapped = false
-					
+
 					for (outer : outers) {
 						if (chunk.overlap(outer)) {
 							methodName.debug('''«chunk» overlaps «outer»''')
 							overlapped = true
-					
+
 							val delta = chunk.deltaFrom(outer)
 
 							chunks.drop(index).filter [
@@ -958,7 +798,7 @@ class Datas {
 							]
 						}
 					}
-				} 
+				}
 			}
 		]
 
