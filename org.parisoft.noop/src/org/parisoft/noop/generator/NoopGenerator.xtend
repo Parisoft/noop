@@ -40,25 +40,31 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject extension IQualifiedNameProvider
 	@Inject IResourceDescriptions descriptions
 
+	var lastSuccesfullCompile = 0L
+
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		val asm = resource.compile
+		if (System::currentTimeMillis - lastSuccesfullCompile > 5) {
+			val asm = resource.compile
 
-		if (asm !== null) {
-			fsa.generateFile(asm.asmFileName, asm.content)
+			if (asm !== null) {
+				fsa.generateFile(asm.asmFileName, asm.content)
 
-			val asm8 = new Asm8 => [
-				inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
-				outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
-				listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
-			]
+				val asm8 = new Asm8 => [
+					inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
+					outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
+					listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
+				]
 
-			try {
-				asm8.compile
-			} catch (Exception exception) {
-				fsa.deleteFile(asm.binFileName)
-				throw exception
+				try {
+					asm8.compile
+				} catch (Exception exception) {
+					fsa.deleteFile(asm.binFileName)
+					throw exception
+				}
 			}
 		}
+		
+		lastSuccesfullCompile = System::currentTimeMillis
 	}
 
 	private def compile(Resource resource) {
