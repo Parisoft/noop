@@ -1142,21 +1142,11 @@ class Expressions {
 					«ENDIF»
 				'''
 				ByteLiteral: '''
-					«IF ctx.db !== null»
-						«val bytes = expression.valueOf.toBytes»
-						«ctx.relative»:
-							«IF ctx.sizeOf == 1»
-								.db «bytes.head.toHex»
-							«ELSE»
-								.db «bytes.join(' ', [toHex])»
-							«ENDIF»
-					«ELSE»
-						«val src = new CompileContext => [
-							type = expression.typeOf
-							immediate = expression.value.toHex.toString
-						]»
-						«src.resolveTo(ctx)»
-					«ENDIF»
+					«val src = new CompileContext => [
+						type = expression.typeOf
+						immediate = expression.value.toHex.toString
+					]»
+					«src.resolveTo(ctx)»
 				'''
 				BoolLiteral: '''
 					«val boolAsByte = NoopFactory::eINSTANCE.createByteLiteral => [value = if (expression.value) 1 else 0]»
@@ -1275,7 +1265,19 @@ class Expressions {
 						«noop»
 							RTS
 					«ELSEIF expression.dimension.isNotEmpty»
-						;TODO: compile array constructor call
+						«val length = expression.dimensionOf.reduce[d1, d2| d1 * d2]»
+						«IF ctx.db !== null»
+							«ctx.db»:
+								.dsb «length * ctx.sizeOf»
+						«ELSE»
+							«IF expression.type.isPrimitive»
+								«(new CompileContext => [immediate = '0']).copyTo(ctx)»
+							«ELSE»
+								«val constructor = expression.copy => [dimension.clear]»
+								«constructor.compile(ctx)»
+							«ENDIF»
+							«ctx.fillArray(length)»
+						«ENDIF»
 					«ELSEIF expression.type.isPrimitive»
 						«val defaultByte = NoopFactory::eINSTANCE.createByteLiteral => [value = 0]»
 						«defaultByte.compile(ctx)»
@@ -1403,7 +1405,7 @@ class Expressions {
 				BoolLiteral:
 					expression.value.toString.toUpperCase
 				NewInstance:
-					if (expression.type.isPrimitive) {
+					if (expression.type.isPrimitive && expression.dimension.isEmpty) {
 						expression.type.defaultValueOf.toString.toUpperCase
 					} else {
 						throw new NonConstantExpressionException(expression)

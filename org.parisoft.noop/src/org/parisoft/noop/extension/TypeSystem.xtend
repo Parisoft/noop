@@ -99,11 +99,11 @@ class TypeSystem {
 	}
 
 	def toClassOrDefault(EObject context, String type, NoopClass ^default) {
-		if (context.fullyQualifiedName == type && context instanceof NoopClass) {
-			return context as NoopClass;
-		}
-
 		try {
+			if (context.fullyQualifiedName == type && context instanceof NoopClass) {
+				return context as NoopClass;
+			}
+
 			val desc = context.visibleClassesDescriptions.findFirst[qualifiedName.toString == type] ?:
 				TypeSystem::context.get.visibleClassesDescriptions.findFirst[qualifiedName.toString == type]
 			var obj = desc.EObjectOrProxy

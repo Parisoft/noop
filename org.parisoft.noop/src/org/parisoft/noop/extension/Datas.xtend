@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.MemChunk
-import org.parisoft.noop.noop.NoopClass
 
 class Datas {
 
@@ -45,6 +44,8 @@ class Datas {
 				«src.copyImmediateToIndirect(dst)»
 			«ELSEIF dst.register !== null»
 				«src.copyImmediateToRegister(dst)»
+			«ELSEIF dst.db !== null»
+				«src.copyImmediateToDb(dst)»
 			«ELSEIF dst.relative !== null»
 				«src.branchImmediateToRelative(dst)»
 			«ENDIF»
@@ -117,6 +118,15 @@ class Datas {
 			«noop»
 				LDA #(«src.immediate»)
 		«ENDIF»
+	'''
+	
+	private def copyImmediateToDb(CompileContext src, CompileContext dst)'''
+		«dst.db»:
+			«IF dst.sizeOf > 1»
+				.dw «src.immediate»
+			«ELSE»
+				.db «src.immediate»
+			«ENDIF»
 	'''
 
 	private def copyAbsoluteToAbsolute(CompileContext src, CompileContext dst) '''
@@ -594,7 +604,7 @@ class Datas {
 		«bytes.copyArrayIndirectToIndirect»
 		«dst.pullAccIfOperating»
 	'''
-	
+
 	private def copyArrayIndirectToIndirect(int bytes) '''
 		«val pages = bytes / 0xFF»
 		«val frags = bytes % 0xFF»
@@ -607,9 +617,9 @@ class Datas {
 				LDA («Members::TEMP_VAR_NAME1»), Y
 				STA («Members::TEMP_VAR_NAME3»), Y
 				INY
-				BNE -«copyLoop»
-				INC «Members::TEMP_VAR_NAME1»
-				INC «Members::TEMP_VAR_NAME3»
+				BNE --«copyLoop»
+				INC «Members::TEMP_VAR_NAME1» + 1
+				INC «Members::TEMP_VAR_NAME3» + 1
 				DEX
 				BNE --«copyLoop»
 		«ENDIF»
@@ -623,50 +633,23 @@ class Datas {
 		«ENDIF»
 	'''
 
-	def fillArrayWith(CompileContext array, CompileContext identity, int len) '''
-	'''
-
-	private def fillArrayAbsoluteWithAbsolute(CompileContext array, CompileContext identity, int len) '''
-	'''
-	
-	private def fillArrayIndirect(NoopClass type, int len)'''
-		«val copyLoop = labelForCopyLoop»
-		«val loops = len - 1»
-			LDA #<«loops»
-			STA «Members::TEMP_VAR_NAME2»
-			«IF loops > 0xFF»
-				LDA #>«loops»
-				STA «Members::TEMP_VAR_NAME2» + 1
-			«ENDIF»
-			LDX #<«type.sizeOf»
-			LDY #0
-		--«copyLoop»:
-			LDA («Members::TEMP_VAR_NAME1»), Y
-			STA («Members::TEMP_VAR_NAME3»), Y
-			DEX
-			BEQ +«copyLoop»
-		-«copyLoop»:
-			INY
-			BNE --
-			INC «Members::TEMP_VAR_NAME1» + 1
-			INC «Members::TEMP_VAR_NAME3» + 1
-		+«copyLoop»:
-			«IF loops > 0xFF»
-				SEC
-				LDA «Members::TEMP_VAR_NAME2»
-				SBC #1
-				SDA «Members::TEMP_VAR_NAME2»
-				LDA «Members::TEMP_VAR_NAME2» + 1
-				SBC #0
-				STA «Members::TEMP_VAR_NAME2» + 1
-				CMP #>«loops»
-				BNE --«copyLoop»
-				LDA «Members::TEMP_VAR_NAME2»
-			«ELSE»
-				DEC «Members::TEMP_VAR_NAME2»
-			«ENDIF»
-			CMP #<«loops»
-			BNE --«copyLoop»
+	def fillArray(CompileContext array, int len) '''
+		«array.pushAccIfOperating»
+		«IF array.absolute !== null»
+			«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToAbsolute(array)»
+		«ELSEIF array.indirect !== null»
+			«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToIndirect(array)»
+		«ENDIF»
+		«val elementSize = array.type.sizeOf»
+			CLC		
+			LDA «Members::TEMP_VAR_NAME1» + 0
+			ADC #«elementSize»
+			STA «Members::TEMP_VAR_NAME3» + 0
+			LDA «Members::TEMP_VAR_NAME1» + 1
+			ADC #0
+			STA «Members::TEMP_VAR_NAME3» + 1
+		«copyArrayIndirectToIndirect(elementSize * (len - 1))»
+		«array.pullAccIfOperating»
 	'''
 
 	def pointTo(CompileContext ptr, CompileContext src) '''
