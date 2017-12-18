@@ -224,6 +224,14 @@ public class Members {
 		!method.isArrayLength
 	}
 	
+	def boolean isInvokedOn(Method method, Statement statement) {
+		statement.eAllContents.filter(MemberRef).map[member].filter(Method).exists[
+			it == method || body.statements.exists[method.isInvokedOn(it)]
+		] || statement.eAllContents.filter(MemberSelect).map[member].filter(Method).exists[
+			it == method || body.statements.exists[method.isInvokedOn(it)]
+		]
+	}
+	
 	def isArrayReference(Variable variable, List<Index> indexes) {
 		variable.dimensionOf.size > indexes.size
 	}
@@ -697,6 +705,7 @@ public class Members {
 					RTI
 			«ELSE»
 				«FOR statement : method.body.statements»
+					«{if (method.isInvokedOn(statement)) throw new RuntimeException('''«method.nameOf» is recursive!''')}»
 					«statement.compile(new CompileContext => [container = method.nameOf])»
 				«ENDFOR»
 					RTS
@@ -704,13 +713,6 @@ public class Members {
 		«ENDIF»
 	'''
 	
-	private def isRecusive(Method method, Statement statement) {
-		val recursive = statement.eAllContents.filter(MemberRef).exists[member == method]
-		if (recursive) {
-			throw new RuntimeException('''«method.nameOf» is resursive!!''')
-		}
-	}
-
 	def compileConstant(Member member) {
 		switch (member) {
 			Variable: member.compileConstant
