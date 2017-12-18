@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import java.io.File
 import java.util.List
 import java.util.stream.Collectors
+import org.eclipse.xtend.lib.annotations.Accessors
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 import org.parisoft.noop.exception.InvalidExpressionException
 import org.parisoft.noop.exception.NonConstantExpressionException
@@ -14,7 +15,6 @@ import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.CompileContext.Mode
 import org.parisoft.noop.generator.CompileContext.Operation
 import org.parisoft.noop.generator.MemChunk
-import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.AddExpression
 import org.parisoft.noop.noop.AndExpression
 import org.parisoft.noop.noop.ArrayLiteral
@@ -42,6 +42,7 @@ import org.parisoft.noop.noop.LtExpression
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
+import org.parisoft.noop.noop.ModExpression
 import org.parisoft.noop.noop.MulExpression
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
@@ -59,10 +60,8 @@ import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
+import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.eclipse.xtend.lib.annotations.Accessors
-import org.parisoft.noop.^extension.Expressions.MethodReference
-import org.parisoft.noop.noop.ModExpression
 
 class Expressions {
 
@@ -577,11 +576,10 @@ class Expressions {
 				StringLiteral:
 					expression.value.chars.boxed.collect(Collectors::toList)
 				NewInstance:
-					if (expression.constructor !== null) {
-						new NoopInstance(expression.type.name, expression.type.allFieldsBottomUp,
-							expression.constructor)
-					} else {
+					if (expression.type.isPrimitive && expression.dimension.isEmpty) {
 						expression.type.defaultValueOf
+					} else {
+						expression.type
 					}
 				MemberSelect:
 					expression.member.valueOf
@@ -1406,7 +1404,13 @@ class Expressions {
 					expression.value.toString.toUpperCase
 				NewInstance:
 					if (expression.type.isPrimitive && expression.dimension.isEmpty) {
-						expression.type.defaultValueOf.toString.toUpperCase
+						val value = expression.type.defaultValueOf
+						
+						if (value instanceof Integer) {
+							value.toHex.toString
+						} else {
+							value.toString.toUpperCase
+						}
 					} else {
 						throw new NonConstantExpressionException(expression)
 					}

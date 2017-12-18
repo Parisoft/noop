@@ -24,6 +24,7 @@ import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.noop.NoopFactory
+import org.parisoft.noop.noop.Statement
 
 public class Members {
 
@@ -702,6 +703,13 @@ public class Members {
 			«ENDIF»
 		«ENDIF»
 	'''
+	
+	private def isRecusive(Method method, Statement statement) {
+		val recursive = statement.eAllContents.filter(MemberRef).exists[member == method]
+		if (recursive) {
+			throw new RuntimeException('''«method.nameOf» is resursive!!''')
+		}
+	}
 
 	def compileConstant(Member member) {
 		switch (member) {

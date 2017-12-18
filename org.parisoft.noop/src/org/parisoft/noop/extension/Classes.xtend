@@ -6,11 +6,11 @@ import java.util.NoSuchElementException
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.AllocContext
-import org.parisoft.noop.generator.NoopInstance
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
+import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 
 class Classes {
@@ -196,8 +196,6 @@ class Classes {
 			0
 		} else if (c.isBoolean) {
 			false
-		} else {
-			new NoopInstance(c.name, c.allFieldsBottomUp)
 		}
 	}
 

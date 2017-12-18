@@ -68,16 +68,11 @@ class NoopGenerator extends AbstractGenerator {
 			return null
 		}
 
-		try {
-			val ctx = gameImpl.prepare
-			gameImpl.alloc(ctx)
-			val content = ctx.compile.optimize
+		val ctx = gameImpl.prepare
+		gameImpl.alloc(ctx)
+		val content = ctx.compile.optimize
 
-			new ASM(gameImpl.name, content)
-		} catch (Throwable e) {
-			System::err.println('''Got a «e». Is eclipse cleaning?''')
-			e.printStackTrace(System::err)
-		}
+		new ASM(gameImpl.name, content)
 	}
 
 	private def optimize(CharSequence code) {
@@ -86,7 +81,7 @@ class NoopGenerator extends AbstractGenerator {
 		val AtomicInteger skip = new AtomicInteger
 
 		lines.forEach [ line, i |
-			var next = if (i + 1 < lines.length) lines.get(i + 1) else ''
+			var next = if(i + 1 < lines.length) lines.get(i + 1) else ''
 
 			if (skip.get > 0) {
 				skip.decrementAndGet

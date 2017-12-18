@@ -42,30 +42,37 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	@Inject extension IQualifiedNameProvider
 
 	override getScope(EObject context, EReference eRef) {
-		switch (context) {
-			Block:
-				if (eRef == NoopPackage.eINSTANCE.memberRef_Member) {
-					return scopeForVariableRef(context)
-				}
-			AsmStatement:
-				if (eRef == NoopPackage.eINSTANCE.asmStatement_Vars) {
-					return scopeForVariableRef(context)
-				}
-			Constructor:
-				if (eRef == NoopPackage.eINSTANCE.constructorField_Variable) {
-					return scopeForNewInstance(context.eContainer as NewInstance)
-				}
-			ConstructorField:
-				if (eRef == NoopPackage.eINSTANCE.constructorField_Variable) {
-					return scopeForNewInstance(context.eContainer.eContainer as NewInstance)
-				}
-			MemberRef:
-				return scopeForMemberRef(context)
-			MemberSelect:
-				return scopeForMemberSelect(context)
+		try {
+			switch (context) {
+				Block:
+					if (eRef == NoopPackage.eINSTANCE.memberRef_Member) {
+						return scopeForVariableRef(context)
+					}
+				AsmStatement:
+					if (eRef == NoopPackage.eINSTANCE.asmStatement_Vars) {
+						return scopeForVariableRef(context)
+					}
+				Constructor:
+					if (eRef == NoopPackage.eINSTANCE.constructorField_Variable) {
+						return scopeForNewInstance(context.eContainer as NewInstance)
+					}
+				ConstructorField:
+					if (eRef == NoopPackage.eINSTANCE.constructorField_Variable) {
+						return scopeForNewInstance(context.eContainer.eContainer as NewInstance)
+					}
+				MemberRef:
+					return scopeForMemberRef(context)
+				MemberSelect:
+					return scopeForMemberSelect(context)
+			}
+	
+			return super.getScope(context, eRef)
+		} catch (Exception e) {
+			System::err.println('''Got a «e». Is eclipse cleaning?''')
+			e.printStackTrace(System::err)
+			
+			return IScope.NULLSCOPE
 		}
-
-		return super.getScope(context, eRef)
 	}
 
 	protected def scopeForMemberRef(MemberRef memberRef) {
