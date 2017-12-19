@@ -3,7 +3,6 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.concurrent.atomic.AtomicInteger
 
-import static extension java.lang.Integer.*
 import static extension java.lang.Math.*
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.CompileContext.Operation
@@ -12,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference
 class Operations {
 
 	@Inject extension Datas
+	@Inject extension Values
 	@Inject extension Classes
 
 	def isComparison(Operation operation) {
@@ -1135,7 +1135,7 @@ class Operations {
 	'''
 
 	private def multiplyImmediate(CompileContext multiplicand, CompileContext multiplier) '''
-		«val const = multiplier.immediate.valueOf»
+		«val const = multiplier.immediate.parseInt»
 		«val one = '1'.charAt(0)»
 		«val bits = const.abs.toBinaryString.toCharArray.reverse»
 		«IF multiplicand.sizeOfOp > 1»
@@ -1495,6 +1495,14 @@ class Operations {
 				LDA #$00
 		«ENDIF»
 	'''
+
+	private def toHexString(Integer i) {
+		Integer::toHexString(i)
+	}
+	
+	private def toBinaryString(Integer i) {
+		Integer::toBinaryString(i)
+	}
 
 	private def labelForSignedMSBEnd() '''signedMSBEnd'''
 

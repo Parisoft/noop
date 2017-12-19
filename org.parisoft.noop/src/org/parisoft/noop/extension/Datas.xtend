@@ -1,7 +1,6 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
-import java.util.concurrent.atomic.AtomicInteger
 import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.MemChunk
@@ -11,13 +10,11 @@ class Datas {
 	public static val int PTR_PAGE = 0
 	public static val int SND_PAGE = 3
 	public static val int VAR_PAGE = 4
+	public static val loopThreshold = 9
 
 	@Inject extension Values
 	@Inject extension Classes
 	@Inject extension Operations
-
-	val loopThreshold = 9
-	val labelCounter = new AtomicInteger
 
 	def sizeOf(CompileContext ctx) {
 		ctx.type.sizeOf
@@ -714,7 +711,7 @@ class Datas {
 		«ENDIF»
 	'''
 
-	private def labelForCopyLoop() '''copyLoop«labelCounter.andIncrement»'''
+	private def labelForCopyLoop() '''copyLoop'''
 
 	private def void noop() {
 	}

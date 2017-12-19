@@ -16,15 +16,16 @@ import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.ReturnStatement
+import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
+import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.NoopFactory
-import org.parisoft.noop.noop.Statement
 
 public class Members {
 
@@ -225,9 +226,11 @@ public class Members {
 	}
 	
 	def boolean isInvokedOn(Method method, Statement statement) {
+		statement !== null &&
 		statement.eAllContents.filter(MemberRef).map[member].filter(Method).exists[
 			it == method || body.statements.exists[method.isInvokedOn(it)]
-		] || statement.eAllContents.filter(MemberSelect).map[member].filter(Method).exists[
+		] ||
+		statement.eAllContents.filter(MemberSelect).map[member].filter(Method).exists[
 			it == method || body.statements.exists[method.isInvokedOn(it)]
 		]
 	}
@@ -705,10 +708,113 @@ public class Members {
 					RTI
 			«ELSE»
 				«FOR statement : method.body.statements»
-					«{if (method.isInvokedOn(statement)) throw new RuntimeException('''«method.nameOf» is recursive!''')}»
 					«statement.compile(new CompileContext => [container = method.nameOf])»
 				«ENDFOR»
 					RTS
+			«ENDIF»
+		«ENDIF»
+	'''
+	
+	private def getOverriddenVariablesOnRecursion(Method method, Statement statement) {
+		val localVars = method.params + method.body.statements.takeWhile[it != statement].map[eAllContentsAsList].flatten.filter(Variable)
+		method.body.statements.dropWhile[it != statement].drop(1).map[eAllContentsAsList].flatten.filter(MemberRef).map[member].filter(Variable).filter[variable|
+			localVars.exists[it == variable]
+		].toSet
+	}
+	
+	def pushIfRecursive(Method method, Statement invoker, CompileContext ctx) {
+		val statement = method.body.statements.findFirst[it == invoker || it.eAllContentsAsList.contains(invoker)]
+		
+		if (method.isInvokedOn(statement)) {
+			val overridenVariables = method.getOverriddenVariablesOnRecursion(statement)
+			
+			if (overridenVariables.isNotEmpty) {
+				ctx.pushAccIfOperating
+				overridenVariables.forEach[push]
+			}
+		}
+	}
+	
+	def pullIfRecursive(Method method, Statement invoker, CompileContext ctx) {
+		val statement = method.body.statements.findFirst[it == invoker || it.eAllContentsAsList.contains(invoker)]
+		
+		if (method.isInvokedOn(statement)) {
+			val overridenVariables = method.getOverriddenVariablesOnRecursion(statement)
+			
+			if (overridenVariables.isNotEmpty) {
+				overridenVariables.forEach[pull]
+				ctx.pullAccIfOperating
+			}
+		}
+	}
+	
+	def push(Variable variable) '''
+		«IF variable.isParameter && (variable.type.isNonPrimitive || variable.dimension.isNotEmpty)»
+			«val pointer = variable.nameOf»
+				LDA «pointer» + 1
+				PHA
+				LDA «pointer» + 0
+				PHA
+			«FOR i : 0 ..< variable.dimension.size»
+				«val len = variable.nameOfLen(i)»
+					LDA «len» + 1
+					PHA
+					LDA «len» + 0
+					PHA
+			«ENDFOR»
+		«ELSE»
+			«val local = variable.nameOf»
+			«val size = variable.sizeOf»
+			«IF size < Datas::loopThreshold»
+				«FOR i : size >.. 0»
+					«noop»
+						LDA «local»«IF i > 0» + «i»«ENDIF»
+						PHA
+				«ENDFOR»
+			«ELSE»
+				«val loop = 'pushLoop'»
+					LDX #«size - 1»
+				-«loop»:
+					LDA «local», X
+					PHA
+					DEX
+					BNE -«loop»
+			«ENDIF»
+		«ENDIF»
+	'''
+	
+	def pull(Variable variable) '''
+		«IF variable.isParameter && (variable.type.isNonPrimitive || variable.dimension.isNotEmpty)»
+			«val pointer = variable.nameOf»
+				PLA
+				STA «pointer» + 0
+				PLA
+				STA «pointer» + 1
+			«FOR i : 0 ..< variable.dimension.size»
+				«val len = variable.nameOfLen(i)»
+					PLA
+					STA «len» + 0
+					PLA
+					STA «len» + 1
+			«ENDFOR»
+		«ELSE»
+			«val local = variable.nameOf»
+			«val size = variable.sizeOf»
+			«IF size < Datas::loopThreshold»
+				«FOR i : 0 ..< size»
+					«noop»
+						PLA
+						STA «local»«IF i > 0» + «i»«ENDIF»
+				«ENDFOR»
+			«ELSE»
+				«val loop = 'pushLoop'»
+					LDX #0
+				-«loop»:
+					PLA
+					STA «local», X
+					INX
+					CMP #«size»
+					BNE -«loop»
 			«ENDIF»
 		«ENDIF»
 	'''

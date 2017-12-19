@@ -255,7 +255,7 @@ class Expressions {
 	def isDmcFile(StringLiteral string) {
 		string.isFileInclude && string.value.toLowerCase.endsWith(Members::FILE_DMC_EXTENSION)
 	}
-
+	
 	def boolean containsMulDivMod(Expression expression) {
 		switch (expression) {
 			OrExpression:
@@ -1326,11 +1326,14 @@ class Expressions {
 						«ENDIF»
 					«ELSEIF member instanceof Method»
 						«val method = member as Method»
+						«val containerMethod = expression.getContainerOfType(Method)»
+						«containerMethod.pushIfRecursive(expression, ctx)»
 						«IF method.isStatic»
 							«method.compileInvocation(expression.args, expression.indexes, ctx)»
 						«ELSE»
 							«method.compileInvocation(receiver, expression.args, expression.indexes, ctx)»
 						«ENDIF»
+						«containerMethod.pullIfRecursive(expression, ctx)»
 					«ENDIF»
 				'''
 				MemberRef: '''
@@ -1360,7 +1363,10 @@ class Expressions {
 							]»
 							«innerReceiver.pointTo(outerReceiver)»
 						«ENDIF»
+						«val containerMethod = expression.getContainerOfType(Method)»
+						«containerMethod.pushIfRecursive(expression, ctx)»
 						«method.compileInvocation(expression.args, expression.indexes, ctx)»
+						«containerMethod.pullIfRecursive(expression, ctx)»
 					«ENDIF»					
 				'''
 				default:
@@ -1399,7 +1405,7 @@ class Expressions {
 				CastExpression:
 					expression.left.compileConstant
 				ByteLiteral:
-					expression.value.toString
+					expression.value.toHex.toString
 				BoolLiteral:
 					expression.value.toString.toUpperCase
 				NewInstance:

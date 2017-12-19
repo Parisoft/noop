@@ -10,19 +10,23 @@ class Values {
 
 	def parseInt(String string) {
 		if (string === null || string.isEmpty()) {
-			throw new IllegalArgumentException("Invalid value")
+			throw new IllegalArgumentException('Invalid value')
 		}
 
 		var value = 0;
 
-		if (string.startsWith("0x")) {
-			value = Integer.parseInt(string.substring(2), 16)
-		} else if (string.startsWith("0b")) {
-			value = Integer.parseInt(string.substring(2), 2)
+		if (string.startsWith('0x')) {
+			value = Integer::parseInt(string.substring(2), 16)
+		} else if (string.startsWith('$')) {
+			value = Integer::parseInt(string.substring(1), 16)
+		} else if (string.startsWith('0b')) {
+			value = Integer::parseInt(string.substring(2), 2)
+		} else if (string.startsWith('%')) {
+			value = Integer::parseInt(string.substring(1), 2)
 		} else if (string.startsWith("'") && string.endsWith("'")) {
 			value = string.charAt(1)
 		} else {
-			value = Integer.parseInt(string);
+			value = Integer::parseInt(string);
 		}
 
 		if (value > TypeSystem::MAX_UINT) {
