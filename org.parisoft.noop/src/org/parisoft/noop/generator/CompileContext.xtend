@@ -2,6 +2,8 @@ package org.parisoft.noop.generator
 
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.Variable
+import java.util.Set
 
 class CompileContext {
 
@@ -49,6 +51,7 @@ class CompileContext {
 	@Accessors var Mode mode = Mode::COPY
 	@Accessors var AllocContext allocation
 	@Accessors var boolean accLoaded = false
+	@Accessors var Set<Variable> recursiveVars = newHashSet
 
 	override toString() '''
 		StorageData{

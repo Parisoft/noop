@@ -13,6 +13,7 @@ class Datas {
 	public static val loopThreshold = 9
 
 	@Inject extension Values
+	@Inject extension Members
 	@Inject extension Classes
 	@Inject extension Operations
 
@@ -709,6 +710,19 @@ class Datas {
 			«ctx.accLoaded = true»
 				PLA
 		«ENDIF»
+	'''
+	
+	def pushRecusiveVars(CompileContext ctx) '''
+		«FOR variable : ctx.recursiveVars»
+			«variable.push»
+		«ENDFOR»
+	'''
+	
+	def pullRecursiveVars(CompileContext ctx) '''
+		«FOR variable : ctx.recursiveVars»
+			«variable.pull»
+		«ENDFOR»
+		«ctx.recursiveVars.clear»
 	'''
 
 	private def labelForCopyLoop() '''copyLoop'''

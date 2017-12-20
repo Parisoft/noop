@@ -62,6 +62,8 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import java.util.HashSet
+import org.parisoft.noop.noop.Statement
 
 class Expressions {
 
@@ -74,6 +76,8 @@ class Expressions {
 	@Inject extension Statements
 	@Inject extension TypeSystem
 	@Inject extension Collections
+
+	static val recursions = ThreadLocal.withInitial[new HashSet<Statement>]
 
 	def getFieldsInitializedOnContructor(NewInstance instance) {
 		instance.type.allFieldsTopDown.filter[nonStatic]
@@ -255,7 +259,60 @@ class Expressions {
 	def isDmcFile(StringLiteral string) {
 		string.isFileInclude && string.value.toLowerCase.endsWith(Members::FILE_DMC_EXTENSION)
 	}
+
+	def isRecursive(MemberRef ref) {
+		val containerMethod = ref.getContainerOfType(Method)
+		
+		if (containerMethod !== null) {
+			ref.invokes(containerMethod)
+		}
+	}
 	
+	def isRecursive(MemberSelect select) {
+		val containerMethod = select.getContainerOfType(Method)
+		
+		if (containerMethod !== null) {
+			select.invokes(containerMethod)
+		}
+	}
+	
+	def checkRecursion(MemberRef ref, CompileContext ctx) {
+		if (ref.isRecursive) {
+			ctx.recursiveVars = ref.getContainerOfType(Method).getOverriddenVariablesOnRecursion(ref)
+		}
+	}
+	
+	def checkRecursion(MemberSelect select, CompileContext ctx) {
+		if (select.isRecursive) {
+			ctx.recursiveVars = select.getContainerOfType(Method).getOverriddenVariablesOnRecursion(select)
+		}
+	}
+
+	def boolean invokes(Statement statement, Method method) {
+		if (recursions.get.add(statement)) {
+			try {
+				switch (statement) {
+					MemberSelect:
+						if (statement.member instanceof Method) {
+							statement.member == method || (statement.member as Method).body.statements.exists [
+								it.invokes(method)
+							]
+						}
+					MemberRef:
+						if (statement.member instanceof Method) {
+							statement.member == method || (statement.member as Method).body.statements.exists [
+								it.invokes(method)
+							]
+						}
+					default:
+						statement.eAllContentsAsList.filter(Statement).exists[it.invokes(method)]
+				}
+			} finally {
+				recursions.get.remove(statement)
+			}
+		}
+	}
+
 	def boolean containsMulDivMod(Expression expression) {
 		switch (expression) {
 			OrExpression:
@@ -1325,15 +1382,13 @@ class Expressions {
 							«member.compileReference(receiver, expression.indexes, ctx)»
 						«ENDIF»
 					«ELSEIF member instanceof Method»
+						«expression.checkRecursion(ctx)»
 						«val method = member as Method»
-						«val containerMethod = expression.getContainerOfType(Method)»
-						«containerMethod.pushIfRecursive(expression, ctx)»
 						«IF method.isStatic»
 							«method.compileInvocation(expression.args, expression.indexes, ctx)»
 						«ELSE»
 							«method.compileInvocation(receiver, expression.args, expression.indexes, ctx)»
 						«ENDIF»
-						«containerMethod.pullIfRecursive(expression, ctx)»
 					«ENDIF»
 				'''
 				MemberRef: '''
@@ -1363,10 +1418,8 @@ class Expressions {
 							]»
 							«innerReceiver.pointTo(outerReceiver)»
 						«ENDIF»
-						«val containerMethod = expression.getContainerOfType(Method)»
-						«containerMethod.pushIfRecursive(expression, ctx)»
+						«expression.checkRecursion(ctx)»
 						«method.compileInvocation(expression.args, expression.indexes, ctx)»
-						«containerMethod.pullIfRecursive(expression, ctx)»
 					«ENDIF»					
 				'''
 				default:
@@ -1411,7 +1464,7 @@ class Expressions {
 				NewInstance:
 					if (expression.type.isPrimitive && expression.dimension.isEmpty) {
 						val value = expression.type.defaultValueOf
-						
+
 						if (value instanceof Integer) {
 							value.toHex.toString
 						} else {

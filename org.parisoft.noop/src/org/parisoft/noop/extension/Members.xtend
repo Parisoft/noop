@@ -66,6 +66,22 @@ public class Members {
 	def getOverriders(Variable variable) {
 		variable.containerClass.subClasses.map[declaredFields.filter[it.isOverrideOf(variable)]].filterNull.flatten
 	}
+	
+	def getOverriddenVariablesOnRecursion(Method method, Expression expression) {
+		val statement = method.body.statements.findFirst[
+			it == expression || eAllContentsAsList.contains(expression)
+		]
+		
+		val localVars = method.params + method.body.statements.takeWhile[it != statement].map[
+			newArrayList(it) + eAllContentsAsList
+		].flatten.filter(Variable)
+		
+		return method.body.statements.dropWhile[it != statement].drop(1).map[
+			newArrayList(it) + eAllContentsAsList
+		].flatten.filter(MemberRef).map[member].filter(Variable).filter[variable|
+			localVars.exists[it == variable]
+		].toSet
+	}
 
 	def isAccessibleFrom(Member member, EObject context) {
 		if (context instanceof MemberSelect) {
@@ -228,10 +244,10 @@ public class Members {
 	def boolean isInvokedOn(Method method, Statement statement) {
 		statement !== null &&
 		statement.eAllContents.filter(MemberRef).map[member].filter(Method).exists[
-			it == method || body.statements.exists[method.isInvokedOn(it)]
+			it == method || body.statements.filter[it != statement].exists[method.isInvokedOn(it)]
 		] ||
 		statement.eAllContents.filter(MemberSelect).map[member].filter(Method).exists[
-			it == method || body.statements.exists[method.isInvokedOn(it)]
+			it == method || body.statements.filter[it != statement].exists[method.isInvokedOn(it)]
 		]
 	}
 	
@@ -384,6 +400,77 @@ public class Members {
 	def nameOfReturn(Method method) {
 		'''«method.nameOf».ret'''.toString
 	}
+
+	def push(Variable variable) '''
+		«IF variable.isParameter && (variable.type.isNonPrimitive || variable.dimension.isNotEmpty)»
+			«val pointer = variable.nameOf»
+				LDA «pointer» + 1
+				PHA
+				LDA «pointer» + 0
+				PHA
+			«FOR i : 0 ..< variable.dimension.size»
+				«val len = variable.nameOfLen(i)»
+					LDA «len» + 1
+					PHA
+					LDA «len» + 0
+					PHA
+			«ENDFOR»
+		«ELSE»
+			«val local = variable.nameOf»
+			«val size = variable.sizeOf»
+			«IF size < Datas::loopThreshold»
+				«FOR i : size >.. 0»
+					«noop»
+						LDA «local»«IF i > 0» + «i»«ENDIF»
+						PHA
+				«ENDFOR»
+			«ELSE»
+				«val loop = 'pushLoop'»
+					LDX #«size - 1»
+				-«loop»:
+					LDA «local», X
+					PHA
+					DEX
+					BNE -«loop»
+			«ENDIF»
+		«ENDIF»
+	'''
+	
+	def pull(Variable variable) '''
+		«IF variable.isParameter && (variable.type.isNonPrimitive || variable.dimension.isNotEmpty)»
+			«val pointer = variable.nameOf»
+				PLA
+				STA «pointer» + 0
+				PLA
+				STA «pointer» + 1
+			«FOR i : 0 ..< variable.dimension.size»
+				«val len = variable.nameOfLen(i)»
+					PLA
+					STA «len» + 0
+					PLA
+					STA «len» + 1
+			«ENDFOR»
+		«ELSE»
+			«val local = variable.nameOf»
+			«val size = variable.sizeOf»
+			«IF size < Datas::loopThreshold»
+				«FOR i : 0 ..< size»
+					«noop»
+						PLA
+						STA «local»«IF i > 0» + «i»«ENDIF»
+				«ENDFOR»
+			«ELSE»
+				«val loop = 'pushLoop'»
+					LDX #0
+				-«loop»:
+					PLA
+					STA «local», X
+					INX
+					CMP #«size»
+					BNE -«loop»
+			«ENDIF»
+		«ENDIF»
+	'''
 
 	def prepare(Method method, AllocContext ctx) {
 		if (preparing.get.add(method)) {
@@ -714,111 +801,7 @@ public class Members {
 			«ENDIF»
 		«ENDIF»
 	'''
-	
-	private def getOverriddenVariablesOnRecursion(Method method, Statement statement) {
-		val localVars = method.params + method.body.statements.takeWhile[it != statement].map[eAllContentsAsList].flatten.filter(Variable)
-		method.body.statements.dropWhile[it != statement].drop(1).map[eAllContentsAsList].flatten.filter(MemberRef).map[member].filter(Variable).filter[variable|
-			localVars.exists[it == variable]
-		].toSet
-	}
-	
-	def pushIfRecursive(Method method, Statement invoker, CompileContext ctx) {
-		val statement = method.body.statements.findFirst[it == invoker || it.eAllContentsAsList.contains(invoker)]
 		
-		if (method.isInvokedOn(statement)) {
-			val overridenVariables = method.getOverriddenVariablesOnRecursion(statement)
-			
-			if (overridenVariables.isNotEmpty) {
-				ctx.pushAccIfOperating
-				overridenVariables.forEach[push]
-			}
-		}
-	}
-	
-	def pullIfRecursive(Method method, Statement invoker, CompileContext ctx) {
-		val statement = method.body.statements.findFirst[it == invoker || it.eAllContentsAsList.contains(invoker)]
-		
-		if (method.isInvokedOn(statement)) {
-			val overridenVariables = method.getOverriddenVariablesOnRecursion(statement)
-			
-			if (overridenVariables.isNotEmpty) {
-				overridenVariables.forEach[pull]
-				ctx.pullAccIfOperating
-			}
-		}
-	}
-	
-	def push(Variable variable) '''
-		«IF variable.isParameter && (variable.type.isNonPrimitive || variable.dimension.isNotEmpty)»
-			«val pointer = variable.nameOf»
-				LDA «pointer» + 1
-				PHA
-				LDA «pointer» + 0
-				PHA
-			«FOR i : 0 ..< variable.dimension.size»
-				«val len = variable.nameOfLen(i)»
-					LDA «len» + 1
-					PHA
-					LDA «len» + 0
-					PHA
-			«ENDFOR»
-		«ELSE»
-			«val local = variable.nameOf»
-			«val size = variable.sizeOf»
-			«IF size < Datas::loopThreshold»
-				«FOR i : size >.. 0»
-					«noop»
-						LDA «local»«IF i > 0» + «i»«ENDIF»
-						PHA
-				«ENDFOR»
-			«ELSE»
-				«val loop = 'pushLoop'»
-					LDX #«size - 1»
-				-«loop»:
-					LDA «local», X
-					PHA
-					DEX
-					BNE -«loop»
-			«ENDIF»
-		«ENDIF»
-	'''
-	
-	def pull(Variable variable) '''
-		«IF variable.isParameter && (variable.type.isNonPrimitive || variable.dimension.isNotEmpty)»
-			«val pointer = variable.nameOf»
-				PLA
-				STA «pointer» + 0
-				PLA
-				STA «pointer» + 1
-			«FOR i : 0 ..< variable.dimension.size»
-				«val len = variable.nameOfLen(i)»
-					PLA
-					STA «len» + 0
-					PLA
-					STA «len» + 1
-			«ENDFOR»
-		«ELSE»
-			«val local = variable.nameOf»
-			«val size = variable.sizeOf»
-			«IF size < Datas::loopThreshold»
-				«FOR i : 0 ..< size»
-					«noop»
-						PLA
-						STA «local»«IF i > 0» + «i»«ENDIF»
-				«ENDFOR»
-			«ELSE»
-				«val loop = 'pushLoop'»
-					LDX #0
-				-«loop»:
-					PLA
-					STA «local», X
-					INX
-					CMP #«size»
-					BNE -«loop»
-			«ENDIF»
-		«ENDIF»
-	'''
-	
 	def compileConstant(Member member) {
 		switch (member) {
 			Variable: member.compileConstant
@@ -1037,6 +1020,7 @@ public class Members {
 	def compileInvocation(Method method, List<Expression> args, List<Index> indexes, CompileContext ctx) '''
 		«IF method.isNonNative»
 			«ctx.pushAccIfOperating»
+			«ctx.pushRecusiveVars»
 			«val methodName = method.nameOf»
 			«FOR i : 0..< args.size»
 				«val param = method.params.get(i)»
@@ -1066,6 +1050,7 @@ public class Members {
 			«ENDFOR»
 			«noop»
 				JSR «method.nameOf»
+			«ctx.pullRecursiveVars»
 			«ctx.pullAccIfOperating»
 			«IF method.typeOf.isNonVoid»
 				«val ret = new CompileContext => [
