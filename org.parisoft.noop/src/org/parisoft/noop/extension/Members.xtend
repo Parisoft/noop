@@ -496,7 +496,7 @@ public class Members {
 	}
 	
 	def prepareInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
-		if (method.isNative) {
+		if (method.isArrayLength) {
 			return
 		}
 		
@@ -520,7 +520,7 @@ public class Members {
 	}
 	
 	def prepareInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
-		if (method.isNative) {
+		if (method.isArrayLength) {
 			return
 		}
 		
@@ -639,7 +639,7 @@ public class Members {
 	def allocInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
 		val chunks = newArrayList
 		
-		if (method.isNative) {
+		if (method.isArrayLength) {
 			return chunks
 		}
 		
@@ -672,7 +672,7 @@ public class Members {
 	def allocInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
 		val chunks = newArrayList
 		
-		if (method.isNative) {
+		if (method.isArrayLength) {
 			return chunks
 		}
 		
@@ -725,7 +725,7 @@ public class Members {
 	}
 	
 	def compile(Method method, CompileContext ctx) '''
-		«IF method.isNonNative»
+		«IF method.isNonArrayLength»
 			«method.nameOf»:
 			«IF method.isReset»
 				;;;;;;;;;; Initial setup begin
@@ -985,7 +985,7 @@ public class Members {
 	'''
 
 	def compileInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, CompileContext ctx) '''
-		«IF method.isNative»
+		«IF method.isArrayLength»
 			«method.compileNativeInvocation(receiver, args, ctx)»
 		«ELSE»
 			«val overriders = if (receiver.isNonThisNorSuper) method.overriders else emptyList»
@@ -1028,7 +1028,7 @@ public class Members {
 	'''
 
 	def compileInvocation(Method method, List<Expression> args, List<Index> indexes, CompileContext ctx) '''
-		«IF method.isNonNative»
+		«IF method.isNonArrayLength»
 			«ctx.pushAccIfOperating»
 			«ctx.pushRecusiveVars»
 			«val methodName = method.nameOf»
@@ -1184,7 +1184,7 @@ public class Members {
 			«ENDIF»
 			«IF isIndexImmediate»
 				«IF ref.absolute !== null»
-					«ref.absolute = '''«ref.absolute» + #«index»'''»
+					«ref.absolute = '''«ref.absolute» + #(«index»)'''»
 				«ELSEIF ref.indirect !== null»
 					«val ptr = indexes.nameOfElement(ref.container)»
 					«ref.pushAccIfOperating»

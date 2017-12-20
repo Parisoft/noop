@@ -85,7 +85,7 @@
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//AsmStatement">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//AsmStatement/codes"/>
-      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//AsmStatement/vars"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//AsmStatement/vars"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//Expression"/>
     <genClasses ecoreClass="Noop.ecore#//Constructor">

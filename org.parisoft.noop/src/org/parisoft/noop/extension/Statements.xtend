@@ -23,6 +23,8 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.MemberRef
+import org.parisoft.noop.noop.This
 
 class Statements {
 
@@ -430,9 +432,15 @@ class Statements {
 						val c2Ini = if(c2.startsWith('!') || c2.startsWith('?')) 1 else 0
 						val c2End = if(c2.endsWith('!') || c2.endsWith('?')) c2.length - 1 else c2.length
 
-						val ref = statement.vars.get(i.andIncrement).nameOf
+						val varRef = statement.vars.get(i.andIncrement)
+						val varName =  
+						if (varRef instanceof MemberRef) {
+							varRef.member.nameOf
+						} else if (varRef instanceof This) {
+							varRef.nameOf
+						}
 
-						c1.substring(c1Ini, c1End) + ref + c2.substring(c2Ini, c2End)
+						c1.substring(c1Ini, c1End) + varName + c2.substring(c2Ini, c2End)
 					]
 				}
 			Expression:

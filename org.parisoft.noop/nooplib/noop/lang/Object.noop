@@ -8,7 +8,14 @@ Object {
     
     /* Returns true if this is exactly the same object as other */
     same(Object other) {
-    	//native implementation
+    	!	LDA ?this? + 0  !
+    	!	CMP ?other? + 0 !
+    	!	BNE +notSame    !
+    	!	LDA ?this? + 1  !
+    	!	CMP ?other? + 1 !
+    	!	BNE +notSame    !
+    	return true
+    	!+notSame:          !
     	return false
     }
     

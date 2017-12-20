@@ -62,7 +62,7 @@ BreakStatement:
 	name='break';
 
 AsmStatement:
-	codes+=ASM_TO_ASM | (codes+=ASM_TO_VAR vars+=[Variable] (codes+=VAR_TO_VAR vars+=[Variable])* codes+=VAR_TO_ASM);
+	codes+=ASM_TO_ASM | (codes+=ASM_TO_VAR vars+=Expression (codes+=VAR_TO_VAR vars+=Expression)* codes+=VAR_TO_ASM);
 
 Expression:
 	AssignmentExpression;
