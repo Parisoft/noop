@@ -368,6 +368,10 @@ class Expressions {
 		}
 	}
 
+	def nameOf(This thisExpression) {
+		thisExpression.getContainerOfType(Method)?.nameOfReceiver
+	}
+
 	def nameOfTmpVar(Expression instance, String containerName) {
 		'''«containerName».tmp«instance.typeOf.name»@«instance.hashCode.toHexString»'''.toString
 	}

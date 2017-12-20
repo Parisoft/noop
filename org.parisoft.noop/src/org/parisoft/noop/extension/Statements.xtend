@@ -127,7 +127,7 @@ class Statements {
 	def nameOfEnd(ForStatement forStatement) {
 		'''«forStatement.nameOf».end'''
 	}
-	
+
 	def dimensionOf(ReturnStatement returnStatement) {
 		return returnStatement?.value?.dimensionOf ?: emptyList
 	}
@@ -430,8 +430,9 @@ class Statements {
 						val c2Ini = if(c2.startsWith('!') || c2.startsWith('?')) 1 else 0
 						val c2End = if(c2.endsWith('!') || c2.endsWith('?')) c2.length - 1 else c2.length
 
-						c1.substring(c1Ini, c1End) + statement.vars.get(i.andIncrement).nameOf +
-							c2.substring(c2Ini, c2End)
+						val ref = statement.vars.get(i.andIncrement).nameOf
+
+						c1.substring(c1Ini, c1End) + ref + c2.substring(c2Ini, c2End)
 					]
 				}
 			Expression:

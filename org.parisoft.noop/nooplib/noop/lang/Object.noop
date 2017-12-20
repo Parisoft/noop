@@ -5,10 +5,17 @@ Object {
         //native implementation
         return false
     }
-
+    
+    /* Returns true if this is exactly the same object as other */
+    same(Object other) {
+    	//native implementation
+    	return false
+    }
+    
     //-- Arrays methods ---
     
     length() {
+    	//native implementation
     	return UInt
     }
     

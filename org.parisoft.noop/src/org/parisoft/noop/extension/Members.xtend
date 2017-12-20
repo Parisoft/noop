@@ -44,6 +44,8 @@ public class Members {
 	public static val FILE_DMC_EXTENSION = '.dmc'
 	public static val MATH_MOD = '''«TypeSystem::LIB_MATH».«STATIC_PREFIX»mod'''
 	public static val METHOD_ARRAY_LENGTH = 'length'
+	public static val METHOD_OBJECT_EQUALS = 'equals'
+	public static val METHOD_OBJECT_SAME = 'same'
 	
 	@Inject extension Datas
 	@Inject extension Values
@@ -494,7 +496,7 @@ public class Members {
 	}
 	
 	def prepareInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
-		if (method.isArrayLength) {
+		if (method.isNative) {
 			return
 		}
 		
@@ -518,6 +520,10 @@ public class Members {
 	}
 	
 	def prepareInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
+		if (method.isNative) {
+			return
+		}
+		
 		args.forEach [ arg, i |
 			if (arg.containsMulDivMod) {
 				try {
@@ -633,7 +639,7 @@ public class Members {
 	def allocInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
 		val chunks = newArrayList
 		
-		if (method.isArrayLength) {
+		if (method.isNative) {
 			return chunks
 		}
 		
@@ -665,6 +671,10 @@ public class Members {
 	
 	def allocInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
 		val chunks = newArrayList
+		
+		if (method.isNative) {
+			return chunks
+		}
 		
 		val methodChunks = method.alloc(ctx)
 		
@@ -1070,7 +1080,57 @@ public class Members {
 	'''
 	
 	private def compileNativeInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
-		«IF method.name == METHOD_ARRAY_LENGTH»
+		«IF method.name == METHOD_OBJECT_EQUALS»
+			«val eq = NoopFactory::eINSTANCE.createEqualsExpression => [
+				left = NoopFactory::eINSTANCE.createCastExpression => [
+					left = receiver.copy
+					type = receiver.typeOf.superClasses.reverse.get(1)
+				]
+				right = NoopFactory::eINSTANCE.createCastExpression => [
+					left = args.head.copy
+					type = args.head.typeOf.superClasses.reverse.get(1)
+				]
+			]»
+			«eq.compile(ctx)»
+		«ELSEIF method.name == METHOD_OBJECT_SAME»
+«««			«ctx.pushAccIfOperating»
+«««			«receiver.compile(new CompileContext => [
+«««				container = ctx.container
+«««				type = receiver.typeOf
+«««				indirect = TEMP_VAR_NAME1
+«««				mode = Mode.POINT
+«««			])»
+«««			«args.head.compile(new CompileContext => [
+«««				container = ctx.container
+«««				type = args.head.typeOf
+«««				indirect = TEMP_VAR_NAME2
+«««				mode = Mode.POINT
+«««			])»
+«««				LDA «TEMP_VAR_NAME1»
+«««				CMP «TEMP_VAR_NAME2»
+«««				BNE  +notSame
+«««				LDA «TEMP_VAR_NAME1» + 1
+«««				CMP «TEMP_VAR_NAME2» + 1
+«««				«IF ctx.relative === null»
+«««					BNE  +notSame
+«««					LDA #«TRUE»
+«««					BNE +same.end:
+«««				«ELSE»
+«««					BEQ «ctx.relative»
+«««				«ENDIF»
+«««			+notSame
+«««			«IF ctx.relative === null»
+«««				«noop»
+«««					LDA #«FALSE»
+«««				+same.end
+«««				«(new CompileContext => [
+«««					container = ctx.container
+«««					type = ctx.type.toBoolClass
+«««					register = 'A'
+«««				]).resolveTo(ctx)»
+«««			«ENDIF»
+«««			«ctx.pullAccIfOperating»
+		«ELSEIF method.name == METHOD_ARRAY_LENGTH»
 			«IF receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable && ((receiver as MemberRef).member as Variable).isUnbounded»
 				«val dim = (receiver as MemberRef).indexes.size»
 				«val len = new CompileContext => [
