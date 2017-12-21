@@ -262,26 +262,26 @@ class Expressions {
 
 	def isRecursive(MemberRef ref) {
 		val containerMethod = ref.getContainerOfType(Method)
-		
+
 		if (containerMethod !== null) {
 			ref.invokes(containerMethod)
 		}
 	}
-	
+
 	def isRecursive(MemberSelect select) {
 		val containerMethod = select.getContainerOfType(Method)
-		
+
 		if (containerMethod !== null) {
 			select.invokes(containerMethod)
 		}
 	}
-	
+
 	def checkRecursion(MemberRef ref, CompileContext ctx) {
 		if (ref.isRecursive) {
 			ctx.recursiveVars = ref.getContainerOfType(Method).getOverriddenVariablesOnRecursion(ref)
 		}
 	}
-	
+
 	def checkRecursion(MemberSelect select, CompileContext ctx) {
 		if (select.isRecursive) {
 			ctx.recursiveVars = select.getContainerOfType(Method).getOverriddenVariablesOnRecursion(select)
@@ -370,6 +370,10 @@ class Expressions {
 
 	def nameOf(This thisExpression) {
 		thisExpression.getContainerOfType(Method)?.nameOfReceiver
+	}
+
+	def nameOf(Super superExpression) {
+		superExpression.getContainerOfType(Method)?.nameOfReceiver
 	}
 
 	def nameOfTmpVar(Expression instance, String containerName) {
@@ -834,8 +838,10 @@ class Expressions {
 					expression.left.prepare(ctx)
 				}
 			}
-			ArrayLiteral:
+			ArrayLiteral: {
 				expression.typeOf.prepare(ctx)
+				expression.values.forEach[prepare(ctx)]
+			}
 			NewInstance:
 				if (expression.type.isINESHeader) {
 					ctx.header = expression
@@ -1036,6 +1042,8 @@ class Expressions {
 					}
 				}
 
+				chunks.disoverlap(ctx.container)
+				
 				ctx.restoreTo(snapshot)
 
 				return chunks
@@ -1061,6 +1069,8 @@ class Expressions {
 					chunks += member.allocInvocation(expression.args, expression.indexes, ctx)
 				}
 
+				chunks.disoverlap(ctx.container)
+				
 				ctx.restoreTo(snapshot)
 
 				return chunks

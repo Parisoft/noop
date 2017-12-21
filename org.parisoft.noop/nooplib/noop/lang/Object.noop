@@ -1,12 +1,22 @@
 Object {
 
-    /* Returns true if other has the same content as this object */
+    /* <b>Returns</b> true if this object has the same content as other object */
     equals(Object other) {
-        //native implementation
+    	size()
+        !	LDY #0           !
+        !-equalsLoop:        !
+        !	LDA (?this?), Y  !
+        !	CMP (?other?), Y !
+        !	BNE +notEquals   !
+        !	INY              !
+        !	CPY ?size()?.ret !
+        !	BNE -equalsLoop  !
+        return true
+        !+notEquals:         !
         return false
     }
     
-    /* Returns true if this is exactly the same object as other */
+    /* <b>Returns</b> true if this object is exactly the same object as other */
     same(Object other) {
     	!	LDA ?this? + 0  !
     	!	CMP ?other? + 0 !
@@ -19,8 +29,20 @@ Object {
     	return false
     }
     
+    /* <b>Returns</b> the size in bytes of this object */
+    size() {
+    	s : 0
+    	!	LDY #0               !
+    	!	LDA (?this?), Y      !
+    	!	TAX                  !
+    	!	LDA Object.$sizes, X !
+    	!	STA ?s?              !
+    	return s
+    }
+    
     //-- Arrays methods ---
     
+    /* <b>Returns</b> how many elements this array contains */
     length() {
     	//native implementation
     	return UInt

@@ -756,9 +756,9 @@ class Datas {
 
 	def computeTmp(AllocContext ctx, String varName, int size) {
 		if (size > 2) {
-			ctx.computeVar(varName, VAR_PAGE, size)
+			ctx.computeVar(varName, VAR_PAGE, size).map[it => [tmp = true]]
 		} else {
-			ctx.computeVar(varName, PTR_PAGE, size)
+			ctx.computeVar(varName, PTR_PAGE, size).map[it => [tmp = true]]
 		}
 	}
 
@@ -768,7 +768,7 @@ class Datas {
 		methodName.debug('''«chunks»:''')
 
 		chunks.forEach [ chunk, index |
-			if (chunk.variable.startsWith(methodName)) {
+			if (chunk.variable.startsWith(methodName) && chunk.isNonDisposed) {
 				val outers = chunks.drop(index).reject[variable.startsWith(methodName)]
 				var overlapped = true
 
@@ -796,12 +796,15 @@ class Datas {
 			}
 		]
 
-//		println('''disoverlapped «methodName» to «chunks»''')
-//		println('--------------------------------')
+		chunks.dispose(methodName)
+	}
+	
+	def void dispose(Iterable<MemChunk> chunks, String methodName) {
+		chunks.filter[tmp].filter[variable.startsWith(methodName)].forEach[disposed = true]
 	}
 
 	private def debug(String methodName, CharSequence message) {
-		val enabled = message === null
+		val enabled = message !== null
 
 		if (enabled && methodName?.contains('$reset')) {
 			println(message)

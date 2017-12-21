@@ -145,7 +145,21 @@ class NoopGenerator extends AbstractGenerator {
 		; Class Metadata
 		;----------------------------------------------------------------
 		«var classCount = 0»
-		«FOR noopClass : ctx.classes.values.filter[nonPrimitive]»
+		«val classes = ctx.classes.values.filter[nonPrimitive].sortWith[a, b|
+			val aHasConstructor = ctx.constructors.containsKey(a.nameOf)
+			val bHasConstructor = ctx.constructors.containsKey(b.nameOf)
+			
+			if (aHasConstructor && !bHasConstructor) {
+				return -1 //don't know why this works inverted ... should be 1 instead
+			}
+			
+			if (!aHasConstructor && bHasConstructor) {
+				return 1 //don't know why this works inverted ... should be -1 instead
+			}
+			
+			return a.name.compareTo(b.name)
+		]»
+		«FOR noopClass : classes»
 			«noopClass.nameOf» = «classCount++»
 			«val fieldOffset = new AtomicInteger(1)»
 			«FOR field : noopClass.allFieldsTopDown.filter[nonStatic]»
@@ -188,13 +202,14 @@ class NoopGenerator extends AbstractGenerator {
 			«val delta = ctx.counters.get(chunk.page).get - chunk.page * 0x0100»
 			«chunk.shiftTo(delta)»
 		«ENDFOR»
-		«FOR i : 1 ..< chunks.size»
-			«val c0 = chunks.get(i - 1)»
-			«val c1 = chunks.get(i)»
-			«IF c0.ZP == c1.ZP»
-				«IF c1.shiftTo(c0) == 0»«noop»«ENDIF»
-			«ENDIF»
-		«ENDFOR»
+«««		«FOR i : 1 ..< chunks.size»
+«««			«val c0 = chunks.get(i - 1)»
+«««			«val c1 = chunks.get(i)»
+«««			«val delta = c1.deltaFrom(c0)»
+«««			«IF c0.ZP == c1.ZP && delta < 0»
+«««				«c1.shiftTo(delta)»
+«««			«ENDIF»
+«««		«ENDFOR»
 		«FOR chunk : chunks»
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
@@ -216,6 +231,10 @@ class NoopGenerator extends AbstractGenerator {
 		«FOR rom : ctx.prgRoms.values.filter[nonDMC]»
 			«rom.compile(new CompileContext)»
 		«ENDFOR»
+		«IF ctx.methods.values.exists[objectSize] && ctx.constructors.size > 0»
+			Object.$sizes:
+				.db «ctx.constructors.values.sortBy[type.name].map[type.sizeOf].join(', ', [toHexString])»
+		«ENDIF»
 		
 		;-- Methods -----------------------------------------------------
 		«FOR method : ctx.methods.values.sortBy[fullyQualifiedName]»

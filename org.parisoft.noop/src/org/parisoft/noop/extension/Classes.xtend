@@ -12,6 +12,8 @@ import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import java.util.ArrayList
+import java.util.HashMap
 
 class Classes {
 
@@ -22,8 +24,8 @@ class Classes {
 	@Inject extension TypeSystem
 	@Inject extension IQualifiedNameProvider
 
-	val classeSizeCache = <NoopClass, Integer>newHashMap
-	val classesCache = <NoopClass>newArrayList
+	static val classeSizeCache = ThreadLocal::withInitial[new HashMap<NoopClass, Integer>]
+	static val classesCache = ThreadLocal::withInitial[new ArrayList<NoopClass>]
 
 	def getSuperClasses(NoopClass c) {
 		val visited = <NoopClass>newArrayList()
@@ -54,7 +56,7 @@ class Classes {
 	}
 
 	def getSubClasses(NoopClass c) {
-		classesCache.filter[it != c].filter[isInstanceOf(c)]
+		classesCache.get.filter[it != c].filter[isInstanceOf(c)]
 	}
 
 	def getContainerClass(EObject e) {
@@ -154,6 +156,10 @@ class Classes {
 	def isNonVoid(NoopClass c) {
 		!c.isVoid
 	}
+	
+	def isObject(NoopClass c) {
+		c.fullyQualifiedName.toString == TypeSystem::LIB_OBJECT
+	}
 
 	def isPrimitive(NoopClass c) {
 		c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_PRIMITIVE]
@@ -228,7 +234,7 @@ class Classes {
 	}
 
 	def int sizeOf(NoopClass c) {
-		classeSizeCache.computeIfAbsent(c, [rawSizeOf])
+		classeSizeCache.get.computeIfAbsent(c, [rawSizeOf])
 	}
 
 	def prepare(NoopClass gameImplClass) {
@@ -238,14 +244,14 @@ class Classes {
 
 		gameImplClass.prepare(ctx)
 
-		classeSizeCache.clear
+		classeSizeCache.get.clear
 
 		ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
 		ctx.classes.values.forEach [ class1 |
 			if (class1.isPrimitive) {
-				classeSizeCache.put(class1, class1.rawSizeOf)
+				classeSizeCache.get.put(class1, class1.rawSizeOf)
 			} else {
-				classeSizeCache.put(class1, ctx.classes.values.filter [ class2 |
+				classeSizeCache.get.put(class1, ctx.classes.values.filter [ class2 |
 					class2.isInstanceOf(class1)
 				].map [
 					rawSizeOf
@@ -253,8 +259,8 @@ class Classes {
 			}
 		]
 
-		classesCache.clear
-		classesCache += ctx.classes.values
+		classesCache.get.clear
+		classesCache.get += ctx.classes.values
 
 		return ctx
 	}

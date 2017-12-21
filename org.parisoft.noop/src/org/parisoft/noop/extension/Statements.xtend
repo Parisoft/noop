@@ -25,6 +25,8 @@ import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.This
+import org.parisoft.noop.noop.MemberSelect
+import org.parisoft.noop.noop.Super
 
 class Statements {
 
@@ -433,12 +435,15 @@ class Statements {
 						val c2End = if(c2.endsWith('!') || c2.endsWith('?')) c2.length - 1 else c2.length
 
 						val varRef = statement.vars.get(i.andIncrement)
-						val varName =  
-						if (varRef instanceof MemberRef) {
-							varRef.member.nameOf
-						} else if (varRef instanceof This) {
-							varRef.nameOf
-						}
+						val varName = if (varRef instanceof MemberRef) {
+								varRef.member.nameOf
+							} else if (varRef instanceof MemberSelect) {
+								varRef.member.nameOf
+							} else if (varRef instanceof This) {
+								varRef.nameOf
+							} else if (varRef instanceof Super) {
+								varRef.nameOf
+							}
 
 						c1.substring(c1Ini, c1End) + varName + c2.substring(c2Ini, c2End)
 					]
