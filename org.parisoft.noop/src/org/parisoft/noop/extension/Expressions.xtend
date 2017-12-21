@@ -524,9 +524,9 @@ class Expressions {
 			val leftType = left.typeOf
 			val rightType = right.typeOf
 
-			if (leftType.rawSizeOf > rightType.rawSizeOf) {
+			if (leftType.sizeOf > rightType.sizeOf) {
 				leftType
-			} else if (leftType.rawSizeOf < rightType.rawSizeOf) {
+			} else if (leftType.sizeOf < rightType.sizeOf) {
 				rightType
 			} else if (leftType.isSigned) {
 				leftType

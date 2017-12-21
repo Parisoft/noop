@@ -126,7 +126,7 @@ class Classes {
 	def getAllMethodsTopDown(NoopClass c) {
 		c.superClasses.reverse.map[members].flatten.filter(Method)
 	}
-	
+
 	def isEquals(NoopClass c1, NoopClass c2) {
 		c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString
 	}
@@ -156,7 +156,7 @@ class Classes {
 	def isNonVoid(NoopClass c) {
 		!c.isVoid
 	}
-	
+
 	def isObject(NoopClass c) {
 		c.fullyQualifiedName.toString == TypeSystem::LIB_OBJECT
 	}
@@ -209,7 +209,11 @@ class Classes {
 		'''«c.name».class'''.toString
 	}
 
-	def int rawSizeOf(NoopClass c) {
+	def int sizeOf(NoopClass c) {
+		classeSizeCache.get.computeIfAbsent(c, [fullSizeOf])
+	}
+
+	private def int fullSizeOf(NoopClass c) {
 		switch (c.fullyQualifiedName.toString) {
 			case TypeSystem::LIB_VOID:
 				0
@@ -225,42 +229,31 @@ class Classes {
 				2
 			case TypeSystem::LIB_PRIMITIVE:
 				2
-			default: {
-				SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonStatic].map[rawSizeOf].reduce [ s1, s2 |
-					s1 + s2
-				] ?: 0)
-			}
+			default:
+				(newArrayList(c.rawSizeOf) + c.subClasses.map[rawSizeOf]).max
 		}
 	}
 
-	def int sizeOf(NoopClass c) {
-		classeSizeCache.get.computeIfAbsent(c, [rawSizeOf])
+	def int rawSizeOf(NoopClass c) {
+		SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonStatic].map[sizeOf].reduce [ s1, s2 |
+			s1 + s2
+		] ?: 0)
 	}
 
 	def prepare(NoopClass gameImplClass) {
 		TypeSystem::context.set(gameImplClass)
-		
+
 		val ctx = new AllocContext
 
 		gameImplClass.prepare(ctx)
 
-		classeSizeCache.get.clear
-
 		ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
-		ctx.classes.values.forEach [ class1 |
-			if (class1.isPrimitive) {
-				classeSizeCache.get.put(class1, class1.rawSizeOf)
-			} else {
-				classeSizeCache.get.put(class1, ctx.classes.values.filter [ class2 |
-					class2.isInstanceOf(class1)
-				].map [
-					rawSizeOf
-				].max)
-			}
-		]
 
 		classesCache.get.clear
-		classesCache.get += ctx.classes.values
+		classesCache.get.addAll(ctx.classes.values)
+
+		classeSizeCache.get.clear
+		classeSizeCache.get.putAll(ctx.classes.values.toMap([it], [sizeOf]))
 
 		return ctx
 	}

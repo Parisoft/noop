@@ -804,7 +804,7 @@ class Datas {
 	}
 
 	private def debug(String methodName, CharSequence message) {
-		val enabled = message !== null
+		val enabled = message === null
 
 		if (enabled && methodName?.contains('$reset')) {
 			println(message)

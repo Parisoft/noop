@@ -256,8 +256,8 @@ public class Members {
 		]
 	}
 	
-	def isArrayReference(Variable variable, List<Index> indexes) {
-		variable.dimensionOf.size > indexes.size
+	def isArrayReference(Member member, List<Index> indexes) {
+		member.dimensionOf.size > indexes.size
 	}
 
 	def typeOf(Member member) {
@@ -314,8 +314,8 @@ public class Members {
 		}
 	}
 
-	def lenOfArrayReference(Variable variable, List<Index> indexes) {
-		variable.dimensionOf.drop(indexes.size).reduce[d1, d2| d1 * d2]
+	def lenOfArrayReference(Member member, List<Index> indexes) {
+		member.dimensionOf.drop(indexes.size).reduce[d1, d2| d1 * d2]
 	}
 
 	def List<Integer> dimensionOf(Member member) {
@@ -339,12 +339,6 @@ public class Members {
 				running.get.remove(method)
 			}
 		}
-	}
-
-	def rawSizeOf(Member member) {
-		member.typeOf.rawSizeOf * (member.dimensionOf.reduce [ d1, d2 |
-			d1 * d2
-		] ?: 1)
 	}
 
 	def sizeOf(Member member) {
@@ -1077,7 +1071,11 @@ public class Members {
 					}
 				]»
 				«method.compileIndexes(indexes, ret)»
-				«ret.resolveTo(ctx)»
+				«IF ctx.mode === Mode::COPY && method.isArrayReference(indexes)»
+					«ret.copyArrayTo(ctx, method.lenOfArrayReference(indexes))»
+				«ELSE»
+					«ret.resolveTo(ctx)»
+				«ENDIF»
 			«ENDIF»
 		«ENDIF»
 	'''

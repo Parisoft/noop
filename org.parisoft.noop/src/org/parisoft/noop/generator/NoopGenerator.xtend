@@ -197,10 +197,13 @@ class NoopGenerator extends AbstractGenerator {
 		«Members::TEMP_VAR_NAME1» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
 		«Members::TEMP_VAR_NAME2» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
 		«Members::TEMP_VAR_NAME3» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
-		«val chunks = ctx.pointers.values.flatten.sort + ctx.variables.values.flatten.sort»
-		«FOR chunk : chunks»
-			«val delta = ctx.counters.get(chunk.page).get - chunk.page * 0x0100»
-			«chunk.shiftTo(delta)»
+		«val zpDelta = ctx.counters.get(Datas::PTR_PAGE).get»
+		«FOR zpChunk : ctx.pointers.values.flatten.sort»
+			«zpChunk.shiftTo(zpDelta)»
+		«ENDFOR»
+		«val varDelta = ctx.counters.drop(Datas::VAR_PAGE).map[get].reduce[c1, c2| c1 + c2] - 0x1600»
+		«FOR varChunk : ctx.variables.values.flatten.sort»
+			«varChunk.shiftTo(varDelta)»
 		«ENDFOR»
 «««		«FOR i : 1 ..< chunks.size»
 «««			«val c0 = chunks.get(i - 1)»
@@ -210,7 +213,7 @@ class NoopGenerator extends AbstractGenerator {
 «««				«c1.shiftTo(delta)»
 «««			«ENDIF»
 «««		«ENDFOR»
-		«FOR chunk : chunks»
+		«FOR chunk : ctx.pointers.values.flatten.sort + ctx.variables.values.flatten.sort»
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
 		

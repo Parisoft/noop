@@ -37,18 +37,18 @@ class AllocContext {
 		new MemChunk(variable, page.getAndMoveCounter(size), size)
 	}
 
-	def getAndMoveCounter(int page, int size) {
+	def int getAndMoveCounter(int page, int size) {
 		val cur = counters.get(page).get
-		val max = page * 0x0100 + 0x00FF
+		val max = (page + 1) * 0x0100
 
 		if (cur + size <= max) {
 			counters.get(page).getAndAdd(size)
+		} else if (cur < max) {
+			counters.get(page + 1).getAndAdd(size - (max - cur))
+			counters.get(page).getAndAdd(max - cur - 1)
 		} else {
-			counters.get(page).set(max)
-			counters.get(page + 1).getAndAdd(cur + size - max)
+			getAndMoveCounter(page + 1, size)
 		}
-
-		return cur
 	}
 
 	def snapshot() {
