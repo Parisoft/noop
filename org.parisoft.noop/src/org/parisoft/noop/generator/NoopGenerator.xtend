@@ -205,14 +205,6 @@ class NoopGenerator extends AbstractGenerator {
 		«FOR varChunk : ctx.variables.values.flatten.sort»
 			«varChunk.shiftTo(varDelta)»
 		«ENDFOR»
-«««		«FOR i : 1 ..< chunks.size»
-«««			«val c0 = chunks.get(i - 1)»
-«««			«val c1 = chunks.get(i)»
-«««			«val delta = c1.deltaFrom(c0)»
-«««			«IF c0.ZP == c1.ZP && delta < 0»
-«««				«c1.shiftTo(delta)»
-«««			«ENDIF»
-«««		«ENDFOR»
 		«FOR chunk : ctx.pointers.values.flatten.sort + ctx.variables.values.flatten.sort»
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
@@ -236,7 +228,7 @@ class NoopGenerator extends AbstractGenerator {
 		«ENDFOR»
 		«IF ctx.methods.values.exists[objectSize] && ctx.constructors.size > 0»
 			Object.$sizes:
-				.db «ctx.constructors.values.sortBy[type.name].map[type.sizeOf].join(', ', [toHexString])»
+				.db «ctx.constructors.values.sortBy[type.name].map[type.rawSizeOf].join(', ', [toHexString])»
 		«ENDIF»
 		
 		;-- Methods -----------------------------------------------------
