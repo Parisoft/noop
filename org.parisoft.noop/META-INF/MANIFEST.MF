@@ -29,7 +29,8 @@ Export-Package: noop.io,
  org.parisoft.noop.scoping,
  org.parisoft.noop.serializer,
  org.parisoft.noop.services,
- org.parisoft.noop.validation
+ org.parisoft.noop.validation,
+ org.parisoft.noop.formatting2
 Import-Package: noop.io,
  noop.lang,
  org.apache.log4j

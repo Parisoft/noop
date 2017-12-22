@@ -6,7 +6,7 @@ import org.eclipse.xtext.xtext.generator.model.project.*
 var rootPath = ".."
 
 Workflow {
-	
+
 	component = XtextGenerator {
 		configuration = {
 			project = StandardProjectConfig {
@@ -25,12 +25,11 @@ Workflow {
 		language = StandardLanguage {
 			name = "org.parisoft.noop.Noop"
 			fileExtensions = "noop"
-
 			serializer = {
 				generateStub = false
 			}
 			validator = {
-				// composedCheck = "org.eclipse.xtext.validation.NamesAreUniqueValidator"
+			// composedCheck = "org.eclipse.xtext.validation.NamesAreUniqueValidator"
 			}
 			generator = {
 				generateXtendMain = true
@@ -38,9 +37,12 @@ Workflow {
 			newProjectWizardForEclipse = {
 				generate = true
 			}
-//			fragment = ui.projectWizard.SimpleProjectWizardFragment2 {
-//				generate = true
-//			}
+			formatter = {
+				generateStub = true
+			}
+			//			fragment = ui.projectWizard.SimpleProjectWizardFragment2 {
+			//				generate = true
+			//			}
 		}
 	}
 }
