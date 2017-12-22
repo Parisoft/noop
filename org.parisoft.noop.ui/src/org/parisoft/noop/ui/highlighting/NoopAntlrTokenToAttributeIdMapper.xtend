@@ -23,7 +23,7 @@ class NoopAntlrTokenToAttributeIdMapper extends DefaultAntlrTokenToAttributeIdMa
 			return NoopHighlightingConfiguration.KEYWORD_ID
 		}
 
-		if (tokenName == "'@PRG-ROM'" || tokenName == "'@CHR-ROM'" || tokenName == "'@RAM'") {
+		if (tokenName == "'@PRG-ROM'" || tokenName == "'@CHR-ROM'" || tokenName == "'@ZP-RAM'" || tokenName == "'@Inline'") {
 			return NoopHighlightingConfiguration.TAG_ID
 		}
 

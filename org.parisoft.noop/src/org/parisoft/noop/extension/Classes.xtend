@@ -3,6 +3,7 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.Collection
 import java.util.NoSuchElementException
+import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.AllocContext
@@ -12,8 +13,6 @@ import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import java.util.ArrayList
-import java.util.HashMap
 
 class Classes {
 
@@ -24,8 +23,8 @@ class Classes {
 	@Inject extension TypeSystem
 	@Inject extension IQualifiedNameProvider
 
-	static val classeSizeCache = ThreadLocal::withInitial[new HashMap<NoopClass, Integer>]
-	static val classesCache = ThreadLocal::withInitial[new ArrayList<NoopClass>]
+	static val classeSizeCache = new ConcurrentHashMap<NoopClass, Integer>
+	static val classesCache = ConcurrentHashMap::<NoopClass>newKeySet
 
 	def getSuperClasses(NoopClass c) {
 		val visited = <NoopClass>newArrayList()
@@ -56,7 +55,7 @@ class Classes {
 	}
 
 	def getSubClasses(NoopClass c) {
-		classesCache.get.filter[it != c].filter[isInstanceOf(c)]
+		classesCache.filter[it != c].filter[isInstanceOf(c)]
 	}
 
 	def getContainerClass(EObject e) {
@@ -210,7 +209,7 @@ class Classes {
 	}
 
 	def int sizeOf(NoopClass c) {
-		classeSizeCache.get.computeIfAbsent(c, [fullSizeOf])
+		classeSizeCache.computeIfAbsent(c, [fullSizeOf])
 	}
 
 	private def int fullSizeOf(NoopClass c) {
@@ -249,11 +248,11 @@ class Classes {
 
 		ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
 
-		classesCache.get.clear
-		classesCache.get.addAll(ctx.classes.values)
+		classesCache.clear
+		classesCache.addAll(ctx.classes.values)
 
-		classeSizeCache.get.clear
-		classeSizeCache.get.putAll(ctx.classes.values.toMap([it], [sizeOf]))
+		classeSizeCache.clear
+		ctx.classes.values.forEach[sizeOf]
 
 		return ctx
 	}

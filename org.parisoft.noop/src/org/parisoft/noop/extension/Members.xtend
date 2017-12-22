@@ -26,6 +26,7 @@ import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.StorageType
 
 public class Members {
 
@@ -142,8 +143,8 @@ public class Members {
 		!variable.isConstant
 	}
 
-	def isROM(Variable variable) {
-		switch(variable.storage?.type) {
+	def isROM(Member member) {
+		switch(member.storage?.type) {
 			case CHRROM: true
 			case PRGROM: true
 			default: false	
@@ -398,6 +399,20 @@ public class Members {
 	
 	def nameOfReturn(Method method) {
 		'''«method.nameOf».ret'''.toString
+	}
+	
+	def storageOf(Member member) {
+		if (member.isROM) {
+			member.storage.location?.valueOf as Integer ?: 0 // FIXME change to the current mapper's default bank
+		} else if (member instanceof Variable) {
+			if (member.storage?.type == StorageType::ZP) {
+				Datas::PTR_PAGE
+			} else {
+				Datas::VAR_PAGE
+			}
+		} else {
+			0
+		}
 	}
 
 	def push(Variable variable) '''

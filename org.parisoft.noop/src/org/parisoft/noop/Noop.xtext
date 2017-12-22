@@ -154,7 +154,7 @@ enum AssignmentType:
 	BOR_ASSIGN='|=' | BAN_ASSIGN='&=' | BLS_ASSIGN='<<=' | BRS_ASSIGN='>>=';
 
 enum StorageType:
-	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM' | RAM='@RAM' | INLINE='@Inline';
+	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM' | ZP='@ZP-RAM' | INLINE='@Inline';
 
 terminal ASM_TO_VAR:
 	'!' !('!' | '?')* '?';

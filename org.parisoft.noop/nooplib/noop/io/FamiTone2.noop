@@ -144,8 +144,8 @@ FamiTone2 {
 	
 	// zero page variables	
 	
-	_$ftTempPtr @RAM[0] 	: Int
-	_$ftTempVar1 @RAM[0] 	: Byte
+	_$ftTempPtr @ZP-RAM 	: Int
+	_$ftTempVar1 @ZP-RAM 	: Byte
 	_$FT_TEMP_SIZE 			: 3
 	
 	// envelope structure offsets, 5 bytes per envelope, grouped by variable type

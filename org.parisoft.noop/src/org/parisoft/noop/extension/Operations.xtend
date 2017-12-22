@@ -13,6 +13,7 @@ class Operations {
 	@Inject extension Datas
 	@Inject extension Values
 	@Inject extension Classes
+	@Inject extension TypeSystem
 
 	def isComparison(Operation operation) {
 		switch (operation) {
@@ -27,6 +28,7 @@ class Operations {
 	def isDivision(Operation operation) {
 		switch (operation) {
 			case DIVISION: true
+			case MODULO: true
 			case BIT_SHIFT_RIGHT: true
 			default: false
 		}
@@ -1250,7 +1252,6 @@ class Operations {
 		«val const = divisor.immediate.parseInt»
 		«IF dividend.sizeOf == 1»
 			«val divStart = '''div@«dividend.hashCode.toHexString».start'''»
-			«val divDone = '''div@«dividend.hashCode.toHexString».done'''»
 			«val divEnd = '''div@«dividend.hashCode.toHexString».end'''»
 			«IF dividend.type.isSigned»
 				«noop»
@@ -1259,15 +1260,15 @@ class Operations {
 				«dividend.signum»
 			«ENDIF»
 			+«divStart»:
-				LDX #$00
+				LDX #0
 				STX «Members::MATH_MOD» + 1
 				STX «Members::TEMP_VAR_NAME1»
 				«IF const.abs > 0xFF»
 					CPX #>«const.abs»
-					BCC +«divDone»
+					BCC ++«divEnd»
 				«ENDIF»
 				CMP #<«const.abs»
-				BCC +«divDone»
+				BCC +«divEnd»
 			«FOR i : 8 >.. 0»
 				«val shift = const.abs << i»
 				«IF shift <= 0xFF»
@@ -1278,41 +1279,75 @@ class Operations {
 					+	ROL «Members::TEMP_VAR_NAME1»
 				«ENDIF»
 			«ENDFOR»
-			+«divDone»:
+			+«divEnd»:
 				STA «Members::MATH_MOD»
+				«IF dividend.sizeOfOp > 1 && dividend.type.isUnsigned && const >= 0»
+					LDA #0
+					PHA
+				«ENDIF»
 				LDA «Members::TEMP_VAR_NAME1»
 			«IF dividend.type.isSigned»
 				«noop»
-					BEQ +«divEnd»
-					CPY #$00
+					BEQ ++«divEnd»
+					CPY #0
 					«IF const < 0»
-						BMI +«divEnd»
+						BMI ++«divEnd»
 					«ELSE»
-						BPL +«divEnd»
+						BPL ++«divEnd»
 					«ENDIF»
 				«dividend.signum»
 			«ELSEIF const < 0»
 				«noop»
-					BEQ +«divEnd»
+					BEQ ++«divEnd»
 				«dividend.signum»
 			«ENDIF»
-			+«divEnd»:
+			++«divEnd»:
+			«IF dividend.sizeOfOp > 1 && (dividend.type.isSigned || const < 0)»
+				«noop»
+					TAX
+				«(dividend => [type = type.toSByteClass]).loadMSB»
+					PHA
+					TXA
+			«ENDIF»
 		«ENDIF»
 	'''
 
 	private def moduloImmediate(CompileContext dividend, CompileContext divisor) '''
 		«IF dividend.sizeOf == 1»
-			«val modEnd = '''mod@«dividend.hashCode.toHexString».end'''»
-				PHA
-			«dividend.divideImmediate(divisor)»
-				PLA
-				BPL +«modEnd»
-				LDA «Members::MATH_MOD»
-			«dividend.signum»
-				STA «Members::MATH_MOD»
-				LDA #$FF
-				STA «Members::MATH_MOD» + 1
-			+«modEnd»:
+			«IF dividend.type.isSigned && dividend.sizeOfOp > 1»
+				«val modEnd = '''mod@«dividend.hashCode.toHexString».end'''»
+					CMP #0
+					PHP
+				«dividend.divideImmediate(divisor)»
+					PLP
+					BPL +
+					LDA #$FF
+					PHA
+					LDA «Members::MATH_MOD»
+				«dividend.signum»
+					JMP +«modEnd»
+				+	LDA #0
+					PHA
+					LDA «Members::MATH_MOD»
+				+«modEnd»:
+			«ELSEIF dividend.type.isSigned»
+				«val modEnd = '''mod@«dividend.hashCode.toHexString».end'''»
+					CMP #0
+					PHP
+				«dividend.divideImmediate(divisor)»
+					LDA «Members::MATH_MOD»
+					PLP
+					BPL +«modEnd»
+				«dividend.signum»
+				+«modEnd»:
+			«ELSE»
+				«dividend.divideImmediate(divisor)»
+					«IF dividend.sizeOfOp > 1»
+						LDA #0
+						PHA
+					«ENDIF»
+					LDA «Members::MATH_MOD»
+			«ENDIF»
 		«ENDIF»
 	'''
 
@@ -1499,7 +1534,7 @@ class Operations {
 	private def toHexString(Integer i) {
 		Integer::toHexString(i)
 	}
-	
+
 	private def toBinaryString(Integer i) {
 		Integer::toBinaryString(i)
 	}

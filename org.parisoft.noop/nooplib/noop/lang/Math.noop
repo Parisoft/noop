@@ -436,8 +436,8 @@ Math {
 		return a
 	}
 	
-	$multiply8Bit(Byte a @RAM[0], Byte b @RAM[0]) {
-		r @RAM[0] : 0
+	$multiply8Bit(Byte a @ZP-RAM, Byte b @ZP-RAM) {
+		r @ZP-RAM : 0
 		!	JMP +   !
 		!-	CLC     !
 		!	ADC ?a? !
@@ -449,8 +449,8 @@ Math {
 		return r
 	}
 	
-	$multiply(Byte a @RAM[0], SByte b @RAM[0]) {
-		r @RAM[0] : $multiply(a as Byte, b as Byte)
+	$multiply(Byte a @ZP-RAM, SByte b @ZP-RAM) {
+		r @ZP-RAM : $multiply(a as Byte, b as Byte)
 		!	LDA ?b?    !
 		!	BPL +end   !
 		!	SEC        !
@@ -461,12 +461,12 @@ Math {
 		return r as Int
 	}
 	
-	$multiply(SByte a @RAM[0], Byte b @RAM[0]) {
+	$multiply(SByte a @ZP-RAM, Byte b @ZP-RAM) {
 		return $multiply(b, a)
 	}
 	
-	$multiply(SByte a @RAM[0], SByte b @RAM[0]) {
-		r @RAM[0] : $multiply(a as Byte, b as Byte)
+	$multiply(SByte a @ZP-RAM, SByte b @ZP-RAM) {
+		r @ZP-RAM : $multiply(a as Byte, b as Byte)
 		!	LDA ?a?    !
 		!	EOR ?b?    !
 		!	BPL +end   !
@@ -484,8 +484,8 @@ Math {
 		return r as Int
 	}
 	
-	$multiply(Byte a @RAM[0], Byte b @RAM[0]) {
-		r @RAM[0] : UInt                                                    
+	$multiply(Byte a @ZP-RAM, Byte b @ZP-RAM) {
+		r @ZP-RAM : UInt                                                    
 		!	LDA #0     ! 
 		!	LDX #8     ! 
 		!-	LSR ?b?    ! 
@@ -500,8 +500,8 @@ Math {
 		return r
 	}
 	
-	$multiply(UInt a @RAM[0], Int b @RAM[0]) {
-		r @RAM[0] : $multiply(a, b as UInt)
+	$multiply(UInt a @ZP-RAM, Int b @ZP-RAM) {
+		r @ZP-RAM : $multiply(a, b as UInt)
 		!	LDA ?b? + 1!
 		!	BPL +end   !
 		!	SEC        !
@@ -512,12 +512,12 @@ Math {
 		return r as Int
 	}
 	
-	$multiply(Int a @RAM[0], UInt b @RAM[0]) {
+	$multiply(Int a @ZP-RAM, UInt b @ZP-RAM) {
 		return $multiply(b, a)
 	}
 	
-	$multiply(Int a @RAM[0], Int b @RAM[0]) {
-		r @RAM[0] : $multiply(a as UInt, b as UInt)
+	$multiply(Int a @ZP-RAM, Int b @ZP-RAM) {
+		r @ZP-RAM : $multiply(a as UInt, b as UInt)
 		!	LDA ?a? + 1!
 		!	EOR ?b? + 1!
 		!	BPL +end   !
@@ -535,9 +535,9 @@ Math {
 		return r as Int
 	}
 	
-	$multiply(UInt a @RAM[0], UInt b @RAM[0]) {
-		r @RAM[0] : UInt
-		s @RAM[0] : Byte
+	$multiply(UInt a @ZP-RAM, UInt b @ZP-RAM) {
+		r @ZP-RAM : UInt
+		s @ZP-RAM : Byte
 		!	LDX #16     !
 		!-	LSR ?b? + 1 !
 		!	ROR ?b?     !

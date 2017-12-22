@@ -21,7 +21,7 @@
     <genEnums typeSafeEnumCompatible="false" ecoreEnum="Noop.ecore#//StorageType">
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/PRGROM"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/CHRROM"/>
-      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/RAM"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/ZP"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INLINE"/>
     </genEnums>
     <genClasses ecoreClass="Noop.ecore#//NoopClass">

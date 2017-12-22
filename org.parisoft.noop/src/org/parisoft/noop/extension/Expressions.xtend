@@ -144,7 +144,7 @@ class Expressions {
 
 	private def getDivideMethod(Expression left, Expression right, NoopClass type) {
 		try {
-			if (left.sizeOf == 1 && type.sizeOf == 1) {
+			if (left.sizeOf == 1) {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
 				new MethodReference => [args = newArrayList(left, const)]
 			} else {
@@ -185,7 +185,7 @@ class Expressions {
 
 	private def getModuloMethod(Expression left, Expression right, NoopClass type) {
 		try {
-			if (left.sizeOf == 1 && type.sizeOf == 1) {
+			if (left.sizeOf == 1) {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
 				new MethodReference => [args = newArrayList(left, const)]
 			} else {
@@ -1472,18 +1472,12 @@ class Expressions {
 				CastExpression:
 					expression.left.compileConstant
 				ByteLiteral:
-					expression.value.toHex.toString
+					expression.value.toString
 				BoolLiteral:
 					expression.value.toString.toUpperCase
 				NewInstance:
 					if (expression.type.isPrimitive && expression.dimension.isEmpty) {
-						val value = expression.type.defaultValueOf
-
-						if (value instanceof Integer) {
-							value.toHex.toString
-						} else {
-							value.toString.toUpperCase
-						}
+						expression.type.defaultValueOf.toString.toUpperCase
 					} else {
 						throw new NonConstantExpressionException(expression)
 					}

@@ -34,21 +34,7 @@ class AllocContext {
 	}
 
 	def chunkFor(int page, String variable, int size) {
-		new MemChunk(variable, page.getAndMoveCounter(size), size)
-	}
-
-	def int getAndMoveCounter(int page, int size) {
-		val cur = counters.get(page).get
-		val max = (page + 1) * 0x0100
-
-		if (cur + size <= max) {
-			counters.get(page).getAndAdd(size)
-		} else if (cur < max) {
-			counters.get(page + 1).getAndAdd(size - (max - cur))
-			counters.get(page).getAndAdd(max - cur - 1)
-		} else {
-			getAndMoveCounter(page + 1, size)
-		}
+		new MemChunk(variable, counters.get(page).getAndAdd(size), size)
 	}
 
 	def snapshot() {

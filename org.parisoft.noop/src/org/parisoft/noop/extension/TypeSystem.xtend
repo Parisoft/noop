@@ -104,13 +104,32 @@ class TypeSystem {
 				return context as NoopClass;
 			}
 
-			val desc = context.visibleClassesDescriptions.findFirst[qualifiedName.toString == type] ?:
-				TypeSystem::context.get.visibleClassesDescriptions.findFirst[qualifiedName.toString == type]
+			val desc = context.visibleClassesDescriptions.findFirst[qualifiedName.toString == type]
 			var obj = desc.EObjectOrProxy
 
 			if (obj.eIsProxy) {
-				obj = context.eResource.resourceSet.getEObject(desc.EObjectURI, true) ?:
-					TypeSystem::context.get.eResource.resourceSet.getEObject(desc.EObjectURI, true)
+				obj = context.eResource.resourceSet.getEObject(desc.EObjectURI, true)
+			}
+
+			obj as NoopClass ?: type.toClassOrDefault(^default)
+		} catch (Exception exception) {
+			type.toClassOrDefault(^default)
+		}
+	}
+	
+	private def toClassOrDefault(String type, NoopClass ^default) {
+		try {
+			val context = TypeSystem::context.get
+			
+			if (context.fullyQualifiedName == type && context instanceof NoopClass) {
+				return context as NoopClass;
+			}
+
+			val desc = context.visibleClassesDescriptions.findFirst[qualifiedName.toString == type]
+			var obj = desc.EObjectOrProxy
+
+			if (obj.eIsProxy) {
+				obj = context.eResource.resourceSet.getEObject(desc.EObjectURI, true)
 			}
 
 			obj as NoopClass ?: ^default

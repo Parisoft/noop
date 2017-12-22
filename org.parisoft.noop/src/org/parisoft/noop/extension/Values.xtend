@@ -16,13 +16,13 @@ class Values {
 		var value = 0;
 
 		if (string.startsWith('0x')) {
-			value = Integer::parseInt(string.substring(2), 16)
+			value = string.substring(2).hexToInt
 		} else if (string.startsWith('$')) {
-			value = Integer::parseInt(string.substring(1), 16)
+			value = string.substring(1).hexToInt
 		} else if (string.startsWith('0b')) {
-			value = Integer::parseInt(string.substring(2), 2)
+			value = string.substring(2).binToInt
 		} else if (string.startsWith('%')) {
-			value = Integer::parseInt(string.substring(1), 2)
+			value = string.substring(1).binToInt
 		} else if (string.startsWith("'") && string.endsWith("'")) {
 			value = string.charAt(1)
 		} else {
@@ -36,6 +36,22 @@ class Values {
 		}
 
 		return value;
+	}
+	
+	private def hexToInt(String hex) {
+		if (hex.length > 4) {
+			Integer::parseInt(hex.substring(hex.length - 4), 16)
+		} else {
+			Integer::parseInt(hex, 16)
+		}
+	}
+	
+	private def binToInt(String bin) {
+		if (bin.length > 16) {
+			Integer::parseInt(bin.substring(bin.length - 16), 2)
+		} else {
+			Integer::parseInt(bin, 2)
+		}
 	}
 
 	def <T> subListFrom(List<T> list, int index) {

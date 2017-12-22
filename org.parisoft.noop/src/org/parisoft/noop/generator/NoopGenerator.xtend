@@ -63,7 +63,7 @@ class NoopGenerator extends AbstractGenerator {
 				}
 			}
 		}
-		
+
 		lastSuccesfullCompile = System::currentTimeMillis
 	}
 
@@ -106,6 +106,22 @@ class NoopGenerator extends AbstractGenerator {
 				}
 
 				builder.append('''	JMP «line.substring(5)»''').append(System::lineSeparator)
+			} else if (line.startsWith('\tLDA')) {
+				val src = line.substring(line.indexOf('LDA') + 3).trim
+				
+				if (next.startsWith('\tSTA') && src == next.substring(next.indexOf('STA') + 3).trim) {
+					skip.incrementAndGet
+				} else {
+					builder.append(line).append(System::lineSeparator)	
+				}
+			} else if (line.startsWith('\tSTA')) {
+				val dst = line.substring(line.indexOf('STA') + 3).trim
+				
+				if (next.startsWith('\tLDA') && dst == next.substring(next.indexOf('LDA') + 3).trim) {
+					skip.incrementAndGet
+				}
+
+				builder.append(line).append(System::lineSeparator)	
 			} else {
 				builder.append(line).append(System::lineSeparator)
 			}
@@ -185,9 +201,9 @@ class NoopGenerator extends AbstractGenerator {
 			«IF ctx.resetCounter(page) == 0»«noop»«ENDIF»
 		«ENDFOR»
 		«FOR page : 0..< ctx.counters.size»
-			«val staticVars = ctx.statics.values.filter[(storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE) === page]»
+			«val staticVars = ctx.statics.values.filter[storageOf == page]»
 			«FOR staticVar : staticVars»
-				«staticVar.nameOfStatic» = «ctx.getAndMoveCounter(page, staticVar.sizeOf).toHexString(4)»
+				«staticVar.nameOfStatic» = «ctx.counters.get(page).getAndAdd(staticVar.sizeOf).toHexString(4)»
 			«ENDFOR»
 		«ENDFOR»
 		

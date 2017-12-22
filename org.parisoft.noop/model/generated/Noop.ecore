@@ -119,7 +119,7 @@
   <eClassifiers xsi:type="ecore:EEnum" name="StorageType">
     <eLiterals name="PRGROM" literal="@PRG-ROM"/>
     <eLiterals name="CHRROM" value="1" literal="@CHR-ROM"/>
-    <eLiterals name="RAM" value="2" literal="@RAM"/>
+    <eLiterals name="ZP" value="2" literal="@ZP-RAM"/>
     <eLiterals name="INLINE" value="3" literal="@Inline"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="AssignmentExpression" eSuperTypes="#//Expression">
