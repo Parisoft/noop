@@ -13,6 +13,7 @@ import org.parisoft.noop.noop.NoopPackage
 import org.parisoft.noop.noop.Storage
 import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.noop.Statement
+import org.parisoft.noop.noop.ArrayLiteral
 
 class NoopFormatter extends AbstractFormatter2 {
 	
@@ -36,13 +37,33 @@ class NoopFormatter extends AbstractFormatter2 {
 	def dispatch void format(Variable variable, extension IFormattableDocument document) {
 		variable.prepend[indent]
 		variable.regionFor.keyword(':').surround[
-			newLines = -1 
+			indent
 			oneSpace
 		]
+		variable.value.format
 	}
 	
 	def dispatch void format(AssignmentExpression assignment, extension IFormattableDocument document) {
-		assignment.regionFor.feature(NoopPackage.Literals.ASSIGNMENT_EXPRESSION__ASSIGNMENT).surround[oneSpace]
+		assignment.regionFor.feature(NoopPackage.Literals.ASSIGNMENT_EXPRESSION__ASSIGNMENT).surround[
+			indent		
+			oneSpace 
+		]
+		assignment.right.format
+	}
+	
+	def dispatch void format(ArrayLiteral array, extension IFormattableDocument document) {
+		interior(array.regionFor.keyword('['), array.regionFor.keyword(']'))[indent]
+		
+		array.regionFor.keyword('[').prepend[indent]
+		array.regionFor.keyword(',').prepend[
+			indent
+			noSpace
+		].append[
+			indent
+			oneSpace
+		]
+		
+		array.values.forEach[format]		
 	}
 	
 	def dispatch void format(Block block, extension IFormattableDocument document) {
