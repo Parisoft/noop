@@ -3,18 +3,18 @@
  */
 package org.parisoft.noop.ui
 
-import org.eclipse.xtend.lib.annotations.FinalFieldsConstructor
 import com.google.inject.Binder
-import org.eclipse.xtext.ui.editor.contentassist.XtextContentAssistProcessor
 import com.google.inject.name.Names
-import org.parisoft.noop.ui.hover.NoopHoverProvider
-import org.eclipse.xtext.ui.editor.hover.IEObjectHoverProvider
-import org.eclipse.xtext.ui.editor.syntaxcoloring.IHighlightingConfiguration
-import org.parisoft.noop.ui.highlighting.NoopHighlightingConfiguration
-import org.parisoft.noop.ui.highlighting.NoopAntlrTokenToAttributeIdMapper
-import org.eclipse.xtext.ui.editor.syntaxcoloring.AbstractAntlrTokenToAttributeIdMapper
+import org.eclipse.xtend.lib.annotations.FinalFieldsConstructor
 import org.eclipse.xtext.ide.editor.syntaxcoloring.ISemanticHighlightingCalculator
+import org.eclipse.xtext.ui.editor.contentassist.XtextContentAssistProcessor
+import org.eclipse.xtext.ui.editor.hover.IEObjectHoverProvider
+import org.eclipse.xtext.ui.editor.syntaxcoloring.AbstractAntlrTokenToAttributeIdMapper
+import org.eclipse.xtext.ui.editor.syntaxcoloring.IHighlightingConfiguration
+import org.parisoft.noop.ui.highlighting.NoopAntlrTokenToAttributeIdMapper
+import org.parisoft.noop.ui.highlighting.NoopHighlightingConfiguration
 import org.parisoft.noop.ui.highlighting.NoopSemanticHighlightingCalculator
+import org.parisoft.noop.ui.hover.NoopHoverProvider
 import org.parisoft.noop.ui.wizard.NoopProjectCreator
 import org.parisoft.noop.ui.wizard.NoopProjectCreator2
 
@@ -33,5 +33,5 @@ class NoopUiModule extends AbstractNoopUiModule {
 		binder.bind(ISemanticHighlightingCalculator).to(NoopSemanticHighlightingCalculator)
 		binder.bind(NoopProjectCreator).to(NoopProjectCreator2)
 	}
-
+	
 }

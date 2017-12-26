@@ -14,66 +14,85 @@ import org.parisoft.noop.noop.Storage
 import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.ArrayLiteral
+import org.parisoft.noop.noop.AsmStatement
+import org.parisoft.noop.^extension.Statements
+import com.google.inject.Inject
+
+import static extension org.eclipse.xtext.EcoreUtil2.*
+import com.google.common.base.Strings
 
 class NoopFormatter extends AbstractFormatter2 {
-	
+
 //	@Inject extension NoopGrammarAccess
+	@Inject extension Statements
 
 	def dispatch void format(NoopClass noopClass, extension IFormattableDocument document) {
 		// TODO: format HiddenRegions around keywords, attributes, cross references, etc.
 		noopClass.regionFor.keyword('extends').surround[oneSpace]
 		noopClass.regionFor.keyword('{').prepend[oneSpace]
-		
-		interior(noopClass.regionFor.keyword('{'), noopClass.regionFor.keyword('}'))[indent] 
-		
+
+		interior(noopClass.regionFor.keyword('{'), noopClass.regionFor.keyword('}'))[indent]
+
 		noopClass.members.forEach[format]
 	}
-	
+
 	def dispatch void format(Method method, extension IFormattableDocument document) {
 		method.prepend[indent]
 		method.body.format
 	}
-	
+
 	def dispatch void format(Variable variable, extension IFormattableDocument document) {
 		variable.prepend[indent]
-		variable.regionFor.keyword(':').surround[
+		variable.regionFor.keyword(':').surround [
 			indent
 			oneSpace
 		]
 		variable.value.format
 	}
-	
+
 	def dispatch void format(AssignmentExpression assignment, extension IFormattableDocument document) {
-		assignment.regionFor.feature(NoopPackage.Literals.ASSIGNMENT_EXPRESSION__ASSIGNMENT).surround[
-			indent		
-			oneSpace 
-		]
-		assignment.right.format
-	}
-	
-	def dispatch void format(ArrayLiteral array, extension IFormattableDocument document) {
-		interior(array.regionFor.keyword('['), array.regionFor.keyword(']'))[indent]
-		
-		array.regionFor.keyword('[').prepend[indent]
-		array.regionFor.keyword(',').prepend[
-			indent
-			noSpace
-		].append[
+		assignment.regionFor.feature(NoopPackage.Literals.ASSIGNMENT_EXPRESSION__ASSIGNMENT).surround [
 			indent
 			oneSpace
 		]
-		
-		array.values.forEach[format]		
+		assignment.right.format
 	}
-	
+
+	def dispatch void format(ArrayLiteral array, extension IFormattableDocument document) {
+		interior(array.regionFor.keyword('['), array.regionFor.keyword(']'))[indent]
+
+		array.regionFor.keyword('[').prepend[indent]
+		
+		array.values.forEach[value|
+			value.format
+			value.immediatelyFollowing.keyword(',').prepend[noSpace].append[oneSpace]
+		]
+	}
+
 	def dispatch void format(Block block, extension IFormattableDocument document) {
 		block.regionFor.keyword('{').prepend[oneSpace]
-		
+
 		interior(block.regionFor.keyword('{'), block.regionFor.keyword('}'))[indent]
-		
+
 		block.statements.forEach[format]
 	}
-	
+
+	def dispatch void format(AsmStatement asm, extension IFormattableDocument document) {
+		val max = asm.getContainerOfType(Block).statements.filter(AsmStatement).map[compile(null).length].max
+		val len = asm.compile(null).length
+
+		if (len < max) {
+//			var last = asm.codes.last
+//			last = last.substring(0, last.length - 1) + Strings::repeat(' ', max - len) + '!'
+//			asm.codes.set(asm.codes.length - 1, last)
+//			val code = asm.compile(null)
+//			val rw = request.textRegionAccess.rewriter
+//			val rep = rw.createReplacement(0, max, code.substring(0, code.length - 1) + Strings::repeat(' ', max - len) + '!')
+//			rw.renderToString(newArrayList(rep))
+		}
+		asm.prepend[indent]
+	}
+
 	def dispatch void format(Statement statement, extension IFormattableDocument document) {
 		statement.prepend[indent]
 	}
@@ -82,6 +101,6 @@ class NoopFormatter extends AbstractFormatter2 {
 		// TODO: format HiddenRegions around keywords, attributes, cross references, etc. 
 		storage.getLocation.format;
 	}
-	
-	// TODO: implement for Variable, Method, Block, ReturnStatement, IfStatement, ElseStatement, ForStatement, ForeverStatement, AsmStatement, AssignmentExpression, BOrExpression, BAndExpression, CastExpression, MemberSelect, ArrayLiteral, NewInstance, MemberRef, Constructor, ConstructorField, Index, Length, OrExpression, AndExpression, EqualsExpression, DifferExpression, GtExpression, GeExpression, LtExpression, LeExpression, InstanceOfExpression, LShiftExpression, RShiftExpression, AddExpression, SubExpression, MulExpression, DivExpression, ModExpression
+
+// TODO: implement for Variable, Method, Block, ReturnStatement, IfStatement, ElseStatement, ForStatement, ForeverStatement, AsmStatement, AssignmentExpression, BOrExpression, BAndExpression, CastExpression, MemberSelect, ArrayLiteral, NewInstance, MemberRef, Constructor, ConstructorField, Index, Length, OrExpression, AndExpression, EqualsExpression, DifferExpression, GtExpression, GeExpression, LtExpression, LeExpression, InstanceOfExpression, LShiftExpression, RShiftExpression, AddExpression, SubExpression, MulExpression, DivExpression, ModExpression
 }

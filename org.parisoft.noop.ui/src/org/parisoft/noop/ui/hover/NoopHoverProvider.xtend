@@ -2,12 +2,12 @@ package org.parisoft.noop.ui.hover
 
 import com.google.inject.Inject
 import org.eclipse.emf.ecore.EObject
+import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.eclipse.xtext.ui.editor.hover.html.DefaultEObjectHoverProvider
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.Method
-import org.parisoft.noop.noop.Variable
-import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.Variable
 
 class NoopHoverProvider extends DefaultEObjectHoverProvider {
 
