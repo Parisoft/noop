@@ -90,7 +90,7 @@ RelationalExpression returns Expression:
 	{GeExpression.left=current} LF* '>=' |
 	{LtExpression.left=current} LF* '<' |
 	{LeExpression.left=current} LF* '<=')
-	LF* right=AdditiveExpression)*;
+	LF* right=InstaceOfExpression)*;
 
 InstaceOfExpression returns Expression:
 	ShiftExpression ({InstanceOfExpression.left=current} 'instanceOf' type=[NoopClass|CID])?;

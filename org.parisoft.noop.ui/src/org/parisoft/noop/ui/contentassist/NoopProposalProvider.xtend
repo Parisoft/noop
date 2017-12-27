@@ -13,11 +13,11 @@ import org.eclipse.xtext.ui.editor.contentassist.ContentAssistContext
 import org.eclipse.xtext.ui.editor.contentassist.ICompletionProposalAcceptor
 import org.eclipse.xtext.ui.editor.hover.IEObjectHover
 import org.parisoft.noop.^extension.Classes
+import org.parisoft.noop.^extension.Collections
+import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.NewInstance
-import org.parisoft.noop.^extension.Collections
-import org.parisoft.noop.^extension.Expressions
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -38,7 +38,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			val receiver = model.receiver
 
 			if (receiver instanceof NewInstance) {
-				receiver.type.allMethodsTopDown.forEach [ method |
+				receiver.type.allMethodsTopDown.filter[static].filter[isAccessibleFrom(model)].forEach [ method |
 					val displayString = new StyledString(method.name).append('(')
 
 					method.params.forEach [ param, i |
