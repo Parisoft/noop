@@ -55,7 +55,7 @@ class Values {
 	}
 
 	def <T> subListFrom(List<T> list, int index) {
-		list.subList(index, list.size)
+		list?.subList(index, list?.size)
 	}
 
 	def List<Integer> dimensionOf(List<?> list) {

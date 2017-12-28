@@ -180,8 +180,35 @@ public class Members {
 		}
 	}
 
+	def isStaticOverrideOf(Method m1, Method m2) {
+		if (m1.isStatic && m2.isStatic 
+			&& m1.name == m2.name 
+			&& m1.params.size == m2.params.size
+			&& m1.containerClass.isSubclassOf(m2.containerClass)) {
+			for (i : 0 ..< m1.params.size) {
+				val p1 = m1.params.get(i)
+				val p2 = m2.params.get(i)
+				
+				if (p1.typeOf != p2.typeOf) {
+					return false
+				}
+				
+				if (p1.dimensionOf.size != p2.dimensionOf.size) {
+					return false
+				}
+			}
+
+			return true
+		}
+		
+		return false
+	}
+
 	def isOverrideOf(Method m1, Method m2) {
-		if (m1.isNonStatic && m2.isNonStatic && m1.name == m2.name && m1.params.size == m2.params.size) {
+		if (m1.isNonStatic && m2.isNonStatic 
+			&& m1.name == m2.name 
+			&& m1.params.size == m2.params.size 
+			&& m1.containerClass.isSubclassOf(m2.containerClass)) {
 			for (i : 0 ..< m1.params.size) {
 				val p1 = m1.params.get(i)
 				val p2 = m2.params.get(i)
