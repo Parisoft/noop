@@ -93,9 +93,8 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 
 		method.params.forEach [ param, i |
 			displayString.append(param.type.name, StyledString::DECORATIONS_STYLER)
-			displayString.append(param.dimension.map['''[«value?.valueOf»]'''].join, StyledString::DECORATIONS_STYLER).
-				append(' ')
-			displayString.append(param.name)
+			displayString.append(param.dimension.map['''[«value?.valueOf»]'''].join, StyledString::DECORATIONS_STYLER)
+			displayString.append(' ').append(param.name)
 
 			if (i < method.params.length - 1) {
 				displayString.append(', ')
