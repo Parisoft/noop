@@ -18,9 +18,9 @@
 
    <splash
       location="org.parisoft.noop.product"
-      startupProgressRect="5,275,445,10"
-      startupMessageRect="7,252,445,15"
-      startupForegroundColor="FFFFFF" />
+      startupProgressRect="5,292,445,8"
+      startupMessageRect="7,274,445,16"
+      startupForegroundColor="BB2024" />
    <launcher name="NoopIDE">
       <win useIco="false">
          <bmp/>
@@ -291,5 +291,12 @@
       <plugin id="org.eclipse.osgi" autoStart="true" startLevel="-1" />
       <plugin id="org.eclipse.update.configurator" autoStart="true" startLevel="3" />
    </configurations>
+
+   <preferencesInfo>
+      <targetfile overwrite="false"/>
+   </preferencesInfo>
+
+   <cssInfo>
+   </cssInfo>
 
 </product>
