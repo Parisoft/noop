@@ -18,6 +18,7 @@ import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NewInstance
+import org.parisoft.noop.noop.Constructor
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -35,7 +36,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 		ICompletionProposalAcceptor acceptor) {
 		if (model instanceof MemberSelect) {
 			val receiver = model.receiver
-			val methods = receiver.typeOf.allMethodsTopDown.filter[isAccessibleFrom(model)]
+			val methods = receiver.typeOf.allMethodsTopDown.filter[isAccessibleFrom(model)].sortBy[name]
 
 			if (receiver.dimensionOf.size > 0) {
 				methods.filter[nonStatic].filter[nativeArray].suppressOverriden.forEach [ method |
@@ -63,7 +64,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 
 	override completeTerminalExpression_Member(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
-		model.containerClass.allMethodsTopDown.filter[nonNativeArray].suppressAnyOverriden.forEach [ method |
+		model.containerClass.allMethodsTopDown.filter[nonNativeArray].suppressAnyOverriden.sortBy[name].forEach [ method |
 			acceptor.accept(method.createCompletionProposal(context))
 		]
 	}
@@ -73,13 +74,18 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 		super.completeSelectionExpression_Args(model, assignment, context, acceptor)
 	}
 
-	override completeKeyword(Keyword keyword, ContentAssistContext contentAssistContext,
-		ICompletionProposalAcceptor acceptor) {
+	override completeKeyword(Keyword keyword, ContentAssistContext context, ICompletionProposalAcceptor acceptor) {
 		if (keyword.value == '.') {
 			return
 		}
 
-		super.completeKeyword(keyword, contentAssistContext, acceptor)
+		if (context.currentModel instanceof Constructor) {
+			if (keyword.value == '{' || keyword.value == '}') {
+				return
+			}
+		}
+
+		super.completeKeyword(keyword, context, acceptor)
 	}
 
 	override protected doCreateProposal(String proposal, StyledString displayString, Image image, int replacementOffset,

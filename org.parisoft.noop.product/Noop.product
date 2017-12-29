@@ -9,9 +9,9 @@
          NOOP  - NES/Famicom Object Oriented Programming
 Version: 1.0
 
-NOOP is high level programming language for developing Nintendo 8-bits games.
-
-Visit https://github.com/Parisoft/noop
+NOOP is a high-level programming language for the development of 8-bit Nintendo games.
+This IDE is provided with an editor and a compiler to help transform your game ideas into reality
+For more, go to https://github.com/Parisoft/noop
       </text>
    </aboutInfo>
 
