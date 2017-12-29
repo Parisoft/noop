@@ -3,6 +3,17 @@
 
 <product name="Noop IDE" uid="Noop IDE" id="org.parisoft.noop.product.noopProduct" application="org.eclipse.ui.ide.workbench" version="1.0.0.qualifier" useFeatures="false" includeLaunchers="true">
 
+   <aboutInfo>
+      <image path="/org.parisoft.noop.product/images/about.png"/>
+      <text>
+         NOOP  - NES/Famicom Object Oriented Programming
+Version: 1.0
+
+NOOP is high level programming language for developing Nintendo 8-bits games.
+
+Visit https://github.com/Parisoft/noop
+      </text>
+   </aboutInfo>
 
    <configIni use="default">
    </configIni>

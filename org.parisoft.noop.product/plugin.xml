@@ -25,6 +25,14 @@
                value="5,292,445,8">
          </property>
          <property
+               name="aboutImage"
+               value="images/about.png">
+         </property>
+         <property
+               name="aboutText"
+               value="NOOP  - NES/Famicom Object Oriented Programming&#x0A;Version: 1.0&#x0A;&#x0A;NOOP is high level programming language for developing Nintendo 8-bits games.&#x0A;&#x0A;Visit https://github.com/Parisoft/noop">
+         </property>
+         <property
                name="preferenceCustomization"
                value="plugin_customization.ini">
          </property>
