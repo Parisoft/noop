@@ -6,6 +6,13 @@ package org.parisoft.noop.ui.labeling
 import com.google.inject.Inject
 import org.eclipse.emf.edit.ui.provider.AdapterFactoryLabelProvider
 import org.eclipse.xtext.ui.label.DefaultEObjectLabelProvider
+import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.Method
+import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.noop.Variable
+import org.eclipse.jface.viewers.StyledString
+import org.parisoft.noop.^extension.Classes
+import org.parisoft.noop.^extension.Expressions
 
 /**
  * Provides labels for EObjects.
@@ -14,18 +21,69 @@ import org.eclipse.xtext.ui.label.DefaultEObjectLabelProvider
  */
 class NoopLabelProvider extends DefaultEObjectLabelProvider {
 
+	@Inject extension Members
+	@Inject extension Classes
+	@Inject extension Expressions
+
 	@Inject
 	new(AdapterFactoryLabelProvider delegate) {
 		super(delegate);
 	}
 
-	// Labels and icons can be computed like this:
-	
-//	def text(Greeting ele) {
-//		'A greeting to ' + ele.name
-//	}
-//
-//	def image(Greeting ele) {
-//		'Greeting.gif'
-//	}
+	def text(Variable variable) {
+		val displayString = new StyledString(variable.name).append(' : ')
+
+		displayString.append(variable.typeOf.name, StyledString::DECORATIONS_STYLER)
+
+		if (variable.isField) {
+			displayString.append(''' - «variable.containerClass.name»''', StyledString::QUALIFIER_STYLER)
+		}
+		
+		return displayString
+	}
+
+	def text(Method method) {
+		val displayString = new StyledString(method.name).append('(')
+
+		method.params.forEach [ param, i |
+			displayString.append(param.type.name, StyledString::DECORATIONS_STYLER)
+			displayString.append(param.dimension.map['''[«value?.valueOf»]'''].join, StyledString::DECORATIONS_STYLER)
+			displayString.append(' ').append(param.name)
+
+			if (i < method.params.length - 1) {
+				displayString.append(', ')
+			}
+		]
+
+		displayString.append(')').append(': ')
+		displayString.append(method.typeOf.name, StyledString::DECORATIONS_STYLER)
+		displayString.append(method.dimensionOf.map['''[«it»]'''].join, StyledString::DECORATIONS_STYLER)
+		displayString.append(''' - «method.containerClass.name»''', StyledString::QUALIFIER_STYLER)
+
+		return displayString
+	}
+
+	def image(NoopClass c) {
+		'Class.png'
+	}
+
+	def image(Variable v) {
+		if (v.isField) {
+			if (v.isPrivate) {
+				'Field_private.png'
+			} else {
+				'Field_public.png'
+			}
+		} else {
+			'Variable.png'
+		}
+	}
+
+	def image(Method m) {
+		if (m.isPrivate) {
+			'Method_private.png'
+		} else {
+			'Method_public.png'
+		}
+	}
 }

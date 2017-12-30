@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<templates><template autoinsert="true" context="org.parisoft.noop.Noop.Method" deleted="false" description="Define a new method" enabled="true" name="def" id="noop-def">${name}(${params}) {
+	${line_selection}${cursor}
+}</template><template autoinsert="true" context="org.parisoft.noop.Noop.ForStatement" deleted="false" description="For loop" enabled="true" name="for" id="noop-for">for (${i} : ${value}; ${i} &lt; ${max}; ++${i}) {
+	${line_selection}${cursor}
+}</template><template autoinsert="true" context="org.parisoft.noop.Noop.ForeverStatement" deleted="false" description="Infinit loop" enabled="true" name="forever" id="noop-forever">forever {
+	${line_selection}${cursor}
+}</template><template autoinsert="true" context="org.parisoft.noop.Noop.ForStatement" deleted="false" description="Loop over an array" enabled="true" name="fori" id="noop-fori">for (${i} : UInt; ${i} &lt; ${array}.length; ++${i}) {
+	${line_selection}${cursor}
+}</template><template autoinsert="true" context="org.parisoft.noop.Noop.IfStatement" deleted="false" description="If statement" enabled="true" name="if" id="noop-if">if (${condition}) {
+	${line_selection}${cursor}
+}</template><template autoinsert="true" context="org.parisoft.noop.Noop.Variable" deleted="false" description="Declare a new variable" enabled="true" name="var" id="noop-var">${name} : ${value}</template></templates>

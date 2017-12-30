@@ -15,10 +15,14 @@ import org.eclipse.xtext.ui.editor.hover.IEObjectHover
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NewInstance
-import org.parisoft.noop.noop.Constructor
+import org.parisoft.noop.noop.Variable
+import org.parisoft.noop.ui.labeling.NoopLabelProvider
+
+import static extension org.eclipse.xtext.EcoreUtil2.*
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -30,12 +34,16 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	@Inject extension Classes
 	@Inject extension Expressions
 
-	@Inject IEObjectHover hover;
+	@Inject NoopLabelProvider labelProvider
+	@Inject IEObjectHover hover
+
+//	val keywordsToIgnore = newArrayList('.', 'if', 'else', 'for', 'forever')
 
 	override completeSelectionExpression_Member(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
 		if (model instanceof MemberSelect) {
 			val receiver = model.receiver
+			val variables = receiver.typeOf.allFieldsTopDown.filter[isAccessibleFrom(model)].sortBy[name]
 			val methods = receiver.typeOf.allMethodsTopDown.filter[isAccessibleFrom(model)].sortBy[name]
 
 			if (receiver.dimensionOf.size > 0) {
@@ -44,15 +52,24 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				]
 			} else if (receiver instanceof NewInstance) {
 				if (receiver.constructor === null) {
-					methods.filter[static].suppressStaticOverriden.forEach [ method |
+					variables.filter[static].suppressOverriden.forEach [ variable |
+						acceptor.accept(variable.createCompletionProposal(context))
+					]
+					methods.filter[static].suppressOverriden.forEach [ method |
 						acceptor.accept(method.createCompletionProposal(context))
 					]
 				} else {
+					variables.filter[nonStatic].suppressOverriden.forEach [ variable |
+						acceptor.accept(variable.createCompletionProposal(context))
+					]
 					methods.filter[nonStatic].filter[nonNativeArray].suppressOverriden.forEach [ method |
 						acceptor.accept(method.createCompletionProposal(context))
 					]
 				}
 			} else {
+				variables.filter[nonStatic].suppressOverriden.forEach [ variable |
+					acceptor.accept(variable.createCompletionProposal(context))
+				]
 				methods.filter[nonStatic].filter[nonNativeArray].suppressOverriden.forEach [ method |
 					acceptor.accept(method.createCompletionProposal(context))
 				]
@@ -64,9 +81,18 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 
 	override completeTerminalExpression_Member(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
-		model.containerClass.allMethodsTopDown.filter[nonNativeArray].suppressAnyOverriden.sortBy[name].forEach [ method |
-			acceptor.accept(method.createCompletionProposal(context))
-		]
+		val nonStatic = model.getContainerOfType(Method)?.isNonStatic
+
+		if (nonStatic) {
+			model.containerClass.allMethodsTopDown.filter[nonNativeArray].suppressOverriden.sortBy[name].forEach [ method |
+				acceptor.accept(method.createCompletionProposal(context))
+			]
+		} else {
+			model.containerClass.allMethodsTopDown.filter[static].filter[nonNativeArray].suppressOverriden.sortBy[name].
+				forEach [ method |
+					acceptor.accept(method.createCompletionProposal(context))
+				]
+		}
 	}
 
 	override completeSelectionExpression_Args(EObject model, Assignment assignment, ContentAssistContext context,
@@ -75,17 +101,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	}
 
 	override completeKeyword(Keyword keyword, ContentAssistContext context, ICompletionProposalAcceptor acceptor) {
-		if (keyword.value == '.') {
-			return
-		}
-
-		if (context.currentModel instanceof Constructor) {
-			if (keyword.value == '{' || keyword.value == '}') {
-				return
-			}
-		}
-
-		super.completeKeyword(keyword, context, acceptor)
+		return
 	}
 
 	override protected doCreateProposal(String proposal, StyledString displayString, Image image, int replacementOffset,
@@ -94,26 +110,12 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			displayString, null, null)
 	}
 
+	private def createCompletionProposal(Variable variable, ContentAssistContext context) {
+		createCompletionProposal(variable.name, variable.text, variable.image, context)
+	}
+
 	private def createCompletionProposal(Method method, ContentAssistContext context) {
-		val displayString = new StyledString(method.name).append('(')
-
-		method.params.forEach [ param, i |
-			displayString.append(param.type.name, StyledString::DECORATIONS_STYLER)
-			displayString.append(param.dimension.map['''[«value?.valueOf»]'''].join, StyledString::DECORATIONS_STYLER)
-			displayString.append(' ').append(param.name)
-
-			if (i < method.params.length - 1) {
-				displayString.append(', ')
-			}
-		]
-
-		displayString.append(')').append(': ')
-		displayString.append(method.typeOf.name, StyledString::DECORATIONS_STYLER)
-		displayString.append(method.dimensionOf.map['''[«it»]'''].join, StyledString::DECORATIONS_STYLER)
-		displayString.append(''' - «method.containerClass.name»''', StyledString::QUALIFIER_STYLER)
-
-		val proposalString = method.name
-		val proposal = createCompletionProposal(proposalString, displayString, method.image, context)
+		val proposal = createCompletionProposal(method.name, method.text, method.image, context)
 
 		if (proposal instanceof NoopMethodCompletionProposal) {
 			proposal => [
@@ -123,34 +125,25 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 		}
 	}
 
-	private def suppressAnyOverriden(Iterable<Method> methods) {
-		methods.suppressOverriden.suppressStaticOverriden
-	}
-
-	private def suppressOverriden(Iterable<Method> methods) {
+	private def <M extends Member> suppressOverriden(Iterable<M> members) {
 		val suppressed = newHashSet
 
-		methods.forEach [ method, i |
-			suppressed += methods.drop(i + 1).findFirst[method.isOverrideOf(it)]
-			suppressed += if (methods.drop(i + 1).exists[isOverrideOf(method)]) {
-				method
+		members.forEach [ member, i |
+			suppressed += members.drop(i + 1).findFirst[member.isOverrideOf(it)]
+			suppressed += if (members.drop(i + 1).exists[isOverrideOf(member)]) {
+				member
 			}
 		]
 
-		methods.filter[!suppressed.contains(it)]
+		members.filter[!suppressed.contains(it)]
 	}
-
-	private def suppressStaticOverriden(Iterable<Method> methods) {
-		val suppressed = newHashSet
-
-		methods.forEach [ method, i |
-			suppressed += methods.drop(i + 1).findFirst[method.isStaticOverrideOf(it)]
-			suppressed += if (methods.drop(i + 1).exists[isStaticOverrideOf(method)]) {
-				method
-			}
-		]
-
-		methods.filter[!suppressed.contains(it)]
+	
+	private def text(Method m) {
+		labelProvider.text(m)
+	}
+	
+	private def text(Variable v) {
+		labelProvider.text(v)
 	}
 
 }

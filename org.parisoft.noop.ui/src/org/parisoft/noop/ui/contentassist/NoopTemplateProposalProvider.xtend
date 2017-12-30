@@ -22,7 +22,7 @@ class NoopTemplateProposalProvider extends DefaultTemplateProposalProvider {
 
 	override getImage(Template template) {
 		if (image === null) {
-			image = AbstractUIPlugin::imageDescriptorFromPlugin('org.parisoft.noop.ui', 'images/template.png').
+			image = AbstractUIPlugin::imageDescriptorFromPlugin('org.parisoft.noop.ui', 'icons/Template.png').
 				createImage
 		}
 		
