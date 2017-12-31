@@ -80,7 +80,7 @@
 		<page
 			class="org.parisoft.noop.ui.NoopExecutableExtensionFactory:org.eclipse.xtext.ui.editor.preferences.LanguageRootPreferencePage"
 			id="org.parisoft.noop.Noop"
-			name="Noop">
+			name="NOOP">
 			<keywordReference id="org.parisoft.noop.ui.keyword_Noop"/>
 		</page>
 		<page
@@ -411,7 +411,7 @@
        point="org.eclipse.ui.newWizards">
     <category
           id="org.parisoft.noop.ui.category"
-          name="Noop">
+          name="NOOP">
     </category>
     <wizard
           category="org.parisoft.noop.ui.category"
@@ -419,6 +419,13 @@
           id="org.parisoft.noop.ui.wizard.NoopNewProjectWizard"
           name="NOOP Project"
           project="true">
+    </wizard>
+    <wizard
+          category="org.parisoft.noop.ui.category"
+          class="org.parisoft.noop.ui.wizards.SampleNewWizard"
+          icon="icons/sample.png"
+          id="org.parisoft.noop.ui.wizards.SampleNewWizard"
+          name="NOOP Class">
     </wizard>
  </extension>
 </plugin>
