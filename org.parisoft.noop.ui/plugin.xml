@@ -9,7 +9,7 @@
 			default="true"
 			extensions="noop"
 			id="org.parisoft.noop.Noop"
-			name="Noop Editor">
+			name="NOOP Editor">
 		</editor>
 	</extension>
 	<extension
@@ -416,8 +416,10 @@
     <wizard
           category="org.parisoft.noop.ui.category"
           class="org.parisoft.noop.ui.NoopExecutableExtensionFactory:org.parisoft.noop.ui.wizard.NoopNewProjectWizard"
+          finalPerspective="org.parisoft.noop.ui.perspective1"
           id="org.parisoft.noop.ui.wizard.NoopNewProjectWizard"
           name="NOOP Project"
+          preferredPerspectives="org.parisoft.noop.ui.perspective1"
           project="true">
     </wizard>
     <wizard
@@ -427,5 +429,28 @@
           id="org.parisoft.noop.ui.wizards.SampleNewWizard"
           name="NOOP Class">
     </wizard>
+ </extension>
+ <extension
+       point="org.eclipse.ui.perspectives">
+    <perspective
+          class="org.parisoft.noop.ui.perspectives.NoopPerspectiveFactory"
+          id="org.parisoft.noop.ui.perspective1"
+          name="NOOP">
+       <description>
+          description body text
+       </description>
+    </perspective>
+ </extension>
+ <extension
+       point="org.eclipse.ui.perspectiveExtensions">
+    <perspectiveExtension
+          targetID="org.parisoft.noop.ui.perspective1">
+       <newWizardShortcut
+             id="org.parisoft.noop.ui.wizard.NoopNewProjectWizard">
+       </newWizardShortcut>
+       <newWizardShortcut
+             id="org.parisoft.noop.ui.wizards.SampleNewWizard">
+       </newWizardShortcut>
+    </perspectiveExtension>
  </extension>
 </plugin>

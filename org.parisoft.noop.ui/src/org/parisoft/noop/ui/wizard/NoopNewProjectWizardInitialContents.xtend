@@ -4,8 +4,10 @@
 package org.parisoft.noop.ui.wizard
 
 import com.google.inject.Inject
+import java.util.stream.Collectors
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.resource.FileExtensionProvider
+import org.parisoft.noop.ui.wizards.SampleNewWizardPage
 
 class NoopNewProjectWizardInitialContents {
 
@@ -13,8 +15,14 @@ class NoopNewProjectWizardInitialContents {
 	@Inject NoopProjectCreator projectCreator
 
 	def generateInitialContents(IFileSystemAccess2 fsa) {
-		val className = projectCreator?.projectInfo?.projectName.toFirstUpper ?: 'MyGame'
-		
+		var className = projectCreator?.projectInfo?.projectName.toFirstUpper ?: 'MyGame'
+
+		className = className.chars.mapToObj [
+			Character.toString(it as char)
+		].filter [
+			SampleNewWizardPage::validClassNamePattern.matcher(it).matches
+		].collect(Collectors::joining())
+
 		fsa.generateFile(
 			'''«projectCreator?.modelFolderName»/«className».«fileExtensionProvider.primaryFileExtension»''',
 			'''

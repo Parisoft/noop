@@ -100,7 +100,7 @@ public class SampleNewWizard extends Wizard implements INewWizard {
 		IContainer container = (IContainer) resource;
 		final IFile file = container.getFile(new Path(fileName));
 		try {
-			InputStream stream = openContentStream();
+			InputStream stream = openContentStream(fileName);
 			if (file.exists()) {
 				file.setContents(stream, true, true, monitor);
 			} else {
@@ -128,9 +128,8 @@ public class SampleNewWizard extends Wizard implements INewWizard {
 	 * We will initialize file contents with a sample text.
 	 */
 
-	private InputStream openContentStream() {
-		String contents =
-			"This is the initial file contents for *.noop file that should be word-sorted in the Preview page of the multi-page editor";
+	private InputStream openContentStream(String filename) {
+		String contents = filename.substring(0, filename.indexOf(".noop")) + " {" + System.lineSeparator() + System.lineSeparator() + "}";
 		return new ByteArrayInputStream(contents.getBytes());
 	}
 

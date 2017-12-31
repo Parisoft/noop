@@ -18,6 +18,8 @@ import org.parisoft.noop.ui.hover.NoopHoverProvider
 import org.parisoft.noop.ui.wizard.NoopProjectCreator
 import org.parisoft.noop.ui.wizard.NoopProjectCreator2
 import org.parisoft.noop.ui.contentassist.NoopTemplateProposalProvider
+import org.parisoft.noop.ui.wizard.NoopNewProjectWizard
+import org.parisoft.noop.ui.wizard.NoopNewProjectWizard2
 
 /**
  * Use this class to register components to be used within the Eclipse IDE.
@@ -33,6 +35,7 @@ class NoopUiModule extends AbstractNoopUiModule {
 		binder.bind(AbstractAntlrTokenToAttributeIdMapper).to(NoopAntlrTokenToAttributeIdMapper)
 		binder.bind(ISemanticHighlightingCalculator).to(NoopSemanticHighlightingCalculator)
 		binder.bind(NoopProjectCreator).to(NoopProjectCreator2)
+		binder.bind(NoopNewProjectWizard).to(NoopNewProjectWizard2)
 	}
 	
 	override bindITemplateProposalProvider() {

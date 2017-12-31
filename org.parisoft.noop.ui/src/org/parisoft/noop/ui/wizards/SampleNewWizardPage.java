@@ -1,5 +1,7 @@
 package org.parisoft.noop.ui.wizards;
 
+import java.util.regex.Pattern;
+
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -27,6 +29,9 @@ import org.eclipse.ui.dialogs.ContainerSelectionDialog;
  */
 
 public class SampleNewWizardPage extends WizardPage {
+	
+	public static final Pattern validClassNamePattern = Pattern.compile("\\w+");
+	
 	private Text containerText;
 
 	private Text fileText;
@@ -40,8 +45,8 @@ public class SampleNewWizardPage extends WizardPage {
 	 */
 	public SampleNewWizardPage(ISelection selection) {
 		super("wizardPage");
-		setTitle("Multi-page Editor File");
-		setDescription("This wizard creates a new file with *.noop extension that can be opened by a multi-page editor.");
+		setTitle("NOOP Class");
+		setDescription("Creates a new NOOP class to define game objects.");
 		this.selection = selection;
 	}
 
@@ -53,7 +58,7 @@ public class SampleNewWizardPage extends WizardPage {
 		layout.numColumns = 3;
 		layout.verticalSpacing = 9;
 		Label label = new Label(container, SWT.NULL);
-		label.setText("&Container:");
+		label.setText("&Folder:");
 
 		containerText = new Text(container, SWT.BORDER | SWT.SINGLE);
 		GridData gd = new GridData(GridData.FILL_HORIZONTAL);
@@ -73,7 +78,7 @@ public class SampleNewWizardPage extends WizardPage {
 			}
 		});
 		label = new Label(container, SWT.NULL);
-		label.setText("&File name:");
+		label.setText("&Class name:");
 
 		fileText = new Text(container, SWT.BORDER | SWT.SINGLE);
 		gd = new GridData(GridData.FILL_HORIZONTAL);
@@ -93,8 +98,7 @@ public class SampleNewWizardPage extends WizardPage {
 	 */
 
 	private void initialize() {
-		if (selection != null && selection.isEmpty() == false
-				&& selection instanceof IStructuredSelection) {
+		if (selection != null && selection.isEmpty() == false && selection instanceof IStructuredSelection) {
 			IStructuredSelection ssel = (IStructuredSelection) selection;
 			if (ssel.size() > 1)
 				return;
@@ -108,18 +112,17 @@ public class SampleNewWizardPage extends WizardPage {
 				containerText.setText(container.getFullPath().toString());
 			}
 		}
-		fileText.setText("NewClass.noop");
+		fileText.setText("NewClass");
 	}
 
 	/**
-	 * Uses the standard container selection dialog to choose the new value for
-	 * the container field.
+	 * Uses the standard container selection dialog to choose the new value for the
+	 * container field.
 	 */
 
 	private void handleBrowse() {
-		ContainerSelectionDialog dialog = new ContainerSelectionDialog(
-				getShell(), ResourcesPlugin.getWorkspace().getRoot(), false,
-				"Select new file container");
+		ContainerSelectionDialog dialog = new ContainerSelectionDialog(getShell(),
+				ResourcesPlugin.getWorkspace().getRoot(), false, "Select new file container");
 		if (dialog.open() == ContainerSelectionDialog.OK) {
 			Object[] result = dialog.getResult();
 			if (result.length == 1) {
@@ -133,39 +136,49 @@ public class SampleNewWizardPage extends WizardPage {
 	 */
 
 	private void dialogChanged() {
-		IResource container = ResourcesPlugin.getWorkspace().getRoot()
-				.findMember(new Path(getContainerName()));
-		String fileName = getFileName();
+		IResource container = ResourcesPlugin.getWorkspace().getRoot().findMember(new Path(getContainerName()));
+		String fullFileName = getFileName();
+		String fileName = fullFileName.substring(0, fullFileName.length() - 5);
 
 		if (getContainerName().length() == 0) {
-			updateStatus("File container must be specified");
+			updateStatus("Class folder must be specified");
 			return;
 		}
-		if (container == null
-				|| (container.getType() & (IResource.PROJECT | IResource.FOLDER)) == 0) {
-			updateStatus("File container must exist");
+
+		if (container == null || (container.getType() & (IResource.PROJECT | IResource.FOLDER)) == 0) {
+			updateStatus("Class folder must exist");
 			return;
 		}
+		
+		if (container instanceof IContainer && ((IContainer) container).getFile(new Path(fullFileName)).exists()) {
+			updateStatus("Class already exists");
+			return;
+		}
+
 		if (!container.isAccessible()) {
 			updateStatus("Project must be writable");
 			return;
 		}
+
 		if (fileName.length() == 0) {
-			updateStatus("File name must be specified");
+			updateStatus("Class name must be specified");
 			return;
 		}
+
+		if (Character.isLowerCase(fileName.charAt(0))) {
+			updateStatus("Class name must start with a upper case character");
+		}
+		
+		if (!validClassNamePattern.matcher(fileName).matches()) {
+			updateStatus("Class name contains invalid characters");
+			return;
+		}
+
 		if (fileName.replace('\\', '/').indexOf('/', 1) > 0) {
-			updateStatus("File name must be valid");
+			updateStatus("Class name must be valid");
 			return;
 		}
-		int dotLoc = fileName.lastIndexOf('.');
-		if (dotLoc != -1) {
-			String ext = fileName.substring(dotLoc + 1);
-			if (ext.equalsIgnoreCase("noop") == false) {
-				updateStatus("File extension must be \"noop\"");
-				return;
-			}
-		}
+
 		updateStatus(null);
 	}
 
@@ -179,6 +192,6 @@ public class SampleNewWizardPage extends WizardPage {
 	}
 
 	public String getFileName() {
-		return fileText.getText();
+		return fileText.getText() + ".noop";
 	}
 }
