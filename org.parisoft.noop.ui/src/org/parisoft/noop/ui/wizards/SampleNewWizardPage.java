@@ -167,6 +167,7 @@ public class SampleNewWizardPage extends WizardPage {
 
 		if (Character.isLowerCase(fileName.charAt(0))) {
 			updateStatus("Class name must start with a upper case character");
+			return;
 		}
 		
 		if (!validClassNamePattern.matcher(fileName).matches()) {
