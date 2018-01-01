@@ -4,14 +4,15 @@
 <product name="Noop IDE" uid="Noop IDE" id="org.parisoft.noop.product.noopProduct" application="org.eclipse.ui.ide.workbench" version="1.0.0.qualifier" useFeatures="false" includeLaunchers="true">
 
    <aboutInfo>
-      <image path="/org.parisoft.noop.product/images/about.png"/>
+      <image path="/org.parisoft.noop.product/images/About.png"/>
       <text>
          NOOP  - NES/Famicom Object Oriented Programming
 Version: 1.0
 
-NOOP is a high-level programming language for the development of 8-bit Nintendo games.
-This IDE is provided with an editor and a compiler to help transform your game ideas into reality
-For more, go to https://github.com/Parisoft/noop
+NOOP is a high-level programming language for the development of 8 bit Nintendo games.
+This IDE is provided with an editor and a compiler for the NOOP language to help transform your game ideas into reality
+
+Visit https://github.com/Parisoft/noop
       </text>
    </aboutInfo>
 
@@ -25,7 +26,7 @@ For more, go to https://github.com/Parisoft/noop
       </vmArgsMac>
    </launcherArgs>
 
-   <windowImages/>
+   <windowImages i16="/org.parisoft.noop.product/images/Image16.png" i32="/org.parisoft.noop.product/images/Image32.png" i48="/org.parisoft.noop.product/images/Image48.png" i64="/org.parisoft.noop.product/images/Image64.png" i128="/org.parisoft.noop.product/images/Image128.png" i256="/org.parisoft.noop.product/images/Image256.png"/>
 
    <splash
       location="org.parisoft.noop.product"

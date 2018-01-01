@@ -26,15 +26,19 @@
          </property>
          <property
                name="aboutImage"
-               value="images/about.png">
+               value="images/About.png">
          </property>
          <property
                name="aboutText"
-               value="NOOP  - NES/Famicom Object Oriented Programming&#x0A;Version: 1.0&#x0A;&#x0A;NOOP is a high-level programming language for the development of 8-bit Nintendo games.&#x0A;This IDE is provided with an editor and a compiler to help transform your game ideas into reality&#x0A;For more, go to https://github.com/Parisoft/noop">
+               value="NOOP  - NES/Famicom Object Oriented Programming&#x0A;Version: 1.0&#x0A;&#x0A;NOOP is a high-level programming language for the development of 8 bit Nintendo games.&#x0A;This IDE is provided with an editor and a compiler for the NOOP language to help transform your game ideas into reality&#x0A;&#x0A;Visit https://github.com/Parisoft/noop">
          </property>
          <property
                name="preferenceCustomization"
                value="plugin_customization.ini">
+         </property>
+         <property
+               name="windowImages"
+               value="images/Image16.png,images/Image32.png,images/Image48.png,images/Image64.png,images/Image128.png,images/Image256.png">
          </property>
       </product>
    </extension>
