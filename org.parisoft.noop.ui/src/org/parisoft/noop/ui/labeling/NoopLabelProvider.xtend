@@ -30,6 +30,10 @@ class NoopLabelProvider extends DefaultEObjectLabelProvider {
 		super(delegate);
 	}
 
+	def text(NoopClass c) {
+		new StyledString(c.name, StyledString::DECORATIONS_STYLER)
+	}
+
 	def text(Variable variable) {
 		val displayString = new StyledString(variable.name).append(' : ')
 

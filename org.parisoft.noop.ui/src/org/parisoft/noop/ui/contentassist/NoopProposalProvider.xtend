@@ -23,6 +23,7 @@ import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.ui.labeling.NoopLabelProvider
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.NoopClass
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -110,17 +111,17 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			displayString, null, null)
 	}
 
-	private def createCompletionProposal(Variable variable, ContentAssistContext context) {
-		createCompletionProposal(variable.name, variable.text, variable.image, context)
-	}
-
-	private def createCompletionProposal(Method method, ContentAssistContext context) {
-		val proposal = createCompletionProposal(method.name, method.text, method.image, context)
+	private def createCompletionProposal(Member member, ContentAssistContext context) {
+		val proposal = createCompletionProposal(member.name, member.text, member.image, context)
 
 		if (proposal instanceof NoopMethodCompletionProposal) {
 			proposal => [
 				it.hover = hover
-				it.setLinkedMode(context.viewer, method)
+				it.additionalProposalInfo = member
+				
+				if (member instanceof Method) {
+					it.setLinkedMode(context.viewer, member)
+				}
 			]
 		}
 	}
@@ -138,11 +139,15 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 		members.filter[!suppressed.contains(it)]
 	}
 	
-	private def text(Method m) {
+	private dispatch def text(NoopClass c) {
+		labelProvider.text(c)
+	}
+	
+	private dispatch def text(Method m) {
 		labelProvider.text(m)
 	}
 	
-	private def text(Variable v) {
+	private dispatch def text(Variable v) {
 		labelProvider.text(v)
 	}
 
