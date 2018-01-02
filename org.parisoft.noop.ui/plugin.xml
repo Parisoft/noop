@@ -420,7 +420,7 @@
           finalPerspective="org.parisoft.noop.ui.perspective1"
           icon="icons/NewProject.png"
           id="org.parisoft.noop.ui.wizard.NoopNewProjectWizard"
-          name="NOOP Project"
+          name="NES/Famicom game project"
           preferredPerspectives="org.parisoft.noop.ui.perspective1"
           project="true">
     </wizard>
@@ -440,7 +440,7 @@
           id="org.parisoft.noop.ui.perspective1"
           name="NOOP">
        <description>
-          description body text
+          This perspective is designed to support NES/Famicom games development through the NOOP language.
        </description>
     </perspective>
  </extension>
