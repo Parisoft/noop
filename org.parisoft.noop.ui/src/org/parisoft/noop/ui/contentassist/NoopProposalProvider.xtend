@@ -86,54 +86,42 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 		val nonStatic = model.getContainerOfType(Method)?.isNonStatic
 
 		if (nonStatic) {
+			model.completeMemberRef(context).forEach [ variable |
+				acceptor.accept(variable.createCompletionProposal(context))
+			]
 			model.containerClass.allMethodsTopDown.filter[nonNativeArray].suppressOverriden.forEach [ method |
 				acceptor.accept(method.createCompletionProposal(context))
 			]
 		} else {
+			model.completeMemberRef(context).filter[static].forEach [ variable |
+				acceptor.accept(variable.createCompletionProposal(context))
+			]
 			model.containerClass.allMethodsTopDown.filter[static].filter[nonNativeArray].suppressOverriden.forEach [ method |
 				acceptor.accept(method.createCompletionProposal(context))
 			]
 		}
 
-		model.completeMemberRef(context, acceptor)
 	}
 
-	private def void completeMemberRef(EObject model, ContentAssistContext context,
-		ICompletionProposalAcceptor acceptor) {
+	private def Iterable<Variable> completeMemberRef(EObject model, ContentAssistContext context) {
 		if (model === null) {
-			return
+			return newArrayList
 		}
 
-		switch (model) {
-			Block: {
-				val line = context.currentNode.startLine
-
-				model.statements.takeWhile[node.startLine < line].filter(Variable).forEach [ local |
-					acceptor.accept(local.createCompletionProposal(context))
-				]
-			}
-			ForStatement: {
-				val offset = context.currentNode.offset
-
-				model.variables.takeWhile[node.offset < offset].filter[value !== null].forEach [ local |
-					acceptor.accept(local.createCompletionProposal(context))
-				]
-			}
-			Method: {
-				model.params.forEach [ param |
-					acceptor.accept(param.createCompletionProposal(context))
-				]
-			}
-			NoopClass: {
-				val line = context.currentNode.startLine
-
-				model.allFieldsTopDown.takeWhile[node.startLine < line].suppressOverriden.suppressHeaders.forEach [ variable |
-					acceptor.accept(variable.createCompletionProposal(context))
-				]
-			}
-		}
-
-		model.eContainer.completeMemberRef(context, acceptor)
+		return switch (model) {
+			Block:
+				model.statements.takeWhile[node.startLine < context.currentNode.startLine].filter(Variable)
+			ForStatement:
+				model.variables.takeWhile[node.offset < context.currentNode.offset].filter[value !== null]
+			Method:
+				model.params
+			NoopClass:
+				model.allFieldsTopDown.takeWhile [
+					node.startLine < context.currentNode.startLine
+				].suppressOverriden.suppressHeaders
+			default:
+				newArrayList
+		} + model.eContainer.completeMemberRef(context)
 	}
 
 	override completeKeyword(Keyword keyword, ContentAssistContext context, ICompletionProposalAcceptor acceptor) {
@@ -147,18 +135,16 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	}
 
 	private def createCompletionProposal(Member member, ContentAssistContext context) {
-		val priority = if (member.isStatic) {
-				if (member instanceof Variable) {
-					2000
-				} else {
-					1000
-				}
-			} else if (member instanceof Variable) {
-				if (member.isField) {
+		val priority = if (member instanceof Variable) {
+				if (member.isStatic) {
 					4000
-				} else {
+				} else if (member.isField) {
 					5000
+				} else {
+					6000
 				}
+			} else if (member.isStatic) {
+				2000
 			} else {
 				3000
 			}
