@@ -32,6 +32,7 @@ import org.parisoft.noop.ui.labeling.NoopLabelProvider
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import static extension org.eclipse.xtext.nodemodel.util.NodeModelUtils.*
+import org.parisoft.noop.noop.IfStatement
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -150,7 +151,8 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 		if (model instanceof Variable || model instanceof ReturnStatement ||
 			(model instanceof AssignmentExpression && (model as AssignmentExpression).typeOf.isBoolean)||
 			(model instanceof EqualsExpression && (model as EqualsExpression).left?.typeOf?.isBoolean) ||
-			(model instanceof DifferExpression && (model as DifferExpression).left?.typeOf?.isBoolean)) {
+			(model instanceof DifferExpression && (model as DifferExpression).left?.typeOf?.isBoolean) ||
+			(model instanceof IfStatement && (model as IfStatement).condition === null)) {
 			acceptor.accept(createCompletionProposal("true", "true", null, context))
 			acceptor.accept(createCompletionProposal("false", "false", null, context))
 		}
