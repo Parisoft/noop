@@ -5,14 +5,14 @@ package org.parisoft.noop.ui.labeling
 
 import com.google.inject.Inject
 import org.eclipse.emf.edit.ui.provider.AdapterFactoryLabelProvider
-import org.eclipse.xtext.ui.label.DefaultEObjectLabelProvider
-import org.parisoft.noop.noop.NoopClass
-import org.parisoft.noop.noop.Method
-import org.parisoft.noop.^extension.Members
-import org.parisoft.noop.noop.Variable
 import org.eclipse.jface.viewers.StyledString
+import org.eclipse.xtext.ui.label.DefaultEObjectLabelProvider
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Expressions
+import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.noop.Method
+import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.Variable
 
 /**
  * Provides labels for EObjects.

@@ -31,10 +31,10 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 			NoopClass: '''
 				«val classes = o.superClasses»
 				<div>
-				<img src="«o.image.toFileURL»" style="float:left">
+				«o.image.toTag»
 				«FOR i : 0 ..< classes.size»
-					«IF i > 0»extends «ENDIF»<b>«classes.get(i).name»</b>
 					<ul style="list-style-type:none">
+					«IF i > 0»extends «ENDIF»<b>«classes.get(i).name»</b>
 				«ENDFOR»
 				«FOR i : 0 ..< classes.size»
 					</ul>
@@ -46,11 +46,11 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 				«val dimension = o.dimensionOf.map['''<b>[</b>«it»<b>]</b>'''].join»
 				«val container = o.containerClass.name»
 				«IF o.isField»
-					<img src="«o.image.toFileURL»" style="float:left"> <b>«type»</b>«dimension» «container».<b>«o.name»</b>
+					«o.image.toTag»&nbsp;<b>«type»</b>«dimension» «container».<b>«o.name»</b>
 				«ELSE»
 					«val method = o.getContainerOfType(Method)»
 					«val params = method.params.map['''«it.type.name»«it.dimension.map['''[«value?.valueOf»]'''].join»'''].join(', ')»
-					<img src="«o.image.toFileURL»" style="float:left"> <b>«type»</b>«dimension» <b>«o.name»</b> - «container».«method.name»(«params»)
+					«o.image.toTag»&nbsp;<b>«type»</b>«dimension» <b>«o.name»</b> - «container».«method.name»(«params»)
 				«ENDIF»
 			'''
 			Method: '''
@@ -58,7 +58,7 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 				«val dimension = o.dimensionOf.map['''<b>[</b>«it»<b>]</b>'''].join»
 				«val container = o.containerClass.name»
 				«val params = o.params.map['''«it.type.name»«it.dimension.map['''[«value?.valueOf»]'''].join»'''].join(', ')»
-				<img src="«o.image.toFileURL»" style="float:left"> <b>«type»</b>«dimension» «container».<b>«o.name»(«params»)</b>
+				«o.image.toTag»&nbsp;<b>«type»</b>«dimension» «container».<b>«o.name»(«params»)</b>
 			'''
 			default:
 				super.getFirstLine(o)
@@ -75,6 +75,8 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 
 		return doc
 	}
+
+	private def toTag(String image) '''<img src="«image.toString.toFileURL»" style="float:left">'''
 
 	private def toFileURL(String image) {
 		FileLocator::toFileURL(uiPlugin.bundle.getEntry(imageHelper.pathSuffix + image))

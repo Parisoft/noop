@@ -2,11 +2,11 @@ package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
 import java.util.concurrent.atomic.AtomicInteger
-
-import static extension java.lang.Math.*
+import java.util.concurrent.atomic.AtomicReference
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.CompileContext.Operation
-import java.util.concurrent.atomic.AtomicReference
+
+import static extension java.lang.Math.*
 
 class Operations {
 
