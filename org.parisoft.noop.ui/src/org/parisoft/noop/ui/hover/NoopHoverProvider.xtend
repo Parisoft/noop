@@ -76,7 +76,7 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 		return doc
 	}
 
-	private def toTag(String image) '''<img src="«image.toString.toFileURL»" style="float:left">'''
+	private def toTag(String image) '''<img src="«image.toFileURL»" style="float:left">'''
 
 	private def toFileURL(String image) {
 		FileLocator::toFileURL(uiPlugin.bundle.getEntry(imageHelper.pathSuffix + image))
