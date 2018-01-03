@@ -1,8 +1,8 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
-import java.util.HashSet
 import java.util.List
+import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
@@ -19,6 +19,7 @@ import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Statement
+import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.Variable
 
@@ -26,7 +27,6 @@ import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.StorageType
 
 public class Members {
 
@@ -56,9 +56,9 @@ public class Members {
 	@Inject extension Collections
 	@Inject extension IQualifiedNameProvider
 
-	static val running = ThreadLocal.withInitial[new HashSet<Member>]
-	static val allocating = ThreadLocal.withInitial[new HashSet<Member>]
-	static val preparing = ThreadLocal.withInitial[new HashSet<Member>]
+	static val running = ConcurrentHashMap::<Member>newKeySet
+	static val allocating = ConcurrentHashMap::<Member>newKeySet
+	static val preparing = ConcurrentHashMap::<Member>newKeySet
 
 	def getOverriders(Method method) {
 		method.containerClass.subClasses.map[declaredMethods.filter[it.isOverrideOf(method)]].filterNull.flatten
@@ -283,7 +283,7 @@ public class Members {
 	}
 
 	def typeOf(Variable variable) {
-		if (running.get.add(variable)) {
+		if (running.add(variable)) {
 			try {
 				if (variable.type !== null) {
 					variable.type
@@ -293,17 +293,17 @@ public class Members {
 					variable.value.typeOf
 				}
 			} finally {
-				running.get.remove(variable)
+				running.remove(variable)
 			}
 		}
 	}
 
 	def typeOf(Method method) {
-		if (running.get.add(method)) {
+		if (running.add(method)) {
 			try {
 				method.body.getAllContentsOfType(ReturnStatement).map[value.typeOf].filterNull.toSet.merge
 			} finally {
-				running.get.remove(method)
+				running.remove(method)
 			}
 		}
 	}
@@ -320,11 +320,11 @@ public class Members {
 			throw new NonConstantMemberException
 		}
 		
-		if (running.get.add(variable)) {
+		if (running.add(variable)) {
 			try {
 				return variable.value.valueOf
 			} finally {
-				running.get.remove(variable)
+				running.remove(variable)
 			}
 		}
 	}
@@ -347,11 +347,11 @@ public class Members {
 	}
 	
 	def List<Integer> dimensionOf(Method method) {
-		if (running.get.add(method)) {
+		if (running.add(method)) {
 			try {
 				method.body.getAllContentsOfType(ReturnStatement).head?.dimensionOf ?: emptyList
 			} finally {
-				running.get.remove(method)
+				running.remove(method)
 			}
 		}
 	}
@@ -501,11 +501,11 @@ public class Members {
 	'''
 
 	def prepare(Method method, AllocContext ctx) {
-		if (preparing.get.add(method)) {
+		if (preparing.add(method)) {
 			try {
 				method.body.statements.forEach[prepare(ctx)]
 			} finally {
-				preparing.get.remove(method)		
+				preparing.remove(method)		
 			}
 		}
 	}
@@ -583,7 +583,7 @@ public class Members {
 	}
 
 	def alloc(Method method, AllocContext ctx) {
-		if (allocating.get.add(method)) {
+		if (allocating.add(method)) {
 			try {
 				val snapshot = ctx.snapshot
 				val methodName = method.nameOf
@@ -605,7 +605,7 @@ public class Members {
 
 				return chunks
 			} finally {
-				allocating.get.remove(method)
+				allocating.remove(method)
 			}
 		} else {
 			newArrayList
@@ -850,11 +850,11 @@ public class Members {
 			throw new NonConstantMemberException
 		}
 		
-		if (running.get.add(variable)) {
+		if (running.add(variable)) {
 			try {
 				return variable.nameOfConstant
 			} finally {
-				running.get.remove(variable)
+				running.remove(variable)
 			}
 		}
 	}

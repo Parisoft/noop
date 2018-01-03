@@ -3,6 +3,7 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.io.File
 import java.util.List
+import java.util.concurrent.ConcurrentHashMap
 import java.util.stream.Collectors
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils
@@ -53,6 +54,7 @@ import org.parisoft.noop.noop.RShiftExpression
 import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.SigNegExpression
 import org.parisoft.noop.noop.SigPosExpression
+import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.SubExpression
 import org.parisoft.noop.noop.Super
@@ -62,8 +64,6 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import java.util.HashSet
-import org.parisoft.noop.noop.Statement
 
 class Expressions {
 
@@ -77,7 +77,7 @@ class Expressions {
 	@Inject extension TypeSystem
 	@Inject extension Collections
 
-	static val recursions = ThreadLocal.withInitial[new HashSet<Statement>]
+	static val recursions = ConcurrentHashMap::<Statement>newKeySet
 
 	def getFieldsInitializedOnContructor(NewInstance instance) {
 		instance.type.allFieldsTopDown.filter[nonStatic]
@@ -289,7 +289,7 @@ class Expressions {
 	}
 
 	def boolean invokes(Statement statement, Method method) {
-		if (recursions.get.add(statement)) {
+		if (recursions.add(statement)) {
 			try {
 				switch (statement) {
 					MemberSelect:
@@ -308,7 +308,7 @@ class Expressions {
 						statement.eAllContentsAsList.filter(Statement).exists[it.invokes(method)]
 				}
 			} finally {
-				recursions.get.remove(statement)
+				recursions.remove(statement)
 			}
 		}
 	}
