@@ -43,7 +43,7 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 			'''
 			Variable: '''
 				«val type = o.typeOf.name»
-				«val dimension = o.dimensionOf.map['''[«it»]'''].join»
+				«val dimension = o.dimensionOf.map['''<b>[</b>«it»<b>]</b>'''].join»
 				«val container = o.containerClass.name»
 				«IF o.isField»
 					<img src="«o.image.toFileURL»" style="float:left"> <b>«type»</b>«dimension» «container».<b>«o.name»</b>
@@ -55,7 +55,7 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 			'''
 			Method: '''
 				«val type = o.typeOf.name»
-				«val dimension = o.dimensionOf.map['''[«it»]'''].join»
+				«val dimension = o.dimensionOf.map['''<b>[</b>«it»<b>]</b>'''].join»
 				«val container = o.containerClass.name»
 				«val params = o.params.map['''«it.type.name»«it.dimension.map['''[«value?.valueOf»]'''].join»'''].join(', ')»
 				<img src="«o.image.toFileURL»" style="float:left"> <b>«type»</b>«dimension» «container».<b>«o.name»(«params»)</b>
