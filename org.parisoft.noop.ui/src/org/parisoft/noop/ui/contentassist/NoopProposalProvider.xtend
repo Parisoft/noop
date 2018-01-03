@@ -9,19 +9,24 @@ import org.eclipse.jface.viewers.StyledString
 import org.eclipse.swt.graphics.Image
 import org.eclipse.xtext.Assignment
 import org.eclipse.xtext.Keyword
+import org.eclipse.xtext.RuleCall
 import org.eclipse.xtext.ui.editor.contentassist.ContentAssistContext
 import org.eclipse.xtext.ui.editor.contentassist.ICompletionProposalAcceptor
 import org.eclipse.xtext.ui.editor.hover.IEObjectHover
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.noop.AssignmentExpression
 import org.parisoft.noop.noop.Block
+import org.parisoft.noop.noop.DifferExpression
+import org.parisoft.noop.noop.EqualsExpression
 import org.parisoft.noop.noop.ForStatement
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.ui.labeling.NoopLabelProvider
 
@@ -40,6 +45,8 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 
 	@Inject NoopLabelProvider labelProvider
 	@Inject IEObjectHover hover
+	
+	val keywordsToPropose = newArrayList('instanceOf', 'as', 'return', 'this', 'super')
 
 	override completeSelectionExpression_Member(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
@@ -86,14 +93,14 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 		val nonStatic = model.getContainerOfType(Method)?.isNonStatic
 
 		if (nonStatic) {
-			model.completeMemberRef(context).forEach [ variable |
+			model.completeVarRef(context).forEach [ variable |
 				acceptor.accept(variable.createCompletionProposal(context))
 			]
 			model.containerClass.allMethodsTopDown.filter[nonNativeArray].suppressOverriden.forEach [ method |
 				acceptor.accept(method.createCompletionProposal(context))
 			]
 		} else {
-			model.completeMemberRef(context).filter[static].forEach [ variable |
+			model.completeVarRef(context).filter[static].forEach [ variable |
 				acceptor.accept(variable.createCompletionProposal(context))
 			]
 			model.containerClass.allMethodsTopDown.filter[static].filter[nonNativeArray].suppressOverriden.forEach [ method |
@@ -103,7 +110,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 
 	}
 
-	private def Iterable<Variable> completeMemberRef(EObject model, ContentAssistContext context) {
+	private def Iterable<Variable> completeVarRef(EObject model, ContentAssistContext context) {
 		if (model === null) {
 			return newArrayList
 		}
@@ -121,11 +128,39 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				].suppressOverriden.suppressHeaders
 			default:
 				newArrayList
-		} + model.eContainer.completeMemberRef(context)
+		} + model.eContainer.completeVarRef(context)
 	}
 
 	override completeKeyword(Keyword keyword, ContentAssistContext context, ICompletionProposalAcceptor acceptor) {
-		return
+		if (keywordsToPropose.contains(keyword.value)) {
+			if (keyword.value == 'this' || keyword.value == 'super') {
+				val method = context.currentModel.getContainerOfType(Method)
+				
+				if (method === null || method.isStatic) {
+					return
+				}
+			}
+			
+			super.completeKeyword(keyword, context, acceptor)
+		}
+	}
+
+	override complete_BOOL(EObject model, RuleCall ruleCall, ContentAssistContext context,
+		ICompletionProposalAcceptor acceptor) {
+		if (model instanceof Variable || model instanceof ReturnStatement ||
+			(model instanceof AssignmentExpression && (model as AssignmentExpression).typeOf.isBoolean)||
+			(model instanceof EqualsExpression && (model as EqualsExpression).left?.typeOf?.isBoolean) ||
+			(model instanceof DifferExpression && (model as DifferExpression).left?.typeOf?.isBoolean)) {
+			acceptor.accept(createCompletionProposal("true", "true", null, context))
+			acceptor.accept(createCompletionProposal("false", "false", null, context))
+		}
+	}
+	
+	override complete_Byte(EObject model, RuleCall ruleCall, ContentAssistContext context, ICompletionProposalAcceptor acceptor) {
+		if (model instanceof Variable || model instanceof ReturnStatement ||
+			(model instanceof AssignmentExpression && (model as AssignmentExpression).typeOf.isNumeric)) {
+			acceptor.accept(createCompletionProposal("0", "0", null, context))
+		}
 	}
 
 	override protected doCreateProposal(String proposal, StyledString displayString, Image image, int replacementOffset,

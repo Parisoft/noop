@@ -45,32 +45,36 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		try {
 			switch (context) {
 				Block:
-					if (eRef == NoopPackage.eINSTANCE.memberRef_Member) {
+					if (eRef == NoopPackage::eINSTANCE.memberRef_Member) {
 						return scopeForVariableRef(context)
 					}
 				AsmStatement:
-					if (eRef == NoopPackage.eINSTANCE.asmStatement_Vars) {
+					if (eRef == NoopPackage::eINSTANCE.asmStatement_Vars) {
 						return scopeForVariableRef(context)
 					}
 				Constructor:
-					if (eRef == NoopPackage.eINSTANCE.constructorField_Variable) {
+					if (eRef == NoopPackage::eINSTANCE.constructorField_Variable) {
 						return scopeForNewInstance(context.eContainer as NewInstance)
 					}
 				ConstructorField:
-					if (eRef == NoopPackage.eINSTANCE.constructorField_Variable) {
+					if (eRef == NoopPackage::eINSTANCE.constructorField_Variable) {
 						return scopeForNewInstance(context.eContainer.eContainer as NewInstance)
 					}
 				MemberRef:
-					return scopeForMemberRef(context)
+					if (eRef == NoopPackage::eINSTANCE.memberRef_Member) {
+						return scopeForMemberRef(context)
+					}
 				MemberSelect:
-					return scopeForMemberSelect(context)
+					if (eRef == NoopPackage::eINSTANCE.memberSelect_Member) {
+						return scopeForMemberSelect(context)
+					}
 			}
-	
+
 			return super.getScope(context, eRef)
 		} catch (Exception e) {
 			System::err.println('''Got a «e». Is eclipse cleaning?''')
 			e.printStackTrace(System::err)
-			
+
 			return IScope.NULLSCOPE
 		}
 	}
