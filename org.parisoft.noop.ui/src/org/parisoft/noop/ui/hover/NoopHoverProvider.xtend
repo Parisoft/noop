@@ -52,7 +52,7 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 				«val type = o.typeOf.name»
 				«val dimension = o.dimensionOf.map['''<b>[</b>«it»<b>]</b>'''].join»
 				«val container = o.containerClass.name»
-				«val params = o.params.map['''«it.type.name»«it.dimension.map['''[«value?.valueOf»]'''].join»'''].join(', ')»
+				«val params = o.params.map['''«it.type.name»«it.dimension.map['''[«value?.valueOf»]'''].join» «name»'''].join(', ')»
 				«o.image.toTag»&nbsp;<b>«type»</b>«dimension» «container».<b>«o.name»(«params»)</b>
 			'''
 			default:

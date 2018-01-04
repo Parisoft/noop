@@ -35,6 +35,7 @@ import org.parisoft.noop.ui.labeling.NoopLabelProvider
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import static extension org.eclipse.xtext.nodemodel.util.NodeModelUtils.*
+import org.parisoft.noop.noop.StorageType
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -50,7 +51,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	@Inject NoopLabelProvider labelProvider
 	@Inject IEObjectHover hover
 
-	val keywordsToPropose = newArrayList('extends', 'instanceOf', 'as', 'return', 'this', 'super')
+	val keywordsToPropose = (newArrayList('extends', 'instanceOf', 'as', 'return', 'this', 'super') + StorageType::VALUES.map[literal]).toList
 
 	override completeNoopClass_Members(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {

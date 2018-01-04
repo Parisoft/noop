@@ -55,7 +55,8 @@ class NoopMethodCompletionProposal extends ConfigurableCompletionProposal {
 		}
 	}
 
-	def setLinkedModeForOverride(ITextViewer viewer, Method method, boolean isStatic, extension Function<Expression, Object> valueOf) {
+	def setLinkedModeForOverride(ITextViewer viewer, Method method, boolean isStatic,
+		extension Function<Expression, Object> valueOf) {
 		super.setSimpleLinkedMode(viewer)
 		this.viewer = viewer
 		this.params = method.params.toList
@@ -64,7 +65,7 @@ class NoopMethodCompletionProposal extends ConfigurableCompletionProposal {
 		val paramsString = params.map [
 			'''«type.name»«dimension.map['''[«value?.apply»]'''].join» «name»«storage.toProposalString(valueOf)»'''
 		].join(', ')
-		val receiver = if (isStatic) EcoreUtil2::getContainerOfType(method, NoopClass).name else 'super'
+		val receiver = if(isStatic) EcoreUtil2::getContainerOfType(method, NoopClass).name else 'super'
 		val methodTop = '''(«paramsString»)«method.storage.toProposalString(valueOf)» {«System::lineSeparator»'''
 		val methodMid = '''		return «receiver».«method.name»«IF method.params.size > 0»(«method.params.map[name].join(', ')»)«ENDIF»'''
 		val methodBot = '''«System::lineSeparator»	}'''
@@ -76,11 +77,11 @@ class NoopMethodCompletionProposal extends ConfigurableCompletionProposal {
 		cursorPosition = cursorPosition + methodTop.length + methodMid.length + methodBot.length
 	}
 
-	private def toProposalString(Storage storage, extension Function<Expression, Object> valueOf) '''
-		«IF storage !== null»
-			«noop» «storage.type.getName»«IF storage.location !== null»[«storage.location.apply»]«ENDIF»
-		«ENDIF»
-	'''
+	private def toProposalString(Storage storage, extension Function<Expression, Object> valueOf) {
+		if (storage !== null) {
+			'''«noop» «storage.type.literal»«IF storage.location !== null»[«storage.location.apply»]«ENDIF»'''
+		}
+	}
 
 	private def void noop() {
 	}
