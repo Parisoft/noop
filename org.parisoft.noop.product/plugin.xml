@@ -30,7 +30,7 @@
          </property>
          <property
                name="aboutText"
-               value="NOOP  - NES/Famicom Object Oriented Programming&#x0A;Version: 1.0&#x0A;&#x0A;NOOP is a high-level programming language for the development of 8 bit Nintendo games.&#x0A;This IDE is provided with an editor and a compiler for the NOOP language to help transform your game ideas into reality&#x0A;&#x0A;Visit https://github.com/Parisoft/noop">
+               value="NOOPr  - NES/Famicom Object Oriented Programming IDE&#x0A;Version: 1.0&#x0A;&#x0A;NOOP is a high-level programming language for the development of 8 bit Nintendo games.&#x0A;NOOPr is the official NOOP IDE. It&apos;s provided with an editor and a compiler for the NOOP language to help transform your game ideas into reality&#x0A;&#x0A;Visit https://github.com/Parisoft/noop">
          </property>
          <property
                name="windowImages"
