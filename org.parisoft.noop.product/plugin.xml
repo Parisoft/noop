@@ -7,10 +7,10 @@
       <product
             application="org.eclipse.ui.ide.workbench"
             description="NES Object Oriented Programming IDE"
-            name="Noop IDE">
+            name="NOOPr">
          <property
                name="appName"
-               value="Noop IDE">
+               value="NOOPr">
          </property>
          <property
                name="startupForegroundColor"

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?pde version="3.5"?>
 
-<product name="Noop IDE" uid="Noop IDE" id="org.parisoft.noop.product.noopProduct" application="org.eclipse.ui.ide.workbench" version="1.0.0.qualifier" useFeatures="false" includeLaunchers="true">
+<product name="NOOPr" uid="NOOPr" id="org.parisoft.noop.product.noopProduct" application="org.eclipse.ui.ide.workbench" version="1.0.0.qualifier" useFeatures="false" includeLaunchers="true">
 
    <aboutInfo>
       <image path="/org.parisoft.noop.product/images/About.png"/>
@@ -33,7 +33,8 @@ Visit https://github.com/Parisoft/noop
       startupProgressRect="5,292,445,8"
       startupMessageRect="7,274,445,16"
       startupForegroundColor="BB2024" />
-   <launcher name="NoopIDE">
+   <launcher name="NOOPr">
+      <linux icon="/org.parisoft.noop.product/images/Icon.xpm"/>
       <win useIco="false">
          <bmp/>
       </win>

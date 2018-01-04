@@ -15,7 +15,7 @@ class Files {
 
 	def toFile(URI uri) {
 		if (uri.isPlatform) {
-			new File(ResourcesPlugin.workspace.root.getFile(new Path(uri.toPlatformString(true))).rawLocation.toOSString)
+			new File(ResourcesPlugin::workspace.root.getFile(new Path(uri.toPlatformString(true))).rawLocation.toOSString)
 		} else {
 			new File(resourceSet.getResource(uri, true).resourceSet.URIConverter.normalize(uri).toFileString)
 		}

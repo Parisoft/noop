@@ -47,7 +47,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	@Inject NoopLabelProvider labelProvider
 	@Inject IEObjectHover hover
 	
-	val keywordsToPropose = newArrayList('instanceOf', 'as', 'return', 'this', 'super')
+	val keywordsToPropose = newArrayList('extends', 'instanceOf', 'as', 'return', 'this', 'super')
 
 	override completeSelectionExpression_Member(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
