@@ -15,12 +15,14 @@ import org.eclipse.xtext.ui.editor.contentassist.ICompletionProposalAcceptor
 import org.eclipse.xtext.ui.editor.hover.IEObjectHover
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Expressions
+import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.AssignmentExpression
 import org.parisoft.noop.noop.Block
 import org.parisoft.noop.noop.DifferExpression
 import org.parisoft.noop.noop.EqualsExpression
 import org.parisoft.noop.noop.ForStatement
+import org.parisoft.noop.noop.IfStatement
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
@@ -30,9 +32,9 @@ import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.ui.labeling.NoopLabelProvider
 
+import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import static extension org.eclipse.xtext.nodemodel.util.NodeModelUtils.*
-import org.parisoft.noop.noop.IfStatement
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -40,14 +42,26 @@ import org.parisoft.noop.noop.IfStatement
  */
 class NoopProposalProvider extends AbstractNoopProposalProvider {
 
+	@Inject extension Files
 	@Inject extension Members
 	@Inject extension Classes
 	@Inject extension Expressions
 
 	@Inject NoopLabelProvider labelProvider
 	@Inject IEObjectHover hover
-	
+
 	val keywordsToPropose = newArrayList('extends', 'instanceOf', 'as', 'return', 'this', 'super')
+
+	override completeNoopClass_Members(EObject model, Assignment assignment, ContentAssistContext context,
+		ICompletionProposalAcceptor acceptor) {
+		if (model instanceof NoopClass) {
+			model.allMethodsTopDown.filter[nonNativeArray].suppressOverriden.filter[containerClass != model].forEach [ method |
+				acceptor.accept(method.createOverrideProposal(context))
+			]
+		} else {
+			super.completeNoopClass_Members(model, assignment, context, acceptor)
+		}
+	}
 
 	override completeSelectionExpression_Member(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
@@ -58,30 +72,30 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 
 			if (receiver.dimensionOf.size > 0) {
 				methods.filter[nonStatic].filter[nativeArray].suppressOverriden.forEach [ method |
-					acceptor.accept(method.createCompletionProposal(context))
+					acceptor.accept(method.createInvocationProposal(context))
 				]
 			} else if (receiver instanceof NewInstance) {
 				if (receiver.constructor === null) {
 					variables.filter[static].suppressOverriden.forEach [ variable |
-						acceptor.accept(variable.createCompletionProposal(context))
+						acceptor.accept(variable.createInvocationProposal(context))
 					]
 					methods.filter[static].suppressOverriden.forEach [ method |
-						acceptor.accept(method.createCompletionProposal(context))
+						acceptor.accept(method.createInvocationProposal(context))
 					]
 				} else {
 					variables.filter[nonStatic].suppressOverriden.forEach [ variable |
-						acceptor.accept(variable.createCompletionProposal(context))
+						acceptor.accept(variable.createInvocationProposal(context))
 					]
 					methods.filter[nonStatic].filter[nonNativeArray].suppressOverriden.forEach [ method |
-						acceptor.accept(method.createCompletionProposal(context))
+						acceptor.accept(method.createInvocationProposal(context))
 					]
 				}
 			} else {
 				variables.filter[nonStatic].suppressOverriden.forEach [ variable |
-					acceptor.accept(variable.createCompletionProposal(context))
+					acceptor.accept(variable.createInvocationProposal(context))
 				]
 				methods.filter[nonStatic].filter[nonNativeArray].suppressOverriden.forEach [ method |
-					acceptor.accept(method.createCompletionProposal(context))
+					acceptor.accept(method.createInvocationProposal(context))
 				]
 			}
 		} else {
@@ -91,57 +105,49 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 
 	override completeTerminalExpression_Member(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
+		if (model instanceof NoopClass) {
+			return
+		}
+
 		val nonStatic = model.getContainerOfType(Method)?.isNonStatic
 
 		if (nonStatic) {
-			model.completeVarRef(context).forEach [ variable |
-				acceptor.accept(variable.createCompletionProposal(context))
+			model.listVariables(context).forEach [ variable |
+				acceptor.accept(variable.createInvocationProposal(context))
 			]
 			model.containerClass.allMethodsTopDown.filter[nonNativeArray].suppressOverriden.forEach [ method |
-				acceptor.accept(method.createCompletionProposal(context))
+				acceptor.accept(method.createInvocationProposal(context))
 			]
 		} else {
-			model.completeVarRef(context).filter[static].forEach [ variable |
-				acceptor.accept(variable.createCompletionProposal(context))
+			model.listVariables(context).filter[static].forEach [ variable |
+				acceptor.accept(variable.createInvocationProposal(context))
 			]
 			model.containerClass.allMethodsTopDown.filter[static].filter[nonNativeArray].suppressOverriden.forEach [ method |
-				acceptor.accept(method.createCompletionProposal(context))
+				acceptor.accept(method.createInvocationProposal(context))
 			]
 		}
 
 	}
 
-	private def Iterable<Variable> completeVarRef(EObject model, ContentAssistContext context) {
-		if (model === null) {
-			return newArrayList
+	override completeTerminalExpression_Type(EObject model, Assignment assignment, ContentAssistContext context,
+		ICompletionProposalAcceptor acceptor) {
+		if (model instanceof NoopClass) {
+			return
 		}
 
-		return switch (model) {
-			Block:
-				model.statements.takeWhile[node.startLine < context.currentNode.startLine].filter(Variable)
-			ForStatement:
-				model.variables.takeWhile[node.offset < context.currentNode.offset].filter[value !== null]
-			Method:
-				model.params
-			NoopClass:
-				model.allFieldsTopDown.takeWhile [
-					node.startLine < context.currentNode.startLine
-				].suppressOverriden.suppressHeaders
-			default:
-				newArrayList
-		} + model.eContainer.completeVarRef(context)
+		super.completeTerminalExpression_Type(model, assignment, context, acceptor)
 	}
 
 	override completeKeyword(Keyword keyword, ContentAssistContext context, ICompletionProposalAcceptor acceptor) {
 		if (keywordsToPropose.contains(keyword.value)) {
 			if (keyword.value == 'this' || keyword.value == 'super') {
 				val method = context.currentModel.getContainerOfType(Method)
-				
+
 				if (method === null || method.isStatic) {
 					return
 				}
 			}
-			
+
 			super.completeKeyword(keyword, context, acceptor)
 		}
 	}
@@ -149,19 +155,34 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	override complete_BOOL(EObject model, RuleCall ruleCall, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
 		if (model instanceof Variable || model instanceof ReturnStatement ||
-			(model instanceof AssignmentExpression && (model as AssignmentExpression).typeOf.isBoolean)||
+			(model instanceof AssignmentExpression && (model as AssignmentExpression).typeOf.isBoolean) ||
 			(model instanceof EqualsExpression && (model as EqualsExpression).left?.typeOf?.isBoolean) ||
 			(model instanceof DifferExpression && (model as DifferExpression).left?.typeOf?.isBoolean) ||
 			(model instanceof IfStatement && (model as IfStatement).condition === null)) {
-			acceptor.accept(createCompletionProposal("true", "true", null, context))
-			acceptor.accept(createCompletionProposal("false", "false", null, context))
+			val trueDisplay = new StyledString("true", StyledString::COUNTER_STYLER)
+			val falseDisplay = new StyledString("false", StyledString::COUNTER_STYLER)
+			acceptor.accept(createCompletionProposal("true", trueDisplay, null, context))
+			acceptor.accept(createCompletionProposal("false", falseDisplay, null, context))
 		}
 	}
-	
-	override complete_Byte(EObject model, RuleCall ruleCall, ContentAssistContext context, ICompletionProposalAcceptor acceptor) {
+
+	override complete_Byte(EObject model, RuleCall ruleCall, ContentAssistContext context,
+		ICompletionProposalAcceptor acceptor) {
 		if (model instanceof Variable || model instanceof ReturnStatement ||
 			(model instanceof AssignmentExpression && (model as AssignmentExpression).typeOf.isNumeric)) {
-			acceptor.accept(createCompletionProposal("0", "0", null, context))
+			val displayString = new StyledString("0", StyledString::COUNTER_STYLER)
+			acceptor.accept(createCompletionProposal("0", displayString, null, context))
+		}
+	}
+
+	override complete_STRING(EObject model, RuleCall ruleCall, ContentAssistContext context,
+		ICompletionProposalAcceptor acceptor) {
+		if (model instanceof Variable && (model as Variable).isField) {
+			for (file : model.URI.resFolder.listFiles) {
+				val proposalString = '''"«Members::FILE_SCHEMA»«file.name»"'''
+				val displayString = new StyledString(Members::FILE_SCHEMA + file.name, StyledString::COUNTER_STYLER)
+				acceptor.accept(createCompletionProposal(proposalString, displayString, null, context))
+			}
 		}
 	}
 
@@ -171,7 +192,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			displayString, null, null)
 	}
 
-	private def createCompletionProposal(Member member, ContentAssistContext context) {
+	private def createInvocationProposal(Member member, ContentAssistContext context) {
 		val priority = if (member instanceof Variable) {
 				if (member.isStatic) {
 					4000
@@ -195,10 +216,48 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				it.additionalProposalInfo = member
 
 				if (member instanceof Method) {
-					it.setLinkedMode(context.viewer, member)
+					it.setLinkedModeForInvocation(context.viewer, member)
 				}
 			]
 		}
+	}
+
+	private def createOverrideProposal(Member member, ContentAssistContext context) {
+		val prefix = context.prefix
+		val displayString  = new StyledString("override ").append(member.text)
+		val proposal = createCompletionProposal(member.name, displayString, member.image, 0, prefix, context)
+
+		if (proposal instanceof NoopMethodCompletionProposal) {
+			proposal => [
+				it.hover = hover
+				it.additionalProposalInfo = member
+
+				if (member instanceof Method) {
+					it.setLinkedModeForOverride(context.viewer, member, member.isStatic, [valueOf])
+				}
+			]
+		}
+	}
+
+	private def Iterable<Variable> listVariables(EObject model, ContentAssistContext context) {
+		if (model === null) {
+			return newArrayList
+		}
+
+		return switch (model) {
+			Block:
+				model.statements.takeWhile[node.startLine < context.currentNode.startLine].filter(Variable)
+			ForStatement:
+				model.variables.takeWhile[node.offset < context.currentNode.offset].filter[value !== null]
+			Method:
+				model.params
+			NoopClass:
+				model.allFieldsTopDown.takeWhile [
+					node.startLine < context.currentNode.startLine
+				].suppressOverriden.suppressHeaders
+			default:
+				newArrayList
+		} + model.eContainer.listVariables(context)
 	}
 
 	private def suppressHeaders(Iterable<Variable> variables) {
