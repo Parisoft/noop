@@ -1,10 +1,7 @@
 package org.parisoft.noop.ui.hover
 
 import com.google.inject.Inject
-import org.eclipse.core.runtime.FileLocator
 import org.eclipse.emf.ecore.EObject
-import org.eclipse.ui.plugin.AbstractUIPlugin
-import org.eclipse.xtext.ui.PluginImageHelper
 import org.eclipse.xtext.ui.editor.hover.html.DefaultEObjectHoverProvider
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Expressions
@@ -13,24 +10,23 @@ import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.ui.labeling.NoopLabelProvider
+import utils.Images
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
 
 class NoopHoverProvider extends DefaultEObjectHoverProvider {
 
+	@Inject extension Images
 	@Inject extension Classes
 	@Inject extension Members
 	@Inject extension Expressions
 	@Inject extension NoopLabelProvider
 
-	@Inject PluginImageHelper imageHelper
-	@Inject AbstractUIPlugin uiPlugin
 
 	override protected getFirstLine(EObject o) {
 		switch (o) {
 			NoopClass: '''
 				«val classes = o.superClasses»
-				<div>
 				«o.image.toTag»
 				«FOR i : 0 ..< classes.size»
 					<ul style="list-style-type:none">
@@ -39,7 +35,6 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 				«FOR i : 0 ..< classes.size»
 					</ul>
 				«ENDFOR»
-				</div>
 			'''
 			Variable: '''
 				«val type = o.typeOf.name»
@@ -78,7 +73,4 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 
 	private def toTag(String image) '''<img src="«image.toFileURL»" style="float:left">'''
 
-	private def toFileURL(String image) {
-		FileLocator::toFileURL(uiPlugin.bundle.getEntry(imageHelper.pathSuffix + image))
-	}
 }

@@ -9,11 +9,12 @@ import org.eclipse.swt.graphics.Image
 import org.eclipse.ui.plugin.AbstractUIPlugin
 import org.eclipse.xtext.ui.editor.templates.ContextTypeIdHelper
 import org.eclipse.xtext.ui.editor.templates.DefaultTemplateProposalProvider
+import java.util.concurrent.ConcurrentHashMap
 
 @Singleton
 class NoopTemplateProposalProvider extends DefaultTemplateProposalProvider {
 
-	var Image image
+	val imageCache = new ConcurrentHashMap<String, Image>
 
 	@Inject
 	new(TemplateStore templateStore, ContextTypeRegistry registry, ContextTypeIdHelper helper) {
@@ -21,12 +22,21 @@ class NoopTemplateProposalProvider extends DefaultTemplateProposalProvider {
 	}
 
 	override getImage(Template template) {
-		if (image === null) {
-			image = AbstractUIPlugin::imageDescriptorFromPlugin('org.parisoft.noop.ui', 'icons/Template.png').
-				createImage
+		val name = switch (template.name) {
+			case 'var': {
+				'NewField.png'
+			}
+			case 'def': {
+				'NewMethod.png'
+			}
+			default: {
+				'Template.png'
+			}
 		}
-		
-		return image
+
+		imageCache.computeIfAbsent(name, [
+			AbstractUIPlugin::imageDescriptorFromPlugin('org.parisoft.noop.ui', 'icons/' + name).createImage
+		])
 	}
 
 }

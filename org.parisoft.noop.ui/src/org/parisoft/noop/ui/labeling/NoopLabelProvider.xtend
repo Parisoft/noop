@@ -13,6 +13,8 @@ import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
+import java.io.File
+import org.eclipse.xtext.Keyword
 
 /**
  * Provides labels for EObjects.
@@ -42,7 +44,7 @@ class NoopLabelProvider extends DefaultEObjectLabelProvider {
 		if (variable.isField) {
 			displayString.append(''' - «variable.containerClass.name»''', StyledString::QUALIFIER_STYLER)
 		}
-		
+
 		return displayString
 	}
 
@@ -72,22 +74,23 @@ class NoopLabelProvider extends DefaultEObjectLabelProvider {
 	}
 
 	def image(Variable v) {
-		if (v.isField) {
-			if (v.isPrivate) {
-				'Field_private.png'
-			} else {
-				'Field_public.png'
-			}
-		} else {
-			'Variable.png'
-		}
+		'''«IF v.isField»Field«IF v.isPrivate»_private«ELSE»_public«ENDIF»«IF v.isOverride»_override«ENDIF»«ELSE»Variable«ENDIF».png'''.
+			toString
 	}
 
 	def image(Method m) {
-		if (m.isPrivate) {
-			'Method_private.png'
-		} else {
-			'Method_public.png'
-		}
+		'''Method«IF m.isPrivate»_private«ELSE»_public«ENDIF»«IF m.isOverride»_override«ENDIF».png'''.toString
+	}
+	
+	def image(File file) {
+		'File.png'
+	}
+	
+	def image(String string) {
+		'Keyword.png'
+	}
+	
+	def image(Keyword k) {
+		'Keyword.png'
 	}
 }

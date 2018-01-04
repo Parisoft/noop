@@ -180,6 +180,14 @@ public class Members {
 		}
 	}
 
+	def isOverride(Variable v) {
+		v.containerClass.superClass.allFieldsTopDown.exists[v.isOverrideOf(it)]
+	}
+	
+	def isOverride(Method m) {
+		m.containerClass.superClass.allMethodsTopDown.exists[m.isOverrideOf(it)]
+	}
+
 	def isOverrideOf(Member m1, Member m2) {
 		if (m1 instanceof Method && m2 instanceof Method) {
 			return (m1 as Method).isOverrideOf(m2 as Method)
@@ -216,7 +224,7 @@ public class Members {
 	}
 
 	def isOverrideOf(Variable v1, Variable v2) {
-		return v1.name == v2.name
+		return v1.name == v2.name && v1.containerClass.isSubclassOf(v2.containerClass)
 	}
 
 	def isIrq(Method method) {

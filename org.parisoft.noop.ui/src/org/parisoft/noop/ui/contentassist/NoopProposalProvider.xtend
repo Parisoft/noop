@@ -119,7 +119,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				acceptor.accept(method.createInvocationProposal(context))
 			]
 		} else {
-			model.listVariables(context).filter[static].forEach [ variable |
+			model.listVariables(context).filter[static || nonField].forEach [ variable |
 				acceptor.accept(variable.createInvocationProposal(context))
 			]
 			model.containerClass.allMethodsTopDown.filter[static].filter[nonNativeArray].suppressOverriden.forEach [ method |
@@ -159,10 +159,11 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			(model instanceof EqualsExpression && (model as EqualsExpression).left?.typeOf?.isBoolean) ||
 			(model instanceof DifferExpression && (model as DifferExpression).left?.typeOf?.isBoolean) ||
 			(model instanceof IfStatement && (model as IfStatement).condition === null)) {
-			val trueDisplay = new StyledString("true", StyledString::COUNTER_STYLER)
-			val falseDisplay = new StyledString("false", StyledString::COUNTER_STYLER)
-			acceptor.accept(createCompletionProposal("true", trueDisplay, null, context))
-			acceptor.accept(createCompletionProposal("false", falseDisplay, null, context))
+			val trueDisplay = new StyledString('true', StyledString::COUNTER_STYLER)
+			val falseDisplay = new StyledString('false', StyledString::COUNTER_STYLER)
+			val image = labelProvider.getImage('true')
+			acceptor.accept(createCompletionProposal('true', trueDisplay, image, context))
+			acceptor.accept(createCompletionProposal('false', falseDisplay, image, context))
 		}
 	}
 
@@ -170,8 +171,9 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 		ICompletionProposalAcceptor acceptor) {
 		if (model instanceof Variable || model instanceof ReturnStatement ||
 			(model instanceof AssignmentExpression && (model as AssignmentExpression).typeOf.isNumeric)) {
-			val displayString = new StyledString("0", StyledString::COUNTER_STYLER)
-			acceptor.accept(createCompletionProposal("0", displayString, null, context))
+			val displayString = new StyledString('0', StyledString::COUNTER_STYLER)
+			val image = labelProvider.getImage('0')
+			acceptor.accept(createCompletionProposal('0', displayString, image, context))
 		}
 	}
 
@@ -181,7 +183,8 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			for (file : model.URI.resFolder.listFiles) {
 				val proposalString = '''"«Members::FILE_SCHEMA»«file.name»"'''
 				val displayString = new StyledString(Members::FILE_SCHEMA + file.name, StyledString::COUNTER_STYLER)
-				acceptor.accept(createCompletionProposal(proposalString, displayString, null, context))
+				val image = labelProvider.getImage(file)
+				acceptor.accept(createCompletionProposal(proposalString, displayString, image, context))
 			}
 		}
 	}
@@ -224,7 +227,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 
 	private def createOverrideProposal(Member member, ContentAssistContext context) {
 		val prefix = context.prefix
-		val displayString  = new StyledString("override ").append(member.text)
+		val displayString = new StyledString('override ').append(member.text)
 		val proposal = createCompletionProposal(member.name, displayString, member.image, 0, prefix, context)
 
 		if (proposal instanceof NoopMethodCompletionProposal) {

@@ -427,7 +427,7 @@
     <wizard
           category="org.parisoft.noop.ui.category"
           class="org.parisoft.noop.ui.wizards.SampleNewWizard"
-          icon="icons/sample.png"
+          icon="icons/NewClass.png"
           id="org.parisoft.noop.ui.wizards.SampleNewWizard"
           name="NOOP Class">
     </wizard>

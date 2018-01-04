@@ -6,11 +6,11 @@
    <aboutInfo>
       <image path="/org.parisoft.noop.product/images/About.png"/>
       <text>
-         NOOP  - NES/Famicom Object Oriented Programming
+         NOOPr  - NES/Famicom Object Oriented Programming IDE
 Version: 1.0
 
 NOOP is a high-level programming language for the development of 8 bit Nintendo games.
-This IDE is provided with an editor and a compiler for the NOOP language to help transform your game ideas into reality
+NOOPr is the official NOOP IDE. It&apos;s provided with an editor and a compiler for the NOOP language to help transform your game ideas into reality
 
 Visit https://github.com/Parisoft/noop
       </text>
