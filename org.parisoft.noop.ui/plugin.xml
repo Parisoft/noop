@@ -456,4 +456,10 @@
        </newWizardShortcut>
     </perspectiveExtension>
  </extension>
+ <extension
+       point="org.eclipse.xtext.ui.resourceRelocationStrategy">
+    <strategy
+          class="org.parisoft.noop.ui.rename.NoopResourceRelocationStrategy">
+    </strategy>
+ </extension>
 </plugin>

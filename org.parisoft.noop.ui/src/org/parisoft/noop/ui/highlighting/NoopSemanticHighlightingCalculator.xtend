@@ -55,10 +55,14 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 						ref.member.colorize(acceptor, node.offset, name.length)
 					} else if (node.semanticElement instanceof MemberSelect) {
 						val selection = node.semanticElement as MemberSelect
-						val name = selection.member?.name ?: ''
-						val offset = node.offset + node.text.trim.indexOf(name)
-
-						selection.member.colorize(acceptor, offset, name.length)
+						val name = selection.member?.name
+						val length = name?.length
+						val text = node.text.trim
+						var i = -1
+						
+						while(length > 0 && (i = text.indexOf(name, i + 1)) > -1){
+							selection.member.colorize(acceptor, node.offset + i, length)
+						}
 					}
 			}
 		}

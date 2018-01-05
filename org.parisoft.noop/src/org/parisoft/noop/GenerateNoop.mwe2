@@ -40,6 +40,9 @@ Workflow {
 			formatter = {
 				generateStub = true
 			}
+			renameRefactoring = {
+				useChangeSerializer = true
+			}
 			//			fragment = ui.projectWizard.SimpleProjectWizardFragment2 {
 			//				generate = true
 			//			}
