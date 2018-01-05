@@ -1,15 +1,19 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
+import org.eclipse.emf.common.util.URI
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
+import org.eclipse.xtext.resource.XtextResourceSet
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.scoping.NoopIndex
 
+import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+
 class TypeSystem {
 
-	public static val LIB_PACKAGE = 'noop.lang'
+	public static val LIB_PACKAGE = 'org.parisoft.noop'
 	public static val LIB_OBJECT = 'Object' // LIB_PACKAGE + '.Object'
 	public static val LIB_PRIMITIVE = 'Primitive'
 	public static val LIB_INT = 'Int' // LIB_PACKAGE + '.Int'
@@ -66,6 +70,37 @@ class TypeSystem {
 	@Inject extension IQualifiedNameProvider
 	@Inject extension NoopIndex
 
+	@Inject XtextResourceSet resourceSet
+
+	def resolve(EObject o) {
+		try {
+			resourceSet.getEObject(o.URI, true) as NoopClass ?: o.resolveAsLib
+		} catch (Exception e) {
+			o.resolveAsLib
+		}
+	}
+
+	private def resolveAsLib(EObject c) {
+		val i = c.URI.toString.indexOf(LIB_PACKAGE)
+
+		if (i > -1) {
+			val uri = URI::createURI(c.URI.trimFragment.toString.substring(i + LIB_PACKAGE.length))
+			val obj = try {
+					resourceSet.getEObject(uri.appendFragment(c.URI.fragment), false) as NoopClass
+				} catch (Exception e) {
+					null
+				}
+
+			if (obj !== null) {
+				obj as NoopClass
+			} else {
+				val stream = class.classLoader.getResourceAsStream(uri.toString)
+				resourceSet.createResource(uri) => [load(stream, resourceSet.loadOptions)]
+				resourceSet.getEObject(uri.appendFragment(c.URI.fragment), true) as NoopClass
+			}
+		}
+	}
+
 	def toObjectClass(EObject context) {
 		toClassOrDefault(context, LIB_OBJECT, TYPE_OBJECT)
 	}
@@ -116,11 +151,11 @@ class TypeSystem {
 			type.toClassOrDefault(^default)
 		}
 	}
-	
+
 	private def toClassOrDefault(String type, NoopClass ^default) {
 		try {
 			val context = TypeSystem::context.get
-			
+
 			if (context.fullyQualifiedName == type && context instanceof NoopClass) {
 				return context as NoopClass;
 			}

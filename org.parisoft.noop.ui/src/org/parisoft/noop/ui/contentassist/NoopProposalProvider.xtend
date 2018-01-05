@@ -22,6 +22,7 @@ import org.parisoft.noop.noop.Block
 import org.parisoft.noop.noop.DifferExpression
 import org.parisoft.noop.noop.EqualsExpression
 import org.parisoft.noop.noop.ForStatement
+import org.parisoft.noop.noop.ForeverStatement
 import org.parisoft.noop.noop.IfStatement
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberSelect
@@ -29,13 +30,13 @@ import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.ReturnStatement
+import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.ui.labeling.NoopLabelProvider
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import static extension org.eclipse.xtext.nodemodel.util.NodeModelUtils.*
-import org.parisoft.noop.noop.StorageType
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -51,7 +52,9 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	@Inject NoopLabelProvider labelProvider
 	@Inject IEObjectHover hover
 
-	val keywordsToPropose = (newArrayList('extends', 'instanceOf', 'as', 'return', 'this', 'super') + StorageType::VALUES.map[literal]).toList
+	val storageKeywords = StorageType::VALUES.map[literal].toList
+	val proposableKeywords = (newArrayList('extends', 'instanceOf', 'as', 'return', 'this', 'super', 'break',
+		'continue') + storageKeywords).toList
 
 	override completeNoopClass_Members(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
@@ -140,11 +143,24 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	}
 
 	override completeKeyword(Keyword keyword, ContentAssistContext context, ICompletionProposalAcceptor acceptor) {
-		if (keywordsToPropose.contains(keyword.value)) {
+		if (proposableKeywords.contains(keyword.value)) {
 			if (keyword.value == 'this' || keyword.value == 'super') {
 				val method = context.currentModel.getContainerOfType(Method)
 
 				if (method === null || method.isStatic) {
+					return
+				}
+			} else if (keyword.value == 'break' || keyword.value == 'continue') {
+				val model = context.currentModel
+
+				if (model.getContainerOfType(ForStatement) === null &&
+					model.getContainerOfType(ForeverStatement) === null) {
+					return
+				}
+			} else if (storageKeywords.contains(keyword.value)) {
+				val model = context.currentModel
+
+				if (!(model instanceof Member)) {
 					return
 				}
 			}

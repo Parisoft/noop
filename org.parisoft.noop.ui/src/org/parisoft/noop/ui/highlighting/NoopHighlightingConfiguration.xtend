@@ -17,6 +17,35 @@ class NoopHighlightingConfiguration extends DefaultHighlightingConfiguration {
 		acceptor.acceptDefaultHighlighting(TAG_ID, 'Tags', tagTextStyle)
 		acceptor.acceptDefaultHighlighting(ASM_ID, 'ASM native code', asmTextStyle)
 	}
+	
+	//gold 130, 70, 15
+	/*
+	 * ASM - cinza escuro
+	 * Class - preto bold
+	 * Comment - cinza claro
+	 * Keyword - vinho bold
+	 * Number - azul
+	 * String - azul bold
+	 * Bool - azul bold
+	 * Fields - dourado
+	 * Static fields - dourado italico
+	 * Constant fields - dourado italico bold
+	 * Variables - preto
+	 * Static methods - italico
+	 * Tags - conza claro
+	 */
+	
+	override numberTextStyle() {
+		super.numberTextStyle() => [
+			color = new RGB(0, 0, 255)
+		]
+	}
+
+	override keywordTextStyle() {
+		super.keywordTextStyle() => [
+			color = new RGB(120, 0, 0)
+		]
+	}
 
 	def classTextStyle() {
 		defaultTextStyle.copy => [

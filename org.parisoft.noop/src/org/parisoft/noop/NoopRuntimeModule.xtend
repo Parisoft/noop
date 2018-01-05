@@ -13,6 +13,7 @@ import org.parisoft.noop.scoping.NoopResourceDescriptionStrategy
 import org.parisoft.noop.convertion.NoopValueConverter
 import org.parisoft.noop.generator.NoopOutputConfigurationProvider
 import org.eclipse.xtext.generator.IOutputConfigurationProvider
+import org.parisoft.noop.^extension.NoopQualifiedNameProvider
 
 /**
  * Use this class to register components to be used at runtime / without the Equinox extension registry.
@@ -30,4 +31,8 @@ class NoopRuntimeModule extends AbstractNoopRuntimeModule {
 		NoopValueConverter
 	}
 
+	override bindIQualifiedNameProvider() {
+		NoopQualifiedNameProvider
+	}
+	
 }

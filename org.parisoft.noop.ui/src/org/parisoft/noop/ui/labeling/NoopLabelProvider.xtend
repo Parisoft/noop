@@ -70,7 +70,11 @@ class NoopLabelProvider extends DefaultEObjectLabelProvider {
 	}
 
 	def image(NoopClass c) {
-		'Class.png'
+		if (c.isVoid) {
+			'Void.png'
+		} else {
+			'Class.png'
+		}
 	}
 
 	def image(Variable v) {
@@ -81,15 +85,15 @@ class NoopLabelProvider extends DefaultEObjectLabelProvider {
 	def image(Method m) {
 		'''Method«IF m.isPrivate»_private«ELSE»_public«ENDIF»«IF m.isOverride»_override«ENDIF».png'''.toString
 	}
-	
+
 	def image(File file) {
 		'File.png'
 	}
-	
+
 	def image(String string) {
 		'Keyword.png'
 	}
-	
+
 	def image(Keyword k) {
 		'Keyword.png'
 	}
