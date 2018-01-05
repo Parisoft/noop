@@ -9,4 +9,6 @@
 	${line_selection}${cursor}
 }</template><template autoinsert="true" context="org.parisoft.noop.Noop.IfStatement" deleted="false" description="If statement" enabled="true" name="if" id="noop-if">if (${condition}) {
 	${line_selection}${cursor}
+}</template><template autoinsert="true" context="org.parisoft.noop.Noop.ElseStatement" deleted="false" description="Else statement" enabled="true" name="else" id="noop-else">else {
+	${line_selection}${cursor}
 }</template><template autoinsert="true" context="org.parisoft.noop.Noop.Variable" deleted="false" description="Declare a new variable" enabled="true" name="var" id="noop-var">${name} : ${value}</template></templates>

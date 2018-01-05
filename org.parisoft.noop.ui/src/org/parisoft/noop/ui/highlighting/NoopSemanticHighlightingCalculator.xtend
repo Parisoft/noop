@@ -14,13 +14,15 @@ import org.parisoft.noop.noop.MemberSelect
 import com.google.inject.Inject
 import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.noop.Method
+import org.parisoft.noop.noop.Member
 
 @Singleton
 class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalculator {
 
 	@Inject extension Members
 
-	override provideHighlightingFor(XtextResource resource, IHighlightedPositionAcceptor acceptor, CancelIndicator cancelIndicator) {
+	override provideHighlightingFor(XtextResource resource, IHighlightedPositionAcceptor acceptor,
+		CancelIndicator cancelIndicator) {
 		val root = resource.getParseResult().getRootNode()
 
 		for (node : root.getAsTreeIterable()) {
@@ -36,11 +38,12 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 					var rule = grammarElement.rule
 					val container = grammarElement.eContainer
 
-					if (rule.name == 'ID' && container instanceof Assignment && (container as Assignment).feature == 'name') {
+					if (rule.name == 'ID' && container instanceof Assignment &&
+						(container as Assignment).feature == 'name') {
 						val element = node.semanticElement
-						
-						if ((element instanceof Variable && (element as Variable).isStatic) || (element instanceof Method && (element as Method).isStatic)) {
-							acceptor.addPosition(node.offset, node.length, NoopHighlightingConfiguration.STRING_ID)
+
+						if (element instanceof Member) {
+							element.colorize(acceptor, node.offset, node.length)
 						}
 					}
 				}
@@ -49,20 +52,33 @@ class NoopSemanticHighlightingCalculator implements ISemanticHighlightingCalcula
 						val ref = node.semanticElement as MemberRef
 						val name = ref.member?.name ?: ''
 
-						if (ref.member.isStatic) {
-							acceptor.addPosition(node.offset, name.length, NoopHighlightingConfiguration.STRING_ID)
-						}
+						ref.member.colorize(acceptor, node.offset, name.length)
 					} else if (node.semanticElement instanceof MemberSelect) {
 						val selection = node.semanticElement as MemberSelect
 						val name = selection.member?.name ?: ''
+						val offset = node.offset + node.text.trim.indexOf(name)
 
-						if (selection.member.isStatic) {
-							acceptor.addPosition(node.offset + node.text.trim.indexOf(Members::STATIC_PREFIX), name.length,
-								NoopHighlightingConfiguration.STRING_ID)
-						}
+						selection.member.colorize(acceptor, offset, name.length)
 					}
 			}
 		}
 	}
 
+	private def colorize(Member member, IHighlightedPositionAcceptor acceptor, int offset, int length) {
+		if (member instanceof Variable) {
+			if (member.isField) {
+				if (member.isStatic) {
+					if (member.isConstant) {
+						acceptor.addPosition(offset, length, NoopHighlightingConfiguration::FIELD_CONST_ID)
+					} else {
+						acceptor.addPosition(offset, length, NoopHighlightingConfiguration::FIELD_STATIC_ID)
+					}
+				} else {
+					acceptor.addPosition(offset, length, NoopHighlightingConfiguration::FIELD_ID)
+				}
+			}
+		} else if (member instanceof Method && (member as Method).isStatic) {
+			acceptor.addPosition(offset, length, NoopHighlightingConfiguration::METHOD_STATIC_ID)
+		}
+	}
 }
