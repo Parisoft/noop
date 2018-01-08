@@ -15,6 +15,8 @@ import java.io.*;
 import org.eclipse.ui.*;
 import org.eclipse.ui.ide.IDE;
 
+import utils.Images;
+
 /**
  * This is a sample new wizard. Its role is to create a new file 
  * resource in the provided container. If the container resource
@@ -26,16 +28,17 @@ import org.eclipse.ui.ide.IDE;
  * be able to open it.
  */
 
-public class SampleNewWizard extends Wizard implements INewWizard {
-	private SampleNewWizardPage page;
+public class NoopNewClassWizard extends Wizard implements INewWizard {
+	private NoopNewClassWizardPage page;
 	private ISelection selection;
 
 	/**
 	 * Constructor for SampleNewWizard.
 	 */
-	public SampleNewWizard() {
+	public NoopNewClassWizard() {
 		super();
 		setNeedsProgressMonitor(true);
+		setDefaultPageImageDescriptor(Images.getDescriptor("NewClass@2x.png"));
 	}
 	
 	/**
@@ -43,7 +46,7 @@ public class SampleNewWizard extends Wizard implements INewWizard {
 	 */
 	@Override
 	public void addPages() {
-		page = new SampleNewWizardPage(selection);
+		page = new NoopNewClassWizardPage(selection);
 		addPage(page);
 	}
 

@@ -426,7 +426,8 @@
     </wizard>
     <wizard
           category="org.parisoft.noop.ui.category"
-          class="org.parisoft.noop.ui.wizards.SampleNewWizard"
+          class="org.parisoft.noop.ui.wizards.NoopNewClassWizard"
+          finalPerspective="org.parisoft.noop.ui.perspective1"
           icon="icons/NewClass.png"
           id="org.parisoft.noop.ui.wizards.SampleNewWizard"
           name="NOOP Class">

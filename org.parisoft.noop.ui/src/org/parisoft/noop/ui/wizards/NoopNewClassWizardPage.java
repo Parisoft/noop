@@ -28,7 +28,7 @@ import org.eclipse.ui.dialogs.ContainerSelectionDialog;
  * OR with the extension that matches the expected one (noop).
  */
 
-public class SampleNewWizardPage extends WizardPage {
+public class NoopNewClassWizardPage extends WizardPage {
 	
 	public static final Pattern validClassNamePattern = Pattern.compile("\\w+");
 	
@@ -43,7 +43,7 @@ public class SampleNewWizardPage extends WizardPage {
 	 * 
 	 * @param pageName
 	 */
-	public SampleNewWizardPage(ISelection selection) {
+	public NoopNewClassWizardPage(ISelection selection) {
 		super("wizardPage");
 		setTitle("NOOP Class");
 		setDescription("Creates a new NOOP class to define game objects.");

@@ -7,12 +7,12 @@ import com.google.inject.Inject
 import java.util.stream.Collectors
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.resource.FileExtensionProvider
-import org.parisoft.noop.ui.wizards.SampleNewWizardPage
+import org.parisoft.noop.ui.wizards.NoopNewClassWizardPage
 
 class NoopNewProjectWizardInitialContents {
 
 	@Inject FileExtensionProvider fileExtensionProvider
-	@Inject NoopProjectCreator projectCreator
+	@Inject NoopProjectCreator2 projectCreator
 
 	def generateInitialContents(IFileSystemAccess2 fsa) {
 		var className = projectCreator?.projectInfo?.projectName.toFirstUpper ?: 'MyGame'
@@ -20,7 +20,7 @@ class NoopNewProjectWizardInitialContents {
 		className = className.chars.mapToObj [
 			Character.toString(it as char)
 		].filter [
-			SampleNewWizardPage::validClassNamePattern.matcher(it).matches
+			NoopNewClassWizardPage::validClassNamePattern.matcher(it).matches
 		].collect(Collectors::joining())
 
 		fsa.generateFile(
