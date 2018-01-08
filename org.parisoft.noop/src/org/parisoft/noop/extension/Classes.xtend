@@ -11,7 +11,6 @@ import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 
 class Classes {
@@ -31,11 +30,7 @@ class Classes {
 		var current = c
 
 		if (current?.eIsProxy) {
-			try {
-				current = current.eResource.resourceSet.getEObject(current.URI, true) as NoopClass
-			} catch (Exception exception) {
-				return visited
-			}
+			current = current.resolve
 		}
 
 		while (current !== null && !visited.contains(current)) {
@@ -43,11 +38,7 @@ class Classes {
 			current = current.superClassOrObject
 
 			if (current?.eIsProxy) {
-				try {
-					current = current.eResource.resourceSet.getEObject(current.URI, true) as NoopClass
-				} catch (Exception exception) {
-					current = null
-				}
+				current = current.resolve
 			}
 		}
 
@@ -63,7 +54,7 @@ class Classes {
 	}
 
 	def isSubclassOf(NoopClass c1, NoopClass c2) {
-		c1.superClasses.contains(c2)
+		c1.superClasses.exists[isEquals(c2)]
 	}
 
 	def getSuperClassOrObject(NoopClass c) {
@@ -127,17 +118,15 @@ class Classes {
 	}
 
 	def isEquals(NoopClass c1, NoopClass c2) {
-		c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString
+		c1 == c2 || c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString
 	}
 
 	def isInstanceOf(NoopClass c1, NoopClass c2) {
 		if (c1.isNumeric && c2.isNumeric) {
-			return true
+			true
+		} else {
+			c1.isSubclassOf(c2)
 		}
-
-		val className = c2.fullyQualifiedName
-
-		return c1.superClasses.exists[it.fullyQualifiedName == className]
 	}
 
 	def isNumeric(NoopClass c) {
