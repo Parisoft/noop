@@ -7,22 +7,23 @@ import com.google.inject.Binder
 import com.google.inject.name.Names
 import org.eclipse.xtend.lib.annotations.FinalFieldsConstructor
 import org.eclipse.xtext.ide.editor.syntaxcoloring.ISemanticHighlightingCalculator
+import org.eclipse.xtext.ide.refactoring.IResourceRelocationStrategy
 import org.eclipse.xtext.ui.editor.contentassist.XtextContentAssistProcessor
 import org.eclipse.xtext.ui.editor.hover.IEObjectHoverProvider
 import org.eclipse.xtext.ui.editor.syntaxcoloring.AbstractAntlrTokenToAttributeIdMapper
 import org.eclipse.xtext.ui.editor.syntaxcoloring.IHighlightingConfiguration
+import org.parisoft.noop.ui.contentassist.NoopTemplateProposalProvider
 import org.parisoft.noop.ui.highlighting.NoopAntlrTokenToAttributeIdMapper
 import org.parisoft.noop.ui.highlighting.NoopHighlightingConfiguration
 import org.parisoft.noop.ui.highlighting.NoopSemanticHighlightingCalculator
 import org.parisoft.noop.ui.hover.NoopHoverProvider
-import org.parisoft.noop.ui.wizard.NoopProjectCreator
-import org.parisoft.noop.ui.wizard.NoopProjectCreator2
-import org.parisoft.noop.ui.contentassist.NoopTemplateProposalProvider
+import org.parisoft.noop.ui.rename.NoopResourceRelocationStrategy
 import org.parisoft.noop.ui.wizard.NoopNewProjectWizard
 import org.parisoft.noop.ui.wizard.NoopNewProjectWizard2
-import org.eclipse.xtext.ide.refactoring.IResourceRelocationStrategy
-import org.parisoft.noop.ui.rename.NoopResourceRelocationStrategy
-import org.parisoft.noop.ui.rename.NoopRenameStrategy2
+import org.parisoft.noop.ui.wizard.NoopProjectCreator
+import org.parisoft.noop.ui.wizard.NoopProjectCreator2
+import org.eclipse.xtext.ui.refactoring.IRenameStrategy
+import org.parisoft.noop.ui.rename.NoopRenameStrategy
 
 /**
  * Use this class to register components to be used within the Eclipse IDE.
@@ -40,14 +41,14 @@ class NoopUiModule extends AbstractNoopUiModule {
 		binder.bind(NoopProjectCreator).to(NoopProjectCreator2)
 		binder.bind(NoopNewProjectWizard).to(NoopNewProjectWizard2)
 		binder.bind(IResourceRelocationStrategy).to(NoopResourceRelocationStrategy)
+		binder.bind(IRenameStrategy).to(NoopRenameStrategy)
 	}
 	
 	override bindITemplateProposalProvider() {
 		NoopTemplateProposalProvider
 	}
 	
-	override bindIRenameStrategy2() {
-		NoopRenameStrategy2
+	override bindIRenameStrategy() {
+		return NoopRenameStrategy
 	}
-	
 }
