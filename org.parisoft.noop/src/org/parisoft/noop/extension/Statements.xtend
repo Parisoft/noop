@@ -420,7 +420,10 @@ class Statements {
 						type = statement.value.typeOf
 					])»
 				«ENDIF»
-					RTS
+				«IF method.isNonInline»
+					«noop»
+						RTS
+				«ENDIF»	
 			'''
 			AsmStatement:
 				if (statement.vars.isEmpty) {

@@ -243,6 +243,14 @@ public class Members {
 		method.containerClass.isObject && method.name == 'size' && method.params.isEmpty
 	}
 	
+	def isInline(Method method) {
+		method.storage?.type == StorageType::INLINE
+	}
+	
+	def isNonInline(Method method) {
+		!method.isInline
+	}
+	
 	def isNative(Method method) {
 		val methodContainer = method.containerClass.fullyQualifiedName.toString
 		return (methodContainer == TypeSystem.LIB_OBJECT || methodContainer == TypeSystem.LIB_PRIMITIVE) 
@@ -263,10 +271,6 @@ public class Members {
 	
 	def isArrayLength(Method method) {
 		method.isNativeArray && method.name == METHOD_ARRAY_LENGTH
-	}
-	
-	def isNonArrayLength(Method method) {
-		!method.isArrayLength
 	}
 	
 	def boolean isInvokedOn(Method method, Statement statement) {
@@ -759,7 +763,7 @@ public class Members {
 	}
 	
 	def compile(Method method, CompileContext ctx) '''
-		«IF method.isNonArrayLength»
+		«IF method.isNonNative && method.isNonInline»
 			«method.nameOf»:
 			«IF method.isReset»
 				;;;;;;;;;; Initial setup begin
@@ -1092,8 +1096,14 @@ public class Members {
 					«ENDFOR»
 				«ENDIF»
 			«ENDFOR»
-			«noop»
-				JSR «method.nameOf»
+			«IF method.isInline»
+				«FOR statement : method.body.statements»
+					«statement.compile(new CompileContext => [container = method.nameOf])»
+				«ENDFOR»
+			«ELSE»
+				«noop»
+					JSR «method.nameOf»
+			«ENDIF»
 			«ctx.pullRecursiveVars»
 			«ctx.pullAccIfOperating»
 			«IF method.typeOf.isNonVoid»
