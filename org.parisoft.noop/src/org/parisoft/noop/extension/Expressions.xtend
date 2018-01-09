@@ -238,6 +238,17 @@ class Expressions {
 		!expression.isThisOrSuper
 	}
 
+	def isUnbounded(Expression expression) {
+		switch (expression) {
+			MemberSelect:
+				expression.member.isUnbounded
+			MemberRef:
+				expression.member.isUnbounded
+			default:
+				false
+		}
+	}
+
 	def isOnMemberSelectionOrReference(Expression expression) {
 		val container = expression.eContainer
 		container !== null && (container instanceof MemberSelect || container instanceof MemberRef ||
@@ -1043,7 +1054,7 @@ class Expressions {
 				}
 
 				chunks.disoverlap(ctx.container)
-				
+
 				ctx.restoreTo(snapshot)
 
 				return chunks
@@ -1070,7 +1081,7 @@ class Expressions {
 				}
 
 				chunks.disoverlap(ctx.container)
-				
+
 				ctx.restoreTo(snapshot)
 
 				return chunks

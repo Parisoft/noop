@@ -208,7 +208,7 @@ public class Members {
 				val p1 = m1.params.get(i)
 				val p2 = m2.params.get(i)
 				
-				if (p1.typeOf != p2.typeOf) {
+				if (p1.type.isNotEquals(p2.type)) {
 					return false
 				}
 				

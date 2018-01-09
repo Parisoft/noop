@@ -56,6 +56,10 @@ class Classes {
 	def isSubclassOf(NoopClass c1, NoopClass c2) {
 		c1.superClasses.exists[isEquals(c2)]
 	}
+	
+	def isNonSubclassOf(NoopClass c1, NoopClass c2) {
+		!c1.isSubclassOf(c2)
+	}
 
 	def getSuperClassOrObject(NoopClass c) {
 		if (c === null || c.fullyQualifiedName?.toString == TypeSystem::LIB_PRIMITIVE ||
