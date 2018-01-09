@@ -144,6 +144,10 @@ class Classes {
 	def isBoolean(NoopClass c) {
 		c.fullyQualifiedName.toString == TypeSystem::LIB_BOOL
 	}
+	
+	def isNonBoolean(NoopClass c) {
+		!c.isBoolean
+	}
 
 	def isVoid(NoopClass c) {
 		c.fullyQualifiedName.toString == TypeSystem::LIB_VOID

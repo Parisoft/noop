@@ -21,6 +21,10 @@ import org.parisoft.noop.noop.Block
 import org.parisoft.noop.noop.ForStatement
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.noop.ReturnStatement
+import org.parisoft.noop.noop.IfStatement
+import org.parisoft.noop.noop.MemberRef
+import org.parisoft.noop.noop.MemberSelect
+import org.parisoft.noop.noop.ElseStatement
 
 /**
  * This class contains custom validation rules. 
@@ -43,12 +47,15 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val STATIC_FIELD_CONTAINER = 'STATIC_FIELD_CONTAINER'
 	public static val STATIC_FIELD_STORAGE_TYPE = 'STATIC_FIELD_STORAGE_TYPE'
 	public static val STATIC_FIELD_ROM_TYPE = 'STATIC_FIELD_ROM_TYPE'
+	public static val STATIC_FIELD_ROM_VALUE = 'STATIC_FIELD_ROM_VALUE'
 	public static val CONSTANT_FIELD_TYPE = 'CONSTANT_FIELD_TYPE'
 	public static val CONSTANT_FIELD_DIMENSION = 'CONSTANT_FIELD_DIMENSION'
 	public static val CONSTANT_FIELD_STORAGE = 'CONSTANT_FIELD_STORAGE'
+	public static val CONSTANT_FIELD_VALUE = 'CONSTANT_FIELD_VALUE'
 	public static val VARIABLE_VOID_TYPE = 'VARIABLE_VOID_TYPE'
 	public static val VARIABLE_INES_HEADER_TYPE = 'VARIABLE_INES_HEADER_TYPE'
 	public static val VARIABLE_DUPLICITY = 'VARIABLE_DUPLICITY'
+	public static val VARIABLE_NEVER_USED = 'VARIABLE_NEVER_USED'
 	public static val PARAMETER_VOID_TYPE = 'PARAMETER VOID_TYPE'
 	public static val PARAMETER_INES_HEADER_TYPE = 'PARAMETER INES_HEADER_TYPE'
 	public static val PARAMETER_STORAGE_TYPE = 'PARAMETER_STORAGE_TYPE'
@@ -61,6 +68,10 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val METHOD_OVERRIDEN_DIMENSION = 'METHOD_OVERRIDEN_DIMENSION'
 	public static val RETURN_UNBOUNDED_DIMENSION = 'RETURN_UNBOUNDED_DIMENSION'
 	public static val RETURN_INCONSISTENT_DIMENSION = 'RETURN_INCONSISTENT_DIMENSION'
+	public static val IF_CONDITION_TYPE = 'IF_CONDITION_TYPE'
+	public static val IF_CONSTANT_CONDITION = 'IF_CONSTANT_CONDITION'
+	public static val IF_EMPTY_BODY = 'IF_EMPTY_BODY'
+	public static val ELSE_EMPTY_BODY = 'ELSE_EMPTY_BODY'
 
 	@Check
 	def classRecursiveHierarchy(NoopClass c) {
@@ -156,6 +167,14 @@ class NoopValidator extends AbstractNoopValidator {
 	}
 
 	@Check
+	def staticFieldRomValue(Variable v) {
+		if (v.isStatic && v.isROM && v.dimensionOf.isEmpty && v.value.isNonConstant) {
+			error('''Fields tagged as «v.storage.type.literal.substring(0)» must be declared with a constant value''',
+				VARIABLE__VALUE, STATIC_FIELD_ROM_VALUE)
+		}
+	}
+
+	@Check
 	def constantFieldType(Variable v) {
 		if (v.isConstant && v.typeOf.isNonPrimitive) {
 			error('''Type of constant fields must be «TypeSystem::LIB_PRIMITIVES.join(', ')»''', VARIABLE__VALUE,
@@ -174,6 +193,13 @@ class NoopValidator extends AbstractNoopValidator {
 	def constantFieldStorage(Variable v) {
 		if (v.isConstant && v.storage !== null) {
 			error('Constant fields cannot be tagged', MEMBER__STORAGE, CONSTANT_FIELD_STORAGE)
+		}
+	}
+
+	@Check
+	def constantFieldValue(Variable v) {
+		if (v.isConstant && v.value.isNonConstant) {
+			error('Constant fields must be declared with a constant value', VARIABLE__VALUE, CONSTANT_FIELD_VALUE)
 		}
 	}
 
@@ -198,6 +224,16 @@ class NoopValidator extends AbstractNoopValidator {
 		if (v.isNonField && v.isNonParameter) {
 			if (v.searchForDuplicityOn(v.eContainer)) {
 				error('''Variable «v.name» is duplicated''', MEMBER__NAME, VARIABLE_DUPLICITY)
+			}
+		}
+	}
+
+	@Check
+	def variableNeverUsed(Variable v) {
+		if (v.isNonField && v.isNonParameter) {
+			if (v.getContainerOfType(Method).getAllContentsOfType(MemberSelect).forall[member != v] &&
+				v.getContainerOfType(Method).getAllContentsOfType(MemberRef).forall[member != v]) {
+				warning('''Variable «v.name» is never used locally''', MEMBER__NAME, VARIABLE_NEVER_USED)
 			}
 		}
 	}
@@ -344,6 +380,35 @@ class NoopValidator extends AbstractNoopValidator {
 		if (inconsistent) {
 			error('All returned values in a method must have the same dimension', RETURN_STATEMENT__VALUE,
 				RETURN_INCONSISTENT_DIMENSION)
+		}
+	}
+
+	@Check
+	def ifBoolCondition(IfStatement ifStatement) {
+		if (ifStatement.condition.typeOf.isNonBoolean) {
+			error('''Ifs condition must be a «TypeSystem::LIB_BOOL» expression''', IF_STATEMENT__CONDITION,
+				IF_CONDITION_TYPE)
+		}
+	}
+
+	@Check
+	def ifConstantCondition(IfStatement ifStatement) {
+		if (ifStatement.condition.isConstant) {
+			warning('''If condition always evaluate to «ifStatement.condition.valueOf»''', IF_STATEMENT__CONDITION,
+				IF_CONSTANT_CONDITION)
+		}
+	}
+
+	@Check
+	def ifEmptyBody(IfStatement ifStatement) {
+		if (ifStatement.body.statements.isEmpty) {
+			warning('Useless if statement', IF_STATEMENT__NAME, IF_EMPTY_BODY)
+		}
+	}
+
+	def elseEmptyBody(ElseStatement elseStatement) {
+		if (elseStatement.body?.statements?.isEmpty) {
+			warning('Useless else statement', ELSE_STATEMENT__NAME, ELSE_EMPTY_BODY)
 		}
 	}
 

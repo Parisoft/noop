@@ -187,6 +187,10 @@ public class Members {
 	def isOverride(Method m) {
 		m.containerClass.superClass.allMethodsTopDown.exists[m.isOverrideOf(it)]
 	}
+	
+	def isNonOverride(Method m) {
+		!m.isOverride
+	}
 
 	def isOverrideOf(Member m1, Member m2) {
 		if (m1 instanceof Method && m2 instanceof Method) {
