@@ -120,6 +120,10 @@ class Classes {
 	def isEquals(NoopClass c1, NoopClass c2) {
 		c1 == c2 || c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString
 	}
+	
+	def isNotEquals(NoopClass c1, NoopClass c2) {
+		!c1.isEquals(c2)
+	}
 
 	def isInstanceOf(NoopClass c1, NoopClass c2) {
 		if (c1.isNumeric && c2.isNumeric) {

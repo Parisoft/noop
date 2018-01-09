@@ -27,6 +27,7 @@ class TypeSystem {
 	public static val LIB_GAME = 'Game'
 
 	public static val LIB_NUMBERS = newArrayList(LIB_BYTE, LIB_SBYTE, LIB_INT, LIB_UINT)
+	public static val LIB_PRIMITIVES = newArrayList(LIB_PRIMITIVE, LIB_BOOL) + LIB_NUMBERS
 
 	public static val MIN_INT = -32768
 	public static val MAX_INT = 32767

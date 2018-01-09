@@ -4,10 +4,15 @@
 package org.parisoft.noop.ui.quickfix
 
 import org.eclipse.xtext.ui.editor.quickfix.DefaultQuickfixProvider
+import org.eclipse.xtext.ui.editor.quickfix.IssueResolutionAcceptor
+import org.eclipse.xtext.validation.Issue
+import org.parisoft.noop.noop.NoopClass
+import org.eclipse.xtext.ui.editor.quickfix.Fix
+import org.parisoft.noop.validation.NoopValidator
 
 /**
  * Custom quickfixes.
- *
+ * 
  * See https://www.eclipse.org/Xtext/documentation/310_eclipse_support.html#quick-fixes
  */
 class NoopQuickfixProvider extends DefaultQuickfixProvider {
@@ -21,4 +26,13 @@ class NoopQuickfixProvider extends DefaultQuickfixProvider {
 //			xtextDocument.replace(issue.offset, 1, firstLetter.toUpperCase)
 //		]
 //	}
+	@Fix(NoopValidator::CLASS_RECURSIVE_HIERARCHY)
+	def fixClassRecursiveHierarchy(Issue issue, IssueResolutionAcceptor acceptor) {
+//		acceptor.acceptMulti(issue, 'Remove hierarchy', 'Remove class hierarchy', null, [ NoopClass c, ctx |
+//			ctx.addModification(c, [superClass = null])
+//		])
+		acceptor.accept(issue, 'Remove hierarchy', '''Removes "extends «issue.data.get(0)»"''', null, [c, ctx |
+			(c as NoopClass).superClass = null
+		])
+	}
 }

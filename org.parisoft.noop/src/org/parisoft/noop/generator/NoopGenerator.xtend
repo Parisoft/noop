@@ -48,19 +48,15 @@ class NoopGenerator extends AbstractGenerator {
 
 			if (asm !== null) {
 				fsa.generateFile(asm.asmFileName, asm.content)
+				fsa.deleteFile(asm.binFileName)
 
-				val asm8 = new Asm8 => [
+				new Asm8 => [
 					inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
 					outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
 					listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
-				]
 
-				try {
-					asm8.compile
-				} catch (Exception exception) {
-					fsa.deleteFile(asm.binFileName)
-					throw exception
-				}
+					compile
+				]
 			}
 		}
 
@@ -108,20 +104,20 @@ class NoopGenerator extends AbstractGenerator {
 				builder.append('''	JMP «line.substring(5)»''').append(System::lineSeparator)
 			} else if (line.startsWith('\tLDA')) {
 				val src = line.substring(line.indexOf('LDA') + 3).trim
-				
+
 				if (next.startsWith('\tSTA') && src == next.substring(next.indexOf('STA') + 3).trim) {
 					skip.incrementAndGet
 				} else {
-					builder.append(line).append(System::lineSeparator)	
+					builder.append(line).append(System::lineSeparator)
 				}
 			} else if (line.startsWith('\tSTA')) {
 				val dst = line.substring(line.indexOf('STA') + 3).trim
-				
+
 				if (next.startsWith('\tLDA') && dst == next.substring(next.indexOf('LDA') + 3).trim) {
 					skip.incrementAndGet
 				}
 
-				builder.append(line).append(System::lineSeparator)	
+				builder.append(line).append(System::lineSeparator)
 			} else {
 				builder.append(line).append(System::lineSeparator)
 			}
@@ -177,9 +173,10 @@ class NoopGenerator extends AbstractGenerator {
 		]»
 		«FOR noopClass : classes»
 			«noopClass.nameOf» = «classCount++»
-			«val fieldOffset = new AtomicInteger(1)»
-			«FOR field : noopClass.allFieldsTopDown.filter[nonStatic]»
-				«field.nameOfOffset» = «fieldOffset.getAndAdd(field.sizeOf)»
+			«val offset = new AtomicInteger(1)»
+			«val offsets = noopClass.allFieldsTopDown.filter[nonStatic].toMap([it], [offset.getAndAdd(sizeOf)])»
+			«FOR field : noopClass.declaredFields.filter[nonStatic]»
+				«field.nameOfOffset» = «offsets.get(field)»
 			«ENDFOR»
 			
 		«ENDFOR»

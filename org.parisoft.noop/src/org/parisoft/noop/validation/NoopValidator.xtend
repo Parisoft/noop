@@ -3,11 +3,227 @@
  */
 package org.parisoft.noop.validation
 
+import com.google.inject.Inject
+import org.eclipse.xtext.validation.Check
+import org.parisoft.noop.^extension.Classes
+import org.parisoft.noop.^extension.Collections
+import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.^extension.TypeSystem
+import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.StorageType
+import org.parisoft.noop.noop.Variable
+
+import static org.parisoft.noop.noop.NoopPackage.Literals.*
+import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.Method
+import org.eclipse.emf.ecore.EObject
+import org.parisoft.noop.noop.Block
+import org.parisoft.noop.noop.ForStatement
+
 /**
  * This class contains custom validation rules. 
  * 
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#validation
  */
 class NoopValidator extends AbstractNoopValidator {
+
+	@Inject extension Classes
+	@Inject extension Members
+	@Inject extension Collections
+
+	public static val CLASS_RECURSIVE_HIERARCHY = 'CLASS_RECURSIVE_HIERARCHY'
+	public static val FIELD_TYPE_SAME_HIERARCHY = 'FIELD_TYPE_SAME_HIERARCHY'
+	public static val FIELD_STORAGE = 'FIELD_STORAGE'
+	public static val FIELD_DUPLICITY = 'FIELD_DUPLICITY'
+	public static val FIELD_OVERRIDEN_TYPE = 'FIELD_OVERRIDEN_TYPE' // TODO keep or remove? (if remove, must change member polymorphic ref)
+	public static val STATIC_FIELD_CONTAINER = 'STATIC_FIELD_CONTAINER'
+	public static val STATIC_FIELD_STORAGE_TYPE = 'STATIC_FIELD_STORAGE_TYPE'
+	public static val STATIC_FIELD_ROM_TYPE = 'STATIC_FIELD_ROM_TYPE'
+	public static val CONSTANT_FIELD_TYPE = 'CONSTANT_FIELD_TYPE'
+	public static val CONSTANT_FIELD_DIMENSION = 'CONSTANT_FIELD_DIMENSION'
+	public static val CONSTANT_FIELD_STORAGE = 'CONSTANT_FIELD_STORAGE'
+	public static val VARIABLE_VOID_TYPE = 'VARIABLE_VOID_TYPE'
+	public static val VARIABLE_INES_HEADER_TYPE = 'VARIABLE_INES_HEADER_TYPE'
+	public static val VARIABLE_DUPLICITY = 'VARIABLE_DUPLICITY'
+	public static val PARAMETER_VOID_TYPE = 'PARAMETER VOID_TYPE'
+	public static val PARAMETER_INES_HEADER_TYPE = 'PARAMETER INES_HEADER_TYPE'
+	public static val PARAMETER_STORAGE_TYPE = 'PARAMETER_STORAGE_TYPE'
+	public static val PARAMETER_DUPLICITY = 'PARAMETER_DUPLICITY'
+
+	@Check
+	def classRecursiveHierarchy(NoopClass c) {
+		if (c.superClass == c || c.superClasses.drop(1).exists[isInstanceOf(c)]) {
+			error('Recursive hierarchy is not allowed', NOOP_CLASS__SUPER_CLASS, CLASS_RECURSIVE_HIERARCHY,
+				c.superClass.name)
+		}
+	}
+
+	@Check
+	def fieldTypeSameHierarchy(Variable v) {
+		if (v.isField && v.isNonStatic) {
+			val varClass = v.containerClass
+			val varType = v.typeOf
+
+			if (varClass.isInstanceOf(varType) || varType.isInstanceOf(varClass)) {
+				error('Type of non-static fields cannot be on the same hierarchy of the field\'s class',
+					VARIABLE__VALUE, FIELD_TYPE_SAME_HIERARCHY)
+			}
+		}
+	}
+
+	@Check
+	def fieldStorage(Variable v) {
+		if (v.isField && v.isNonStatic && v.storage !== null) {
+			error('Non-static fields cannot be tagged', MEMBER__STORAGE, FIELD_STORAGE)
+		}
+	}
+
+	@Check
+	def fieldDuplicity(Variable v) {
+		if (v.isField) {
+			if (v.containerClass.declaredFields.takeWhile[it != v].exists[it.name == v.name]) {
+				error('''Field «v.name» is duplicated''', MEMBER__NAME, FIELD_DUPLICITY)
+			}
+		}
+	}
+
+	@Check
+	def fieldOverridenType(Variable v) {
+		if (v.isField) {
+			val overriden = v.containerClass.superClass.allFieldsTopDown.findFirst[v.isOverrideOf(it)]
+
+			if (overriden !== null) {
+				val fieldType = v.typeOf
+				val overridenType = overriden.typeOf
+
+				if (fieldType.isNotEquals(overridenType)) {
+					error('''Field «v.name» must have the same type of the overriden field: «overridenType.name»''',
+						VARIABLE__VALUE, FIELD_OVERRIDEN_TYPE)
+				}
+			}
+		}
+	}
+
+	@Check
+	def staticFieldContainer(Variable v) {
+		if (v.isStatic && v.isNonField) {
+			error('''«IF v.isParameter»Parameters«ELSE»Local variables«ENDIF» cannot be declared as static''',
+				MEMBER__NAME, STATIC_FIELD_CONTAINER)
+		}
+	}
+
+	@Check
+	def staticFieldStorageType(Variable v) {
+		if (v.isStatic && v.storage?.type == StorageType::INLINE) {
+			error('''Fields cannot be tagged as «v.storage.type.literal.substring(1)»''', MEMBER__STORAGE,
+				STATIC_FIELD_STORAGE_TYPE)
+		}
+	}
+
+	@Check
+	def staticFieldRomType(Variable v) {
+		if (v.isStatic && v.isROM && v.typeOf.isNonPrimitive) {
+			error('''Type of static fields tagged as «v.storage.type.literal.substring(1)» must be «TypeSystem::LIB_PRIMITIVES.join(', ')»''',
+				VARIABLE__VALUE, STATIC_FIELD_ROM_TYPE)
+		}
+	}
+
+	@Check
+	def constantFieldType(Variable v) {
+		if (v.isConstant && v.typeOf.isNonPrimitive) {
+			error('''Type of constant fields must be «TypeSystem::LIB_PRIMITIVES.join(', ')»''', VARIABLE__VALUE,
+				CONSTANT_FIELD_TYPE)
+		}
+	}
+
+	@Check
+	def constantFieldDimension(Variable v) {
+		if (v.isConstant && v.dimensionOf.isNotEmpty) {
+			error('Constant fields must be non-dimensional', VARIABLE__DIMENSION, CONSTANT_FIELD_DIMENSION)
+		}
+	}
+
+	@Check
+	def constantFieldStorage(Variable v) {
+		if (v.isConstant && v.storage !== null) {
+			error('Constant fields cannot be tagged', MEMBER__STORAGE, CONSTANT_FIELD_STORAGE)
+		}
+	}
+
+	@Check
+	def variableVoidType(Variable v) {
+		if (v.isNonParameter && v.typeOf.isVoid) {
+			error('''«TypeSystem::LIB_VOID» is not a valid type for «IF v.isField»fields«ELSE»variables«ENDIF»''',
+				VARIABLE__VALUE, VARIABLE_VOID_TYPE)
+		}
+	}
+
+	@Check
+	def variableINesHeaderType(Variable v) {
+		if (v.isNonParameter && v.isNonStatic && v.typeOf.isINESHeader) {
+			error('''«TypeSystem::LIB_NES_HEADER» is not a valid type for «IF v.isField»non-static fields«ELSE»variables«ENDIF»''',
+				VARIABLE__VALUE, VARIABLE_INES_HEADER_TYPE)
+		}
+	}
+
+	@Check
+	def variableDuplicity(Variable v) {
+		if (v.isNonField && v.isNonParameter) {
+			if (v.searchForDuplicityOn(v.eContainer)) {
+				error('''Variable «v.name» is duplicated''', MEMBER__NAME, VARIABLE_DUPLICITY)
+			}
+		}
+	}
+
+	@Check
+	def parameterVoidType(Variable v) {
+		if (v.isParameter && v.type.isVoid) {
+			error('''«TypeSystem::LIB_VOID» is not a valid type for parameters''', VARIABLE__TYPE, PARAMETER_VOID_TYPE)
+		}
+	}
+
+	@Check
+	def parameterINesHeaderType(Variable v) {
+		if (v.isParameter && v.type.isINESHeader) {
+			error('''«TypeSystem::LIB_NES_HEADER» is not a valid type for parameters''', VARIABLE__TYPE,
+				PARAMETER_INES_HEADER_TYPE)
+		}
+	}
+
+	@Check
+	def parameterStorageType(Variable v) {
+		if (v.isParameter && v.storage?.type != StorageType::ZP) {
+			error('''Parameters cannot be tagged as «v.storage.type.literal.substring(1)»''', MEMBER__STORAGE,
+				PARAMETER_STORAGE_TYPE)
+		}
+	}
+
+	@Check
+	def parameterDuplicity(Variable v) {
+		if (v.isParameter) {
+			if (v.getContainerOfType(Method).params.takeWhile[it != v].exists[it.name == v.name]) {
+				error('''Parameter «v.name» is duplicated''', MEMBER__NAME, PARAMETER_DUPLICITY)
+			}
+		}
+	}
+
+	private def boolean searchForDuplicityOn(Variable v, EObject container) {
+		if (container === null) {
+			return false
+		}
+
+		return switch (container) {
+			Block:
+				container.statements.takeWhile [
+					it != v && !it.getAllContentsOfType(Variable).contains(v)
+				].filter(Variable).exists[it.name == v.name]
+			ForStatement:
+				container.variables.takeWhile[it != v].filter(Variable).exists[it.name == v.name]
+			Method:
+				container.params.exists[it.name == v.name]
+			default:
+				false
+		} || v.searchForDuplicityOn(container.eContainer)
+	}
 
 }
