@@ -10,7 +10,6 @@ import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 import org.parisoft.noop.exception.InvalidExpressionException
 import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.exception.NonConstantMemberException
-import org.parisoft.noop.exception.NullExpressionException
 import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.CompileContext.Mode
@@ -417,7 +416,7 @@ class Expressions {
 
 	def NoopClass typeOf(Expression expression) {
 		if (expression === null) {
-			throw new NullExpressionException
+			expression.toVoidClass
 		}
 
 		switch (expression) {

@@ -25,6 +25,9 @@ import org.parisoft.noop.noop.IfStatement
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.ElseStatement
+import org.parisoft.noop.noop.Statement
+import org.parisoft.noop.noop.BreakStatement
+import org.parisoft.noop.noop.ContinueStatement
 
 /**
  * This class contains custom validation rules. 
@@ -68,6 +71,7 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val METHOD_OVERRIDEN_DIMENSION = 'METHOD_OVERRIDEN_DIMENSION'
 	public static val RETURN_UNBOUNDED_DIMENSION = 'RETURN_UNBOUNDED_DIMENSION'
 	public static val RETURN_INCONSISTENT_DIMENSION = 'RETURN_INCONSISTENT_DIMENSION'
+	public static val STATEMENT_UNREACHABLE = 'STATEMENT_UNREACHABLE'
 	public static val IF_CONDITION_TYPE = 'IF_CONDITION_TYPE'
 	public static val IF_CONSTANT_CONDITION = 'IF_CONSTANT_CONDITION'
 	public static val IF_EMPTY_BODY = 'IF_EMPTY_BODY'
@@ -129,14 +133,22 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def fieldOverridenDimension(Variable v) {
 		if (v.isField) {
-			val overriden = v.containerClass.allFieldsTopDown.findFirst[v.isOverrideOf(it)]
+			val overriden = v.containerClass.superClass.allFieldsTopDown.findFirst[v.isOverrideOf(it)]
 
 			if (overriden !== null) {
 				val overrideDimension = overriden.dimensionOf
 
 				if (v.dimensionOf !== overrideDimension) {
-					error( '''Field «v.name» must have the same «overrideDimension.map['''[«it»]'''].join» dimension of the overriden field''',
-						MEMBER__NAME, FIELD_OVERRIDEN_DIMENSION)
+					if (overrideDimension.isEmpty) {
+						error('''Field «v.name» must have no dimension as the overriden field''', MEMBER__NAME,
+							FIELD_OVERRIDEN_DIMENSION)
+					} else if (overrideDimension.size == 1) {
+						error('''Field «v.name» must have the same dimension of length «overrideDimension.head» as the overriden field''',
+							MEMBER__NAME, FIELD_OVERRIDEN_DIMENSION)
+					} else {
+						error('''Field «v.name» must have the same «overrideDimension.join('x')» dimension of the overriden field''',
+							MEMBER__NAME, FIELD_OVERRIDEN_DIMENSION)
+					}
 				}
 			}
 		}
@@ -272,17 +284,22 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def parameterOverridenDimension(Variable v) {
-		val m = v.getContainerOfType(Method)
+		val m = v.eContainer
 
-		if (m !== null) {
+		if (m instanceof Method) {
 			val overriden = m.containerClass.allMethodsTopDown.findFirst[m.isOverrideOf(it)]
 
 			if (overriden !== null) {
 				val overridenDimension = overriden.params.get(m.params.indexOf(v)).dimension
 
 				if (v.dimension != overridenDimension) {
-					error('''Parameter «v.name» must have the same «overridenDimension.map['''[«value?.valueOf»]'''].join» dimension of the overriden parameter''',
-						VARIABLE__DIMENSION, PARAMETER_OVERRIDEN_DIMENSION)
+					if (overridenDimension.size == 1) {
+						error('''Parameter «v.name» must have the same dimension of length «overridenDimension.head» as the overriden parameter''',
+							VARIABLE__DIMENSION, PARAMETER_OVERRIDEN_DIMENSION)
+					} else {
+						error('''Parameter «v.name» must have the same «overridenDimension.map[value?.valueOf].join('x')» dimension of the overriden parameter''',
+							VARIABLE__DIMENSION, PARAMETER_OVERRIDEN_DIMENSION)
+					}
 				}
 			}
 		}
@@ -354,8 +371,11 @@ class NoopValidator extends AbstractNoopValidator {
 				if (overridenDimension.isEmpty) {
 					error('''Method «m.name» must return a non-dimensional value as the overriden method''',
 						MEMBER__NAME, METHOD_OVERRIDEN_DIMENSION)
+				} else if (overridenDimension.size == 1) {
+					error('''Method «m.name» must return the same dimension of length «overridenDimension.head» as returned by the overriden method''',
+						MEMBER__NAME, METHOD_OVERRIDEN_DIMENSION)
 				} else {
-					error('''Method «m.name» must return the same «overridenDimension.map['''[«it»]'''].join» dimension returned by the overriden method''',
+					error('''Method «m.name» must return the same «overridenDimension.join('x')» dimension returned by the overriden method''',
 						MEMBER__NAME, METHOD_OVERRIDEN_DIMENSION)
 				}
 			}
@@ -384,7 +404,18 @@ class NoopValidator extends AbstractNoopValidator {
 	}
 
 	@Check
-	def ifBoolCondition(IfStatement ifStatement) {
+	def statementUnreachable(Statement statement) {
+		val block = statement.eContainer
+
+		if (block instanceof Block) {
+			if (block.statements.takeWhile[it != statement].exists[unconditionalBreak]) {
+				warning('Dead code', statement, null, STATEMENT_UNREACHABLE)
+			}
+		}
+	}
+
+	@Check
+	def ifConditionType(IfStatement ifStatement) {
 		if (ifStatement.condition.typeOf.isNonBoolean) {
 			error('''Ifs condition must be a «TypeSystem::LIB_BOOL» expression''', IF_STATEMENT__CONDITION,
 				IF_CONDITION_TYPE)
@@ -394,8 +425,28 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def ifConstantCondition(IfStatement ifStatement) {
 		if (ifStatement.condition.isConstant) {
-			warning('''If condition always evaluate to «ifStatement.condition.valueOf»''', IF_STATEMENT__CONDITION,
-				IF_CONSTANT_CONDITION)
+			val condition = ifStatement.condition.valueOf
+
+			if (condition instanceof Boolean) {
+				warning('''If's condition always evaluate to «ifStatement.condition.valueOf»''',
+					IF_STATEMENT__CONDITION, IF_CONSTANT_CONDITION)
+
+				if (condition) {
+					var nextElse = ifStatement.^else
+
+					while (nextElse !== null) {
+						if (nextElse.body !== null) {
+							warning('Dead code', nextElse.body, null, IF_CONSTANT_CONDITION)
+						} else if (nextElse.^if !== null) {
+							warning('Dead code', nextElse.^if.body, null, IF_CONSTANT_CONDITION)
+						}
+
+						nextElse = nextElse.^if?.^else
+					}
+				} else {
+					warning('Dead code', ifStatement.body, null, IF_CONSTANT_CONDITION)
+				}
+			}
 		}
 	}
 
@@ -406,6 +457,7 @@ class NoopValidator extends AbstractNoopValidator {
 		}
 	}
 
+	@Check
 	def elseEmptyBody(ElseStatement elseStatement) {
 		if (elseStatement.body?.statements?.isEmpty) {
 			warning('Useless else statement', ELSE_STATEMENT__NAME, ELSE_EMPTY_BODY)
@@ -429,6 +481,45 @@ class NoopValidator extends AbstractNoopValidator {
 			default:
 				false
 		} || v.searchForDuplicityOn(container.eContainer)
+	}
+	
+	private def unconditionalBreak(Statement s) {
+		s.isBreakContinueOrReturn || (s instanceof IfStatement && (s as IfStatement).unconditionalBreak)
+	}
+
+	private def Boolean unconditionalBreak(IfStatement ifStatement) {
+		if (ifStatement === null) {
+			null
+		} else if (ifStatement.condition.isConstant) {
+			val condition = ifStatement.condition.valueOf
+
+			if (condition instanceof Boolean) {
+				if (condition) {
+					ifStatement.body.statements.exists[isBreakContinueOrReturn]
+				} else {
+					ifStatement.^else.unconditionalBreak ?: false
+				}
+			} else {
+				false
+			}
+		} else {
+			ifStatement.body.statements.exists[isBreakContinueOrReturn] &&
+				(ifStatement.^else.unconditionalBreak ?: true)
+		}
+	}
+
+	private def Boolean unconditionalBreak(ElseStatement elseStatement) {
+		if (elseStatement === null) {
+			null
+		} else if (elseStatement.body !== null) {
+			elseStatement.body.statements.exists[isBreakContinueOrReturn]
+		} else {
+			elseStatement.^if.unconditionalBreak
+		}
+	}
+
+	private def isBreakContinueOrReturn(Statement s) {
+		s instanceof ReturnStatement || s instanceof BreakStatement || s instanceof ContinueStatement
 	}
 
 }
