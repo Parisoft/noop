@@ -4,30 +4,31 @@
 package org.parisoft.noop.validation
 
 import com.google.inject.Inject
+import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.validation.Check
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Collections
+import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.TypeSystem
+import org.parisoft.noop.noop.Block
+import org.parisoft.noop.noop.BreakStatement
+import org.parisoft.noop.noop.ContinueStatement
+import org.parisoft.noop.noop.ElseStatement
+import org.parisoft.noop.noop.ForStatement
+import org.parisoft.noop.noop.IfStatement
+import org.parisoft.noop.noop.MemberRef
+import org.parisoft.noop.noop.MemberSelect
+import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.ReturnStatement
+import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
 
 import static org.parisoft.noop.noop.NoopPackage.Literals.*
+
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.Method
-import org.eclipse.emf.ecore.EObject
-import org.parisoft.noop.noop.Block
-import org.parisoft.noop.noop.ForStatement
-import org.parisoft.noop.^extension.Expressions
-import org.parisoft.noop.noop.ReturnStatement
-import org.parisoft.noop.noop.IfStatement
-import org.parisoft.noop.noop.MemberRef
-import org.parisoft.noop.noop.MemberSelect
-import org.parisoft.noop.noop.ElseStatement
-import org.parisoft.noop.noop.Statement
-import org.parisoft.noop.noop.BreakStatement
-import org.parisoft.noop.noop.ContinueStatement
 
 /**
  * This class contains custom validation rules. 
@@ -45,12 +46,14 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val FIELD_TYPE_SAME_HIERARCHY = 'FIELD_TYPE_SAME_HIERARCHY'
 	public static val FIELD_STORAGE = 'FIELD_STORAGE'
 	public static val FIELD_DUPLICITY = 'FIELD_DUPLICITY'
-	public static val FIELD_OVERRIDEN_TYPE = 'FIELD_OVERRIDEN_TYPE' // TODO keep or remove? (if remove, must change member polymorphic ref)
-	public static val FIELD_OVERRIDEN_DIMENSION = 'FIELD_OVERRIDEN_DIMENSION'
+	public static val FIELD_UNDECLARED_VALUE = 'FIELD_UNDECLARED_VALUE'
+	public static val FIELD_OVERRIDDEN_TYPE = 'FIELD_OVERRIDDEN_TYPE' // TODO keep or remove? (if remove, must change member polymorphic ref)
+	public static val FIELD_OVERRIDDEN_DIMENSION = 'FIELD_OVERRIDDEN_DIMENSION'
 	public static val STATIC_FIELD_CONTAINER = 'STATIC_FIELD_CONTAINER'
 	public static val STATIC_FIELD_STORAGE_TYPE = 'STATIC_FIELD_STORAGE_TYPE'
 	public static val STATIC_FIELD_ROM_TYPE = 'STATIC_FIELD_ROM_TYPE'
 	public static val STATIC_FIELD_ROM_VALUE = 'STATIC_FIELD_ROM_VALUE'
+	public static val STATIC_FIELD_NON_STATIC_VALUE = 'STATIC_FIELD_NON_STATIC_VALUE'
 	public static val CONSTANT_FIELD_TYPE = 'CONSTANT_FIELD_TYPE'
 	public static val CONSTANT_FIELD_DIMENSION = 'CONSTANT_FIELD_DIMENSION'
 	public static val CONSTANT_FIELD_STORAGE = 'CONSTANT_FIELD_STORAGE'
@@ -63,12 +66,14 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val PARAMETER_INES_HEADER_TYPE = 'PARAMETER INES_HEADER_TYPE'
 	public static val PARAMETER_STORAGE_TYPE = 'PARAMETER_STORAGE_TYPE'
 	public static val PARAMETER_DUPLICITY = 'PARAMETER_DUPLICITY'
-	public static val PARAMETER_OVERRIDEN_DIMENSION = 'PARAMETER_OVERRIDEN_DIMENSION'
+	public static val PARAMETER_DIMENSION_VALUE = 'PARAMETER_DIMENSION_VALUE'
+	public static val PARAMETER_DIMENSION_CONSISTENCE = 'PARAMETER_DIMENSION_CONSISTENCE'
+	public static val PARAMETER_OVERRIDDEN_DIMENSION = 'PARAMETER_OVERRIDDEN_DIMENSION'
 	public static val METHOD_DUPLICITY = 'METHOD_DUPLICITY'
 	public static val METHOD_DIMENSIONAL_VOID = 'METHOD DIMENSIONAL_VOID'
 	public static val METHOD_STORAGE_TYPE = 'METHOD_STORAGE_TYPE'
-	public static val METHOD_OVERRIDEN_TYPE = 'METHOD_OVERRIDEN_TYPE'
-	public static val METHOD_OVERRIDEN_DIMENSION = 'METHOD_OVERRIDEN_DIMENSION'
+	public static val METHOD_OVERRIDDEN_TYPE = 'METHOD_OVERRIDDEN_TYPE'
+	public static val METHOD_OVERRIDDEN_DIMENSION = 'METHOD_OVERRIDDEN_DIMENSION'
 	public static val RETURN_UNBOUNDED_DIMENSION = 'RETURN_UNBOUNDED_DIMENSION'
 	public static val RETURN_INCONSISTENT_DIMENSION = 'RETURN_INCONSISTENT_DIMENSION'
 	public static val STATEMENT_UNREACHABLE = 'STATEMENT_UNREACHABLE'
@@ -115,39 +120,61 @@ class NoopValidator extends AbstractNoopValidator {
 	}
 
 	@Check
-	def fieldOverridenType(Variable v) {
+	def fieldUndeclaredValue(Variable v) {
 		if (v.isField) {
-			val overriden = v.containerClass.allFieldsTopDown.findFirst[v.isOverrideOf(it)]
+			val value = v.value
+			val member = if (value instanceof MemberSelect) {
+					value.member
+				} else if (value instanceof MemberRef) {
+					value.member
+				} else {
+					value.getAllContentsOfType(MemberSelect).map[member].findFirst[isNonStatic] ?:
+						value.getAllContentsOfType(MemberRef).map[member].findFirst[isNonStatic]
+				}
 
-			if (overriden !== null) {
-				val overridenType = overriden.typeOf
-
-				if (v.typeOf.isNotEquals(overridenType)) {
-					error('''Field «v.name» must have the same «overridenType.name» type of the overriden field''',
-						VARIABLE__VALUE, FIELD_OVERRIDEN_TYPE)
+			if (member !== null && member.isField) {
+				if (!v.containerClass.allFieldsTopDown.takeWhile[it != v].exists[it == member]) {
+					error('''Field «v.name» cannot reference the field «member.name» before it is declared''',
+						VARIABLE__VALUE, FIELD_UNDECLARED_VALUE)
 				}
 			}
 		}
 	}
 
 	@Check
-	def fieldOverridenDimension(Variable v) {
+	def fieldOverriddenType(Variable v) {
 		if (v.isField) {
-			val overriden = v.containerClass.superClass.allFieldsTopDown.findFirst[v.isOverrideOf(it)]
+			val overridden = v.containerClass.allFieldsTopDown.findFirst[v.isOverrideOf(it)]
 
-			if (overriden !== null) {
-				val overrideDimension = overriden.dimensionOf
+			if (overridden !== null) {
+				val overriddenType = overridden.typeOf
+
+				if (v.typeOf.isNotEquals(overriddenType)) {
+					error('''Field «v.name» must have the same «overriddenType.name» type of the overridden field''',
+						VARIABLE__VALUE, FIELD_OVERRIDDEN_TYPE)
+				}
+			}
+		}
+	}
+
+	@Check
+	def fieldOverriddenDimension(Variable v) {
+		if (v.isField) {
+			val overridden = v.containerClass.superClass.allFieldsTopDown.findFirst[v.isOverrideOf(it)]
+
+			if (overridden !== null) {
+				val overrideDimension = overridden.dimensionOf
 
 				if (v.dimensionOf !== overrideDimension) {
 					if (overrideDimension.isEmpty) {
-						error('''Field «v.name» must have no dimension as the overriden field''', MEMBER__NAME,
-							FIELD_OVERRIDEN_DIMENSION)
+						error('''Field «v.name» must have no dimension as the overridden field''', MEMBER__NAME,
+							FIELD_OVERRIDDEN_DIMENSION)
 					} else if (overrideDimension.size == 1) {
-						error('''Field «v.name» must have the same dimension of length «overrideDimension.head» as the overriden field''',
-							MEMBER__NAME, FIELD_OVERRIDEN_DIMENSION)
+						error('''Field «v.name» must have the same dimension of length «overrideDimension.head» as the overridden field''',
+							MEMBER__NAME, FIELD_OVERRIDDEN_DIMENSION)
 					} else {
-						error('''Field «v.name» must have the same «overrideDimension.join('x')» dimension of the overriden field''',
-							MEMBER__NAME, FIELD_OVERRIDEN_DIMENSION)
+						error('''Field «v.name» must have the same «overrideDimension.join('x')» dimension of the overridden field''',
+							MEMBER__NAME, FIELD_OVERRIDDEN_DIMENSION)
 					}
 				}
 			}
@@ -183,6 +210,26 @@ class NoopValidator extends AbstractNoopValidator {
 		if (v.isStatic && v.isROM && v.dimensionOf.isEmpty && v.value.isNonConstant) {
 			error('''Fields tagged as «v.storage.type.literal.substring(0)» must be declared with a constant value''',
 				VARIABLE__VALUE, STATIC_FIELD_ROM_VALUE)
+		}
+	}
+
+	@Check
+	def staticFieldNonStaticValue(Variable v) {
+		if (v.isStatic) {
+			val value = v.value
+			val member = if (value instanceof MemberSelect) {
+					value.member
+				} else if (value instanceof MemberRef) {
+					value.member
+				} else {
+					value.getAllContentsOfType(MemberSelect).map[member].findFirst[isNonStatic] ?:
+						value.getAllContentsOfType(MemberRef).map[member].findFirst[isNonStatic]
+				}
+
+			if (member?.isNonStatic) {
+				error('''Static field «v.name» cannot reference the non-static «IF member.isField»field«ELSE»method«ENDIF» «member.name»''',
+					VARIABLE__VALUE, STATIC_FIELD_NON_STATIC_VALUE)
+			}
 		}
 	}
 
@@ -283,22 +330,49 @@ class NoopValidator extends AbstractNoopValidator {
 	}
 
 	@Check
-	def parameterOverridenDimension(Variable v) {
+	def parameterDimensionValue(Variable v) {
+		if (v.isParameter) {
+			v.dimension.filter[value?.isNonConstant].forEach [
+				error('Length must be a constant expression', it, null, PARAMETER_DIMENSION_VALUE)
+			]
+		}
+	}
+
+	@Check
+	def parameterDimensionConsistence(Variable v) {
+		if (v.isParameter) {
+			if (!(v.dimension.forall[value === null] || v.dimension.forall[value !== null])) {
+				v.dimension.filter[value === null].forEach [
+					error('''Length expression is missing''', it, null, PARAMETER_DIMENSION_CONSISTENCE)
+				]
+			}
+		}
+	}
+
+	@Check
+	def parameterOverriddenDimension(Variable v) {
 		val m = v.eContainer
 
 		if (m instanceof Method) {
-			val overriden = m.containerClass.allMethodsTopDown.findFirst[m.isOverrideOf(it)]
+			val overriddenMethod = m.containerClass.allMethodsTopDown.findFirst[m.isOverrideOf(it)]
 
-			if (overriden !== null) {
-				val overridenDimension = overriden.params.get(m.params.indexOf(v)).dimension
+			if (overriddenMethod !== null) {
+				val overridden = overriddenMethod.params.get(m.params.indexOf(v))
 
-				if (v.dimension != overridenDimension) {
-					if (overridenDimension.size == 1) {
-						error('''Parameter «v.name» must have the same dimension of length «overridenDimension.head» as the overriden parameter''',
-							VARIABLE__DIMENSION, PARAMETER_OVERRIDEN_DIMENSION)
-					} else {
-						error('''Parameter «v.name» must have the same «overridenDimension.map[value?.valueOf].join('x')» dimension of the overriden parameter''',
-							VARIABLE__DIMENSION, PARAMETER_OVERRIDEN_DIMENSION)
+				for (i : 0 ..< v.dimension.size) {
+					val paramLen = v.dimension.get(i).value
+					val overriddenLen = overridden.dimension.get(i).value
+
+					if (paramLen === null && overriddenLen !== null) {
+						error('''Lenght must be «overriddenLen.valueOf» as the overridden parameter''',
+							v.dimension.get(i), null, PARAMETER_OVERRIDDEN_DIMENSION)
+					} else if (paramLen !== null && overriddenLen === null) {
+						error('Length must be omitted as the overridden parameter', paramLen, null,
+							PARAMETER_OVERRIDDEN_DIMENSION)
+					} else if (paramLen !== null && paramLen.isConstant && overriddenLen.isConstant &&
+						paramLen.valueOf != overriddenLen.valueOf) {
+						error('''Lenght must be «overriddenLen.valueOf» as the overridden parameter''', paramLen, null,
+							PARAMETER_OVERRIDDEN_DIMENSION)
 					}
 				}
 			}
@@ -350,33 +424,33 @@ class NoopValidator extends AbstractNoopValidator {
 	}
 
 	@Check
-	def methodOverridenType(Method m) {
-		val overriden = m.containerClass.allMethodsTopDown.findFirst[m.isOverrideOf(it)]
+	def methodOverriddenType(Method m) {
+		val overridden = m.containerClass.allMethodsTopDown.findFirst[m.isOverrideOf(it)]
 
-		if (overriden !== null && m.typeOf.isNonSubclassOf(overriden.typeOf)) {
-			error('''Method «m.name» must return the same «overriden.typeOf.name» type or a subtype returned by the overriden method''',
-				MEMBER__NAME, METHOD_OVERRIDEN_TYPE)
+		if (overridden !== null && m.typeOf.isNonSubclassOf(overridden.typeOf)) {
+			error('''Method «m.name» must return the same «overridden.typeOf.name» type or a subtype returned by the overridden method''',
+				MEMBER__NAME, METHOD_OVERRIDDEN_TYPE)
 		}
 	}
 
 	@Check
-	def methodOverridenDimension(Method m) {
-		val overriden = m.containerClass.allMethodsTopDown.findFirst[m.isOverrideOf(it)]
+	def methodOverriddenDimension(Method m) {
+		val overridden = m.containerClass.allMethodsTopDown.findFirst[m.isOverrideOf(it)]
 
-		if (overriden !== null) {
+		if (overridden !== null) {
 			val methodDimension = m.dimensionOf
-			val overridenDimension = overriden.dimensionOf
+			val overriddenDimension = overridden.dimensionOf
 
-			if (methodDimension != overridenDimension) {
-				if (overridenDimension.isEmpty) {
-					error('''Method «m.name» must return a non-dimensional value as the overriden method''',
-						MEMBER__NAME, METHOD_OVERRIDEN_DIMENSION)
-				} else if (overridenDimension.size == 1) {
-					error('''Method «m.name» must return the same dimension of length «overridenDimension.head» as returned by the overriden method''',
-						MEMBER__NAME, METHOD_OVERRIDEN_DIMENSION)
+			if (methodDimension != overriddenDimension) {
+				if (overriddenDimension.isEmpty) {
+					error('''Method «m.name» must return a non-dimensional value as the overridden method''',
+						MEMBER__NAME, METHOD_OVERRIDDEN_DIMENSION)
+				} else if (overriddenDimension.size == 1) {
+					error('''Method «m.name» must return the same dimension of length «overriddenDimension.head» as returned by the overridden method''',
+						MEMBER__NAME, METHOD_OVERRIDDEN_DIMENSION)
 				} else {
-					error('''Method «m.name» must return the same «overridenDimension.join('x')» dimension returned by the overriden method''',
-						MEMBER__NAME, METHOD_OVERRIDEN_DIMENSION)
+					error('''Method «m.name» must return the same «overriddenDimension.join('x')» dimension returned by the overridden method''',
+						MEMBER__NAME, METHOD_OVERRIDDEN_DIMENSION)
 				}
 			}
 		}
@@ -482,7 +556,7 @@ class NoopValidator extends AbstractNoopValidator {
 				false
 		} || v.searchForDuplicityOn(container.eContainer)
 	}
-	
+
 	private def unconditionalBreak(Statement s) {
 		s.isBreakContinueOrReturn || (s instanceof IfStatement && (s as IfStatement).unconditionalBreak)
 	}

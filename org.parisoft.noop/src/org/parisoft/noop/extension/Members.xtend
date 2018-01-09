@@ -83,6 +83,10 @@ public class Members {
 			localVars.exists[it == variable]
 		].toSet
 	}
+	
+	def isField(Member member) {
+		member instanceof Variable && (member as Variable).isField
+	}
 
 	def isAccessibleFrom(Member member, EObject context) {
 		if (context instanceof MemberSelect) {
