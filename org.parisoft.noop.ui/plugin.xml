@@ -138,6 +138,12 @@
 			description="Copy the qualified name for the selected element"
 			name="Copy Qualified Name">
 	</command>
+ <command
+       defaultHandler="org.parisoft.noop.ui.commands.NoopNewClassHandler"
+       description="Creates a new NOOP Class"
+       id="org.parisoft.noop.ui.command.NoopNewClass"
+       name="New NOOP Class">
+ </command>
 	</extension>
 	<extension point="org.eclipse.ui.menus">
 		<menuContribution
@@ -183,6 +189,19 @@
 				</visibleWhen>
 			</command>
 		</menuContribution>
+  <menuContribution
+        allPopups="false"
+        locationURI="toolbar:org.eclipse.ui.main.toolbar">
+     <toolbar
+           id="org.parisoft.noop.ui.toolbar.Noop"
+           label="NOOP">
+        <command
+              commandId="org.parisoft.noop.ui.command.NoopNewClass"
+              icon="icons/NewClass.png"
+              style="push">
+        </command>
+     </toolbar>
+  </menuContribution>
 	</extension>
 	<extension point="org.eclipse.ui.menus">
 		<menuContribution locationURI="popup:#TextEditorContext?endof=group.find">
@@ -417,19 +436,19 @@
     <wizard
           category="org.parisoft.noop.ui.category"
           class="org.parisoft.noop.ui.NoopExecutableExtensionFactory:org.parisoft.noop.ui.wizard.NoopNewProjectWizard"
-          finalPerspective="org.parisoft.noop.ui.perspective1"
+          finalPerspective="org.parisoft.noop.ui.perspective.Noop"
           icon="icons/NewProject.png"
           id="org.parisoft.noop.ui.wizard.NoopNewProjectWizard"
           name="NES/Famicom game project"
-          preferredPerspectives="org.parisoft.noop.ui.perspective1"
+          preferredPerspectives="org.parisoft.noop.ui.perspective.Noop"
           project="true">
     </wizard>
     <wizard
           category="org.parisoft.noop.ui.category"
           class="org.parisoft.noop.ui.wizards.NoopNewClassWizard"
-          finalPerspective="org.parisoft.noop.ui.perspective1"
+          finalPerspective="org.parisoft.noop.ui.perspective.Noop"
           icon="icons/NewClass.png"
-          id="org.parisoft.noop.ui.wizards.SampleNewWizard"
+          id="org.parisoft.noop.ui.wizards.NoopNewClassWizard"
           name="NOOP Class">
     </wizard>
  </extension>
@@ -438,7 +457,7 @@
     <perspective
           class="org.parisoft.noop.ui.perspectives.NoopPerspectiveFactory"
           icon="icons/Perspective.png"
-          id="org.parisoft.noop.ui.perspective1"
+          id="org.parisoft.noop.ui.perspective.Noop"
           name="NOOP">
        <description>
           This perspective is designed to support NES/Famicom games development through the NOOP language.
@@ -448,12 +467,12 @@
  <extension
        point="org.eclipse.ui.perspectiveExtensions">
     <perspectiveExtension
-          targetID="org.parisoft.noop.ui.perspective1">
+          targetID="org.parisoft.noop.ui.perspective.Noop">
        <newWizardShortcut
              id="org.parisoft.noop.ui.wizard.NoopNewProjectWizard">
        </newWizardShortcut>
        <newWizardShortcut
-             id="org.parisoft.noop.ui.wizards.SampleNewWizard">
+             id="org.parisoft.noop.ui.wizards.NoopNewClassWizard">
        </newWizardShortcut>
     </perspectiveExtension>
  </extension>

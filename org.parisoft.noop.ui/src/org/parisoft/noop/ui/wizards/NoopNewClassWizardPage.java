@@ -46,7 +46,7 @@ public class NoopNewClassWizardPage extends WizardPage {
 	public NoopNewClassWizardPage(ISelection selection) {
 		super("wizardPage");
 		setTitle("NOOP Class");
-		setDescription("Creates a new NOOP class to define game objects.");
+		setDescription("Create a new NOOP Class");
 		this.selection = selection;
 	}
 
