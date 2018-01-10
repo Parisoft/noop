@@ -37,6 +37,7 @@ import org.parisoft.noop.ui.labeling.NoopLabelProvider
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import static extension org.eclipse.xtext.nodemodel.util.NodeModelUtils.*
+import org.eclipse.xtext.CrossReference
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -55,6 +56,26 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	val storageKeywords = StorageType::VALUES.map[literal].toList
 	val proposableKeywords = (newArrayList('extends', 'instanceOf', 'as', 'return', 'this', 'super', 'break',
 		'continue') + storageKeywords).toList
+
+	override completeNoopClass_SuperClass(EObject model, Assignment assignment, ContentAssistContext context,
+		ICompletionProposalAcceptor acceptor) {
+		if (model instanceof NoopClass) {
+			lookupCrossReference((assignment.getTerminal() as CrossReference), context, acceptor) [
+				val superClass = if(EObjectOrProxy.eIsProxy) EObjectOrProxy.resolve(model) else EObjectOrProxy
+
+				if (superClass instanceof NoopClass) {
+					if (superClass.isVoid || superClass.isPrimitive || superClass.isINESHeader ||
+						superClass.superClasses.exists[isInstanceOf(model)]) {
+						return false
+					}
+				}
+
+				true
+			]
+		} else {
+			super.completeNoopClass_SuperClass(model, assignment, context, acceptor)
+		}
+	}
 
 	override completeNoopClass_Members(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {

@@ -11,12 +11,18 @@ import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.TypeSystem
+import org.parisoft.noop.noop.AsmStatement
+import org.parisoft.noop.noop.AssignmentExpression
 import org.parisoft.noop.noop.Block
 import org.parisoft.noop.noop.BreakStatement
 import org.parisoft.noop.noop.ContinueStatement
+import org.parisoft.noop.noop.DecExpression
 import org.parisoft.noop.noop.ElseStatement
+import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.ForStatement
+import org.parisoft.noop.noop.ForeverStatement
 import org.parisoft.noop.noop.IfStatement
+import org.parisoft.noop.noop.IncExpression
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
@@ -27,7 +33,7 @@ import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
 
 import static org.parisoft.noop.noop.NoopPackage.Literals.*
-
+import static org.parisoft.noop.noop.AssignmentType.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 
 /**
@@ -43,17 +49,19 @@ class NoopValidator extends AbstractNoopValidator {
 	@Inject extension Collections
 
 	public static val CLASS_RECURSIVE_HIERARCHY = 'CLASS_RECURSIVE_HIERARCHY'
+	public static val CLASS_SUPERCLASS_TYPE = 'CLASS_SUPERCLASS_TYPE'
 	public static val FIELD_TYPE_SAME_HIERARCHY = 'FIELD_TYPE_SAME_HIERARCHY'
 	public static val FIELD_STORAGE = 'FIELD_STORAGE'
 	public static val FIELD_DUPLICITY = 'FIELD_DUPLICITY'
 	public static val FIELD_UNDECLARED_VALUE = 'FIELD_UNDECLARED_VALUE'
-	public static val FIELD_OVERRIDDEN_TYPE = 'FIELD_OVERRIDDEN_TYPE' // TODO keep or remove? (if remove, must change member polymorphic ref)
+	public static val FIELD_OVERRIDDEN_TYPE = 'FIELD_OVERRIDDEN_TYPE'
 	public static val FIELD_OVERRIDDEN_DIMENSION = 'FIELD_OVERRIDDEN_DIMENSION'
 	public static val STATIC_FIELD_CONTAINER = 'STATIC_FIELD_CONTAINER'
 	public static val STATIC_FIELD_STORAGE_TYPE = 'STATIC_FIELD_STORAGE_TYPE'
 	public static val STATIC_FIELD_ROM_TYPE = 'STATIC_FIELD_ROM_TYPE'
 	public static val STATIC_FIELD_ROM_VALUE = 'STATIC_FIELD_ROM_VALUE'
 	public static val STATIC_FIELD_NON_STATIC_VALUE = 'STATIC_FIELD_NON_STATIC_VALUE'
+	public static val STATIC_FIELD_UNDECLARED_VALUE = 'STATIC_FIELD_UNDECLARED_VALUE'
 	public static val CONSTANT_FIELD_TYPE = 'CONSTANT_FIELD_TYPE'
 	public static val CONSTANT_FIELD_DIMENSION = 'CONSTANT_FIELD_DIMENSION'
 	public static val CONSTANT_FIELD_STORAGE = 'CONSTANT_FIELD_STORAGE'
@@ -81,12 +89,34 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val IF_CONSTANT_CONDITION = 'IF_CONSTANT_CONDITION'
 	public static val IF_EMPTY_BODY = 'IF_EMPTY_BODY'
 	public static val ELSE_EMPTY_BODY = 'ELSE_EMPTY_BODY'
+	public static val FOR_CONSTANT_CONDITION = 'FOR_CONSTANT_CONDITION'
+	public static val BREAK_CONTAINER = 'BREAK_CONTAINER'
+	public static val CONTINUE_CONTAINER = 'CONTINUE_CONTAINER'
+	public static val ASM_REFERENCE = 'ASM_REFERENCE'
+	public static val EXPRESSION_SIDE_EFFECT = 'EXPRESSION_SIDE_EFFECT'
+	public static val ASSIGN_LEFT_SIDE = 'ASSIGN_LEFT_SIDE'
+	public static val ASSIGN_TO_CONSTANT_OR_ROM = 'ASSIGN_TO_CONSTANT_OR_ROM'
+	public static val ASSIGN_VALUE_TYPE = 'ASSIGN_VALUE_TYPE'
+	public static val ASSIGN_VALUE_DIMENSION = 'ASSIGN_VALUE_DIMENSION'
+	public static val ASSIGN_TYPE = 'ASSIGN_TYPE'
+
+	@Check(NORMAL)
+	def classPrepare(NoopClass c) {
+		// TODO migrate prepare from generator
+	}
 
 	@Check
 	def classRecursiveHierarchy(NoopClass c) {
 		if (c.superClass == c || c.superClasses.drop(1).exists[isInstanceOf(c)]) {
 			error('Recursive hierarchy is not allowed', NOOP_CLASS__SUPER_CLASS, CLASS_RECURSIVE_HIERARCHY,
 				c.superClass.name)
+		}
+	}
+
+	@Check
+	def classSuperType(NoopClass c) {
+		if (c.superClass?.isVoid) {
+			error('''«TypeSystem::LIB_VOID» cannot be extended''', NOOP_CLASS__SUPER_CLASS, CLASS_SUPERCLASS_TYPE)
 		}
 	}
 
@@ -113,15 +143,20 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def fieldDuplicity(Variable v) {
 		if (v.isField) {
-			if (v.containerClass.declaredFields.takeWhile[it != v].exists[it.name == v.name]) {
-				error('''Field «v.name» is duplicated''', MEMBER__NAME, FIELD_DUPLICITY)
+			val duplicates = v.containerClass.declaredFields.takeWhile[it != v].filter[it.name == v.name].toList
+
+			if (duplicates.isNotEmpty) {
+				duplicates += v
+				duplicates.forEach [
+					error('''Field «v.name» is duplicated''', it, MEMBER__NAME, FIELD_DUPLICITY)
+				]
 			}
 		}
 	}
 
 	@Check
 	def fieldUndeclaredValue(Variable v) {
-		if (v.isField) {
+		if (v.isField && v.isNonStatic) {
 			val value = v.value
 			val member = if (value instanceof MemberSelect) {
 					value.member
@@ -132,7 +167,7 @@ class NoopValidator extends AbstractNoopValidator {
 						value.getAllContentsOfType(MemberRef).map[member].findFirst[isNonStatic]
 				}
 
-			if (member !== null && member.isField) {
+			if (member !== null && member.isField && member.isNonStatic) {
 				if (!v.containerClass.allFieldsTopDown.takeWhile[it != v].exists[it == member]) {
 					error('''Field «v.name» cannot reference the field «member.name» before it is declared''',
 						VARIABLE__VALUE, FIELD_UNDECLARED_VALUE)
@@ -234,6 +269,28 @@ class NoopValidator extends AbstractNoopValidator {
 	}
 
 	@Check
+	def staticUndeclaredValue(Variable v) {
+		if (v.isStatic) {
+			val value = v.value
+			val member = if (value instanceof MemberSelect) {
+					value.member
+				} else if (value instanceof MemberRef) {
+					value.member
+				} else {
+					value.getAllContentsOfType(MemberSelect).map[member].findFirst[isStatic] ?:
+						value.getAllContentsOfType(MemberRef).map[member].findFirst[isStatic]
+				}
+
+			if (member !== null && member.isStatic && member.containerClass.isEquals(v.containerClass)) {
+				if (!v.containerClass.allFieldsTopDown.takeWhile[it != v].exists[it == member]) {
+					error('''Field «v.name» cannot reference the field «member.name» before it is declared''',
+						VARIABLE__VALUE, FIELD_UNDECLARED_VALUE)
+				}
+			}
+		}
+	}
+
+	@Check
 	def constantFieldType(Variable v) {
 		if (v.isConstant && v.typeOf.isNonPrimitive) {
 			error('''Type of constant fields must be «TypeSystem::LIB_PRIMITIVES.join(', ')»''', VARIABLE__VALUE,
@@ -281,8 +338,13 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def variableDuplicity(Variable v) {
 		if (v.isNonField && v.isNonParameter) {
-			if (v.searchForDuplicityOn(v.eContainer)) {
-				error('''Variable «v.name» is duplicated''', MEMBER__NAME, VARIABLE_DUPLICITY)
+			val duplicates = v.searchDuplicatesOn(v.eContainer).toList
+
+			if (duplicates.isNotEmpty) {
+				duplicates += v
+				duplicates.forEach [
+					error('''Variable «name» is duplicated''', it, MEMBER__NAME, VARIABLE_DUPLICITY)
+				]
 			}
 		}
 	}
@@ -323,8 +385,13 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def parameterDuplicity(Variable v) {
 		if (v.isParameter) {
-			if (v.getContainerOfType(Method).params.takeWhile[it != v].exists[it.name == v.name]) {
-				error('''Parameter «v.name» is duplicated''', MEMBER__NAME, PARAMETER_DUPLICITY)
+			val duplicates = v.getContainerOfType(Method).params.takeWhile[it != v].filter[it.name == v.name].toList
+
+			if (duplicates.isNotEmpty) {
+				duplicates += v
+				duplicates.forEach [
+					error('''Parameter «name» is duplicated''', it, MEMBER__NAME, PARAMETER_DUPLICITY)
+				]
 			}
 		}
 	}
@@ -381,11 +448,11 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def methodDuplicity(Method m) {
-		val duplicated = m.containerClass.declaredMethods.takeWhile[it != m].filter [
+		val duplicates = m.containerClass.declaredMethods.takeWhile[it != m].filter [
 			it.name == m.name
 		].filter [
 			it.params.size == m.params.size
-		].exists [
+		].filter [
 			for (i : 0 ..< params.size) {
 				val p1 = it.params.get(i)
 				val p2 = m.params.get(i)
@@ -400,10 +467,13 @@ class NoopValidator extends AbstractNoopValidator {
 			}
 
 			true
-		]
+		].toList
 
-		if (duplicated) {
-			error('''Method «m.name» is duplicated''', MEMBER__NAME, METHOD_DUPLICITY)
+		if (duplicates.isNotEmpty) {
+			duplicates += m
+			duplicates.forEach [
+				error('''Method «name» is duplicated''', it, MEMBER__NAME, METHOD_DUPLICITY)
+			]
 		}
 	}
 
@@ -465,15 +535,18 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def returnInconsistentDimension(ReturnStatement ret) {
-		val inconsistent = ret.getContainerOfType(Method).getAllContentsOfType(ReturnStatement).takeWhile [
+		val inconsistents = ret.getContainerOfType(Method).getAllContentsOfType(ReturnStatement).takeWhile [
 			it != ret
-		].exists [
+		].filter [
 			it?.value.dimensionOf != ret?.value.dimensionOf
-		]
+		].toList
 
-		if (inconsistent) {
-			error('All returned values in a method must have the same dimension', RETURN_STATEMENT__VALUE,
-				RETURN_INCONSISTENT_DIMENSION)
+		if (inconsistents.isNotEmpty) {
+			inconsistents += ret
+			inconsistents.forEach [
+				error('All returned values in a method must have the same dimension', it, RETURN_STATEMENT__VALUE,
+					RETURN_INCONSISTENT_DIMENSION)
+			]
 		}
 	}
 
@@ -482,7 +555,7 @@ class NoopValidator extends AbstractNoopValidator {
 		val block = statement.eContainer
 
 		if (block instanceof Block) {
-			if (block.statements.takeWhile[it != statement].exists[unconditionalBreak]) {
+			if (block.statements.takeWhile[it != statement].exists[blocker]) {
 				warning('Dead code', statement, null, STATEMENT_UNREACHABLE)
 			}
 		}
@@ -538,62 +611,225 @@ class NoopValidator extends AbstractNoopValidator {
 		}
 	}
 
-	private def boolean searchForDuplicityOn(Variable v, EObject container) {
+	@Check
+	def forConstantCondition(ForStatement forStatement) {
+		if (forStatement.condition?.isConstant) {
+			val condition = forStatement.condition.valueOf
+
+			if (condition instanceof Boolean && (condition as Boolean) == false) {
+				warning('For\'s condition always evaluate to false', FOR_STATEMENT__CONDITION, FOR_CONSTANT_CONDITION)
+				warning('Dead code', forStatement.body, null, FOR_CONSTANT_CONDITION)
+			}
+		}
+	}
+
+	@Check
+	def breakContainer(BreakStatement break) {
+		if (break.getContainerOfType(ForStatement) === null && break.getContainerOfType(ForeverStatement) === null) {
+			error('Break statement must be inside a loop statement', BREAK_STATEMENT__NAME, BREAK_CONTAINER)
+		}
+	}
+
+	@Check
+	def continueContainer(ContinueStatement continue) {
+		if (continue.getContainerOfType(ForStatement) === null &&
+			continue.getContainerOfType(ForeverStatement) === null) {
+			error('Continue statement must be inside a loop statement', CONTINUE_STATEMENT__NAME, CONTINUE_CONTAINER)
+		}
+	}
+
+	@Check
+	def asmReference(AsmStatement asm) {
+		asm.vars.reject[it instanceof MemberSelect || it instanceof MemberRef || isThisOrSuper].forEach [
+			error('Expected a variable, field or method reference', it, null, ASM_REFERENCE)
+		]
+	}
+
+	@Check
+	def expressionSideEffect(Expression expr) {
+		if (expr.eContainer instanceof Block) {
+			val invalid = switch (expr) {
+				AssignmentExpression: false
+				DecExpression: false
+				IncExpression: false
+				MemberSelect: expr.member instanceof Variable
+				MemberRef: expr.member instanceof Variable
+				default: true
+			}
+
+			if (invalid) {
+				error('This expression is not allowed here, since it doesn\'t cause any side effects', expr, null,
+					EXPRESSION_SIDE_EFFECT)
+			}
+		}
+	}
+
+	@Check
+	def assignLeftSide(AssignmentExpression assignment) {
+		val left = assignment.left
+		val member = switch (left) {
+			MemberSelect: left.member
+			MemberRef: left.member
+		}
+
+		if (member === null || member instanceof Method) {
+			error('Can only assign a value to a variable', ASSIGNMENT_EXPRESSION__LEFT, ASSIGN_LEFT_SIDE)
+		}
+	}
+
+	@Check
+	def assignToConstantOrRom(AssignmentExpression assignment) {
+		val left = assignment.left
+		val member = switch (left) {
+			MemberSelect: left.member
+			MemberRef: left.member
+		}
+
+		if (member instanceof Variable) {
+			if (member.isConstant) {
+				error('Cannot assign a value to a constant field', ASSIGNMENT_EXPRESSION__LEFT,
+					ASSIGN_TO_CONSTANT_OR_ROM)
+			} else if (member.isStatic && member.isROM) {
+				error('''Cannot assign a value to a field tagged as «member.storage.type.literal.substring(1)»''',
+					ASSIGNMENT_EXPRESSION__LEFT, ASSIGN_TO_CONSTANT_OR_ROM)
+			}
+		}
+	}
+
+	@Check
+	def assignValueDimension(AssignmentExpression assignment) {
+		val leftDim = assignment.left.dimensionOf
+		val rightDim = assignment.right.dimensionOf
+
+		if (leftDim.size != rightDim.size) {
+			error('''Cannot assign a value to a variable with incompatible dimensions''', ASSIGNMENT_EXPRESSION__RIGHT,
+				ASSIGN_VALUE_DIMENSION)
+		}
+	}
+
+	@Check
+	def assignType(AssignmentExpression assignment) {
+		val type = assignment.assignment
+
+		if (type == ADD_ASSIGN || type == SUB_ASSIGN || type == MUL_ASSIGN || type == DIV_ASSIGN ||
+			type == MOD_ASSIGN || type == BLS_ASSIGN || type == BRS_ASSIGN) {
+			if (assignment.left.typeOf.isNonNumeric) {
+				error('''Invalid assignment to a non-numeric variable of type «assignment.left.typeOf.name»''',
+					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
+			} else if (assignment.right.typeOf.isNonNumeric) {
+				error('''Right hand side of assignment must be a numberic value''', ASSIGNMENT_EXPRESSION__RIGHT,
+					ASSIGN_VALUE_TYPE)
+			}
+		} else if (type == BAN_ASSIGN || type == BOR_ASSIGN) {
+			val leftType = assignment.left.typeOf
+
+			if (leftType.isNonNumeric && leftType.isNonBoolean) {
+				error('''Invalid assignment to a non-numeric non-boolean variable of type «assignment.left.typeOf.name»''',
+					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
+			} else {
+				val rightType = assignment.right.typeOf
+
+				if (rightType.isNonNumeric && rightType.isNonBoolean) {
+					error('''Right hand side of assignment must be a numberic or boolean value''',
+						ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
+				}
+			}
+		} else if (type == ASSIGN) {
+			val leftType = assignment.left.typeOf
+			val rightType = assignment.right.typeOf
+
+			if (rightType.isNonInstanceOf(leftType)) {
+				error('''Cannot assign a value of type «rightType.name» value to a variable of type «leftType.name»''',
+					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
+			}
+		}
+
+	}
+
+	private def Iterable<Variable> searchDuplicatesOn(Variable v, EObject container) {
 		if (container === null) {
-			return false
+			return newArrayList
 		}
 
 		return switch (container) {
 			Block:
 				container.statements.takeWhile [
 					it != v && !it.getAllContentsOfType(Variable).contains(v)
-				].filter(Variable).exists[it.name == v.name]
+				].filter(Variable).filter[it.name == v.name]
 			ForStatement:
-				container.variables.takeWhile[it != v].filter(Variable).exists[it.name == v.name]
+				container.variables.takeWhile[it != v].filter(Variable).filter[it.name == v.name]
 			Method:
-				container.params.exists[it.name == v.name]
+				container.params.filter[it.name == v.name]
+			default:
+				newArrayList
+		} + v.searchDuplicatesOn(container.eContainer)
+	}
+
+	private def isBlocker(Statement s) {
+		s.isBreakContinueOrReturn || s.isInfiniteLoop || s.containsBlocker
+	}
+
+	private def isInfiniteLoop(Statement s) {
+		switch (s) {
+			ForStatement: {
+				if (s.condition === null || s.condition.isConstant) {
+					val condition = s.condition?.valueOf ?: true
+
+					if (condition instanceof Boolean && (condition as Boolean)) {
+						return s.body.getAllContentsOfType(Statement).forall[!isBreakOrReturn]
+					}
+				} else {
+					false
+				}
+			}
+			ForeverStatement:
+				s.body.getAllContentsOfType(Statement).forall[!isBreakOrReturn]
 			default:
 				false
-		} || v.searchForDuplicityOn(container.eContainer)
+		}
 	}
 
-	private def unconditionalBreak(Statement s) {
-		s.isBreakContinueOrReturn || (s instanceof IfStatement && (s as IfStatement).unconditionalBreak)
-	}
+	private def Boolean containsBlocker(EObject s) {
+		if (s === null) {
+			return false
+		}
 
-	private def Boolean unconditionalBreak(IfStatement ifStatement) {
-		if (ifStatement === null) {
-			null
-		} else if (ifStatement.condition.isConstant) {
-			val condition = ifStatement.condition.valueOf
+		switch (s) {
+			IfStatement: {
+				if (s.condition.isConstant) {
+					val condition = s.condition.valueOf
 
-			if (condition instanceof Boolean) {
-				if (condition) {
-					ifStatement.body.statements.exists[isBreakContinueOrReturn]
+					if (condition instanceof Boolean) {
+						if (condition) {
+							s.body.statements.exists[blocker]
+						} else {
+							s.^else.containsBlocker
+						}
+					} else {
+						false
+					}
 				} else {
-					ifStatement.^else.unconditionalBreak ?: false
+					s.body.statements.exists[blocker] && s.^else.containsBlocker
 				}
-			} else {
-				false
 			}
-		} else {
-			ifStatement.body.statements.exists[isBreakContinueOrReturn] &&
-				(ifStatement.^else.unconditionalBreak ?: true)
+			ElseStatement:
+				if (s.body !== null) {
+					s.body.statements.exists[blocker]
+				} else {
+					s.^if.containsBlocker
+				}
+			default:
+				false
 		}
-	}
 
-	private def Boolean unconditionalBreak(ElseStatement elseStatement) {
-		if (elseStatement === null) {
-			null
-		} else if (elseStatement.body !== null) {
-			elseStatement.body.statements.exists[isBreakContinueOrReturn]
-		} else {
-			elseStatement.^if.unconditionalBreak
-		}
 	}
 
 	private def isBreakContinueOrReturn(Statement s) {
 		s instanceof ReturnStatement || s instanceof BreakStatement || s instanceof ContinueStatement
+	}
+
+	private def isBreakOrReturn(Statement s) {
+		s instanceof ReturnStatement || s instanceof BreakStatement
 	}
 
 }

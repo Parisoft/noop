@@ -339,7 +339,7 @@ class NoopFormatter extends AbstractFormatter2 {
 
 	def dispatch void format(NotExpression expression, extension IFormattableDocument document) {
 		expression.preFormat(document)
-		expression.regionFor.keyword('not').append[noSpace]
+		expression.regionFor.keyword('not').append[oneSpace]
 	}
 
 	def dispatch void format(SigNegExpression expression, extension IFormattableDocument document) {

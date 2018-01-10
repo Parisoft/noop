@@ -136,9 +136,17 @@ class Classes {
 			c1.isSubclassOf(c2)
 		}
 	}
+	
+	def isNonInstanceOf(NoopClass c1, NoopClass c2) {
+		!c1.isInstanceOf(c2)
+	}
 
 	def isNumeric(NoopClass c) {
 		TypeSystem::LIB_NUMBERS.contains(c.fullyQualifiedName?.toString)
+	}
+	
+	def isNonNumeric(NoopClass c) {
+		!c.isNumeric
 	}
 
 	def isBoolean(NoopClass c) {
