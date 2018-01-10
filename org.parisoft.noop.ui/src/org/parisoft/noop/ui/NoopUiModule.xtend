@@ -17,13 +17,12 @@ import org.parisoft.noop.ui.highlighting.NoopAntlrTokenToAttributeIdMapper
 import org.parisoft.noop.ui.highlighting.NoopHighlightingConfiguration
 import org.parisoft.noop.ui.highlighting.NoopSemanticHighlightingCalculator
 import org.parisoft.noop.ui.hover.NoopHoverProvider
+import org.parisoft.noop.ui.rename.NoopRenameStrategy
 import org.parisoft.noop.ui.rename.NoopResourceRelocationStrategy
 import org.parisoft.noop.ui.wizard.NoopNewProjectWizard
 import org.parisoft.noop.ui.wizard.NoopNewProjectWizard2
 import org.parisoft.noop.ui.wizard.NoopProjectCreator
 import org.parisoft.noop.ui.wizard.NoopProjectCreator2
-import org.eclipse.xtext.ui.refactoring.IRenameStrategy
-import org.parisoft.noop.ui.rename.NoopRenameStrategy
 
 /**
  * Use this class to register components to be used within the Eclipse IDE.
@@ -41,7 +40,6 @@ class NoopUiModule extends AbstractNoopUiModule {
 		binder.bind(NoopProjectCreator).to(NoopProjectCreator2)
 		binder.bind(NoopNewProjectWizard).to(NoopNewProjectWizard2)
 		binder.bind(IResourceRelocationStrategy).to(NoopResourceRelocationStrategy)
-		binder.bind(IRenameStrategy).to(NoopRenameStrategy)
 	}
 	
 	override bindITemplateProposalProvider() {
