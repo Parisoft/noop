@@ -98,6 +98,12 @@
 			name="Templates">
 			<keywordReference id="org.parisoft.noop.ui.keyword_Noop"/>
 		</page>
+  <page
+        category="org.parisoft.noop.Noop"
+        class="org.parisoft.noop.ui.preferences.NoopPreferencePage"
+        id="org.parisoft.noop.ui.preferences.NoopPreferencePage"
+        name="Run">
+  </page>
 	</extension>
 	<extension
 			point="org.eclipse.ui.propertyPages">
@@ -143,6 +149,12 @@
        description="Creates a new NOOP Class"
        id="org.parisoft.noop.ui.command.NoopNewClass"
        name="New NOOP Class">
+ </command>
+ <command
+       defaultHandler="org.parisoft.noop.ui.commands.NoopRunHandler"
+       description="Run the compiled game on an external emulator"
+       id="org.parisoft.noop.ui.command.NoopRun"
+       name="Run">
  </command>
 	</extension>
 	<extension point="org.eclipse.ui.menus">
@@ -198,6 +210,11 @@
         <command
               commandId="org.parisoft.noop.ui.command.NoopNewClass"
               icon="icons/NewClass.png"
+              style="push">
+        </command>
+        <command
+              commandId="org.parisoft.noop.ui.command.NoopRun"
+              icon="icons/Keyword.png"
               style="push">
         </command>
      </toolbar>
@@ -481,5 +498,11 @@
     <strategy
           class="org.parisoft.noop.ui.rename.NoopResourceRelocationStrategy">
     </strategy>
+ </extension>
+ <extension
+       point="org.eclipse.core.runtime.preferences">
+    <initializer
+          class="org.parisoft.noop.preferences.PreferenceInitializer">
+    </initializer>
  </extension>
 </plugin>

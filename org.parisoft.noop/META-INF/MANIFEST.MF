@@ -14,23 +14,26 @@ Require-Bundle: org.eclipse.xtext,
  org.eclipse.xtend.lib;bundle-version="2.13.0",
  org.eclipse.emf.common,
  org.antlr.runtime,
- org.eclipse.core.resources;bundle-version="3.12.0"
+ org.eclipse.core.resources;bundle-version="3.12.0",
+ org.eclipse.equinox.preferences,
+ org.eclipse.core.runtime
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Export-Package: noop.io,
  noop.lang,
  org.parisoft.noop,
  org.parisoft.noop.extension,
+ org.parisoft.noop.formatting2,
  org.parisoft.noop.generator,
  org.parisoft.noop.noop,
  org.parisoft.noop.noop.impl,
  org.parisoft.noop.noop.util,
  org.parisoft.noop.parser.antlr,
  org.parisoft.noop.parser.antlr.internal,
+ org.parisoft.noop.preferences,
  org.parisoft.noop.scoping,
  org.parisoft.noop.serializer,
  org.parisoft.noop.services,
- org.parisoft.noop.validation,
- org.parisoft.noop.formatting2
+ org.parisoft.noop.validation
 Import-Package: noop.io,
  noop.lang,
  org.apache.log4j

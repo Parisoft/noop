@@ -33,12 +33,13 @@ Visit https://github.com/Parisoft/noop
       startupProgressRect="5,292,445,8"
       startupMessageRect="7,274,445,16"
       startupForegroundColor="BB2024" />
-   <launcher name="NOOPr">
+   <launcher name="noopr">
       <linux icon="/org.parisoft.noop.product/images/Icon.xpm"/>
       <win useIco="false">
          <bmp/>
       </win>
    </launcher>
+
 
    <vm>
       <linux include="false">org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8</linux>

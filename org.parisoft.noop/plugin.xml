@@ -7,4 +7,10 @@
 			class = "org.parisoft.noop.noop.NoopPackage"
 			genModel = "model/generated/Noop.genmodel" />
 	</extension>
+ <extension
+       point="org.eclipse.core.runtime.preferences">
+    <initializer
+          class="org.parisoft.noop.preferences.PreferenceInitializer">
+    </initializer>
+ </extension>
 </plugin>
