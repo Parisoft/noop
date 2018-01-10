@@ -710,34 +710,28 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def assignType(AssignmentExpression assignment) {
 		val type = assignment.assignment
+		val leftType = assignment.left.typeOf
+		val rightType = assignment.right.typeOf
 
 		if (type == ADD_ASSIGN || type == SUB_ASSIGN || type == MUL_ASSIGN || type == DIV_ASSIGN ||
 			type == MOD_ASSIGN || type == BLS_ASSIGN || type == BRS_ASSIGN) {
-			if (assignment.left.typeOf.isNonNumeric) {
-				error('''Invalid assignment to a non-numeric variable of type «assignment.left.typeOf.name»''',
+			if (leftType.isNonNumeric) {
+				error('''Invalid assignment to a non-numeric variable of type «leftType.name»''',
 					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
-			} else if (assignment.right.typeOf.isNonNumeric) {
+			} else if (rightType.isNonNumeric) {
 				error('''Right hand side of assignment must be a numberic value''', ASSIGNMENT_EXPRESSION__RIGHT,
 					ASSIGN_VALUE_TYPE)
 			}
 		} else if (type == BAN_ASSIGN || type == BOR_ASSIGN) {
-			val leftType = assignment.left.typeOf
-
 			if (leftType.isNonNumeric && leftType.isNonBoolean) {
 				error('''Invalid assignment to a non-numeric non-boolean variable of type «assignment.left.typeOf.name»''',
 					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
-			} else {
-				val rightType = assignment.right.typeOf
+			} else if (rightType.isNonNumeric && rightType.isNonBoolean) {
+				error('''Right hand side of assignment must be a numberic or boolean value''',
+					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
 
-				if (rightType.isNonNumeric && rightType.isNonBoolean) {
-					error('''Right hand side of assignment must be a numberic or boolean value''',
-						ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
-				}
 			}
 		} else if (type == ASSIGN) {
-			val leftType = assignment.left.typeOf
-			val rightType = assignment.right.typeOf
-
 			if (rightType.isNonInstanceOf(leftType)) {
 				error('''Cannot assign a value of type «rightType.name» value to a variable of type «leftType.name»''',
 					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
