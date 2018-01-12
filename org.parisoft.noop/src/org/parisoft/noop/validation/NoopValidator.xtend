@@ -71,6 +71,7 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val VARIABLE_INES_HEADER_TYPE = 'org.parisoft.noop.VARIABLE_INES_HEADER_TYPE'
 	public static val VARIABLE_DUPLICITY = 'org.parisoft.noop.VARIABLE_DUPLICITY'
 	public static val VARIABLE_NEVER_USED = 'org.parisoft.noop.VARIABLE_NEVER_USED'
+	public static val VARIABLE_DIMENSION = 'org.parisoft.noop.VARIABLE_DIMENSION'
 	public static val PARAMETER_VOID_TYPE = 'org.parisoft.noop.PARAMETER VOID_TYPE'
 	public static val PARAMETER_INES_HEADER_TYPE = 'org.parisoft.noop.PARAMETER INES_HEADER_TYPE'
 	public static val PARAMETER_STORAGE_TYPE = 'org.parisoft.noop.PARAMETER_STORAGE_TYPE'
@@ -357,6 +358,14 @@ class NoopValidator extends AbstractNoopValidator {
 				v.getContainerOfType(Method).getAllContentsOfType(MemberRef).forall[member != v]) {
 				warning('''Variable «v.name» is never used locally''', MEMBER__NAME, VARIABLE_NEVER_USED)
 			}
+		}
+	}
+
+	@Check
+	def variableDimension(Variable v) {
+		if (v?.value.isUnbounded) {
+			error('''«IF v.isField»Fields«ELSE»Variables«ENDIF» cannot be declared with an unbounded array''',
+				VARIABLE__VALUE, VARIABLE_DIMENSION)
 		}
 	}
 
