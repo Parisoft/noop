@@ -363,7 +363,7 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def variableDimension(Variable v) {
-		if (v?.value.isUnbounded) {
+		if (v?.value.isUnbounded && v?.value?.dimensionOf?.size > 0) {
 			error('''«IF v.isField»Fields«ELSE»Variables«ENDIF» cannot be declared with an unbounded array''',
 				VARIABLE__VALUE, VARIABLE_DIMENSION)
 		}
