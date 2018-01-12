@@ -3,6 +3,7 @@ package org.parisoft.noop.ui.preferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.FileFieldEditor;
+import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
@@ -19,12 +20,12 @@ import org.parisoft.noop.preferences.NoopPreferences;
  * preferences can be accessed directly via the preference store.
  */
 
-public class NoopPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
+public class NoopPlayPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
-	public NoopPreferencePage() {
+	public NoopPlayPreferencePage() {
 		super(GRID);
 		setPreferenceStore(new ScopedPreferenceStore(InstanceScope.INSTANCE, "org.parisoft.noop"));
-		setDescription("Preferences to run your games");
+		setDescription("External emulator configuration");
 	}
 
 	/**
@@ -33,8 +34,8 @@ public class NoopPreferencePage extends FieldEditorPreferencePage implements IWo
 	 * knows how to save and restore itself.
 	 */
 	public void createFieldEditors() {
-		addField(new FileFieldEditor(NoopPreferences.P_PATH_TO_EMULATOR, "Emulator executable:",
-				getFieldEditorParent()));
+		addField(new FileFieldEditor(NoopPreferences.P_EMULATOR_PATH, "Emulator executable:", getFieldEditorParent()));
+		addField(new StringFieldEditor(NoopPreferences.P_EMULATOR_OPTS, "Emulator options (optional):", getFieldEditorParent()));
 	}
 
 	/*

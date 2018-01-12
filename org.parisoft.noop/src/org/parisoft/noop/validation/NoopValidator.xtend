@@ -104,7 +104,6 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check(NORMAL)
 	def classPrepare(NoopClass c) {
 		// TODO migrate prepare from generator
-		println('''«this» validating «c» at thread «Thread::currentThread.name»''')
 	}
 
 	@Check

@@ -42,7 +42,6 @@ class NoopGenerator extends AbstractGenerator {
 	var lastSuccesfullCompile = 0L
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		println('''«this» generating «resource» at thread «Thread::currentThread.name»''')
 		if (System::currentTimeMillis - lastSuccesfullCompile > 5) {
 			val asm = resource.compile
 

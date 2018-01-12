@@ -1,7 +1,7 @@
 package org.parisoft.noop.ui.perspectives
 
-import org.eclipse.ui.IPerspectiveFactory
 import org.eclipse.ui.IPageLayout
+import org.eclipse.ui.IPerspectiveFactory
 
 class NoopPerspectiveFactory implements IPerspectiveFactory {
 
@@ -13,6 +13,7 @@ class NoopPerspectiveFactory implements IPerspectiveFactory {
 		topLeft.addPlaceholder(IPageLayout.ID_BOOKMARKS)
 
 		layout.addView(IPageLayout.ID_PROBLEM_VIEW, IPageLayout::BOTTOM, 0.66f, editorArea)
+//		layout.addView(IConsoleConstants.ID_CONSOLE_VIEW, IPageLayout::BOTTOM, 0.66f, editorArea)
 	}
 
 }

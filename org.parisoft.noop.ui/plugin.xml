@@ -100,9 +100,9 @@
 		</page>
   <page
         category="org.parisoft.noop.Noop"
-        class="org.parisoft.noop.ui.preferences.NoopPreferencePage"
-        id="org.parisoft.noop.ui.preferences.NoopPreferencePage"
-        name="Run">
+        class="org.parisoft.noop.ui.preferences.NoopPlayPreferencePage"
+        id="org.parisoft.noop.ui.preferences.NoopPlayPreferencePage"
+        name="Play">
   </page>
 	</extension>
 	<extension

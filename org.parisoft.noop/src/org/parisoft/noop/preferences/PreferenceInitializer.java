@@ -15,7 +15,8 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 	 * @see org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer#initializeDefaultPreferences()
 	 */
 	public void initializeDefaultPreferences() {
-		getPreferenceStore().put(NoopPreferences.P_PATH_TO_EMULATOR, "nes");
+		getPreferenceStore().put(NoopPreferences.P_EMULATOR_PATH, "");
+		getPreferenceStore().put(NoopPreferences.P_EMULATOR_OPTS, "");
 	}
 
 	public static IEclipsePreferences getPreferenceStore() {
