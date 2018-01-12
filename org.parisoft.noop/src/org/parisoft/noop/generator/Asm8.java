@@ -1,11 +1,14 @@
 package org.parisoft.noop.generator;
 
+import static java.nio.file.Files.deleteIfExists;
+
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -19,8 +22,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
-
-import static java.nio.file.Files.deleteIfExists;
 
 @SuppressWarnings("serial")
 public class Asm8 {
@@ -41,6 +42,9 @@ public class Asm8 {
     private static final List<Character> whiteSpaceChars2 = Arrays.asList(' ', '\t', '\r', '\n', '\"');
     private static final Pattern mathRegex = Pattern.compile("!|^|&|\\||\\+|-|\\*|/|%|\\(|\\)|<|>|=|,");
 
+    public static PrintStream outStream = System.out;
+    public static PrintStream errStream = System.err;
+    
     enum OpType {
         ACC(0, (char) 0, "A"),
         IMM(1, '#', ""),
@@ -183,6 +187,7 @@ public class Asm8 {
     private boolean verbose = true;
     private int dependant;
     private int enumSaveAddr;
+    
 
     public void setVerboseListing(boolean verboseListing) {
         this.verboseListing = verboseListing;
@@ -203,7 +208,7 @@ public class Asm8 {
     public void setVerbose(boolean verbose) {
         this.verbose = verbose;
     }
-
+    
     public static void main(String[] args) {
         if (args.length < 1) {
             showHelp();
@@ -228,14 +233,14 @@ public class Asm8 {
                         asm8.listFileName = "";
                         break;
                     case 'd':
-                        System.err.println("Error: option not implemented yet: " + args[i]);
+                        errStream.println("Error: option not implemented yet: " + args[i]);
                         System.exit(0);
                         break;
                     case 'q':
                         asm8.verbose = false;
                         break;
                     default:
-                        System.err.println("Error: unknown option: " + args[i]);
+                        errStream.println("Error: unknown option: " + args[i]);
                         System.exit(0);
                 }
             } else {
@@ -246,7 +251,7 @@ public class Asm8 {
                 } else if (notOption == 2) {
                     asm8.listFileName = args[i];
                 } else {
-                    System.err.println("Error: unused argument: " + args[i]);
+                    errStream.println("Error: unused argument: " + args[i]);
                     System.exit(0);
                 }
 
@@ -255,7 +260,7 @@ public class Asm8 {
         }
 
         if (asm8.inputFileName == null) {
-            System.err.println("Error: No source file specified.");
+            errStream.println("Error: No source file specified.");
             System.exit(0);
         }
 
@@ -266,7 +271,7 @@ public class Asm8 {
         try {
             deleteIfExists(Paths.get(asm8.outputFileName));
         } catch (IOException e) {
-            System.err.println("Can't delete old output file");
+            errStream.println("Can't delete old output file");
             System.exit(0);
         }
 
@@ -278,7 +283,7 @@ public class Asm8 {
             try {
                 deleteIfExists(Paths.get(asm8.listFileName));
             } catch (IOException e) {
-                System.err.println("Can't delete old list file");
+                errStream.println("Can't delete old list file");
                 System.exit(0);
             }
         }
@@ -286,23 +291,23 @@ public class Asm8 {
         try {
             asm8.compile();
         } catch (Exception e) {
-            System.err.println(e.getMessage());
+            errStream.println(e.getMessage());
             System.exit(0);
         }
     }
 
     private static void showHelp() {
-        System.out.println();
-        System.out.println("asm8 " + VERSION);
-        System.out.println();
-        System.out.println("Usage:  asm8 [-options] sourcefile [outputfile] [listfile]");
-        System.out.println("    -?          show this help");
-        System.out.println("    -l          create listing");
-        System.out.println("    -L          create verbose listing (expand REPT, MACRO)");
-        System.out.println("    -d<name>    define symbol");
-        System.out.println("    -q          quiet mode (no output unless error)");
-        System.out.println();
-        System.out.println("See README.TXT for more info.");
+        outStream.println();
+        outStream.println("asm8 " + VERSION);
+        outStream.println();
+        outStream.println("Usage:  asm8 [-options] sourcefile [outputfile] [listfile]");
+        outStream.println("    -?          show this help");
+        outStream.println("    -l          create listing");
+        outStream.println("    -L          create verbose listing (expand REPT, MACRO)");
+        outStream.println("    -d<name>    define symbol");
+        outStream.println("    -q          quiet mode (no output unless error)");
+        outStream.println();
+        outStream.println("See README.TXT for more info.");
     }
 
     public void compile() {
@@ -318,10 +323,10 @@ public class Asm8 {
                     lastChance = true;
 
                     if (verbose) {
-                        System.out.println("last try..");
+                        outStream.println("last try..");
                     }
                 } else if (verbose) {
-                    System.out.printf("pass %s..\n", pass);
+                    outStream.printf("pass %s..\n", pass);
                 }
 
                 needAnotherPass = false;
@@ -354,7 +359,7 @@ public class Asm8 {
                 outputStream.close();
 
                 if (verbose) {
-                    System.out.printf("%s written (%d bytes).\n", outputFileName, new File(outputFileName).length());
+                    outStream.printf("%s written (%d bytes).\n", outputFileName, new File(outputFileName).length());
                 }
             } catch (IOException e) {
                 throw new Asm8Exception("Write error.");

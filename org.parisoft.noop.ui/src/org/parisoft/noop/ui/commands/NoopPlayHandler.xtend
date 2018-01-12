@@ -1,6 +1,9 @@
 package org.parisoft.noop.ui.commands
 
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.nio.file.Paths
+import java.util.concurrent.CompletableFuture
 import org.eclipse.core.commands.ExecutionEvent
 import org.eclipse.core.commands.ExecutionException
 import org.eclipse.core.resources.IMarker
@@ -11,14 +14,14 @@ import org.eclipse.jface.dialogs.MessageDialog
 import org.eclipse.jface.preference.PreferenceDialog
 import org.eclipse.jface.preference.PreferenceManager
 import org.eclipse.jface.preference.PreferenceNode
+import org.eclipse.swt.graphics.Color
+import org.eclipse.swt.widgets.Display
 import org.parisoft.noop.generator.NoopOutputConfigurationProvider
 import org.parisoft.noop.preferences.NoopPreferences
 import org.parisoft.noop.ui.preferences.NoopPlayPreferencePage
+import utils.Consoles
 
 import static extension org.eclipse.ui.handlers.HandlerUtil.*
-import java.util.concurrent.CompletableFuture
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 class NoopPlayHandler extends NoopAbstractHandler {
 
@@ -70,19 +73,22 @@ class NoopPlayHandler extends NoopAbstractHandler {
 		}
 
 		val command = '''«emu»«IF !opts.nullOrEmpty» «opts»«ENDIF» «Paths::get(bin.locationURI).toAbsolutePath.toString»'''
+		val console = Consoles::instance
+		val err = console.newMessageStream => [color = new Color(Display.current ?: Display::^default, 255, 0, 0)]
+		val out = console.newMessageStream
 
 		event.activeWorkbenchWindow.run(true, true) [ monitor |
 			monitor.beginTask('Launching game', 2)
 
 			val proc = Runtime::runtime.exec(command)
-			
+
 			monitor.worked(1)
-			
-			val err = CompletableFuture::runAsync [
-				new BufferedReader(new InputStreamReader(proc.inputStream)).lines.forEach[System::out.println(it)]
+
+			val tErr = CompletableFuture::runAsync [
+				new BufferedReader(new InputStreamReader(proc.inputStream)).lines.forEach[err.println(it)]
 			]
-			val out = CompletableFuture::runAsync [
-				new BufferedReader(new InputStreamReader(proc.errorStream)).lines.forEach[System::err.println(it)]
+			val tOut = CompletableFuture::runAsync [
+				new BufferedReader(new InputStreamReader(proc.errorStream)).lines.forEach[out.println(it)]
 			]
 
 			while (proc.alive && !monitor.isCanceled) {
@@ -90,8 +96,8 @@ class NoopPlayHandler extends NoopAbstractHandler {
 			}
 
 			if (monitor.isCanceled) {
-				out.cancel(true)
-				err.cancel(true)
+				tOut.cancel(true)
+				tErr.cancel(true)
 				proc.destroyForcibly.waitFor
 			} else {
 				monitor.worked(1)

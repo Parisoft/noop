@@ -2,6 +2,7 @@ package org.parisoft.noop.ui.perspectives
 
 import org.eclipse.ui.IPageLayout
 import org.eclipse.ui.IPerspectiveFactory
+import org.eclipse.ui.console.IConsoleConstants
 
 class NoopPerspectiveFactory implements IPerspectiveFactory {
 
@@ -12,8 +13,9 @@ class NoopPerspectiveFactory implements IPerspectiveFactory {
 		topLeft.addView(IPageLayout.ID_PROJECT_EXPLORER)
 		topLeft.addPlaceholder(IPageLayout.ID_BOOKMARKS)
 
-		layout.addView(IPageLayout.ID_PROBLEM_VIEW, IPageLayout::BOTTOM, 0.66f, editorArea)
-//		layout.addView(IConsoleConstants.ID_CONSOLE_VIEW, IPageLayout::BOTTOM, 0.66f, editorArea)
+		val bottom = layout.createFolder("bottom", IPageLayout::BOTTOM, 0.66f, editorArea)
+		bottom.addView(IPageLayout.ID_PROBLEM_VIEW)
+		bottom.addView(IConsoleConstants.ID_CONSOLE_VIEW)
 	}
 
 }
