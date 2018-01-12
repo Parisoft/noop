@@ -6,8 +6,6 @@ import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.Path;
-import org.eclipse.jface.viewers.ISelection;
-import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ModifyEvent;
@@ -35,19 +33,19 @@ public class NoopNewClassWizardPage extends WizardPage {
 	private Text containerText;
 
 	private Text fileText;
-
-	private ISelection selection;
+	
+	private String folderPath;
 
 	/**
 	 * Constructor for SampleNewWizardPage.
 	 * 
 	 * @param pageName
 	 */
-	public NoopNewClassWizardPage(ISelection selection) {
+	public NoopNewClassWizardPage(String folderPath) {
 		super("wizardPage");
 		setTitle("NOOP Class");
 		setDescription("Create a new NOOP Class");
-		this.selection = selection;
+		this.folderPath = folderPath;
 	}
 
 	@Override
@@ -102,20 +100,7 @@ public class NoopNewClassWizardPage extends WizardPage {
 	 */
 
 	private void initialize() {
-		if (selection != null && selection.isEmpty() == false && selection instanceof IStructuredSelection) {
-			IStructuredSelection ssel = (IStructuredSelection) selection;
-			if (ssel.size() > 1)
-				return;
-			Object obj = ssel.getFirstElement();
-			if (obj instanceof IResource) {
-				IContainer container;
-				if (obj instanceof IContainer)
-					container = (IContainer) obj;
-				else
-					container = ((IResource) obj).getParent();
-				containerText.setText(container.getFullPath().toString());
-			}
-		}
+		containerText.setText(folderPath != null ? folderPath : "");
 		fileText.setText("NewClass");
 	}
 

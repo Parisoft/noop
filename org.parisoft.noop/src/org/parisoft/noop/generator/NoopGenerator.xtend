@@ -4,7 +4,6 @@
 package org.parisoft.noop.generator
 
 import com.google.inject.Inject
-import java.util.Objects
 import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
@@ -43,6 +42,7 @@ class NoopGenerator extends AbstractGenerator {
 	var lastSuccesfullCompile = 0L
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
+		println('''«this» generating «resource» at thread «Thread::currentThread.name»''')
 		if (System::currentTimeMillis - lastSuccesfullCompile > 5) {
 			val asm = resource.compile
 
@@ -127,7 +127,7 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def gameClass(Resource resource) {
-		val resourceProject = resource.URI.projectURI
+		val resourceProject = resource.URI.project
 
 		val games = descriptions.allResourceDescriptions.map [
 			getExportedObjectsByType(NoopPackage::eINSTANCE.noopClass)
@@ -140,7 +140,7 @@ class NoopGenerator extends AbstractGenerator {
 
 			obj as NoopClass
 		].filter [
-			Objects::equals(eResource.URI?.projectURI, resourceProject)
+			eResource.URI?.project == resourceProject
 		].filter [
 			it.isGame && it.name != TypeSystem::LIB_GAME
 		].toSet

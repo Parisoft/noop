@@ -145,16 +145,22 @@
 			name="Copy Qualified Name">
 	</command>
  <command
-       defaultHandler="org.parisoft.noop.ui.commands.NoopNewClassHandler"
+       defaultHandler="org.parisoft.noop.ui.NoopExecutableExtensionFactory:org.parisoft.noop.ui.commands.NoopNewClassHandler"
        description="Creates a new NOOP Class"
        id="org.parisoft.noop.ui.command.NoopNewClass"
        name="New NOOP Class">
  </command>
  <command
-       defaultHandler="org.parisoft.noop.ui.commands.NoopRunHandler"
-       description="Run the compiled game on an external emulator"
-       id="org.parisoft.noop.ui.command.NoopRun"
-       name="Run">
+       defaultHandler="org.parisoft.noop.ui.NoopExecutableExtensionFactory:org.parisoft.noop.ui.commands.NoopBuildHandler"
+       description="Build the project"
+       id="org.parisoft.noop.ui.command.NoopBuild"
+       name="Build">
+ </command>
+ <command
+       defaultHandler="org.parisoft.noop.ui.NoopExecutableExtensionFactory:org.parisoft.noop.ui.commands.NoopPlayHandler"
+       description="Play the compiled game"
+       id="org.parisoft.noop.ui.command.NoopPlay"
+       name="Play">
  </command>
 	</extension>
 	<extension point="org.eclipse.ui.menus">
@@ -213,8 +219,13 @@
               style="push">
         </command>
         <command
-              commandId="org.parisoft.noop.ui.command.NoopRun"
-              icon="icons/Keyword.png"
+              commandId="org.parisoft.noop.ui.command.NoopBuild"
+              icon="icons/Build.png"
+              style="push">
+        </command>
+        <command
+              commandId="org.parisoft.noop.ui.command.NoopPlay"
+              icon="icons/Play.png"
               style="push">
         </command>
      </toolbar>

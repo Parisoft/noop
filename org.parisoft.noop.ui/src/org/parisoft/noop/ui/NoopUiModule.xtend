@@ -23,6 +23,7 @@ import org.parisoft.noop.ui.wizard.NoopNewProjectWizard
 import org.parisoft.noop.ui.wizard.NoopNewProjectWizard2
 import org.parisoft.noop.ui.wizard.NoopProjectCreator
 import org.parisoft.noop.ui.wizard.NoopProjectCreator2
+import org.parisoft.noop.ui.build.NoopBuildParticipant
 
 /**
  * Use this class to register components to be used within the Eclipse IDE.
@@ -49,4 +50,9 @@ class NoopUiModule extends AbstractNoopUiModule {
 	override bindIRenameStrategy() {
 		return NoopRenameStrategy
 	}
+	
+	override bindIXtextBuilderParticipant() {
+		NoopBuildParticipant
+	}
+	
 }
