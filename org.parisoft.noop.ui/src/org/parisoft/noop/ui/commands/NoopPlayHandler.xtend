@@ -1,5 +1,6 @@
 package org.parisoft.noop.ui.commands
 
+import com.google.inject.Inject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.nio.file.Paths
@@ -14,16 +15,17 @@ import org.eclipse.jface.dialogs.MessageDialog
 import org.eclipse.jface.preference.PreferenceDialog
 import org.eclipse.jface.preference.PreferenceManager
 import org.eclipse.jface.preference.PreferenceNode
-import org.eclipse.swt.graphics.Color
-import org.eclipse.swt.widgets.Display
+import org.eclipse.ui.console.MessageConsoleStream
 import org.parisoft.noop.generator.NoopOutputConfigurationProvider
 import org.parisoft.noop.preferences.NoopPreferences
 import org.parisoft.noop.ui.preferences.NoopPlayPreferencePage
-import utils.Consoles
+import utils.NoopConsole
 
 import static extension org.eclipse.ui.handlers.HandlerUtil.*
 
 class NoopPlayHandler extends NoopAbstractHandler {
+
+	@Inject NoopConsole console
 
 	override execute(ExecutionEvent event) throws ExecutionException {
 		var emu = ''
@@ -73,9 +75,8 @@ class NoopPlayHandler extends NoopAbstractHandler {
 		}
 
 		val command = '''«emu»«IF !opts.nullOrEmpty» «opts»«ENDIF» «Paths::get(bin.locationURI).toAbsolutePath.toString»'''
-		val console = Consoles::instance
-		val err = console.newMessageStream => [color = new Color(Display.current ?: Display::^default, 255, 0, 0)]
-		val out = console.newMessageStream
+		val err = console.newErrStream as MessageConsoleStream
+		val out = console.newOutStream as MessageConsoleStream
 
 		event.activeWorkbenchWindow.run(true, true) [ monitor |
 			monitor.beginTask('Launching game', 2)
@@ -121,7 +122,7 @@ class NoopPlayHandler extends NoopAbstractHandler {
 	}
 
 	private def build(IProject project, int kind, ExecutionEvent event) {
-		event.activeWorkbenchWindow.run(true, true) [ monitor |
+		event.activeWorkbenchWindow.run(false, true) [ monitor |
 			project.build(kind, monitor);
 		]
 
@@ -139,7 +140,7 @@ class NoopPlayHandler extends NoopAbstractHandler {
 	}
 
 	private def refresh(IProject project, ExecutionEvent event) {
-		event.activeWorkbenchWindow.run(true, true) [ monitor |
+		event.activeWorkbenchWindow.run(false, true) [ monitor |
 			project.refreshLocal(IResource::DEPTH_INFINITE, monitor)
 		]
 

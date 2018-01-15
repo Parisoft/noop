@@ -21,6 +21,7 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Export-Package: noop.io,
  noop.lang,
  org.parisoft.noop,
+ org.parisoft.noop.consoles,
  org.parisoft.noop.extension,
  org.parisoft.noop.formatting2,
  org.parisoft.noop.generator,

@@ -12,6 +12,7 @@ import org.eclipse.xtext.ui.editor.contentassist.XtextContentAssistProcessor
 import org.eclipse.xtext.ui.editor.hover.IEObjectHoverProvider
 import org.eclipse.xtext.ui.editor.syntaxcoloring.AbstractAntlrTokenToAttributeIdMapper
 import org.eclipse.xtext.ui.editor.syntaxcoloring.IHighlightingConfiguration
+import org.parisoft.noop.ui.build.NoopBuildParticipant
 import org.parisoft.noop.ui.contentassist.NoopTemplateProposalProvider
 import org.parisoft.noop.ui.highlighting.NoopAntlrTokenToAttributeIdMapper
 import org.parisoft.noop.ui.highlighting.NoopHighlightingConfiguration
@@ -23,7 +24,8 @@ import org.parisoft.noop.ui.wizard.NoopNewProjectWizard
 import org.parisoft.noop.ui.wizard.NoopNewProjectWizard2
 import org.parisoft.noop.ui.wizard.NoopProjectCreator
 import org.parisoft.noop.ui.wizard.NoopProjectCreator2
-import org.parisoft.noop.ui.build.NoopBuildParticipant
+import org.parisoft.noop.consoles.Console
+import utils.NoopConsole
 
 /**
  * Use this class to register components to be used within the Eclipse IDE.
@@ -41,6 +43,7 @@ class NoopUiModule extends AbstractNoopUiModule {
 		binder.bind(NoopProjectCreator).to(NoopProjectCreator2)
 		binder.bind(NoopNewProjectWizard).to(NoopNewProjectWizard2)
 		binder.bind(IResourceRelocationStrategy).to(NoopResourceRelocationStrategy)
+		binder.bind(Console).to(NoopConsole)
 	}
 	
 	override bindITemplateProposalProvider() {
@@ -48,7 +51,7 @@ class NoopUiModule extends AbstractNoopUiModule {
 	}
 	
 	override bindIRenameStrategy() {
-		return NoopRenameStrategy
+		NoopRenameStrategy
 	}
 	
 	override bindIXtextBuilderParticipant() {

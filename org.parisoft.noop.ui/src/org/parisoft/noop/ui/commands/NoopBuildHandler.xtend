@@ -22,7 +22,7 @@ class NoopBuildHandler extends NoopAbstractHandler {
 			return null
 		}
 
-		event.activeWorkbenchWindow.run(true, true) [ monitor |
+		event.activeWorkbenchWindow.run(false, true) [ monitor |
 			project.build(IncrementalProjectBuilder::FULL_BUILD, monitor);
 		]
 

@@ -4,13 +4,15 @@
 package org.parisoft.noop.generator
 
 import com.google.inject.Inject
+import com.google.inject.Provider
+import java.io.PrintStream
 import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
 import org.eclipse.xtext.naming.IQualifiedNameProvider
-import org.eclipse.xtext.resource.IResourceDescriptions
+import org.parisoft.noop.consoles.Console
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Datas
@@ -18,10 +20,10 @@ import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.Statements
-import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
-import org.parisoft.noop.noop.NoopPackage
+
+import static org.parisoft.noop.generator.Asm8.*
 
 /**
  * Generates code from your model files on save.
@@ -37,33 +39,36 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject extension Collections
 	@Inject extension Expressions
 	@Inject extension IQualifiedNameProvider
-	@Inject IResourceDescriptions descriptions
 
-	var lastSuccesfullCompile = 0L
+	@Inject Provider<Console> console
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		if (System::currentTimeMillis - lastSuccesfullCompile > 5) {
-			val asm = resource.compile
+		val asm = resource.compile
 
-			if (asm !== null) {
-				fsa.generateFile(asm.asmFileName, asm.content)
-				fsa.deleteFile(asm.binFileName)
+		if (asm !== null) {
+			fsa.generateFile(asm.asmFileName, asm.content)
+			fsa.deleteFile(asm.binFileName)
 
-				new Asm8 => [
-					inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
-					outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
-					listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
+			new Asm8 => [
+				Asm8.outStream = new PrintStream(console.get.newOutStream, true)
+				Asm8.errStream = new PrintStream(console.get.newErrStream, true)
 
+				inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
+				outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
+				listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
+
+				try {
 					compile
-				]
-			}
+				} catch (Exception exception) {
+					Asm8.errStream.println(exception.message)
+					throw exception
+				}
+			]
 		}
-
-		lastSuccesfullCompile = System::currentTimeMillis
 	}
 
 	private def compile(Resource resource) {
-		val gameImpl = resource.gameClass
+		val gameImpl = resource.contents.filter(NoopClass).findFirst[game]
 
 		if (gameImpl === null) {
 			return null
@@ -123,32 +128,6 @@ class NoopGenerator extends AbstractGenerator {
 		]
 
 		builder.toString
-	}
-
-	private def gameClass(Resource resource) {
-		val resourceProject = resource.URI.project
-
-		val games = descriptions.allResourceDescriptions.map [
-			getExportedObjectsByType(NoopPackage::eINSTANCE.noopClass)
-		].flatten.map [
-			var obj = it.EObjectOrProxy
-
-			if (obj.eIsProxy) {
-				obj = resource.resourceSet.getEObject(it.EObjectURI, true)
-			}
-
-			obj as NoopClass
-		].filter [
-			eResource.URI?.project == resourceProject
-		].filter [
-			it.isGame && it.name != TypeSystem::LIB_GAME
-		].toSet
-
-		if (games.size > 1) {
-			throw new IllegalArgumentException("More than 1 game implementation found: " + games.map[name])
-		}
-
-		return games.head
 	}
 
 	private def compile(AllocContext ctx) '''

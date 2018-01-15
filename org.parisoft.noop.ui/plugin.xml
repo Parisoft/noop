@@ -516,4 +516,18 @@
           class="org.parisoft.noop.preferences.PreferenceInitializer">
     </initializer>
  </extension>
+ <extension
+       point="org.eclipse.xtext.ui.shared.overridingGuiceModule">
+    <module
+          class="org.parisoft.noop.ui.NoopModule">
+    </module>
+ </extension>
+ <extension
+       point="org.eclipse.ui.bindings">
+    <key
+          commandId="org.parisoft.noop.ui.command.NoopPlay"
+          schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+          sequence="M1+R">
+    </key>
+ </extension>
 </plugin>
