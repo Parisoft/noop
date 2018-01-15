@@ -38,6 +38,7 @@ import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import static extension org.eclipse.xtext.nodemodel.util.NodeModelUtils.*
 import org.eclipse.xtext.CrossReference
+import org.eclipse.xtext.ui.editor.contentassist.ConfigurableCompletionProposal
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -56,6 +57,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	val storageKeywords = StorageType::VALUES.map[literal].toList
 	val proposableKeywords = (newArrayList('extends', 'instanceOf', 'as', 'return', 'this', 'super', 'break',
 		'continue') + storageKeywords).toList
+	val matcher = new SmartPrefixMatcher
 
 	override completeNoopClass_SuperClass(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
@@ -102,14 +104,14 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			} else if (receiver instanceof NewInstance) {
 				if (receiver.constructor === null) {
 					variables.filter[static].suppressOverriden.forEach [ variable |
-						acceptor.accept(variable.createInvocationProposal(context))
+						acceptor.accept(variable.createReferenceProposal(context))
 					]
 					methods.filter[static].suppressOverriden.forEach [ method |
 						acceptor.accept(method.createInvocationProposal(context))
 					]
 				} else {
 					variables.filter[nonStatic].suppressOverriden.forEach [ variable |
-						acceptor.accept(variable.createInvocationProposal(context))
+						acceptor.accept(variable.createReferenceProposal(context))
 					]
 					methods.filter[nonStatic].filter[nonNativeArray].suppressOverriden.forEach [ method |
 						acceptor.accept(method.createInvocationProposal(context))
@@ -117,7 +119,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				}
 			} else {
 				variables.filter[nonStatic].suppressOverriden.forEach [ variable |
-					acceptor.accept(variable.createInvocationProposal(context))
+					acceptor.accept(variable.createReferenceProposal(context))
 				]
 				methods.filter[nonStatic].filter[nonNativeArray].suppressOverriden.forEach [ method |
 					acceptor.accept(method.createInvocationProposal(context))
@@ -138,14 +140,14 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 
 		if (nonStatic) {
 			model.listVariables(context).forEach [ variable |
-				acceptor.accept(variable.createInvocationProposal(context))
+				acceptor.accept(variable.createReferenceProposal(context))
 			]
 			model.containerClass.allMethodsTopDown.filter[nonNativeArray].suppressOverriden.forEach [ method |
 				acceptor.accept(method.createInvocationProposal(context))
 			]
 		} else {
 			model.listVariables(context).filter[static || nonField].forEach [ variable |
-				acceptor.accept(variable.createInvocationProposal(context))
+				acceptor.accept(variable.createReferenceProposal(context))
 			]
 			model.containerClass.allMethodsTopDown.filter[static].filter[nonNativeArray].suppressOverriden.forEach [ method |
 				acceptor.accept(method.createInvocationProposal(context))
@@ -233,32 +235,41 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			displayString, null, null)
 	}
 
-	private def createInvocationProposal(Member member, ContentAssistContext context) {
-		val priority = if (member instanceof Variable) {
-				if (member.isStatic) {
-					4000
-				} else if (member.isField) {
-					5000
-				} else {
-					6000
-				}
-			} else if (member.isStatic) {
+	private def createReferenceProposal(Variable variable, ContentAssistContext context) {
+		val priority = if (variable.isStatic) {
+				4000
+			} else if (variable.isField) {
+				5000
+			} else {
+				6000
+			}
+
+		val prefix = context.prefix
+		val proposal = createCompletionProposal(variable.name, variable.text, variable.image, priority, prefix, context)
+
+		if (proposal instanceof ConfigurableCompletionProposal) {
+			proposal => [
+				it.matcher = matcher
+			]
+		}
+	}
+
+	private def createInvocationProposal(Method method, ContentAssistContext context) {
+		val priority = if (method.isStatic) {
 				2000
 			} else {
 				3000
 			}
 
 		val prefix = context.prefix
-		val proposal = createCompletionProposal(member.name, member.text, member.image, priority, prefix, context)
+		val proposal = createCompletionProposal(method.name, method.text, method.image, priority, prefix, context)
 
 		if (proposal instanceof NoopMethodCompletionProposal) {
 			proposal => [
+				it.matcher = matcher
 				it.hover = hover
-				it.additionalProposalInfo = member
-
-				if (member instanceof Method) {
-					it.setLinkedModeForInvocation(context.viewer, member)
-				}
+				it.additionalProposalInfo = method
+				it.setLinkedModeForInvocation(context.viewer, method)
 			]
 		}
 	}
@@ -270,6 +281,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 
 		if (proposal instanceof NoopMethodCompletionProposal) {
 			proposal => [
+				it.matcher = matcher
 				it.hover = hover
 				it.additionalProposalInfo = member
 
