@@ -17,7 +17,14 @@ class NoopConsole implements Console {
 	}
 
 	override newErrStream() {
-		console.newMessageStream => [color = new Color(Display::current ?: Display::^default, 255, 0, 0)]
+		val stream = console.newMessageStream
+		val display = Display::current ?: Display::^default
+
+		display.asyncExec [
+			stream.color = new Color(display, 255, 0, 0)
+		]
+
+		stream
 	}
 
 	override newOutStream() {
