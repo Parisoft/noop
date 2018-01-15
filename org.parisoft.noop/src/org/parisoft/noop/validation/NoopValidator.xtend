@@ -9,6 +9,7 @@ import org.eclipse.xtext.validation.Check
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Expressions
+import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.noop.AsmStatement
@@ -32,8 +33,10 @@ import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
 
-import static org.parisoft.noop.noop.NoopPackage.Literals.*
 import static org.parisoft.noop.noop.AssignmentType.*
+import static org.parisoft.noop.noop.NoopPackage.Literals.*
+
+import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 
 /**
@@ -43,6 +46,7 @@ import static extension org.eclipse.xtext.EcoreUtil2.*
  */
 class NoopValidator extends AbstractNoopValidator {
 
+	@Inject extension Files
 	@Inject extension Classes
 	@Inject extension Members
 	@Inject extension Expressions
@@ -51,6 +55,7 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val ISSUE_PREFIX = 'org.parisoft.noop'
 	public static val CLASS_RECURSIVE_HIERARCHY = 'org.parisoft.noop.CLASS_RECURSIVE_HIERARCHY'
 	public static val CLASS_SUPERCLASS_TYPE = 'org.parisoft.noop.CLASS_SUPERCLASS_TYPE'
+	public static val CLASS_SIZE_OVERFLOW = 'org.parisoft.noop.CLASS_SIZE_OVERFLOW'
 	public static val FIELD_TYPE_SAME_HIERARCHY = 'org.parisoft.noop.FIELD_TYPE_SAME_HIERARCHY'
 	public static val FIELD_STORAGE = 'org.parisoft.noop.FIELD_STORAGE'
 	public static val FIELD_DUPLICITY = 'org.parisoft.noop.FIELD_DUPLICITY'
@@ -103,8 +108,16 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val ASSIGN_TYPE = 'org.parisoft.noop.ASSIGN_TYPE'
 
 	@Check(NORMAL)
-	def classPrepare(NoopClass c) {
-		// TODO migrate prepare from generator
+	def classSizeOverflow(NoopClass c) {
+		if (c.isGame) {
+			val project = c.URI.project.name
+			val classes = c.prepare.classes.values.filter[URI.project?.name == project]
+
+			classes.filter[sizeOf > 0x100].forEach [
+				error('''Class «name» size is «sizeOf» bytes which overflows the maximum of 256 bytes''', it,
+					NOOP_CLASS__NAME, CLASS_SIZE_OVERFLOW)
+			]
+		}
 	}
 
 	@Check

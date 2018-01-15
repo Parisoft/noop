@@ -12,6 +12,7 @@ import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import java.util.WeakHashMap
 
 class Classes {
 
@@ -24,6 +25,7 @@ class Classes {
 
 	static val classeSizeCache = new ConcurrentHashMap<NoopClass, Integer>
 	static val classesCache = ConcurrentHashMap::<NoopClass>newKeySet
+	static val contextCache = java.util.Collections::synchronizedMap(new WeakHashMap<NoopClass, AllocContext>)
 
 	def getSuperClasses(NoopClass c) {
 		val visited = <NoopClass>newArrayList()
@@ -56,7 +58,7 @@ class Classes {
 	def isSubclassOf(NoopClass c1, NoopClass c2) {
 		c1.superClasses.exists[isEquals(c2)]
 	}
-	
+
 	def isNonSubclassOf(NoopClass c1, NoopClass c2) {
 		!c1.isSubclassOf(c2)
 	}
@@ -124,7 +126,7 @@ class Classes {
 	def isEquals(NoopClass c1, NoopClass c2) {
 		c1 == c2 || c1.fullyQualifiedName.toString == c2.fullyQualifiedName.toString
 	}
-	
+
 	def isNotEquals(NoopClass c1, NoopClass c2) {
 		!c1.isEquals(c2)
 	}
@@ -136,7 +138,7 @@ class Classes {
 			c1.isSubclassOf(c2)
 		}
 	}
-	
+
 	def isNonInstanceOf(NoopClass c1, NoopClass c2) {
 		!c1.isInstanceOf(c2)
 	}
@@ -144,7 +146,7 @@ class Classes {
 	def isNumeric(NoopClass c) {
 		TypeSystem::LIB_NUMBERS.contains(c.fullyQualifiedName?.toString)
 	}
-	
+
 	def isNonNumeric(NoopClass c) {
 		!c.isNumeric
 	}
@@ -152,7 +154,7 @@ class Classes {
 	def isBoolean(NoopClass c) {
 		c.fullyQualifiedName.toString == TypeSystem::LIB_BOOL
 	}
-	
+
 	def isNonBoolean(NoopClass c) {
 		!c.isBoolean
 	}
@@ -249,21 +251,23 @@ class Classes {
 	}
 
 	def prepare(NoopClass gameImplClass) {
-		TypeSystem::context.set(gameImplClass)
+		contextCache.computeIfAbsent(gameImplClass, [
+			TypeSystem::context.set(gameImplClass)
 
-		val ctx = new AllocContext
+			val ctx = new AllocContext
 
-		gameImplClass.prepare(ctx)
+			gameImplClass.prepare(ctx)
 
-		ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
+			ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
 
-		classesCache.clear
-		classesCache.addAll(ctx.classes.values)
+			classesCache.clear
+			classesCache.addAll(ctx.classes.values)
 
-		classeSizeCache.clear
-		ctx.classes.values.forEach[sizeOf]
+			classeSizeCache.clear
+			ctx.classes.values.forEach[sizeOf]
 
-		return ctx
+			return ctx
+		])
 	}
 
 	def void prepare(NoopClass noopClass, AllocContext ctx) {
