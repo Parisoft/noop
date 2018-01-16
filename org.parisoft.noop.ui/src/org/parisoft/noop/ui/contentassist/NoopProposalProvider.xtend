@@ -8,8 +8,10 @@ import org.eclipse.emf.ecore.EObject
 import org.eclipse.jface.viewers.StyledString
 import org.eclipse.swt.graphics.Image
 import org.eclipse.xtext.Assignment
+import org.eclipse.xtext.CrossReference
 import org.eclipse.xtext.Keyword
 import org.eclipse.xtext.RuleCall
+import org.eclipse.xtext.ui.editor.contentassist.ConfigurableCompletionProposal
 import org.eclipse.xtext.ui.editor.contentassist.ContentAssistContext
 import org.eclipse.xtext.ui.editor.contentassist.ICompletionProposalAcceptor
 import org.eclipse.xtext.ui.editor.hover.IEObjectHover
@@ -37,8 +39,6 @@ import org.parisoft.noop.ui.labeling.NoopLabelProvider
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import static extension org.eclipse.xtext.nodemodel.util.NodeModelUtils.*
-import org.eclipse.xtext.CrossReference
-import org.eclipse.xtext.ui.editor.contentassist.ConfigurableCompletionProposal
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -202,8 +202,10 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			val trueDisplay = new StyledString('true', StyledString::COUNTER_STYLER)
 			val falseDisplay = new StyledString('false', StyledString::COUNTER_STYLER)
 			val image = labelProvider.getImage('true')
-			acceptor.accept(createCompletionProposal('true', trueDisplay, image, context))
-			acceptor.accept(createCompletionProposal('false', falseDisplay, image, context))
+			val priority = keywordPriority
+			val prefix = context.prefix
+			acceptor.accept(createCompletionProposal('true', trueDisplay, image, priority, prefix, context))
+			acceptor.accept(createCompletionProposal('false', falseDisplay, image, priority, prefix, context))
 		}
 	}
 
@@ -213,7 +215,9 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			(model instanceof AssignmentExpression && (model as AssignmentExpression).typeOf.isNumeric)) {
 			val displayString = new StyledString('0', StyledString::COUNTER_STYLER)
 			val image = labelProvider.getImage('0')
-			acceptor.accept(createCompletionProposal('0', displayString, image, context))
+			val priority = keywordPriority
+			val prefix = context.prefix
+			acceptor.accept(createCompletionProposal('0', displayString, image, priority, prefix, context))
 		}
 	}
 
@@ -224,7 +228,10 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				val proposalString = '''"«Members::FILE_SCHEMA»«file.name»"'''
 				val displayString = new StyledString(Members::FILE_SCHEMA + file.name, StyledString::COUNTER_STYLER)
 				val image = labelProvider.getImage(file)
-				acceptor.accept(createCompletionProposal(proposalString, displayString, image, context))
+				val priority = keywordPriority
+				val prefix = context.prefix
+				acceptor.accept(
+					createCompletionProposal(proposalString, displayString, image, priority, prefix, context))
 			}
 		}
 	}
@@ -340,6 +347,16 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 
 	private dispatch def text(Variable v) {
 		labelProvider.text(v)
+	}
+
+	private def getKeywordPriority() {
+		val helper = priorityHelper
+
+		if (helper instanceof NoopContentProposalPriorities) {
+			helper.keywordPriority
+		} else {
+			helper.defaultPriority
+		}
 	}
 
 }

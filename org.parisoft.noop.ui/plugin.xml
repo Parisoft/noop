@@ -527,7 +527,12 @@
     <key
           commandId="org.parisoft.noop.ui.command.NoopPlay"
           schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
-          sequence="M1+R">
+          sequence="SHIFT+F10">
+    </key>
+    <key
+          commandId="org.parisoft.noop.ui.command.NoopBuild"
+          schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+          sequence="M1+F9">
     </key>
  </extension>
 </plugin>

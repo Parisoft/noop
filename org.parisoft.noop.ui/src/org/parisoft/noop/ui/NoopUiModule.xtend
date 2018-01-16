@@ -26,6 +26,8 @@ import org.parisoft.noop.ui.wizard.NoopProjectCreator
 import org.parisoft.noop.ui.wizard.NoopProjectCreator2
 import org.parisoft.noop.consoles.Console
 import utils.NoopConsole
+import org.eclipse.xtext.ui.editor.contentassist.IContentProposalPriorities
+import org.parisoft.noop.ui.contentassist.NoopContentProposalPriorities
 
 /**
  * Use this class to register components to be used within the Eclipse IDE.
@@ -44,6 +46,7 @@ class NoopUiModule extends AbstractNoopUiModule {
 		binder.bind(NoopNewProjectWizard).to(NoopNewProjectWizard2)
 		binder.bind(IResourceRelocationStrategy).to(NoopResourceRelocationStrategy)
 		binder.bind(Console).to(NoopConsole)
+		binder.bind(IContentProposalPriorities).to(NoopContentProposalPriorities)
 	}
 	
 	override bindITemplateProposalProvider() {
