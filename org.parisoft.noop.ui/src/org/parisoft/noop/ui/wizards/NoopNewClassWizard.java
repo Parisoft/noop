@@ -27,6 +27,9 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
 
+import com.google.inject.Inject;
+
+import utils.IResources;
 import utils.Images;
 
 /**
@@ -39,9 +42,15 @@ import utils.Images;
  */
 
 public class NoopNewClassWizard extends Wizard implements INewWizard {
+	
 	private NoopNewClassWizardPage page;
 	private String folderPath;
 
+	@Inject
+	public NoopNewClassWizard() {
+		this(null);
+	}
+	
 	/**
 	 * Constructor for SampleNewWizard.
 	 */
@@ -154,5 +163,13 @@ public class NoopNewClassWizard extends Wizard implements INewWizard {
 	 */
 	@Override
 	public void init(IWorkbench workbench, IStructuredSelection selection) {
+		IResource iResource = IResources.getIResource(selection);
+		
+		if (iResource instanceof IFile) {
+			folderPath = iResource.getParent().getFullPath().toString();
+		} else if (iResource != null) {
+			folderPath = iResource.getFullPath().toString();
+		}
+		
 	}
 }

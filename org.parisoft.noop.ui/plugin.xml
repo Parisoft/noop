@@ -467,13 +467,13 @@
           finalPerspective="org.parisoft.noop.ui.perspective.Noop"
           icon="icons/NewProject.png"
           id="org.parisoft.noop.ui.wizard.NoopNewProjectWizard"
-          name="NES/Famicom game project"
+          name="NOOP Project - NES/Famicom Game"
           preferredPerspectives="org.parisoft.noop.ui.perspective.Noop"
           project="true">
     </wizard>
     <wizard
           category="org.parisoft.noop.ui.category"
-          class="org.parisoft.noop.ui.wizards.NoopNewClassWizard"
+          class="org.parisoft.noop.ui.NoopExecutableExtensionFactory:org.parisoft.noop.ui.wizards.NoopNewClassWizard"
           finalPerspective="org.parisoft.noop.ui.perspective.Noop"
           icon="icons/NewClass.png"
           id="org.parisoft.noop.ui.wizards.NoopNewClassWizard"
