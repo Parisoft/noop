@@ -39,6 +39,9 @@ import org.parisoft.noop.ui.labeling.NoopLabelProvider
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import static extension org.eclipse.xtext.nodemodel.util.NodeModelUtils.*
+import java.util.regex.Pattern
+import utils.Pluralize
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -58,6 +61,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	val proposableKeywords = (newArrayList('extends', 'instanceOf', 'as', 'return', 'this', 'super', 'break',
 		'continue') + storageKeywords).toList
 	val matcher = new SmartPrefixMatcher
+	val camelCasePattern = Pattern::compile('(?=[A-Z])')
 
 	override completeNoopClass_SuperClass(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
@@ -87,6 +91,21 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			]
 		} else {
 			super.completeNoopClass_Members(model, assignment, context, acceptor)
+		}
+	}
+
+	override completeParameter_Name(EObject model, Assignment assignment, ContentAssistContext context,
+		ICompletionProposalAcceptor acceptor) {
+		if (model instanceof Variable) {
+			for (name : model.names) {
+				val displayString = new StyledString(name)
+				val image = labelProvider.getImage(name)
+				val priority = keywordPriority
+				val prefix = context.prefix
+				acceptor.accept(createCompletionProposal(name, displayString, image, priority, prefix, context))
+			}
+		} else {
+			super.completeParameter_Name(model, assignment, context, acceptor)
 		}
 	}
 
@@ -356,6 +375,29 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			helper.keywordPriority
 		} else {
 			helper.defaultPriority
+		}
+	}
+
+	private def getNames(Variable param) {
+		val type = param.type.name.toFirstLower
+		val count = param.dimension.size + 1
+		val words = camelCasePattern.split(type)
+
+		if (words.size > 1) {
+			val names = newArrayList
+			val prev = new AtomicReference<String>(type)
+
+			words.forEach [ w, i |
+				if (w.length > 1 || prev.get.length > 1) {
+					names += Pluralize::plural(words.drop(i).join.toFirstLower, count)
+				}
+				
+				prev.set(w)
+			]
+
+			names
+		} else {
+			newArrayList(Pluralize::plural(type, count))
 		}
 	}
 
