@@ -38,6 +38,25 @@ import static org.parisoft.noop.noop.NoopPackage.Literals.*
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.OrExpression
+import org.parisoft.noop.noop.AndExpression
+import org.parisoft.noop.noop.BOrExpression
+import org.parisoft.noop.noop.BAndExpression
+import org.parisoft.noop.noop.EqualsExpression
+import org.parisoft.noop.noop.DifferExpression
+import org.parisoft.noop.noop.LtExpression
+import org.parisoft.noop.noop.LeExpression
+import org.parisoft.noop.noop.GtExpression
+import org.parisoft.noop.noop.GeExpression
+import org.parisoft.noop.noop.LShiftExpression
+import org.parisoft.noop.noop.RShiftExpression
+import org.parisoft.noop.noop.AddExpression
+import org.parisoft.noop.noop.SubExpression
+import org.parisoft.noop.noop.MulExpression
+import org.parisoft.noop.noop.DivExpression
+import org.parisoft.noop.noop.ModExpression
+import org.parisoft.noop.noop.InstanceOfExpression
+import org.parisoft.noop.noop.CastExpression
 
 /**
  * This class contains custom validation rules. 
@@ -56,6 +75,7 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val CLASS_RECURSIVE_HIERARCHY = 'org.parisoft.noop.CLASS_RECURSIVE_HIERARCHY'
 	public static val CLASS_SUPERCLASS_TYPE = 'org.parisoft.noop.CLASS_SUPERCLASS_TYPE'
 	public static val CLASS_SIZE_OVERFLOW = 'org.parisoft.noop.CLASS_SIZE_OVERFLOW'
+	public static val CLASS_FILE_NAME = 'org.parisoft.noop.CLASS_FILE_NAME'
 	public static val FIELD_TYPE_SAME_HIERARCHY = 'org.parisoft.noop.FIELD_TYPE_SAME_HIERARCHY'
 	public static val FIELD_STORAGE = 'org.parisoft.noop.FIELD_STORAGE'
 	public static val FIELD_DUPLICITY = 'org.parisoft.noop.FIELD_DUPLICITY'
@@ -106,6 +126,43 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val ASSIGN_VALUE_TYPE = 'org.parisoft.noop.ASSIGN_VALUE_TYPE'
 	public static val ASSIGN_VALUE_DIMENSION = 'org.parisoft.noop.ASSIGN_VALUE_DIMENSION'
 	public static val ASSIGN_TYPE = 'org.parisoft.noop.ASSIGN_TYPE'
+	public static val OR_TYPES = 'org.parisoft.noop.OR_TYPES'
+	public static val OR_DIMENSIONS = 'org.parisoft.noop.OR_DIMENSIONS'
+	public static val AND_TYPES = 'org.parisoft.noop.AND_TYPES'
+	public static val AND_DIMENSIONS = 'org.parisoft.noop.AND_DIMENSIONS'
+	public static val BOR_TYPES = 'org.parisoft.noop.BOR_TYPES'
+	public static val BOR_DIMENSIONS = 'org.parisoft.noop.BOR_DIMENSIONS'
+	public static val BAND_TYPES = 'org.parisoft.noop.BAND_TYPES'
+	public static val BAND_DIMENSIONS = 'org.parisoft.noop.BAND_DIMENSIONS'
+	public static val EQ_TYPES = 'org.parisoft.noop.EQ_TYPES'
+	public static val EQ_DIMENSIONS = 'org.parisoft.noop.EQ_DIMENSIONS'
+	public static val NE_TYPES = 'org.parisoft.noop.NE_TYPES'
+	public static val NE_DIMENSIONS = 'org.parisoft.noop.NE_DIMENSIONS'
+	public static val LT_TYPES = 'org.parisoft.noop.LT_TYPES'
+	public static val LT_DIMENSIONS = 'org.parisoft.noop.LT_DIMENSIONS'
+	public static val LE_TYPES = 'org.parisoft.noop.LE_TYPES'
+	public static val LE_DIMENSIONS = 'org.parisoft.noop.LE_DIMENSIONS'
+	public static val GT_TYPES = 'org.parisoft.noop.GT_TYPES'
+	public static val GT_DIMENSIONS = 'org.parisoft.noop.GT_DIMENSIONS'
+	public static val GE_TYPES = 'org.parisoft.noop.GE_TYPES'
+	public static val GE_DIMENSIONS = 'org.parisoft.noop.GE_DIMENSIONS'
+	public static val LSHIFT_TYPES = 'org.parisoft.noop.LSHIFT_TYPES'
+	public static val LSHIFT_DIMENSIONS = 'org.parisoft.noop.LSHIFT_DIMENSIONS'
+	public static val RSHIFT_TYPES = 'org.parisoft.noop.RSHIFT_TYPES'
+	public static val RSHIFT_DIMENSIONS = 'org.parisoft.noop.RSHIFT_DIMENSIONS'
+	public static val ADD_TYPES = 'org.parisoft.noop.ADD_TYPES'
+	public static val ADD_DIMENSIONS = 'org.parisoft.noop.ADD_DIMENSIONS'
+	public static val SUB_TYPES = 'org.parisoft.noop.SUB_TYPES'
+	public static val SUB_DIMENSIONS = 'org.parisoft.noop.SUB_DIMENSIONS'
+	public static val MUL_TYPES = 'org.parisoft.noop.MUL_TYPES'
+	public static val MUL_DIMENSIONS = 'org.parisoft.noop.MUL_DIMENSIONS'
+	public static val DIV_TYPES = 'org.parisoft.noop.DIV_TYPES'
+	public static val DIV_DIMENSIONS = 'org.parisoft.noop.DIV_DIMENSIONS'
+	public static val MOD_TYPES = 'org.parisoft.noop.MOD_TYPES'
+	public static val MOD_DIMENSIONS = 'org.parisoft.noop.MOD_DIMENSIONS'
+	public static val INSTANCEOF_TYPES = 'org.parisoft.noop.INSTANCEOF_TYPES'
+	public static val INSTANCEOF_CONSTANT_RESULT = 'org.parisoft.noop.INSTANCEOF_CONSTANT_RESULT'
+	public static val CAST_TO_VOID = 'org.parisoft.noop.CAST_TO_VOID'
 
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
@@ -132,6 +189,13 @@ class NoopValidator extends AbstractNoopValidator {
 	def classSuperType(NoopClass c) {
 		if (c.superClass?.isVoid) {
 			error('''«TypeSystem::LIB_VOID» cannot be extended''', NOOP_CLASS__SUPER_CLASS, CLASS_SUPERCLASS_TYPE)
+		}
+	}
+
+	@Check
+	def classFileName(NoopClass c) {
+		if (c.URI.trimFragment.trimFileExtension.lastSegment != c.name) {
+			error('''Class and file must have the same name''', NOOP_CLASS__NAME, CLASS_FILE_NAME)
 		}
 	}
 
@@ -761,6 +825,468 @@ class NoopValidator extends AbstractNoopValidator {
 			}
 		}
 
+	}
+
+	@Check
+	def orTypes(OrExpression x) {
+		if (x.left.typeOf.isNonBoolean) {
+			error('''Left-hand side of a Logical expression must be a «TypeSystem::LIB_BOOL» value''',
+				OR_EXPRESSION__LEFT, OR_TYPES)
+		}
+
+		if (x.right.typeOf.isNonBoolean) {
+			error('''Right-hand side of a Logical expression must be a «TypeSystem::LIB_BOOL» value''',
+				OR_EXPRESSION__RIGHT, OR_TYPES)
+		}
+	}
+
+	@Check
+	def orDimensions(OrExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of a Logical expression must be a non-array value', OR_EXPRESSION__LEFT,
+				OR_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Logical expression must be a non-array value', OR_EXPRESSION__RIGHT,
+				OR_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def andTypes(AndExpression x) {
+		if (x.left.typeOf.isNonBoolean) {
+			error('''Left-hand side of a Logical expression must be a «TypeSystem::LIB_BOOL» value''',
+				AND_EXPRESSION__LEFT, AND_TYPES)
+		}
+
+		if (x.right.typeOf.isNonBoolean) {
+			error('''Right-hand side of a Logical expression must be a «TypeSystem::LIB_BOOL» value''',
+				AND_EXPRESSION__RIGHT, AND_TYPES)
+		}
+	}
+
+	@Check
+	def andDimensions(AndExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of a Logical expression must be a non-array value', AND_EXPRESSION__LEFT,
+				AND_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Logical expression must be a non-array value', AND_EXPRESSION__RIGHT,
+				AND_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def bitOrTypes(BOrExpression x) {
+		if (x.left.typeOf.isNonPrimitive) {
+			error('''Left-hand side of a Bitwise expression must be a «TypeSystem::LIB_PRIMITIVE» value''',
+				BOR_EXPRESSION__LEFT, BOR_TYPES)
+		}
+
+		if (x.right.typeOf.isNonPrimitive) {
+			error('''Right-hand side of a Bitwise expression must be a «TypeSystem::LIB_PRIMITIVE» value''',
+				BOR_EXPRESSION__RIGHT, BOR_TYPES)
+		}
+	}
+
+	@Check
+	def bitOrDimensions(BOrExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of a Bitwise expression must be a non-array value', BOR_EXPRESSION__LEFT,
+				BOR_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Bitwise expression must be a non-array value', BOR_EXPRESSION__RIGHT,
+				BOR_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def bitAndTypes(BAndExpression x) {
+		if (x.left.typeOf.isNonPrimitive) {
+			error('''Left-hand side of a Bitwise expression must be a «TypeSystem::LIB_PRIMITIVE» value''',
+				BAND_EXPRESSION__LEFT, BAND_TYPES)
+		}
+
+		if (x.right.typeOf.isNonPrimitive) {
+			error('''Right-hand side of a Bitwise expression must be a «TypeSystem::LIB_PRIMITIVE» value''',
+				BAND_EXPRESSION__RIGHT, BAND_TYPES)
+		}
+	}
+
+	@Check
+	def bitAndDimensions(BAndExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of a Bitwise expression must be a non-array value', BAND_EXPRESSION__LEFT,
+				BAND_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Bitwise expression must be a non-array value', BAND_EXPRESSION__RIGHT,
+				BAND_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def eqTypes(EqualsExpression x) {
+		if (x.left.typeOf.isNonPrimitive) {
+			error('''Left-hand side of an Equality expression must be a «TypeSystem::LIB_PRIMITIVE» value''',
+				EQUALS_EXPRESSION__LEFT, EQ_TYPES)
+		}
+
+		if (x.right.typeOf.isNonPrimitive) {
+			error('''Right-hand side of an Equality expression must be a «TypeSystem::LIB_PRIMITIVE» value''',
+				EQUALS_EXPRESSION__RIGHT, EQ_TYPES)
+		}
+	}
+
+	@Check
+	def eqDimensions(EqualsExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of an Equality expression must be a non-array value', EQUALS_EXPRESSION__LEFT,
+				EQ_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of an Equality expression must be a non-array value', EQUALS_EXPRESSION__RIGHT,
+				EQ_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def neTypes(DifferExpression x) {
+		if (x.left.typeOf.isNonPrimitive) {
+			error('''Left-hand side of an Equality expression must be a «TypeSystem::LIB_PRIMITIVE» value''',
+				DIFFER_EXPRESSION__LEFT, NE_TYPES)
+		}
+
+		if (x.right.typeOf.isNonPrimitive) {
+			error('''Right-hand side of an Equality expression must be a «TypeSystem::LIB_PRIMITIVE» value''',
+				DIFFER_EXPRESSION__RIGHT, NE_TYPES)
+		}
+	}
+
+	@Check
+	def neDimensions(DifferExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of an Equality expression must be a non-array value', DIFFER_EXPRESSION__LEFT,
+				NE_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of an Equality expression must be a non-array value', DIFFER_EXPRESSION__RIGHT,
+				NE_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def ltTypes(LtExpression x) {
+		if (x.left.typeOf.isNonNumeric) {
+			error('Left-hand side of a Relational expression must be a Numeric value', LT_EXPRESSION__LEFT, LT_TYPES)
+		}
+
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of a Relational expression must be a Numeric value', LT_EXPRESSION__RIGHT, LT_TYPES)
+		}
+	}
+
+	@Check
+	def ltDimensions(LtExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of a Relational expression must be a non-array value', LT_EXPRESSION__LEFT,
+				LT_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Relational expression must be a non-array value', LT_EXPRESSION__RIGHT,
+				LT_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def leTypes(LeExpression x) {
+		if (x.left.typeOf.isNonNumeric) {
+			error('Left-hand side of a Relational expression must be a Numeric value', LE_EXPRESSION__LEFT, LE_TYPES)
+		}
+
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of a Relational expression must be a Numeric value', LE_EXPRESSION__RIGHT, LE_TYPES)
+		}
+	}
+
+	@Check
+	def leDimensions(LeExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of a Relational expression must be a non-array value', LE_EXPRESSION__LEFT,
+				LE_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Relational expression must be a non-array value', LE_EXPRESSION__RIGHT,
+				LE_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def gtTypes(GtExpression x) {
+		if (x.left.typeOf.isNonNumeric) {
+			error('Left-hand side of a Relational expression must be a Numeric value', GT_EXPRESSION__LEFT, GT_TYPES)
+		}
+
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of a Relational expression must be a Numeric value', GT_EXPRESSION__RIGHT, GT_TYPES)
+		}
+	}
+
+	@Check
+	def gtDimensions(GtExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of a Relational expression must be a non-array value', GT_EXPRESSION__LEFT,
+				GT_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Relational expression must be a non-array value', GT_EXPRESSION__RIGHT,
+				GT_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def geTypes(GeExpression x) {
+		if (x.left.typeOf.isNonNumeric) {
+			error('Left-hand side of a Relational expression must be a Numeric value', GE_EXPRESSION__LEFT, GE_TYPES)
+		}
+
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of a Relational expression must be a Numeric value', GE_EXPRESSION__RIGHT, GE_TYPES)
+		}
+	}
+
+	@Check
+	def geDimensions(GeExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of a Relational expression must be a non-array value', GE_EXPRESSION__LEFT,
+				GE_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Relational expression must be a non-array value', GE_EXPRESSION__RIGHT,
+				GE_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def leftShiftTypes(LShiftExpression x) {
+		if (x.left.typeOf.isNonNumeric) {
+			error('Left-hand side of a Shift expression must be a Numeric value', LSHIFT_EXPRESSION__LEFT, LSHIFT_TYPES)
+		}
+
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of a Shift expression must be a Numeric value', LSHIFT_EXPRESSION__RIGHT,
+				LSHIFT_TYPES)
+		}
+	}
+
+	@Check
+	def leftShiftDimensions(LShiftExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of a Shift expression must be a non-array value', LSHIFT_EXPRESSION__LEFT,
+				LSHIFT_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Shift expression must be a non-array value', LSHIFT_EXPRESSION__RIGHT,
+				LSHIFT_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def rightShiftTypes(RShiftExpression x) {
+		if (x.left.typeOf.isNonNumeric) {
+			error('Left-hand side of a Shift expression must be a Numeric value', RSHIFT_EXPRESSION__LEFT, RSHIFT_TYPES)
+		}
+
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of a Shift expression must be a Numeric value', RSHIFT_EXPRESSION__RIGHT,
+				RSHIFT_TYPES)
+		}
+	}
+
+	@Check
+	def rightShiftDimensions(RShiftExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of a Shift expression must be a non-array value', RSHIFT_EXPRESSION__LEFT,
+				RSHIFT_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Shift expression must be a non-array value', RSHIFT_EXPRESSION__RIGHT,
+				RSHIFT_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def addTypes(AddExpression x) {
+		if (x.left.typeOf.isNonNumeric) {
+			error('Left-hand side of an Arithmetic expression must be a Numeric value', ADD_EXPRESSION__LEFT, ADD_TYPES)
+		}
+
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of an Arithmetic expression must be a Numeric value', ADD_EXPRESSION__RIGHT,
+				ADD_TYPES)
+		}
+	}
+
+	@Check
+	def addDimensions(AddExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of an Arithmetic expression must be a non-array value', ADD_EXPRESSION__LEFT,
+				ADD_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of an Arithmetic expression must be a non-array value', ADD_EXPRESSION__RIGHT,
+				ADD_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def subTypes(SubExpression x) {
+		if (x.left.typeOf.isNonNumeric) {
+			error('Left-hand side of an Arithmetic expression must be a Numeric value', SUB_EXPRESSION__LEFT, SUB_TYPES)
+		}
+
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of an Arithmetic expression must be a Numeric value', SUB_EXPRESSION__RIGHT,
+				SUB_TYPES)
+		}
+	}
+
+	@Check
+	def subDimensions(SubExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of an Arithmetic expression must be a non-array value', SUB_EXPRESSION__LEFT,
+				SUB_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of an Arithmetic expression must be a non-array value', SUB_EXPRESSION__RIGHT,
+				SUB_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def mulTypes(MulExpression x) {
+		if (x.left.typeOf.isNonNumeric) {
+			error('Left-hand side of an Arithmetic expression must be a Numeric value', MUL_EXPRESSION__LEFT, MUL_TYPES)
+		}
+
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of an Arithmetic expression must be a Numeric value', MUL_EXPRESSION__RIGHT,
+				MUL_TYPES)
+		}
+	}
+
+	@Check
+	def mulDimensions(MulExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of an Arithmetic expression must be a non-array value', MUL_EXPRESSION__LEFT,
+				MUL_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of an Arithmetic expression must be a non-array value', MUL_EXPRESSION__RIGHT,
+				MUL_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def divTypes(DivExpression x) {
+		if (x.left.typeOf.isNonNumeric) {
+			error('Left-hand side of an Arithmetic expression must be a Numeric value', DIV_EXPRESSION__LEFT, DIV_TYPES)
+		}
+
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of an Arithmetic expression must be a Numeric value', DIV_EXPRESSION__RIGHT,
+				DIV_TYPES)
+		}
+	}
+
+	@Check
+	def divDimensions(DivExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of an Arithmetic expression must be a non-array value', DIV_EXPRESSION__LEFT,
+				DIV_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of an Arithmetic expression must be a non-array value', DIV_EXPRESSION__RIGHT,
+				DIV_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def modTypes(ModExpression x) {
+		if (x.left.typeOf.isNonNumeric) {
+			error('Left-hand side of an Arithmetic expression must be a Numeric value', MOD_EXPRESSION__LEFT, MOD_TYPES)
+		}
+
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of an Arithmetic expression must be a Numeric value', MOD_EXPRESSION__RIGHT,
+				MOD_TYPES)
+		}
+	}
+
+	@Check
+	def modDimensions(ModExpression x) {
+		if (x.left.dimensionOf.size > 1) {
+			error('Left-hand side of an Arithmetic expression must be a non-array value', MOD_EXPRESSION__LEFT,
+				MOD_DIMENSIONS)
+		}
+
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of an Arithmetic expression must be a non-array value', MOD_EXPRESSION__RIGHT,
+				MOD_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def instanceOfTypes(InstanceOfExpression x) {
+		val leftType = x.left.typeOf
+
+		if (leftType.isPrimitive || leftType.isVoid) {
+			error('''Left-hand side of an "instanceOf" expression must be an «TypeSystem::LIB_OBJECT» value''',
+				INSTANCE_OF_EXPRESSION__LEFT, INSTANCEOF_TYPES)
+		}
+
+		if (x.type.isPrimitive || x.type.isVoid) {
+			error('''Right-hand side of an "instanceOf" expression must be an «TypeSystem::LIB_OBJECT» type''',
+				INSTANCE_OF_EXPRESSION__TYPE, INSTANCEOF_TYPES)
+		}
+	}
+
+	@Check
+	def instanceOfConstantValue(InstanceOfExpression x) {
+		val leftType = x.left.typeOf
+
+		if (leftType.isNonPrimitive && leftType.isNonVoid && x.type.isNonPrimitive && x.type.isNonVoid) {
+			if (leftType.isInstanceOf(x.type)) {
+				warning('Expression always evaluates to true', x, null, INSTANCEOF_CONSTANT_RESULT)
+			} else if (x.type.isNonInstanceOf(leftType)) {
+				warning('Expression always evaluates to false', x, null, INSTANCEOF_CONSTANT_RESULT)
+			}
+		}
+	}
+	
+	@Check
+	def castToVoid(CastExpression x) {
+		if (x.left.typeOf.isVoid || x.type.isVoid) {
+			error('''«x.left.typeOf.name» cannot be cast to «x.type.name»''', x, null, CAST_TO_VOID)
+		}
 	}
 
 	private def Iterable<Variable> searchDuplicatesOn(Variable v, EObject container) {
