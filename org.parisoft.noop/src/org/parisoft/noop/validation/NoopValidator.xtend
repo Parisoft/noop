@@ -66,6 +66,8 @@ import org.parisoft.noop.noop.ByteLiteral
 import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.ArrayLiteral
 import java.util.List
+import org.parisoft.noop.noop.This
+import org.parisoft.noop.noop.Super
 
 /**
  * This class contains custom validation rules. 
@@ -190,6 +192,8 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val STRING_FILE_NOT_FOUND = 'org.parisoft.noop.STRING_FILE_NOT_FOUND'
 	public static val ARRAY_CONSTANT = 'org.parisoft.noop.ARRAY_CONSTANT'
 	public static val ARRAY_LENGTH = 'org.parisoft.noop.ARRAY_LENGTH'
+	public static val THIS_CONTEXT = 'org.parisoft.noop.THIS_CONTEXT'
+	public static val SUPER_CONTEXT = 'org.parisoft.noop.SUPER_CONTEXT'
 
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
@@ -1486,6 +1490,24 @@ class NoopValidator extends AbstractNoopValidator {
 
 				a1
 			]
+		}
+	}
+	
+	@Check
+	def thisContext(This t) {
+		val method = t.getContainerOfType(Method)
+		
+		if (method === null || method.isStatic) {
+			error('"this" can only be called inside a non-static method', t, null, THIS_CONTEXT)
+		}
+	}
+	
+	@Check
+	def superContext(Super s) {
+		val method = s.getContainerOfType(Method)
+		
+		if (method === null || method.isStatic) {
+			error('"super" can only be called inside a non-static method', s, null, THIS_CONTEXT)
 		}
 	}
 
