@@ -200,6 +200,9 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val NEW_INSTANCE_DIMENSION = 'org.parisoft.noop.NEW_INSTANCE_DIMENSION'
 	public static val CONSTRUCTOR_FIELD_TYPE = 'org.parisoft.noop.CONSTRUCTOR_FIELD_TYPE'
 	public static val CONSTRUCTOR_FIELD_DIMENSION = 'org.parisoft.noop.CONSTRUCTOR_FIELD_DIMENSION'
+	public static val INES_HEADER_FIELD_VALUE = 'org.parisoft.noop.INES_HEADER_FIELD_VALUE'
+	public static val MEMBER_SELECT_DIMENSION = 'org.parisoft.noop.MEMBER_SELECT_DIMENSION'
+	public static val MEMBER_REF_DIMENSION = 'org.parisoft.noop.MEMBER_REF_DIMENSION'
 
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
@@ -1576,6 +1579,28 @@ class NoopValidator extends AbstractNoopValidator {
 			error('''Cannot assign an array value to an array field with incompatible dimensions''',
 				CONSTRUCTOR_FIELD__VALUE, CONSTRUCTOR_FIELD_DIMENSION)
 		}
+	}
+
+	@Check
+	def iNesHeaderFieldValue(ConstructorField field) {
+		if (field.getContainerOfType(NewInstance).type.isINESHeader && field.value?.isNonConstant) {
+			error('''Field «field.variable.name» value must be a constant expression''', CONSTRUCTOR_FIELD__VALUE,
+				INES_HEADER_FIELD_VALUE)
+		}
+	}
+	
+	@Check
+	def memberSelectDimension(MemberSelect select) {
+		select.indexes.drop(select.member.dimensionOf.size).forEach[
+			error('Invalid index', it, null, MEMBER_SELECT_DIMENSION)
+		]
+	}
+	
+	@Check
+	def memberRefDimension(MemberRef ref) {
+		ref.indexes.drop(ref.member.dimensionOf.size).forEach[
+			error('Invalid index', it, null, MEMBER_REF_DIMENSION)
+		]
 	}
 
 	private def int depth(Object o) {
