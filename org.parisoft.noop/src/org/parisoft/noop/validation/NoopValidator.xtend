@@ -70,6 +70,7 @@ import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.ConstructorField
+import org.parisoft.noop.noop.Storage
 
 /**
  * This class contains custom validation rules. 
@@ -203,6 +204,7 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val INES_HEADER_FIELD_VALUE = 'org.parisoft.noop.INES_HEADER_FIELD_VALUE'
 	public static val MEMBER_SELECT_DIMENSION = 'org.parisoft.noop.MEMBER_SELECT_DIMENSION'
 	public static val MEMBER_REF_DIMENSION = 'org.parisoft.noop.MEMBER_REF_DIMENSION'
+	public static val STORAGE_LOCATION = 'org.parisoft.noop.STORAGE_LOCATION'
 
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
@@ -1588,19 +1590,38 @@ class NoopValidator extends AbstractNoopValidator {
 				INES_HEADER_FIELD_VALUE)
 		}
 	}
-	
+
 	@Check
 	def memberSelectDimension(MemberSelect select) {
-		select.indexes.drop(select.member.dimensionOf.size).forEach[
+		select.indexes.drop(select.member.dimensionOf.size).forEach [
 			error('Invalid index', it, null, MEMBER_SELECT_DIMENSION)
 		]
 	}
-	
+
 	@Check
 	def memberRefDimension(MemberRef ref) {
-		ref.indexes.drop(ref.member.dimensionOf.size).forEach[
+		ref.indexes.drop(ref.member.dimensionOf.size).forEach [
 			error('Invalid index', it, null, MEMBER_REF_DIMENSION)
 		]
+	}
+
+	@Check
+	def storageLocation(Storage s) {
+		if (s.location !== null) {
+			if (s.type == StorageType::ZP || s.type == StorageType::INLINE) {
+				error('''Tag «s.type.literal.substring(1)» doesn't accept locations''', STORAGE__LOCATION,
+					STORAGE_LOCATION)
+			} else
+				try {
+					if ((s.location.valueOf as Integer) < 0) {
+						error('Bank must be a positive number', STORAGE__LOCATION, STORAGE_LOCATION)
+					}
+				} catch (NonConstantExpressionException e) {
+					error('Bank must be a constant expression', STORAGE__LOCATION, STORAGE_LOCATION)
+				} catch (ClassCastException e) {
+					error('Bank must be a numeric expression', STORAGE__LOCATION, STORAGE_LOCATION)
+				}
+		}
 	}
 
 	private def int depth(Object o) {
