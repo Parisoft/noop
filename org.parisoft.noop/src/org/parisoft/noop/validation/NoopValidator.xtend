@@ -58,6 +58,10 @@ import org.parisoft.noop.noop.ModExpression
 import org.parisoft.noop.noop.InstanceOfExpression
 import org.parisoft.noop.noop.CastExpression
 import org.parisoft.noop.exception.NonConstantExpressionException
+import org.parisoft.noop.noop.ComplementExpression
+import org.parisoft.noop.noop.NotExpression
+import org.parisoft.noop.noop.SigNegExpression
+import org.parisoft.noop.noop.SigPosExpression
 
 /**
  * This class contains custom validation rules. 
@@ -161,6 +165,18 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val DIV_DIMENSIONS = 'org.parisoft.noop.DIV_DIMENSIONS'
 	public static val MOD_TYPES = 'org.parisoft.noop.MOD_TYPES'
 	public static val MOD_DIMENSIONS = 'org.parisoft.noop.MOD_DIMENSIONS'
+	public static val CPL_TYPE = 'org.parisoft.noop.CPL_TYPE'
+	public static val CPL_DIMENSION = 'org.parisoft.noop.CPL_DIMENSION'
+	public static val NOT_TYPE = 'org.parisoft.noop.NOT_TYPE'
+	public static val NOT_DIMENSION = 'org.parisoft.noop.NOT_DIMENSION'
+	public static val NEG_TYPE = 'org.parisoft.noop.NEG_TYPE'
+	public static val NEG_DIMENSION = 'org.parisoft.noop.NEG_DIMENSION'
+	public static val POS_TYPE = 'org.parisoft.noop.POS_TYPE'
+	public static val POS_DIMENSION = 'org.parisoft.noop.POS_DIMENSION'
+	public static val INC_TYPE = 'org.parisoft.noop.INC_TYPE'
+	public static val INC_DIMENSION = 'org.parisoft.noop.INC_DIMENSION'
+	public static val DEC_TYPE = 'org.parisoft.noop.DEC_TYPE'
+	public static val DEC_DIMENSION = 'org.parisoft.noop.DEC_DIMENSION'
 	public static val INSTANCEOF_TYPES = 'org.parisoft.noop.INSTANCEOF_TYPES'
 	public static val INSTANCEOF_CONSTANT_RESULT = 'org.parisoft.noop.INSTANCEOF_CONSTANT_RESULT'
 	public static val CAST_TYPE = 'org.parisoft.noop.CAST_TYPE'
@@ -1253,6 +1269,102 @@ class NoopValidator extends AbstractNoopValidator {
 		if (x.right.dimensionOf.size > 1) {
 			error('Right-hand side of an Arithmetic expression must be a non-array value', MOD_EXPRESSION__RIGHT,
 				MOD_DIMENSIONS)
+		}
+	}
+
+	@Check
+	def cplType(ComplementExpression x) {
+		if (x.right.typeOf.isNonPrimitive) {
+			error('''Right-hand side of a Bitwise expression must be a «TypeSystem::LIB_PRIMITIVE» value''',
+				COMPLEMENT_EXPRESSION__RIGHT, CPL_TYPE)
+		}
+	}
+
+	@Check
+	def cplDimension(ComplementExpression x) {
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Bitwise expression must be a non-array value', COMPLEMENT_EXPRESSION__RIGHT,
+				CPL_DIMENSION)
+		}
+	}
+
+	@Check
+	def notType(NotExpression x) {
+		if (x.right.typeOf.isNonBoolean) {
+			error('''Right-hand side of a Logical expression must be a «TypeSystem::LIB_BOOL» value''',
+				NOT_EXPRESSION__RIGHT, NOT_TYPE)
+		}
+	}
+
+	@Check
+	def notDimension(NotExpression x) {
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of a Logical expression must be a non-array value', NOT_EXPRESSION__RIGHT,
+				NOT_DIMENSION)
+		}
+	}
+
+	@Check
+	def negType(SigNegExpression x) {
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of an Arithmetic expression must be a Numeric value', SIG_NEG_EXPRESSION__RIGHT,
+				NEG_TYPE)
+		}
+	}
+
+	@Check
+	def negDimension(SigNegExpression x) {
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of an Arithmetic expression must be a non-array value', SIG_NEG_EXPRESSION__RIGHT,
+				NEG_DIMENSION)
+		}
+	}
+
+	@Check
+	def posType(SigPosExpression x) {
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of an Arithmetic expression must be a Numeric value', SIG_POS_EXPRESSION__RIGHT,
+				POS_TYPE)
+		}
+	}
+
+	@Check
+	def posDimension(SigPosExpression x) {
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of an Arithmetic expression must be a non-array value', SIG_POS_EXPRESSION__RIGHT,
+				POS_DIMENSION)
+		}
+	}
+
+	@Check
+	def incType(IncExpression x) {
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of an Arithmetic expression must be a Numeric value', INC_EXPRESSION__RIGHT,
+				INC_TYPE)
+		}
+	}
+
+	@Check
+	def incDimension(IncExpression x) {
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of an Arithmetic expression must be a non-array value', INC_EXPRESSION__RIGHT,
+				INC_DIMENSION)
+		}
+	}
+
+	@Check
+	def decType(DecExpression x) {
+		if (x.right.typeOf.isNonNumeric) {
+			error('Right-hand side of an Arithmetic expression must be a Numeric value', DEC_EXPRESSION__RIGHT,
+				DEC_TYPE)
+		}
+	}
+
+	@Check
+	def decDimension(DecExpression x) {
+		if (x.right.dimensionOf.size > 1) {
+			error('Right-hand side of an Arithmetic expression must be a non-array value', DEC_EXPRESSION__RIGHT,
+				DEC_DIMENSION)
 		}
 	}
 

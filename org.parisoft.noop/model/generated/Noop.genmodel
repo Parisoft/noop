@@ -183,8 +183,8 @@
       <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference Noop.ecore#//CastExpression/type"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//CastExpression/dimension"/>
     </genClasses>
-    <genClasses ecoreClass="Noop.ecore#//EorExpression">
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//EorExpression/right"/>
+    <genClasses ecoreClass="Noop.ecore#//ComplementExpression">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//ComplementExpression/right"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//NotExpression">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//NotExpression/right"/>

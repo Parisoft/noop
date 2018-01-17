@@ -113,7 +113,7 @@ CastExpression returns Expression:
 
 UnaryExpression returns Expression:
 	SelectionExpression |
-	(({EorExpression} '~' |
+	(({ComplementExpression} '~' |
 	{NotExpression} 'not' |
 	{SigNegExpression} '-' |
 	{SigPosExpression} '+' |

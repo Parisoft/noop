@@ -28,7 +28,7 @@ import org.parisoft.noop.noop.CastExpression
 import org.parisoft.noop.noop.DecExpression
 import org.parisoft.noop.noop.DifferExpression
 import org.parisoft.noop.noop.DivExpression
-import org.parisoft.noop.noop.EorExpression
+import org.parisoft.noop.noop.ComplementExpression
 import org.parisoft.noop.noop.EqualsExpression
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.GeExpression
@@ -359,7 +359,7 @@ class Expressions {
 				expression.left.containsMulDivMod || expression.right.containsMulDivMod
 			RShiftExpression:
 				expression.left.containsMulDivMod || expression.right.containsMulDivMod
-			EorExpression:
+			ComplementExpression:
 				expression.right.containsMulDivMod
 			NotExpression:
 				expression.right.containsMulDivMod
@@ -458,7 +458,7 @@ class Expressions {
 				expression.typeOfValueOrInt
 			RShiftExpression:
 				expression.typeOfValueOrMerge(expression.left, expression.right)
-			EorExpression:
+			ComplementExpression:
 				expression.right.typeOf
 			NotExpression:
 				expression.toBoolClass
@@ -632,7 +632,7 @@ class Expressions {
 					(expression.left.valueOf as Integer) << (expression.right.valueOf as Integer)
 				RShiftExpression:
 					(expression.left.valueOf as Integer) >> (expression.right.valueOf as Integer)
-				EorExpression:
+				ComplementExpression:
 					(expression.right.valueOf as Integer).bitwiseNot
 				NotExpression:
 					!(expression.right.valueOf as Boolean)
@@ -823,7 +823,7 @@ class Expressions {
 				expression.left.prepare(ctx)
 				expression.right.prepare(ctx)
 			}
-			EorExpression:
+			ComplementExpression:
 				expression.right.prepare(ctx)
 			NotExpression:
 				expression.right.prepare(ctx)
@@ -964,7 +964,7 @@ class Expressions {
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 			RShiftExpression:
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			EorExpression:
+			ComplementExpression:
 				expression.right.alloc(ctx)
 			NotExpression:
 				expression.right.alloc(ctx)
@@ -1185,7 +1185,7 @@ class Expressions {
 				BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, ctx)»'''
 				LShiftExpression: '''«Operation::BIT_SHIFT_LEFT.compileMultiplication(expression.left, expression.right, ctx)»'''
 				RShiftExpression: '''«Operation::BIT_SHIFT_RIGHT.compileMultiplication(expression.left, expression.right, ctx)»'''
-				EorExpression: '''«Operation::BIT_EXCLUSIVE_OR.compileUnary(expression.right, ctx)»'''
+				ComplementExpression: '''«Operation::BIT_EXCLUSIVE_OR.compileUnary(expression.right, ctx)»'''
 				NotExpression: '''«expression.right.compileNot(ctx)»'''
 				SigNegExpression: '''«Operation::SIGNUM.compileUnary(expression.right, ctx)»'''
 				SigPosExpression: '''«expression.right.compile(ctx)»'''
@@ -1475,7 +1475,7 @@ class Expressions {
 				BAndExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» & «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				LShiftExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» << «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				RShiftExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» >> «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
-				EorExpression: '''«IF wrapped»(«ENDIF»~«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				ComplementExpression: '''«IF wrapped»(«ENDIF»~«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				NotExpression: '''«IF wrapped»(«ENDIF»!«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				SigNegExpression: '''«IF wrapped»(«ENDIF»-«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				SigPosExpression: '''«IF wrapped»(«ENDIF»+«expression.right.compileConstant»«IF wrapped»)«ENDIF»'''

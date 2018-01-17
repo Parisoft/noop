@@ -16,6 +16,11 @@ import org.parisoft.noop.noop.AssignmentExpression
 import org.parisoft.noop.noop.BAndExpression
 import org.parisoft.noop.noop.BOrExpression
 import org.parisoft.noop.noop.Block
+import org.parisoft.noop.noop.CastExpression
+import org.parisoft.noop.noop.ComplementExpression
+import org.parisoft.noop.noop.Constructor
+import org.parisoft.noop.noop.ConstructorField
+import org.parisoft.noop.noop.DecExpression
 import org.parisoft.noop.noop.DifferExpression
 import org.parisoft.noop.noop.DivExpression
 import org.parisoft.noop.noop.ElseStatement
@@ -26,36 +31,31 @@ import org.parisoft.noop.noop.ForeverStatement
 import org.parisoft.noop.noop.GeExpression
 import org.parisoft.noop.noop.GtExpression
 import org.parisoft.noop.noop.IfStatement
+import org.parisoft.noop.noop.IncExpression
+import org.parisoft.noop.noop.Index
 import org.parisoft.noop.noop.InstanceOfExpression
 import org.parisoft.noop.noop.LShiftExpression
 import org.parisoft.noop.noop.LeExpression
 import org.parisoft.noop.noop.Length
 import org.parisoft.noop.noop.LtExpression
+import org.parisoft.noop.noop.MemberRef
+import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.ModExpression
 import org.parisoft.noop.noop.MulExpression
+import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopPackage
+import org.parisoft.noop.noop.NotExpression
 import org.parisoft.noop.noop.OrExpression
 import org.parisoft.noop.noop.RShiftExpression
 import org.parisoft.noop.noop.ReturnStatement
+import org.parisoft.noop.noop.SigNegExpression
+import org.parisoft.noop.noop.SigPosExpression
 import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.Storage
 import org.parisoft.noop.noop.SubExpression
 import org.parisoft.noop.noop.Variable
-import org.parisoft.noop.noop.CastExpression
-import org.parisoft.noop.noop.Index
-import org.parisoft.noop.noop.EorExpression
-import org.parisoft.noop.noop.NotExpression
-import org.parisoft.noop.noop.SigNegExpression
-import org.parisoft.noop.noop.SigPosExpression
-import org.parisoft.noop.noop.DecExpression
-import org.parisoft.noop.noop.IncExpression
-import org.parisoft.noop.noop.NewInstance
-import org.parisoft.noop.noop.Constructor
-import org.parisoft.noop.noop.ConstructorField
-import org.parisoft.noop.noop.MemberSelect
-import org.parisoft.noop.noop.MemberRef
 
 class NoopFormatter extends AbstractFormatter2 {
 
@@ -332,7 +332,7 @@ class NoopFormatter extends AbstractFormatter2 {
 		expression.dimension.forEach[format.prepend[noSpace]]
 	}
 
-	def dispatch void format(EorExpression expression, extension IFormattableDocument document) {
+	def dispatch void format(ComplementExpression expression, extension IFormattableDocument document) {
 		expression.preFormat(document)
 		expression.regionFor.keyword('~').append[noSpace]
 	}
