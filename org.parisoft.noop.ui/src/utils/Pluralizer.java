@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
  * An Algorithmic Approach to English Pluralization</a> by Damian Conway.
  * </p>
  */
-public class Pluralize {
+public class Pluralizer {
 
     public static enum MODE {
         ENGLISH_ANGLICIZED, ENGLISH_CLASSICAL
@@ -127,13 +127,13 @@ public class Pluralize {
             "Panaman", "Selman", "Sonaman", "Tacoman", "Yakiman", "Yokohaman", "Yuman"
     };
 
-    private static Pluralize inflector = new Pluralize();
+    private static Pluralizer inflector = new Pluralizer();
 
-    public Pluralize() {
+    public Pluralizer() {
         this(MODE.ENGLISH_ANGLICIZED);
     }
 
-    public Pluralize(MODE mode) {
+    public Pluralizer(MODE mode) {
 
         uncountable(new String[]{
                 // 2. Handle words that do not inflect in the plural (such as fish, travois, chassis, nationalities ending
@@ -330,7 +330,7 @@ public class Pluralize {
     }
 
     public static void setMode(MODE mode) {
-        Pluralize newInflector = new Pluralize(mode);
+        Pluralizer newInflector = new Pluralizer(mode);
         inflector = newInflector;
     }
 

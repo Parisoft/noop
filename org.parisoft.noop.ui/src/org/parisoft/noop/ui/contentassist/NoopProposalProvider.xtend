@@ -4,6 +4,8 @@
 package org.parisoft.noop.ui.contentassist
 
 import com.google.inject.Inject
+import java.util.concurrent.atomic.AtomicReference
+import java.util.regex.Pattern
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.jface.viewers.StyledString
 import org.eclipse.swt.graphics.Image
@@ -39,9 +41,7 @@ import org.parisoft.noop.ui.labeling.NoopLabelProvider
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import static extension org.eclipse.xtext.nodemodel.util.NodeModelUtils.*
-import java.util.regex.Pattern
-import utils.Pluralize
-import java.util.concurrent.atomic.AtomicReference
+import static extension utils.Pluralizer.*
 
 /**
  * See https://www.eclipse.org/Xtext/documentation/304_ide_concepts.html#content-assist
@@ -391,19 +391,19 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				prev.set(w)
 
 				if (i == 0 || w.length > 1 || words.get(i - 1).length > 1) {
-					names += (w.toFirstLower + Pluralize::plural(words.drop(i + 1).map [
+					names += w.toFirstLower + words.drop(i + 1).map [
 						try {
 							if(it.length == 1 && prev.get.length == 1) it.toLowerCase else it
 						} finally {
 							prev.set(it)
 						}
-					].join, count))
+					].join.plural(count)
 				}
 			]
 
 			names
 		} else {
-			newArrayList(Pluralize::plural(type.toFirstLower, count))
+			newArrayList(type.toFirstLower.plural(count))
 		}
 	}
 
