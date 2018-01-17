@@ -68,6 +68,7 @@ import org.parisoft.noop.noop.ArrayLiteral
 import java.util.List
 import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Super
+import org.parisoft.noop.noop.NewInstance
 
 /**
  * This class contains custom validation rules. 
@@ -194,6 +195,8 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val ARRAY_LENGTH = 'org.parisoft.noop.ARRAY_LENGTH'
 	public static val THIS_CONTEXT = 'org.parisoft.noop.THIS_CONTEXT'
 	public static val SUPER_CONTEXT = 'org.parisoft.noop.SUPER_CONTEXT'
+	public static val NEW_INSTANCE_TYPE = 'org.parisoft.noop.NEW_INSTANCE_TYPE'
+	public static val NEW_INSTANCE_DIMENSION = 'org.parisoft.noop.NEW_INSTANCE_DIMENSION'
 
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
@@ -514,8 +517,18 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def parameterDimensionValue(Variable v) {
 		if (v.isParameter) {
-			v.dimension.filter[value?.isNonConstant].forEach [
-				error('Length must be a constant expression', it, null, PARAMETER_DIMENSION_VALUE)
+			v.dimension.forEach [
+				try {
+					val value = value?.valueOf as Integer ?: 0
+
+					if (value < 0) {
+						error('Length must be a positive number', it, null, NEW_INSTANCE_DIMENSION)
+					}
+				} catch (NonConstantExpressionException e) {
+					error('Length must be a constant expression', it, null, NEW_INSTANCE_DIMENSION)
+				} catch (ClassCastException e) {
+					error('Length must be numeric', it, null, NEW_INSTANCE_DIMENSION)
+				}
 			]
 		}
 	}
@@ -1492,23 +1505,49 @@ class NoopValidator extends AbstractNoopValidator {
 			]
 		}
 	}
-	
+
 	@Check
 	def thisContext(This t) {
 		val method = t.getContainerOfType(Method)
-		
+
 		if (method === null || method.isStatic) {
-			error('"this" can only be called inside a non-static method', t, null, THIS_CONTEXT)
+			error('Access to "this" can only be made inside a non-static method', t, null, THIS_CONTEXT)
 		}
 	}
-	
+
 	@Check
 	def superContext(Super s) {
 		val method = s.getContainerOfType(Method)
-		
+
 		if (method === null || method.isStatic) {
-			error('"super" can only be called inside a non-static method', s, null, THIS_CONTEXT)
+			error('Access to "super" can only be made inside a non-static method', s, null, THIS_CONTEXT)
 		}
+	}
+
+	@Check
+	def newInstanceType(NewInstance n) {
+		if (n.type.isVoid) {
+			error('''«TypeSystem::LIB_VOID» cannot be instantiated''', n, null, NEW_INSTANCE_TYPE)
+		}
+	}
+
+	@Check
+	def newInstanceDimension(NewInstance n) {
+		n.dimension.forEach [
+			try {
+				val value = value?.valueOf as Integer ?: 0
+
+				if (value == 0) {
+					error('Array cannot be empty', it, null, NEW_INSTANCE_DIMENSION)
+				} else if (value < 0) {
+					error('Array length must be a positive number', it, null, NEW_INSTANCE_DIMENSION)
+				}
+			} catch (NonConstantExpressionException e) {
+				error('Array length must be a constant expression', it, null, NEW_INSTANCE_DIMENSION)
+			} catch (ClassCastException e) {
+				error('Array length must be numeric', it, null, NEW_INSTANCE_DIMENSION)
+			}
+		]
 	}
 
 	private def int depth(Object o) {
