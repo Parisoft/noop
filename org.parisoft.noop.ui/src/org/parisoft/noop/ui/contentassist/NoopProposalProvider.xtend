@@ -379,25 +379,31 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	}
 
 	private def getNames(Variable param) {
-		val type = param.type.name.toFirstLower
+		val type = param.type.name
 		val count = param.dimension.size + 1
 		val words = camelCasePattern.split(type)
 
 		if (words.size > 1) {
 			val names = newArrayList
-			val prev = new AtomicReference<String>(type)
+			val prev = new AtomicReference<String>
 
 			words.forEach [ w, i |
-				if (w.length > 1 || prev.get.length > 1) {
-					names += Pluralize::plural(words.drop(i).join.toFirstLower, count)
-				}
-				
 				prev.set(w)
+
+				if (i == 0 || w.length > 1 || words.get(i - 1).length > 1) {
+					names += (w.toFirstLower + Pluralize::plural(words.drop(i + 1).map [
+						try {
+							if(it.length == 1 && prev.get.length == 1) it.toLowerCase else it
+						} finally {
+							prev.set(it)
+						}
+					].join, count))
+				}
 			]
 
 			names
 		} else {
-			newArrayList(Pluralize::plural(type, count))
+			newArrayList(Pluralize::plural(type.toFirstLower, count))
 		}
 	}
 
