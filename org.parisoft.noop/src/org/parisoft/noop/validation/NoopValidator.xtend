@@ -57,6 +57,7 @@ import org.parisoft.noop.noop.DivExpression
 import org.parisoft.noop.noop.ModExpression
 import org.parisoft.noop.noop.InstanceOfExpression
 import org.parisoft.noop.noop.CastExpression
+import org.parisoft.noop.exception.NonConstantExpressionException
 
 /**
  * This class contains custom validation rules. 
@@ -162,7 +163,8 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val MOD_DIMENSIONS = 'org.parisoft.noop.MOD_DIMENSIONS'
 	public static val INSTANCEOF_TYPES = 'org.parisoft.noop.INSTANCEOF_TYPES'
 	public static val INSTANCEOF_CONSTANT_RESULT = 'org.parisoft.noop.INSTANCEOF_CONSTANT_RESULT'
-	public static val CAST_TO_VOID = 'org.parisoft.noop.CAST_TO_VOID'
+	public static val CAST_TYPE = 'org.parisoft.noop.CAST_TYPE'
+	public static val CAST_DIMENSION = 'org.parisoft.noop.CAST_DIMENSION'
 
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
@@ -281,13 +283,10 @@ class NoopValidator extends AbstractNoopValidator {
 
 				if (v.dimensionOf !== overrideDimension) {
 					if (overrideDimension.isEmpty) {
-						error('''Field «v.name» must have no dimension as the overridden field''', MEMBER__NAME,
+						error('''Field «v.name» must be a non-array as the overridden field''', MEMBER__NAME,
 							FIELD_OVERRIDDEN_DIMENSION)
-					} else if (overrideDimension.size == 1) {
-						error('''Field «v.name» must have the same dimension of length «overrideDimension.head» as the overridden field''',
-							MEMBER__NAME, FIELD_OVERRIDDEN_DIMENSION)
 					} else {
-						error('''Field «v.name» must have the same «overrideDimension.join('x')» dimension of the overridden field''',
+						error('''Field «v.name» must be an array of length «overrideDimension.map['''[«it»]'''].join» as the overridden field''',
 							MEMBER__NAME, FIELD_OVERRIDDEN_DIMENSION)
 					}
 				}
@@ -380,7 +379,7 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def constantFieldDimension(Variable v) {
 		if (v.isConstant && v.dimensionOf.isNotEmpty) {
-			error('Constant fields must be non-dimensional', VARIABLE__DIMENSION, CONSTANT_FIELD_DIMENSION)
+			error('Constant fields must be non-array', VARIABLE__DIMENSION, CONSTANT_FIELD_DIMENSION)
 		}
 	}
 
@@ -567,7 +566,7 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def methodDimensionalVoid(Method m) {
 		if (m.typeOf.isVoid && m.dimensionOf.isNotEmpty) {
-			error('''«TypeSystem::LIB_VOID» methods must return a non-dimensional value''', MEMBER__NAME,
+			error('''«TypeSystem::LIB_VOID» methods must return a non-array value''', MEMBER__NAME,
 				METHOD_DIMENSIONAL_VOID)
 		}
 	}
@@ -600,13 +599,10 @@ class NoopValidator extends AbstractNoopValidator {
 
 			if (methodDimension != overriddenDimension) {
 				if (overriddenDimension.isEmpty) {
-					error('''Method «m.name» must return a non-dimensional value as the overridden method''',
-						MEMBER__NAME, METHOD_OVERRIDDEN_DIMENSION)
-				} else if (overriddenDimension.size == 1) {
-					error('''Method «m.name» must return the same dimension of length «overriddenDimension.head» as returned by the overridden method''',
-						MEMBER__NAME, METHOD_OVERRIDDEN_DIMENSION)
+					error('''Method «m.name» must return a non-array value as the overridden method''', MEMBER__NAME,
+						METHOD_OVERRIDDEN_DIMENSION)
 				} else {
-					error('''Method «m.name» must return the same «overriddenDimension.join('x')» dimension returned by the overridden method''',
+					error('''Method «m.name» must return an array of length «overriddenDimension.map['''[«it»]'''].join» as returned by the overridden method''',
 						MEMBER__NAME, METHOD_OVERRIDDEN_DIMENSION)
 				}
 			}
@@ -616,7 +612,7 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def returnUnboundedDimension(ReturnStatement ret) {
 		if (ret.value?.isUnbounded) {
-			error('Methods must return bounded dimensional values', RETURN_STATEMENT__VALUE, RETURN_UNBOUNDED_DIMENSION)
+			error('Methods must return bounded arrays', RETURN_STATEMENT__VALUE, RETURN_UNBOUNDED_DIMENSION)
 		}
 	}
 
@@ -631,7 +627,7 @@ class NoopValidator extends AbstractNoopValidator {
 		if (inconsistents.isNotEmpty) {
 			inconsistents += ret
 			inconsistents.forEach [
-				error('All returned values in a method must have the same dimension', it, RETURN_STATEMENT__VALUE,
+				error('All returned arrays in a method must have the same length', it, RETURN_STATEMENT__VALUE,
 					RETURN_INCONSISTENT_DIMENSION)
 			]
 		}
@@ -788,9 +784,15 @@ class NoopValidator extends AbstractNoopValidator {
 		val leftDim = assignment.left.dimensionOf
 		val rightDim = assignment.right.dimensionOf
 
-		if (leftDim.size != rightDim.size) {
-			error('''Cannot assign a value to a variable with incompatible dimensions''', ASSIGNMENT_EXPRESSION__RIGHT,
+		if (leftDim.isEmpty && rightDim.isNotEmpty) {
+			error('''Cannot assign an array value to a non-array variable''', ASSIGNMENT_EXPRESSION__RIGHT,
 				ASSIGN_VALUE_DIMENSION)
+		} else if (leftDim.isNotEmpty && rightDim.isEmpty) {
+			error('''Cannot assign a non-array value to an array variable''', ASSIGNMENT_EXPRESSION__RIGHT,
+				ASSIGN_VALUE_DIMENSION)
+		} else if (leftDim.size != rightDim.size) {
+			error('''Cannot assign an array value to an array variable with incompatible lengths''',
+				ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_DIMENSION)
 		}
 	}
 
@@ -806,15 +808,15 @@ class NoopValidator extends AbstractNoopValidator {
 				error('''Invalid assignment to a non-numeric variable of type «leftType.name»''',
 					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
 			} else if (rightType.isNonNumeric) {
-				error('''Right hand side of assignment must be a numberic value''', ASSIGNMENT_EXPRESSION__RIGHT,
+				error('''Right-hand side of assignment must be a numberic value''', ASSIGNMENT_EXPRESSION__RIGHT,
 					ASSIGN_VALUE_TYPE)
 			}
 		} else if (type == BAN_ASSIGN || type == BOR_ASSIGN) {
-			if (leftType.isNonNumeric && leftType.isNonBoolean) {
-				error('''Invalid assignment to a non-numeric non-boolean variable of type «assignment.left.typeOf.name»''',
+			if (leftType.isNonPrimitive) {
+				error('''Invalid assignment to a non-«TypeSystem::LIB_PRIMITIVE.toLowerCase» variable of type «assignment.left.typeOf.name»''',
 					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
-			} else if (rightType.isNonNumeric && rightType.isNonBoolean) {
-				error('''Right hand side of assignment must be a numberic or boolean value''',
+			} else if (rightType.isNonPrimitive) {
+				error('''Right-hand side of assignment must be a «TypeSystem::LIB_PRIMITIVE» value''',
 					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
 
 			}
@@ -1281,11 +1283,37 @@ class NoopValidator extends AbstractNoopValidator {
 			}
 		}
 	}
-	
+
 	@Check
-	def castToVoid(CastExpression x) {
+	def castType(CastExpression x) {
 		if (x.left.typeOf.isVoid || x.type.isVoid) {
-			error('''«x.left.typeOf.name» cannot be cast to «x.type.name»''', x, null, CAST_TO_VOID)
+			error('''«x.left.typeOf.name» cannot be cast to «x.type.name»''', x, null, CAST_TYPE)
+		}
+	}
+
+	@Check
+	def castDimension(CastExpression cast) {
+		val leftDim = cast.left.dimensionOf
+
+		if (leftDim.size > 0 || cast.dimension.size > 0) {
+			val leftType = cast.left.typeOf
+			val leftLength = leftDim.reduce[a, b|a * b] ?: 1
+			val castLength = cast.dimension.map [
+				try {
+					value?.valueOf as Integer ?: 1
+				} catch (NonConstantExpressionException e) {
+					error('Array length must be a constant expression', it, null, CAST_DIMENSION)
+					1
+				}
+			].reduce[a, b|a * b] ?: 1
+
+			if (leftLength != castLength ||
+				(leftType.isPrimitive && cast.type.isPrimitive && leftType.sizeOf != cast.type.sizeOf) ||
+				((leftType.isNonPrimitive || cast.type.isNonPrimitive) && leftType.isNotEquals(cast.type))) {
+				val leftString = '''«leftType.name»«leftDim.map['''[«it»]'''].join»'''
+				val castString = '''«cast.type.name»«cast.dimension.map['''[«value?.valueOf»]'''].join»'''
+				error('''«leftString» cannot be cast to «castString»''', cast, null, CAST_DIMENSION)
+			}
 		}
 	}
 
