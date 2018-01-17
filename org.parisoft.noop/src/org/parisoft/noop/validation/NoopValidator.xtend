@@ -69,6 +69,7 @@ import java.util.List
 import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.NewInstance
+import org.parisoft.noop.noop.ConstructorField
 
 /**
  * This class contains custom validation rules. 
@@ -197,6 +198,8 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val SUPER_CONTEXT = 'org.parisoft.noop.SUPER_CONTEXT'
 	public static val NEW_INSTANCE_TYPE = 'org.parisoft.noop.NEW_INSTANCE_TYPE'
 	public static val NEW_INSTANCE_DIMENSION = 'org.parisoft.noop.NEW_INSTANCE_DIMENSION'
+	public static val CONSTRUCTOR_FIELD_TYPE = 'org.parisoft.noop.CONSTRUCTOR_FIELD_TYPE'
+	public static val CONSTRUCTOR_FIELD_DIMENSION = 'org.parisoft.noop.CONSTRUCTOR_FIELD_DIMENSION'
 
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
@@ -833,7 +836,7 @@ class NoopValidator extends AbstractNoopValidator {
 			error('''Cannot assign a non-array value to an array variable''', ASSIGNMENT_EXPRESSION__RIGHT,
 				ASSIGN_VALUE_DIMENSION)
 		} else if (leftDim.size != rightDim.size) {
-			error('''Cannot assign an array value to an array variable with incompatible lengths''',
+			error('''Cannot assign an array value to an array variable with incompatible dimensions''',
 				ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_DIMENSION)
 		}
 	}
@@ -864,7 +867,7 @@ class NoopValidator extends AbstractNoopValidator {
 			}
 		} else if (type == ASSIGN) {
 			if (rightType.isNonInstanceOf(leftType)) {
-				error('''Cannot assign a value of type «rightType.name» value to a variable of type «leftType.name»''',
+				error('''Cannot assign a value of type «rightType.name» to a variable of type «leftType.name»''',
 					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
 			}
 		}
@@ -1548,6 +1551,31 @@ class NoopValidator extends AbstractNoopValidator {
 				error('Array length must be numeric', it, null, NEW_INSTANCE_DIMENSION)
 			}
 		]
+	}
+
+	@Check
+	def constructorFieldType(ConstructorField field) {
+		if (field.value?.typeOf?.isNonInstanceOf(field.variable.typeOf)) {
+			error('''Cannot assign a value of type «field.value.typeOf.name» to a field of type «field.variable.typeOf.name»''',
+				CONSTRUCTOR_FIELD__VALUE, CONSTRUCTOR_FIELD_TYPE)
+		}
+	}
+
+	@Check
+	def constructorFieldDimension(ConstructorField field) {
+		val leftDim = field.variable.dimensionOf
+		val rightDim = field.value?.dimensionOf ?: newArrayList
+
+		if (leftDim.isEmpty && rightDim.isNotEmpty) {
+			error('''Cannot assign an array value to a non-array field''', CONSTRUCTOR_FIELD__VALUE,
+				CONSTRUCTOR_FIELD_DIMENSION)
+		} else if (leftDim.isNotEmpty && rightDim.isEmpty) {
+			error('''Cannot assign a non-array value to an array field''', CONSTRUCTOR_FIELD__VALUE,
+				CONSTRUCTOR_FIELD_DIMENSION)
+		} else if (leftDim.size != rightDim.size) {
+			error('''Cannot assign an array value to an array field with incompatible dimensions''',
+				CONSTRUCTOR_FIELD__VALUE, CONSTRUCTOR_FIELD_DIMENSION)
+		}
 	}
 
 	private def int depth(Object o) {
