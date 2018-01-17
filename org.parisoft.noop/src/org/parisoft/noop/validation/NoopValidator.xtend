@@ -62,6 +62,10 @@ import org.parisoft.noop.noop.ComplementExpression
 import org.parisoft.noop.noop.NotExpression
 import org.parisoft.noop.noop.SigNegExpression
 import org.parisoft.noop.noop.SigPosExpression
+import org.parisoft.noop.noop.ByteLiteral
+import org.parisoft.noop.noop.StringLiteral
+import org.parisoft.noop.noop.ArrayLiteral
+import java.util.List
 
 /**
  * This class contains custom validation rules. 
@@ -181,6 +185,11 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val INSTANCEOF_CONSTANT_RESULT = 'org.parisoft.noop.INSTANCEOF_CONSTANT_RESULT'
 	public static val CAST_TYPE = 'org.parisoft.noop.CAST_TYPE'
 	public static val CAST_DIMENSION = 'org.parisoft.noop.CAST_DIMENSION'
+	public static val BYTE_LITERAL_OVERFLOW = 'org.parisoft.noop.BYTE_LITERAL_OVERFLOW'
+	public static val STRING_EMPTY = 'org.parisoft.noop.STRING_EMPTY'
+	public static val STRING_FILE_NOT_FOUND = 'org.parisoft.noop.STRING_FILE_NOT_FOUND'
+	public static val ARRAY_CONSTANT = 'org.parisoft.noop.ARRAY_CONSTANT'
+	public static val ARRAY_LENGTH = 'org.parisoft.noop.ARRAY_LENGTH'
 
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
@@ -1426,6 +1435,73 @@ class NoopValidator extends AbstractNoopValidator {
 				val castString = '''«cast.type.name»«cast.dimension.map['''[«value?.valueOf»]'''].join»'''
 				error('''«leftString» cannot be cast to «castString»''', cast, null, CAST_DIMENSION)
 			}
+		}
+	}
+
+	// @Check: Not called cause its normalized during conversion
+	def byteLiteralOverflow(ByteLiteral b) {
+		if (b.value > TypeSystem::MAX_UINT) {
+			warning('''Value overflows the maximum numeric value of «TypeSystem::MAX_UINT»''', BYTE_LITERAL__VALUE,
+				BYTE_LITERAL_OVERFLOW)
+		} else if (b.value < TypeSystem::MIN_INT) {
+			warning('''Value underflows the minimum numeric value of «TypeSystem::MIN_INT»''', BYTE_LITERAL__VALUE,
+				BYTE_LITERAL_OVERFLOW)
+		}
+	}
+
+	@Check
+	def stringEmpty(StringLiteral s) {
+		if (s.value.isEmpty) {
+			error('String cannot be empty', STRING_LITERAL__VALUE, STRING_EMPTY)
+		}
+	}
+
+	@Check
+	def stringFileNotFound(StringLiteral s) {
+		if (s.isFileInclude) {
+			val file = s.toFile
+
+			if (!file.exists) {
+				error('''File «file.name» not found on /res folder''', STRING_LITERAL__VALUE, STRING_FILE_NOT_FOUND)
+			}
+		}
+	}
+
+	@Check
+	def array(ArrayLiteral a) {
+		if (a.values.isEmpty) {
+			error('Array cannot be empty', a, null, ARRAY_LENGTH)
+		} else {
+			a.values.map [
+				try {
+					valueOf
+				} catch (NonConstantExpressionException e) {
+					error('Array element must be a constant expression', it, null, ARRAY_CONSTANT)
+					null
+				}
+			].filterNull.reduce [ a1, a2 |
+				if (a1.length != a2.length || a1.depth != a2.depth) {
+					error('All array elements of an array must have the same length', a, null, ARRAY_LENGTH)
+				}
+
+				a1
+			]
+		}
+	}
+
+	private def int depth(Object o) {
+		if (o instanceof List<?>) {
+			1 + if(o.isNotEmpty) o.map[depth].max else 0
+		} else {
+			0
+		}
+	}
+
+	private def int length(Object o) {
+		if (o instanceof List<?>) {
+			o.size
+		} else {
+			0
 		}
 	}
 
