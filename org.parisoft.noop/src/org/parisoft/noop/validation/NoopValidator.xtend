@@ -193,6 +193,8 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val BYTE_LITERAL_OVERFLOW = 'org.parisoft.noop.BYTE_LITERAL_OVERFLOW'
 	public static val STRING_EMPTY = 'org.parisoft.noop.STRING_EMPTY'
 	public static val STRING_FILE_NOT_FOUND = 'org.parisoft.noop.STRING_FILE_NOT_FOUND'
+	public static val STRING_FILE_NON_ROM = 'org.parisoft.noop.STRING_FILE_NON_ROM'
+	public static val STRING_FILE_NON_VARIABLE = 'org.parisoft.noop.STRING_FILE_NON_VARIABLE'
 	public static val ARRAY_CONSTANT = 'org.parisoft.noop.ARRAY_CONSTANT'
 	public static val ARRAY_LENGTH = 'org.parisoft.noop.ARRAY_LENGTH'
 	public static val THIS_CONTEXT = 'org.parisoft.noop.THIS_CONTEXT'
@@ -1488,6 +1490,16 @@ class NoopValidator extends AbstractNoopValidator {
 
 			if (!file.exists) {
 				error('''File «file.name» not found on /res folder''', STRING_LITERAL__VALUE, STRING_FILE_NOT_FOUND)
+			}
+
+			val v = s.getContainerOfType(Variable)
+
+			if (v === null) {
+				error('Files can only be referenced on variables declaration', STRING_LITERAL__VALUE,
+					STRING_FILE_NON_VARIABLE)
+			} else if (v.isNonROM) {
+				error('''Variable «v.name» must be tagged with «StorageType::PRGROM.literal» or «StorageType::CHRROM.literal»''',
+					v, null, STRING_FILE_NON_ROM)
 			}
 		}
 	}
