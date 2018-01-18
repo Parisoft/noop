@@ -276,6 +276,8 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 		if (proposal instanceof ConfigurableCompletionProposal) {
 			proposal => [
 				it.matcher = matcher
+				it.hover = hover
+				it.additionalProposalInfo = variable
 			]
 		}
 	}

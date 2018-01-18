@@ -13,6 +13,7 @@ import org.parisoft.noop.ui.labeling.NoopLabelProvider
 import utils.Images
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import static extension java.lang.Integer.*
 
 class NoopHoverProvider extends DefaultEObjectHoverProvider {
 
@@ -21,7 +22,6 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 	@Inject extension Members
 	@Inject extension Expressions
 	@Inject extension NoopLabelProvider
-
 
 	override protected getFirstLine(EObject o) {
 		switch (o) {
@@ -41,7 +41,15 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 				«val dimension = o.dimensionOf.map['''<b>[</b>«it»<b>]</b>'''].join»
 				«val container = o.containerClass.name»
 				«IF o.isField»
-					«o.image.toTag»&nbsp;<b>«type»</b>«dimension» «container».<b>«o.name»</b>
+					«val value = if (o.isConstant) {
+						try {
+							val n = o.value?.valueOf as Integer
+							''' = «n»<sub>10</sub>|«n.toHexString.toUpperCase»<sub>16</sub>|«n.toBinaryString»<sub>2</sub>'''
+						} catch (Exception e) {
+							''
+						}
+					}»
+					«o.image.toTag»&nbsp;<b>«type»</b>«dimension» «container».<b>«o.name»«value»</b>
 				«ELSE»
 					«val method = o.getContainerOfType(Method)»
 					«val params = method.params.map['''«it.type.name»«it.dimension.map['''[«value?.valueOf»]'''].join»'''].join(', ')»
