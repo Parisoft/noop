@@ -441,7 +441,18 @@ class Statements {
 						val varName = if (varRef instanceof MemberRef) {
 								varRef.member.nameOf
 							} else if (varRef instanceof MemberSelect) {
-								varRef.member.nameOf
+								if (varRef.member instanceof Method && (varRef.member as Method).isNative) {
+									val ref = new CompileContext => [
+										container = ctx.container
+										accLoaded = ctx.accLoaded
+										type = ctx.type
+										mode = Mode::REFERENCE
+									]
+									varRef.compile(ref)
+									'''«ref.immediate»«ref.absolute»«ref.indirect»'''
+								} else {
+									varRef.member.nameOf
+								}
 							} else if (varRef instanceof This) {
 								varRef.nameOf
 							} else if (varRef instanceof Super) {

@@ -14,7 +14,7 @@ class CompileContext {
 		COMPARE_NE,
 		COMPARE_LT,
 		COMPARE_GE,
-		ADDITION, 
+		ADDITION,
 		SUBTRACTION,
 		MULTIPLICATION,
 		DIVISION,
@@ -29,7 +29,7 @@ class CompileContext {
 		DECREMENT,
 		INCREMENT
 	}
-	
+
 	enum Mode {
 		COPY,
 		POINT,
@@ -74,7 +74,7 @@ class CompileContext {
 	def isIndexed() {
 		index !== null
 	}
-	
+
 	override CompileContext clone() {
 		val src = this
 		new CompileContext => [
@@ -93,5 +93,5 @@ class CompileContext {
 			opType = src.opType
 		]
 	}
-	
+
 }

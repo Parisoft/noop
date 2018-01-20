@@ -48,7 +48,7 @@ class Classes {
 	}
 
 	def getSubClasses(NoopClass c) {
-		classesCache.filter[it != c].filter[isInstanceOf(c)]
+		classesCache.filter[isNotEquals(c)].filter[isInstanceOf(c)]
 	}
 
 	def getContainerClass(EObject e) {

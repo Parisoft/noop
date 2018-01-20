@@ -117,8 +117,8 @@ class Datas {
 				LDA #(«src.immediate»)
 		«ENDIF»
 	'''
-	
-	private def copyImmediateToDb(CompileContext src, CompileContext dst)'''
+
+	private def copyImmediateToDb(CompileContext src, CompileContext dst) '''
 		«dst.db»:
 			«IF dst.sizeOf > 1»
 				.dw «src.immediate»
@@ -711,13 +711,13 @@ class Datas {
 				PLA
 		«ENDIF»
 	'''
-	
+
 	def pushRecusiveVars(CompileContext ctx) '''
 		«FOR variable : ctx.recursiveVars»
 			«variable.push»
 		«ENDFOR»
 	'''
-	
+
 	def pullRecursiveVars(CompileContext ctx) '''
 		«FOR variable : ctx.recursiveVars»
 			«variable.pull»
@@ -798,7 +798,7 @@ class Datas {
 
 		chunks.dispose(methodName)
 	}
-	
+
 	def void dispose(Iterable<MemChunk> chunks, String methodName) {
 		chunks.filter[tmp].filter[variable.startsWith(methodName)].forEach[disposed = true]
 	}
