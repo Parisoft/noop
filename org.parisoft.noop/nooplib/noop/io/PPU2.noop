@@ -595,14 +595,21 @@ PPU2 {
     	!	BNE -frag            !
     }
     
-    $setNameTableTiles(Int screen, Byte row, Byte col, Byte[][] tiles) {
-    	row *= 32
+    $setNameTableTile(Int screen, Byte rowOffset, Byte colOffset, Byte tile) {
+    	offset : rowOffset * 32 + colOffset
     	!	LDA ?$PPUSTATUS?           !
-    	!	CLC                        !
+    	screen += offset
+    	!	STA ?$PPUADDR?             !
     	!	LDA ?screen? + 0           !
-    	!	ADC ?row?                  !
-    	!	ADC ?col?                  !
-    	!	STA ?screen? + 0           !
+    	!	STA ?$PPUADDR?             !
+    	!	LDA ?tile?                 !
+    	!	STA ?$PPUDATA?             !
+    }
+    
+    $setNameTableTiles(Int screen, Byte rowOffset, Byte colOffset, Byte[][] tiles) {
+    	offset : rowOffset * 32 + colOffset
+    	!	LDA ?$PPUSTATUS?           !
+    	screen += offset
     	!	LDX ?tiles.length?         !
     	!	BNE +loop                  !
     	!--loop:                       !
@@ -617,10 +624,10 @@ PPU2 {
     	!	LDA ?screen? + 0           !
     	!	ADC #?$SCREEN_WIDTH_TILES? !
     	!	STA ?screen? + 0           !
-    	!+loop:                        !
     	!	LDA ?screen? + 1           !
     	!	ADC #0                     !
     	!	STA ?screen? + 1           !
+    	!+loop:                        !
     	!	STA ?$PPUADDR?             !
     	!	LDA ?screen? + 0           !
     	!	STA ?$PPUADDR?             !
@@ -635,39 +642,145 @@ PPU2 {
     	!	BNE --loop                 !
     }
     
-    $setAttributeTable(Int screen, Byte[64] attributeTable) {
-    	!	LDA ?$PPUSTATUS? !
-    	!	CLC              !
-    	!	LDA ?screen? + 1 !
-    	!	ADC #>$03C0      !
-    	!	STA ?$PPUADDR?   !
-    	!	LDA #<$03C0      !
-    	!	STA ?$PPUADDR?   !
-    	!	LDY #0           !
-    	!-loop:              !
-    	!	LDA (?attributeTable?), Y !
-    	!	STA ?$PPUDATA?   !
-    	!	INY              !
-    	!	CPY #64          !
-    	!	BNE -loop        !
+    $setNameTableRow(Int screen, Byte rowOffset, Byte[960] nameTable) {
+    	offset : rowOffset * $SCREEN_WIDTH_TILES
+    	!	LDA ?$PPUSTATUS?           !
+    	!	CLC                        !
+    	!	LDA ?offset? + 0           !
+    	!	ADC ?nameTable? + 0        !
+    	!	STA ?nameTable? + 0        !
+    	!	LDA ?offset? + 1           !
+    	!	ADC ?nameTable? + 1        !
+		!	STA ?nameTable? + 1        !
+    	!	CLC                        !
+    	!	LDA ?offset? + 0           !
+    	!	ADC ?screen? + 0           !
+    	!	STA ?screen? + 0           !
+    	!	LDA ?offset? + 1           !
+    	!	ADC ?screen? + 1           !
+    	!	STA ?screen? + 1           !
+    	!	STA ?$PPUADDR?             !
+    	!	LDA ?screen? + 0           !
+    	!	STA ?$PPUADDR?             !
+    	!	LDY #0                     !
+    	!-loop:                        !
+    	!	LDA (?nameTable?), Y       !
+    	!	STA ?$PPUDATA?             !
+    	!	INY                        !
+    	!	CPY #?$SCREEN_WIDTH_TILES? !
+    	!	BNE -loop                  !
+    }
+    
+    $setNameTableColumn(Int screen, Byte colOffset, Byte[960] nameTable) {
+    	!	LDY #0                      !
+    	!	LDX #?$SCREEN_HEIGHT_TILES? !
+    	!	LDA #%00000100              !
+    	!	STA ?$PPUCTRL?              !
+    	!	LDA ?$PPUSTATUS?            !
+    	!	LDA ?screen? + 1            !
+    	!	STA ?$PPUADDR?              !
+    	!	LDA ?colOffset?             !
+    	!	STA ?$PPUADDR?              !
+    	!-loop:                         !
+    	!	CLC                         !
+    	!	ADC ?nameTable? + 0         !
+    	!	STA ?nameTable? + 0         !
+    	!	LDA #0                      !
+    	!	ADC ?nameTable? + 1         !
+    	!	STA ?nameTable? + 1         !
+    	!	LDA (?nameTable?), Y        !
+    	!	STA ?$PPUDATA?              !
+    	!	LDA #?$SCREEN_WIDTH_TILES?  !
+    	!	DEX                         !
+    	!	BNE -loop                   !
+    	!	LDA ?$control?              !
+    	!	STA ?$PPUCTRL?              !
     }
     
     $setNameAndAttributeTable(Int screen, Byte[1024] nameAndAttributeTable) {
-    	!	LDA ?$PPUSTATUS? !
-    	!	LDA ?screen? + 1 !
-    	!	STA ?$PPUADDR?   !
-    	!	LDA ?screen? + 0 !
-    	!	STA ?$PPUADDR? !
-    	!	LDX #4         !
-    	!	LDY #0         !
-    	!-loop:            !
+    	!	LDA ?$PPUSTATUS?                 !
+    	!	LDA ?screen? + 1                 !
+    	!	STA ?$PPUADDR?                   !
+    	!	LDA ?screen? + 0                 !
+    	!	STA ?$PPUADDR?                   !
+    	!	LDX #4                           !
+    	!	LDY #0                           !
+    	!-loop:                              !
     	!	LDA (?nameAndAttributeTable?), Y !
-    	!	STA ?$PPUDATA? !
-    	!	INY            !
-    	!	BNE -loop      !
-    	!	INC ?nameAndAttributeTable? + 1 !
-    	!	DEX            !
-    	!	BNE -loop      !
+    	!	STA ?$PPUDATA?                   !
+    	!	INY                              !
+    	!	BNE -loop                        !
+    	!	INC ?nameAndAttributeTable? + 1  !
+    	!	DEX                              !
+    	!	BNE -loop                        !
+    }
+    
+    $setAttributeTable(Int screen, Byte[64] attributeTable) {
+    	!	LDA ?$PPUSTATUS?             !
+    	!	CLC                          !
+    	!	LDA ?screen? + 1             !
+    	!	ADC #>$03C0                  !
+    	!	STA ?$PPUADDR?               !
+    	!	LDA #<$03C0                  !
+    	!	STA ?$PPUADDR?               !
+    	!	LDY #0                       !
+    	!-loop:                          !
+    	!	LDA (?attributeTable?), Y    !
+    	!	STA ?$PPUDATA?               !
+    	!	INY                          !
+    	!	CPY #?attributeTable.length? !
+    	!	BNE -loop                    !
+    }
+    
+    $setAttributeTableRow(Int screen, Byte rowOffset, Byte[64] attributeTable) {
+    	!	LDA ?$PPUSTATUS?             !
+		rowOffset *= 8
+    	!	TAY                          !
+    	!	CLC                          !
+    	!	ADC #<$03C0                  !
+    	!	STA ?screen? + 0             !
+    	!	LDA ?screen? + 1             !
+    	!	ADC #>$03C0                  !
+    	!	STA ?$PPUADDR?               !
+    	!	LDA ?screen? + 0             !
+    	!	STA ?$PPUADDR?               !
+    	!	LDX #8                       !
+    	!-loop:                          !
+    	!	LDA (?attributeTable?), Y    !
+    	!	STA ?$PPUDATA?               !
+    	!	INY                          !
+    	!	DEX                          !
+    	!	BNE -loop                    !
+    }
+    
+    $setAttributeTableColumn(Int screen, Byte colOffset, Byte[64] attributeTable) {
+    	!	LDA ?$PPUSTATUS?             !
+    	!	LDX #8                       !
+		!	LDA ?colOffset?              !
+    	!	TAY                          !
+    	!	CLC                          !
+    	!	ADC #<$03C0                  !
+    	!	STA ?screen? + 0             !
+    	!	LDA ?screen? + 1             !
+    	!	ADC #>$03C0                  !
+    	!	STA ?screen? + 1             !
+    	!-loop:                          !
+    	!	STA ?$PPUADDR?               !
+    	!	LDA ?screen? + 0             !
+    	!	STA ?$PPUADDR?               !
+    	!	LDA (?attributeTable?), Y    !
+    	!	STA ?$PPUDATA?               !
+    	!	DEX                          !
+    	!	BEQ +done                    !
+    	!	TYA                          !
+    	!	ADC #8                       !
+    	!	TAY                          !
+    	!	LDA ?screen? + 0             !
+    	!	ADC #8                       !
+    	!	STA ?screen? + 0             !
+    	!	LDA ?screen? + 1             !
+    	!	BNE -loop                    !
+    	!+done:                          !
     }
     
     $update() @Inline {

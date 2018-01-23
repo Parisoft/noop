@@ -693,6 +693,7 @@ class Datas {
 	'''
 
 	def referenceInto(CompileContext src, CompileContext dst) {
+		dst.immediate = src.immediate
 		dst.absolute = src.absolute
 		dst.indirect = src.indirect
 		dst.index = src.index
