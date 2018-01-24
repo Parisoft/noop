@@ -323,7 +323,7 @@ class NoopValidator extends AbstractNoopValidator {
 			if (overridden !== null) {
 				val overrideDimension = overridden.dimensionOf
 
-				if (v.dimensionOf !== overrideDimension) {
+				if (v.dimensionOf != overrideDimension) {
 					if (overrideDimension.isEmpty) {
 						error('''Field «v.name» must be a non-array as the overridden field''', MEMBER__NAME,
 							FIELD_OVERRIDDEN_DIMENSION)

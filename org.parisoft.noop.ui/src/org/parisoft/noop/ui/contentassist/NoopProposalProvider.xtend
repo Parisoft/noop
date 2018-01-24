@@ -258,7 +258,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	override protected doCreateProposal(String proposal, StyledString displayString, Image image, int replacementOffset,
 		int replacementLength) {
 		new NoopMethodCompletionProposal(proposal, replacementOffset, replacementLength, proposal.length(), image,
-			displayString, null, null)
+			displayString, null, null) => [it.matcher = matcher]
 	}
 
 	private def createReferenceProposal(Variable variable, ContentAssistContext context) {

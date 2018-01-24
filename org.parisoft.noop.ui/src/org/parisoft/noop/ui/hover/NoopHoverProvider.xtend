@@ -75,6 +75,10 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 		if (doc !== null && (index = doc.indexOf('*/')) !== -1) {
 			return doc.substring(0, index)
 		}
+		
+		if (doc?.endsWith('/')) {
+			return doc.substring(0, doc.length - 1)
+		}
 
 		return doc
 	}

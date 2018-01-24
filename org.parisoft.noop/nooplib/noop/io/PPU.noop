@@ -1,24 +1,269 @@
 PPU {
-    
-    $SCREEN_WIDTH_PX : 256
+	
+	/*
+	 * <p>Screen number 0 localized at top left</p>
+	 * <pre>     (0,0)     (256,0)     (511,0)
+     *        +-----------+-----------+
+     *        |           |           |
+     *        |           |           |
+     *        |   <b>$2000</b>   |   $2400   |
+     *        |           |           |
+     *        |           |           |
+     * (0,240)+-----------+-----------+(511,240)
+     *        |           |           |
+     *        |           |           |
+     *        |   $2800   |   $2C00   |
+     *        |           |           |
+     *        |           |           |
+     *        +-----------+-----------+
+     *      (0,479)   (256,479)   (511,479)
+     * </pre>
+	 */
+	$SCREEN_TOP_LEFT : 0x2000
+	
+	/*
+	 * <p>Screen number 1 localized at top right</p>
+	 * <pre>     (0,0)     (256,0)     (511,0)
+     *        +-----------+-----------+
+     *        |           |           |
+     *        |           |           |
+     *        |   $2000   |   <b>$2400</b>   |
+     *        |           |           |
+     *        |           |           |
+     * (0,240)+-----------+-----------+(511,240)
+     *        |           |           |
+     *        |           |           |
+     *        |   $2800   |   $2C00   |
+     *        |           |           |
+     *        |           |           |
+     *        +-----------+-----------+
+     *      (0,479)   (256,479)   (511,479)
+     * </pre>
+	 */
+	$SCREEN_TOP_RIGHT : 0x2400
+	
+	/*
+	 * <p>Screen number 2 localized at bottom left</p>
+	 * <pre>     (0,0)     (256,0)     (511,0)
+     *        +-----------+-----------+
+     *        |           |           |
+     *        |           |           |
+     *        |   $2000   |   $2400   |
+     *        |           |           |
+     *        |           |           |
+     * (0,240)+-----------+-----------+(511,240)
+     *        |           |           |
+     *        |           |           |
+     *        |   <b>$2800</b>   |   $2C00   |
+     *        |           |           |
+     *        |           |           |
+     *        +-----------+-----------+
+     *      (0,479)   (256,479)   (511,479)
+     * </pre>
+	 */
+	$SCREEN_BOTTOM_LEFT : 0x2800
+	
+	/*
+	 * <p>Screen number 3 localized at bottom right</p>
+	 * <pre>     (0,0)     (256,0)     (511,0)
+     *        +-----------+-----------+
+     *        |           |           |
+     *        |           |           |
+     *        |   $2000   |   $2400   |
+     *        |           |           |
+     *        |           |           |
+     * (0,240)+-----------+-----------+(511,240)
+     *        |           |           |
+     *        |           |           |
+     *        |   $2800   |   <b>$2C00</b>   |
+     *        |           |           |
+     *        |           |           |
+     *        +-----------+-----------+
+     *      (0,479)   (256,479)   (511,479)
+     * </pre>
+	 */
+	$SCREEN_BOTTOM_RIGHT : 0x2C00
+	
+	/*
+	 * <p>Number of width pixels on the screen</p>
+	 */
+	$SCREEN_WIDTH_PX : 256
+	
+	/*
+	 * <p>Number of height pixels on the screen</p>
+	 */
     $SCREEN_HEIGHT_PX : 240
-    $SCREEN_WIDTH_TILES : 32
-    $SCREEN_HEIGHT_TILES : 30
-    $NAME_TABLE_DEFAULT : PPUControl.$NAME_TABLE_DEFAULT
-    $NAME_TABLE_TOP_RIGHT : PPUControl.$NAME_TABLE_TOP_RIGHT
-    $NAME_TABLE_BOTTOM_LEFT : PPUControl.$NAME_TABLE_BOTTOM_LEFT
-    $NAME_TABLE_BOTTOM_RIGHT : PPUControl.$NAME_TABLE_BOTTOM_RIGHT
-    
-    $control : PPUControl.$DEFAULT
-    $mask : PPUMask.$DEFAULT
-    $scrollX : 0
-    $scrollY : 0
     
     /*
+     * <p>Number of width tiles on the screen<p>
+     * <h2>Note:</h2>
+     * <p>Each tile has 8 pixels</p>
+     */
+    $SCREEN_WIDTH_TILES : 32
+    
+    /*
+     * <p>Number of height tiles on the screen<p>
+     * <h2>Note:</h2>
+     * <p>Each tile has 8 pixels</p>
+     */
+    $SCREEN_HEIGHT_TILES : 30
+	
+	/*
+	 * <p>Various flags controlling PPU operation</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * VPHB SINN
+     * |||| ||||
+     * |||| ||++- Base nametable address
+     * |||| ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * |||| |+--- VRAM address increment per CPU read/write of PPUDATA
+     * |||| |     (0: add 1, going across; 1: add 32, going down)
+     * |||| +---- Sprite pattern table address for 8x8 sprites
+     * ||||       (0: $0000; 1: $1000; ignored in 8x16 mode)
+     * |||+------ Background pattern table address (0: $0000; 1: $1000)
+     * ||+------- Sprite size (0: 8x8; 1: 8x16)
+     * |+-------- PPU master/slave select
+     * |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     * +--------- Generate an <a href="/w/index.php/NMI" title="NMI">NMI</a> at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
+     * </pre>
+	 */
+	$PPUCTRL : 0x2000
+	
+	/*
+	 * <p>This register controls the rendering of sprites and backgrounds, as well as colour effects</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * BGRs bMmG
+     * |||| ||||
+     * |||| |||+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * |||| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * |||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * |||| +---- 1: Show background
+     * |||+------ 1: Show sprites
+     * ||+------- Emphasize red*
+     * |+-------- Emphasize green*
+     * +--------- Emphasize blue*
+     * 
+     * * NTSC colors. PAL and Dendy swaps green and red
+     * </pre>
+	 */
+	$PPUMASK : 0x2001
+	
+	/*
+	 * <p>This register reflects the state of various functions inside the PPU. It is often used for determining timing. To determine when the PPU has reached a given pixel of the screen, put an opaque pixel of sprite 0 there</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * VSO. ....
+     * |||| ||||
+     * |||+-++++- Least significant bits previously written into a PPU register
+     * |||        (due to register not being updated for this address)
+     * ||+------- Sprite overflow. The intent was for this flag to be set
+     * ||         whenever more than eight sprites appear on a scanline, but a
+     * ||         hardware bug causes the actual behavior to be more complicated
+     * ||         and generate false positives as well as false negatives; see
+     * ||         <a href="/w/index.php/PPU_sprite_evaluation" title="PPU sprite evaluation">PPU sprite evaluation</a>. This flag is set during sprite
+     * ||         evaluation and cleared at dot 1 (the second dot) of the
+     * ||         pre-render line.
+     * |+-------- Sprite 0 Hit.  Set when a nonzero pixel of sprite 0 overlaps
+     * |          a nonzero background pixel; cleared at dot 1 of the pre-render
+     * |          line.  Used for raster timing.
+     * +--------- Vertical blank has started (0: not in vblank; 1: in vblank).
+     *            Set at dot 1 of line 241 (the line *after* the post-render
+     *            line); cleared after reading $2002 and at dot 1 of the
+     *            pre-render line.
+     * </pre>
+	 */
+	$PPUSTATUS : 0x2002
+	
+	/*
+	 * <p>This register is used to change the scroll position, that is, to tell the PPU which pixel of the nametable selected through PPUCTRL should be at the top left corner of the rendered screen. Typically, this register is written to during vertical blanking, so that the next frame starts rendering from the desired location, but it can also be modified during rendering in order to split the screen. Changes made to the vertical scroll during rendering will only take effect on the next frame.</p>
+	 */
+	$PPUSCROLL : 0x2005
+	
+	/*
+	 * <p>Because the CPU and the PPU are on separate buses, neither has direct access to the other's memory. The CPU writes to VRAM through a pair of registers on the PPU. First it loads an address into PPUADDR, and then it writes repeatedly to PPUDATA to fill VRAM.</p>
+	 */
+	$PPUADDR : 0x2006
+	
+	/*
+	 * <p>VRAM read/write data register. After access, the video memory address will increment by an amount determined by $2000:2.</p>
+	 */
+	$PPUDATA : 0x2007
+	
+	/*
+	 * <p>Write the address of OAM you want to access here. Most games just write $00 here and then use OAMDMA. (DMA is implemented in the 2A03/7 chip and works by repeatedly writing to OAMDATA)</p>
+	 */
+	$OAMADDR : 0x2003
+	
+	/*
+	 * <p>Write OAM data here. Writes will increment OAMADDR after the write; reads during vertical or forced blanking return the value from OAM at that address but do not increment.</p>
+     * <p>Because changes to OAM should normally be made only during vblank, writing through OAMDATA is only effective for partial updates (it is too slow). Most games will use the DMA feature through OAMDMA instead.</p>
+	 */
+	$OAMDATA : 0x2004
+	
+	/*
+	 * <p>This port is located on the CPU. Writing $XX will upload 256 bytes of data from CPU page $XX00-$XXFF to the internal PPU OAM. This page is typically located in internal RAM, commonly $0200-$02FF, but cartridge RAM or ROM can be used as well.</p>
+	 */
+	$OAMDMA : 0x4014
+	
+	/*
+	 * <p>Bits written to <i>$PPUCTRL</i> when <i>$update()</i> is called</p>
+	 * <h2>Default:</h2>
+	 * <pre>
+	 * 1001 0000
+     * |||| ||||
+     * |||| ||++- Base nametable address
+     * |||| ||    (0 = <b>$2000</b>; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * |||| |+--- VRAM address increment per CPU read/write of PPUDATA
+     * |||| |     (0: <b>add 1</b>, going across; 1: add 32, going down)
+     * |||| +---- Sprite pattern table address for 8x8 sprites
+     * ||||       (0: <b>$0000</b>; 1: $1000; ignored in 8x16 mode)
+     * |||+------ Background pattern table address (0: $0000; 1: <b>$1000</b>)
+     * ||+------- Sprite size (0: <b>8x8</b>; 1: 8x16)
+     * |+-------- PPU master/slave select
+     * |          (0: <b>read backdrop from EXT pins</b>; 1: output color on EXT pins)
+     * +--------- Generate an NMI at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: <b>on</b>)
+     * </pre>
+	 */
+	$control : 0b10010000
+	
+	/*
+	 * <p>Bits written to <i>$PPUMASK</i> when <i>$update()</i> is called</p>
+	 * <h2>Default:</h2>
+	 * <pre>
+     * 0001 1110
+     * |||| ||||
+     * |||| |||+- Greyscale (0: <b>normal color</b>, 1: produce a greyscale display)
+     * |||| ||+-- 1: <b>Show background in leftmost 8 pixels of screen</b>, 0: Hide
+     * |||| |+--- 1: <b>Show sprites in leftmost 8 pixels of screen</b>, 0: Hide
+     * |||| +---- 1: <b>Show background</b>
+     * |||+------ 1: <b>Show sprites</b>
+     * ||+------- <b>Emphasize red*</b>
+     * |+-------- <b>Emphasize green*</b>
+     * +--------- <b>Emphasize blue*</b>
+     * 
+     * * NTSC colors. PAL and Dendy swaps green and red
+     * </pre>
+	 */
+	$mask : 0b00011110
+	
+	/*
+	 * <p>Horizontal scroll value written to <i>$PPUSCROLL</i> when <i>$update()</i> is called</p>
+	 */
+	$scrollX : 0
+	
+	/*
+	 * <p>Vertical scroll value written to <i>$PPUSCROLL</i> when <i>$update()</i> is called</p>
+	 */
+	$scrollY : 0
+	
+	/*
     * <p>Load the background palettes</p>
     * <h2>Parameters</h2>
     * <ul>
-    * <li><b>palettes</b>: a 4x4 matrix containing colors from NES palettes</li>
+    * <li><b>palettes</b>: an array containing 16 colors from NES palettes</li>
     * </ul>
     * <h2>NES palette colors</h2>
 	* <table class="wikitable">
@@ -154,27 +399,27 @@ PPU {
 	* </td>
 	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x3F
 	* </td></tr></tbody></table>*/
-    $loadBgPalettes(Byte[][] palettes) {
-    	!	LDA $2002             ; read PPU status to reset the high/low latch !
-    	!	LDA #$3F                                                            !
-    	!	STA $2006             ; write the high byte of $3F00 address        !
-    	!	LDA #$00                                                            !
-    	!	STA $2006             ; write the low byte of $3F00 address         !
-    	!	                                                                    !
-    	!	LDY #$00                                                            !
-    	!-loop:                                                                 !
-    	!	LDA (?palettes?), Y                                                 !
-    	!	STA $2007             ; write to PPU                                !
-    	!	INY                                                                 !
-    	!	CPY #$10                                                            !
-    	!	BNE -loop                                                           !
+    $setBackgroundPalettes(Byte[16] palettes) {
+    	!	LDA ?$PPUSTATUS?    !
+    	!	LDA #>$3F00         !
+    	!	STA ?$PPUADDR?      !
+    	!	LDA #<$3F00         !
+    	!	STA ?$PPUADDR?      !
+    	!	                    !
+    	!	LDY #$00            !
+    	!-loop:                 !
+    	!	LDA (?palettes?), Y !
+    	!	STA ?$PPUDATA?      !
+    	!	INY                 !
+    	!	CPY #$10            !
+    	!	BNE -loop           !
     }
     
     /*
     * <p>Load the sprites palettes</p>
     * <h2>Parameters</h2>
     * <ul>
-    * <li><b>palettes</b>: a 4x4 matrix containing colors from NES palettes</li>
+    * <li><b>palettes</b>: an array containing 16 colors from NES palettes</li>
     * </ul>
     * <h2>NES palette colors</h2>
 	* <table class="wikitable">
@@ -310,225 +555,340 @@ PPU {
 	* </td>
 	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x3F
 	* </td></tr></tbody></table>*/
-    $loadSpritesPalettes(Byte[][] palettes) {
-    	!	LDA $2002	       ; read PPU status to reset the high/low latch !
-    	!	LDA #$3F                                                         !
-    	!	STA $2006	       ; write the high byte of $3F00 address        !
-    	!	LDA #$10                                                         !
-    	!	STA $2006          ; write the low byte of $3F00 address         !
-    	!	                                                                 !
-    	!	LDY #$00                                                         !
-    	!-loop:                                                              !
-    	!	LDA (?palettes?), Y                                              !
-    	!	STA $2007	       ; write to PPU                                !
-    	!	INY                                                              !
-    	!	CPY #$10                                                         !
-    	!	BNE -loop                                                        !
+    $setSpritesPalettes(Byte[16] palettes) {
+    	!	LDA ?$PPUSTATUS?    !
+    	!	LDA #>$3F10         !
+    	!	STA ?$PPUADDR?      !
+    	!	LDA #<$3F10         !
+    	!	STA ?$PPUADDR?      !
+    	!	                    !
+    	!	LDY #$00            !
+    	!-loop:                 !
+    	!	LDA (?palettes?), Y !
+    	!	STA ?$PPUDATA?      !
+    	!	INY                 !
+    	!	CPY #$10            !
+    	!	BNE -loop           !
     }
     
-    $drawBackground(Byte bgPosition, Byte row, Byte col, Byte[][] nameTable) {
-    	i : 0
-    	j : 0
-    	addr : Int
-    	!	; addr = row * 32              !
-    	!	LDA ?row?                      !
-    	!	STA ?addr?+0                   !
-    	!	LDA #$00                       !
-    	!	STA ?addr?+1                   !
-    	!	CLC                            !
-    	!	ASL ?addr?+0                   !
-    	!	ROL ?addr?+1                   !
-    	!	ASL ?addr?+0                   !
-    	!	ROL ?addr?+1                   !
-    	!	ASL ?addr?+0                   !
-    	!	ROL ?addr?+1                   !
-    	!	ASL ?addr?+0                   !
-    	!	ROL ?addr?+1                   !
-    	!	ASL ?addr?+0                   !
-    	!	ROL ?addr?+1                   !
-    	!	; addr += col                  !
-    	!	CLC                            !
-    	!	LDA ?addr?+0                   !
-    	!	ADC ?col?                      !
-    	!	STA ?addr?+0                   !
-    	!	LDA ?addr?+1                   !
-    	!	ADC #$00                       !
-    	!	STA ?addr?+1                   !
-    	!	                               !
-    	!+if0:                             !
-    	!	LDX ?bgPosition?               !
-    	!	CPX #?$NAME_TABLE_DEFAULT?     !
-    	!	BNE +elseif0                   !
-    	!	CLC                            !
-    	!	ADC #$20                       !
-    	!	JMP +endif0                    !
-    	!+elseif0:                         !
-    	!	CPX #?$NAME_TABLE_TOP_RIGHT?   !
-    	!	BNE +elseif1                   !
-    	!	CLC                            !
-    	!	ADC #$24                       !
-    	!	JMP +endif0                    !
-    	!+elseif1:                         !
-    	!	CPX #?$NAME_TABLE_BOTTOM_LEFT? !
-    	!	BNE +else0                     !
-    	!	CLC                            !
-    	!	ADC #$28                       !
-    	!	JMP +endif0                    !
-    	!+else0:                           !
-    	!	CLC                            !
-    	!	ADC #$2C                       !
-    	!+endif0:                          !
-    	!	                               !
-    	!	STA ?addr?+1                   !
-    	!	LDA $2002                      !
-    	!	                               !
-    	!+for0assign:                      !
-    	!	LDX #$00                       !
-    	!	STX ?i?                        !
-    	!-for0compare:                     !
-    	!	CPX ?nameTable?.len0           !
-    	!	BEQ +for0end                   !
-    	!+for0block:                       !
-    	!	LDA ?addr?+1                   !
-    	!	STA $2006                      !
-    	!	LDA ?addr?+0                   !
-    	!	STA $2006                      !
-    	!+for1assign:                      !
-    	!	LDX #$00                       !
-    	!	STX ?j?                        !
-    	!-for1compare:                     !
-    	!	CPX ?nameTable?.len1           !
-    	!	BEQ +for1end                   !
-    	!+for1block:                       !
-    	!	LDY ?j?                        !
-    	!	LDA (?nameTable?), Y           !
-    	!	STA $2007                      !
-    	!+for1increment:                   !
-    	!	INC ?j?                        !
-    	!	LDX ?j?                        !
-    	!	JMP -for1compare               !
-    	!+for1end:                         !
-    	!	                               !
-    	!+for0increment:                   !
-    	!	CLC                            !
-    	!	LDA ?nameTable?+0              !
-    	!	ADC ?nameTable?.len1           !
-    	!	STA ?nameTable?+0              !
-    	!	BCC ++for0increment            !
-    	!	LDA ?nameTable?+1              !
-    	!	ADC #$00                       !
-    	!	STA ?nameTable?+1              !
-    	!++for0increment:                  !
-    	!	CLC                            !
-    	!	LDA ?addr?+0                   !
-    	!	ADC #?$SCREEN_WIDTH_TILES?     !
-    	!	STA ?addr?+0                   !
-    	!	BCC +++for0increment           !
-    	!	LDA ?addr?+1                   !
-    	!	ADC #$00                       !
-    	!	STA ?addr?+1                   !
-    	!+++for0increment:                 !
-    	!	INC ?i?                        !
-    	!	LDX ?i?                        !
-    	!	JMP -for0compare               !
-    	!+for0end:                         !
-    }
-
-	$drawBackgroundTile(Byte bgPosition, Byte row, Byte col, Byte tile) {
-		i : Int
-    	!	; i = row * 32                 !
-    	!	LDA ?row?                      !
-    	!	STA ?i?+0                      !
-    	!	LDA #$00                       !
-    	!	STA ?i?+1                      !
-    	!	CLC                            !
-    	!	ASL ?i?+0                      !
-    	!	ROL ?i?+1                      !
-    	!	ASL ?i?+0                      !
-    	!	ROL ?i?+1                      !
-    	!	ASL ?i?+0                      !
-    	!	ROL ?i?+1                      !
-    	!	ASL ?i?+0                      !
-    	!	ROL ?i?+1                      !
-    	!	ASL ?i?+0                      !
-    	!	ROL ?i?+1                      !
-    	!	; i += col                     !
-    	!	CLC                            !
-    	!	LDA ?i?+0                      !
-    	!	ADC ?col?                      !
-    	!	STA ?i?+0                      !
-    	!	BCC +end:                      !
-    	!	LDA ?i?+1                      !
-    	!	ADC #$00                       !
-    	!	STA ?i?+1                      !
-    	!+end:                             !
-    	!	                               !
-    	!	LDA $2002                      !
-    	!	                               !
-    	!+if0:                             !
-    	!	LDX ?bgPosition?               !
-    	!	CPX #?$NAME_TABLE_DEFAULT?     !
-    	!	BNE +elseif0                   !
-    	!	LDA #$20                       !
-    	!	JMP +endif0                    !
-    	!+elseif0:                         !
-    	!	CPX #?$NAME_TABLE_TOP_RIGHT?   !
-    	!	BNE +elseif1                   !
-    	!	LDA #$24                       !
-    	!	JMP +endif0                    !
-    	!+elseif1:                         !
-    	!	CPX #?$NAME_TABLE_BOTTOM_LEFT? !
-    	!	BNE +else0                     !
-    	!	LDA #$28                       !
-    	!	JMP +endif0                    !
-    	!+else0:                           !
-    	!	LDA #$2C                       !
-    	!+endif0:                          !
-    	!	                               !
-    	!	CLC                            !
-    	!	ADC ?i?+1                      !
-    	!	STA $2006                      !
-    	!	LDA ?i?+0                      !
-    	!	STA $2006                      !
-    	!	LDA ?tile?                     !
-    	!	STA $2007                      !
+    $setNameTable(Int screen, Byte[960] nameTable) {
+    	!	LDA ?$PPUSTATUS?     !
+    	!	LDA ?screen? + 1     !
+    	!	STA ?$PPUADDR?       !
+    	!	LDA ?screen? + 0     !
+    	!	STA ?$PPUADDR?       !
+    	!	LDX #3               !
+    	!	LDY #0               !
+    	!-loop:                  !
+    	!	LDA (?nameTable?), Y !
+    	!	STA ?$PPUDATA?       !
+    	!	INY                  !
+    	!	BNE -loop            !
+    	!	INC ?nameTable? + 1  !
+    	!	DEX                  !
+    	!	BNE -loop            !
+    	!-frag:                  !
+    	!	LDA (?nameTable?), Y !
+    	!	STA ?$PPUDATA?       !
+    	!	INY                  !
+    	!	CPY #$C0             !
+    	!	BNE -frag            !
     }
     
-    $configureBackground(Byte bgPosition, Byte[][] attributeTable) {
-    	!	;TODO configureBackground(Byte bgPosition, Byte[][] attributeTable) !
+    $setNameTableTile(Int screen, Byte rowOffset, Byte colOffset, Byte tile) {
+    	!	LDA ?$PPUSTATUS?           !
+    	offset : rowOffset * 32 + colOffset
+		!	CLC                        !
+		!	LDA ?offset? + 0           !
+		!	ADC ?screen? + 0           !
+		!	STA ?screen? + 0           !
+		!	LDA ?offset? + 1           !
+		!	ADC ?screen? + 1           !
+    	!	STA ?$PPUADDR?             !
+    	!	LDA ?screen? + 0           !
+    	!	STA ?$PPUADDR?             !
+    	!	LDA ?tile?                 !
+    	!	STA ?$PPUDATA?             !
     }
     
-    $drawSpriteTile(Byte spriteNumber, Byte x, Byte y, Byte tile, Byte options) {
-		!	ASL ?spriteNumber? !
-		!	ASL ?spriteNumber? !
-		!	LDX ?spriteNumber? !
-		!	LDA ?y?            !
-		!	STA $0200, X       !
-		!	LDA ?x?            !
-		!	STA $0203, X       !
-		!	LDA ?tile?         !
-		!	STA $0201, X       !
-		!	LDA ?options?      !
-		!	STA $0202, X       !
-	}
+    $setNameTableTiles(Int screen, Byte rowOffset, Byte colOffset, Byte[][] tiles) {
+    	offset : rowOffset * 32 + colOffset
+    	!	LDA ?$PPUSTATUS?           !
+    	screen += offset
+    	!	LDX ?tiles.length?         !
+    	!	BNE +loop                  !
+    	!--loop:                       !
+    	!	CLC                        !
+    	!	LDA ?tiles? + 0            !
+    	!	ADC ?tiles[0].length?      !
+    	!	STA ?tiles? + 0            !
+    	!	LDA ?tiles? + 1            !
+    	!	ADC #0                     !
+    	!	STA ?tiles? + 1            !
+    	!	CLC                        !
+    	!	LDA ?screen? + 0           !
+    	!	ADC #?$SCREEN_WIDTH_TILES? !
+    	!	STA ?screen? + 0           !
+    	!	LDA ?screen? + 1           !
+    	!	ADC #0                     !
+    	!	STA ?screen? + 1           !
+    	!+loop:                        !
+    	!	STA ?$PPUADDR?             !
+    	!	LDA ?screen? + 0           !
+    	!	STA ?$PPUADDR?             !
+    	!	LDY #0                     !
+    	!-loop:                        !
+    	!	LDA (?tiles?), Y           !
+    	!	STA ?$PPUDATA?             !
+    	!	INY                        !
+    	!	CPY ?tiles[0].length?      !
+    	!	BNE -loop                  !
+    	!	DEX                        !
+    	!	BNE --loop                 !
+    }
     
-    $update() {
+    $setNameTableRow(Int screen, Byte rowOffset, Byte[960] nameTable) {
+    	offset : rowOffset * $SCREEN_WIDTH_TILES
+    	!	LDA ?$PPUSTATUS?           !
+    	!	CLC                        !
+    	!	LDA ?offset? + 0           !
+    	!	ADC ?nameTable? + 0        !
+    	!	STA ?nameTable? + 0        !
+    	!	LDA ?offset? + 1           !
+    	!	ADC ?nameTable? + 1        !
+		!	STA ?nameTable? + 1        !
+    	!	CLC                        !
+    	!	LDA ?offset? + 0           !
+    	!	ADC ?screen? + 0           !
+    	!	STA ?screen? + 0           !
+    	!	LDA ?offset? + 1           !
+    	!	ADC ?screen? + 1           !
+    	!	STA ?screen? + 1           !
+    	!	STA ?$PPUADDR?             !
+    	!	LDA ?screen? + 0           !
+    	!	STA ?$PPUADDR?             !
+    	!	LDY #0                     !
+    	!-loop:                        !
+    	!	LDA (?nameTable?), Y       !
+    	!	STA ?$PPUDATA?             !
+    	!	INY                        !
+    	!	CPY #?$SCREEN_WIDTH_TILES? !
+    	!	BNE -loop                  !
+    }
+    
+    $setNameTableColumn(Int screen, Byte colOffset, Byte[960] nameTable) {
+    	!	LDY #0                      !
+    	!	LDX #?$SCREEN_HEIGHT_TILES? !
+    	!	LDA #%00000100              !
+    	!	STA ?$PPUCTRL?              !
+    	!	LDA ?$PPUSTATUS?            !
+    	!	LDA ?screen? + 1            !
+    	!	STA ?$PPUADDR?              !
+    	!	LDA ?colOffset?             !
+    	!	STA ?$PPUADDR?              !
+    	!-loop:                         !
+    	!	CLC                         !
+    	!	ADC ?nameTable? + 0         !
+    	!	STA ?nameTable? + 0         !
+    	!	LDA #0                      !
+    	!	ADC ?nameTable? + 1         !
+    	!	STA ?nameTable? + 1         !
+    	!	LDA (?nameTable?), Y        !
+    	!	STA ?$PPUDATA?              !
+    	!	LDA #?$SCREEN_WIDTH_TILES?  !
+    	!	DEX                         !
+    	!	BNE -loop                   !
+    	!	LDA ?$control?              !
+    	!	STA ?$PPUCTRL?              !
+    }
+    
+    $setNameAndAttributeTable(Int screen, Byte[1024] nameAndAttributeTable) {
+    	!	LDA ?$PPUSTATUS?                 !
+    	!	LDA ?screen? + 1                 !
+    	!	STA ?$PPUADDR?                   !
+    	!	LDA ?screen? + 0                 !
+    	!	STA ?$PPUADDR?                   !
+    	!	LDX #4                           !
+    	!	LDY #0                           !
+    	!-loop:                              !
+    	!	LDA (?nameAndAttributeTable?), Y !
+    	!	STA ?$PPUDATA?                   !
+    	!	INY                              !
+    	!	BNE -loop                        !
+    	!	INC ?nameAndAttributeTable? + 1  !
+    	!	DEX                              !
+    	!	BNE -loop                        !
+    }
+    
+    $setAttributeTable(Int screen, Byte[64] attributeTable) {
+    	!	LDA ?$PPUSTATUS?             !
+    	!	CLC                          !
+    	!	LDA ?screen? + 1             !
+    	!	ADC #>$03C0                  !
+    	!	STA ?$PPUADDR?               !
+    	!	LDA #<$03C0                  !
+    	!	STA ?$PPUADDR?               !
+    	!	LDY #0                       !
+    	!-loop:                          !
+    	!	LDA (?attributeTable?), Y    !
+    	!	STA ?$PPUDATA?               !
+    	!	INY                          !
+    	!	CPY #?attributeTable.length? !
+    	!	BNE -loop                    !
+    }
+    
+    $setAttributeTableRow(Int screen, Byte rowOffset, Byte[64] attributeTable) {
+    	!	LDA ?$PPUSTATUS?          !
+		!	LDA ?rowOffset?           !
+    	!	ASL A                     !
+    	!	ASL A                     !
+    	!	ASL A                     !
+    	!	TAY                       !
+    	!	CLC                       !
+    	!	ADC #<$03C0               !
+    	!	STA ?screen? + 0          !
+    	!	LDA ?screen? + 1          !
+    	!	ADC #>$03C0               !
+    	!	STA ?$PPUADDR?            !
+    	!	LDA ?screen? + 0          !
+    	!	STA ?$PPUADDR?            !
+    	!	LDX #8                    !
+    	!-loop:                       !
+    	!	LDA (?attributeTable?), Y !
+    	!	STA ?$PPUDATA?            !
+    	!	INY                       !
+    	!	DEX                       !
+    	!	BNE -loop                 !
+    }
+    
+    $setAttributeTableColumn(Int screen, Byte colOffset, Byte[64] attributeTable) {
+    	!	LDA ?$PPUSTATUS?          !
+    	!	LDX #8                    !
+		!	LDA ?colOffset?           !
+    	!	TAY                       !
+    	!	CLC                       !
+    	!	ADC #<$03C0               !
+    	!	STA ?screen? + 0          !
+    	!	LDA ?screen? + 1          !
+    	!	ADC #>$03C0               !
+    	!	STA ?screen? + 1          !
+    	!-loop:                       !
+    	!	STA ?$PPUADDR?            !
+    	!	LDA ?screen? + 0          !
+    	!	STA ?$PPUADDR?            !
+    	!	LDA (?attributeTable?), Y !
+    	!	STA ?$PPUDATA?            !
+    	!	DEX                       !
+    	!	BEQ +done                 !
+    	!	TYA                       !
+    	!	ADC #8                    !
+    	!	TAY                       !
+    	!	LDA ?screen? + 0          !
+    	!	ADC #8                    !
+    	!	STA ?screen? + 0          !
+    	!	LDA ?screen? + 1          !
+    	!	BNE -loop                 !
+    	!+done:                       !
+    }
+    
+    $setAttribute(Int screen, Byte rowOffset, Byte colOffset, Byte attribute) {
+    	!	LDA ?$PPUSTATUS? !
+    	!	LDA ?rowOffset?  !
+    	!	ASL A            !
+    	!	ASL A            !
+    	!	ASL A            !
+    	!	CLC              !
+    	!	ADC ?colOffset?  !
+    	!	ADC #<$03C0      !
+    	!	STA ?screen? + 0 !
+    	!	LDA ?screen? + 1 !
+    	!	ADC #>$03C0      !
+    	!	STA ?$PPUADDR?   !
+    	!	LDA ?screen? + 0 !
+    	!	STA ?$PPUADDR?   !
+    	!	LDA ?attribute?  !
+    	!	STA ?$PPUDATA?   !
+    }
+    
+    $currentScreen() {
+    	current : $SCREEN_TOP_LEFT
+    	!	LDA ?$control?    !
+    	!	AND #%00000011    !
+    	!	ASL A             !
+    	!	ASL A             !
+    	!	CLC               !
+    	!	ADC ?current? + 1 !
+    	!	STA ?current? + 1 !
+    	return current
+    }
+    
+    $nextHorizontalScreen() {
+    	next : $SCREEN_TOP_LEFT
     	!	LDA ?$control? !
-    	!	STA $2000      !
-    	!	LDA ?$mask?    !
-    	!	STA $2001      !
-    	!	LDA #$00       !
-    	!	STA $2006      !
-    	!	STA $2006      !
-    	!	LDA ?$scrollX? !
-    	!	STA $2005      !
-    	!	LDA ?$scrollY? !
-    	!	STA $2005      !
+    	!	AND #%00000011 !
+    	!	EOR #%00000001 !
+    	!	ASL A          !
+    	!	ASL A          !
+    	!	CLC            !
+    	!	ADC ?next? + 1 !
+    	!	STA ?next? + 1 !
+    	return next
     }
     
-    $waitVBlank() {
-    	!-loop:       !
-		!	BIT $2002 !
-		!	BPL -loop !
+    $nextVerticalScreen() {
+    	next : $SCREEN_TOP_LEFT
+    	!	LDA ?$control? !
+    	!	AND #%00000011 !
+    	!	EOR #%00000010 !
+    	!	ASL A          !
+    	!	ASL A          !
+    	!	CLC            !
+    	!	ADC ?next? + 1 !
+    	!	STA ?next? + 1 !
+    	return next
+    }
+    
+    $swapScreensHorizontally() @Inline {
+    	!	LDA ?$control? !
+    	!	EOR #%00000001 !
+    	!	STA ?$control? !
+    }
+    
+    $swapScreensVertically() @Inline {
+    	!	LDA ?$control? !
+    	!	EOR #%00000010 !
+    	!	STA ?$control? !
+    }
+    
+    $waitVBlank() @Inline {
+    	!-	BIT ?$PPUSTATUS? !
+		!	BPL -            !
+    }
+    
+    $turnOff() @Inline {
+    	!	LDA #0         !
+    	!	STA ?$PPUCTRL? !
+    	!	STA ?$PPUMASK? !
+    }
+    
+    $turnOn() @Inline {
+    	!	LDA ?$control?   !
+    	!	STA ?$PPUCTRL?   !
+    	!	LDA ?$mask?      !
+    	!	STA ?$PPUMASK?   !
+    }
+    
+    $update() @Inline {
+    	!	LDA #0           !
+    	!	STA ?$PPUADDR?   !
+    	!	STA ?$PPUADDR?   !
+		!	LDA ?$control?   !
+    	!	STA ?$PPUCTRL?   !
+    	!	LDA ?$mask?      !
+    	!	STA ?$PPUMASK?   !
+    	!	LDA ?$scrollX?   !
+    	!	STA ?$PPUSCROLL? !
+    	!	LDA ?$scrollY?   !
+    	!	STA ?$PPUSCROLL? !
     }
 }
