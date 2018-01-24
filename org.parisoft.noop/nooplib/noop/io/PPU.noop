@@ -124,7 +124,7 @@ PPU {
      * ||+------- Sprite size (0: 8x8; 1: 8x16)
      * |+-------- PPU master/slave select
      * |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
-     * +--------- Generate an <a href="/w/index.php/NMI" title="NMI">NMI</a> at the start of the
+     * +--------- Generate a NMI at the start of the
      *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
      * </pre>
 	 */
@@ -208,7 +208,7 @@ PPU {
 	$OAMDMA : 0x4014
 	
 	/*
-	 * <p>Bits written to <i>$PPUCTRL</i> when <i>$update()</i> is called</p>
+	 * <p>Bits written to <i>$PPUCTRL</i> when <i>$update()</i> or <i>$updateCtrl()</i> is called</p>
 	 * <h2>Default:</h2>
 	 * <pre>
 	 * 1001 0000
@@ -227,7 +227,7 @@ PPU {
      *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: <b>on</b>)
      * </pre>
 	 */
-	$control : 0b10010000
+	$ctrl : 0b10010000
 	
 	/*
 	 * <p>Bits written to <i>$PPUMASK</i> when <i>$update()</i> is called</p>
@@ -260,10 +260,848 @@ PPU {
 	$scrollY : 0
 	
 	/*
+	 * <p>Sets bits 0 and 1 of PPUCTRL to 00, setting the screen address to 0x2000</p>
+	 * <pre>     (0,0)     (256,0)     (511,0)
+     *        +-----------+-----------+
+     *        |           |           |
+     *        |           |           |
+     *        |   <b>$2000</b>   |   $2400   |
+     *        |           |           |
+     *        |           |           |
+     * (0,240)+-----------+-----------+(511,240)
+     *        |           |           |
+     *        |           |           |
+     *        |   $2800   |   $2C00   |
+     *        |           |           |
+     *        |           |           |
+     *        +-----------+-----------+
+     *      (0,479)   (256,479)   (511,479)
+     * </pre>
+	 * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$setScreenAtTopLeft() @Inline {
+		!	LDA ?$ctrl?    !
+		!	AND #%11111100 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bits 0 and 1 of PPUCTRL to 01, setting the screen address to 0x2400</p>
+	 * <pre>     (0,0)     (256,0)     (511,0)
+     *        +-----------+-----------+
+     *        |           |           |
+     *        |           |           |
+     *        |   $2000   |   <b>$2400</b>   |
+     *        |           |           |
+     *        |           |           |
+     * (0,240)+-----------+-----------+(511,240)
+     *        |           |           |
+     *        |           |           |
+     *        |   $2800   |   $2C00   |
+     *        |           |           |
+     *        |           |           |
+     *        +-----------+-----------+
+     *      (0,479)   (256,479)   (511,479)
+     * </pre>
+	 * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$setScreenAtTopRight() @Inline {
+		!	LDA ?$ctrl?    !
+		!	AND #%11111100 !
+		!	ORA #%00000001 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bits 0 and 1 of PPUCTRL to 10, setting the screen address to 0x2800</p>
+	 * <pre>     (0,0)     (256,0)     (511,0)
+     *        +-----------+-----------+
+     *        |           |           |
+     *        |           |           |
+     *        |   $2000   |   $2400   |
+     *        |           |           |
+     *        |           |           |
+     * (0,240)+-----------+-----------+(511,240)
+     *        |           |           |
+     *        |           |           |
+     *        |   <b>$2800</b>   |   $2C00   |
+     *        |           |           |
+     *        |           |           |
+     *        +-----------+-----------+
+     *      (0,479)   (256,479)   (511,479)
+     * </pre>
+	 * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$setScreenAtBottomLeft() @Inline {
+		!	LDA ?$ctrl?    !
+		!	AND #%11111100 !
+		!	ORA #%00000010 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bits 0 and 1 of PPUCTRL to 11, setting the screen address to 0x2C00</p>
+	 * <pre>     (0,0)     (256,0)     (511,0)
+     *        +-----------+-----------+
+     *        |           |           |
+     *        |           |           |
+     *        |   $2000   |   $2400   |
+     *        |           |           |
+     *        |           |           |
+     * (0,240)+-----------+-----------+(511,240)
+     *        |           |           |
+     *        |           |           |
+     *        |   $2800   |   <b>$2C00</b>   |
+     *        |           |           |
+     *        |           |           |
+     *        +-----------+-----------+
+     *      (0,479)   (256,479)   (511,479)
+     * </pre>
+	 * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$setScreenAtBottomRight() @Inline {
+		!	LDA ?$ctrl?    !
+		!	ORA #%00000011 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 2 of PPUCTRL to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx x<b>0</b>xx
+     * |||| |<b>|</b>||
+     * |||| |<b>|</b>++- Base nametable address
+     * |||| |<b>|</b>    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * |||| |<b>+--- VRAM address increment per CPU read/write of PPUDATA</b>
+     * |||| |<b>     (0: add 1, going across</b>; 1: add 32, going down)
+     * |||| +---- Sprite pattern table address for 8x8 sprites
+     * ||||       (0: $0000; 1: $1000; ignored in 8x16 mode)
+     * |||+------ Background pattern table address (0: $0000; 1: $1000)
+     * ||+------- Sprite size (0: 8x8; 1: 8x16)
+     * |+-------- PPU master/slave select
+     * |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     * +--------- Generate a NMI at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$setVramIncrementBy1GoingAcross() @Inline {
+		!	LDA ?$ctrl?    !
+		!	AND #%11111011 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 2 of PPUCTRL to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx x<b>1</b>xx
+     * |||| |<b>|</b>||
+     * |||| |<b>|</b>++- Base nametable address
+     * |||| |<b>|</b>    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * |||| |<b>+--- VRAM address increment per CPU read/write of PPUDATA</b>
+     * |||| |     (0: add 1, going across; <b>1: add 32, going down</b>)
+     * |||| +---- Sprite pattern table address for 8x8 sprites
+     * ||||       (0: $0000; 1: $1000; ignored in 8x16 mode)
+     * |||+------ Background pattern table address (0: $0000; 1: $1000)
+     * ||+------- Sprite size (0: 8x8; 1: 8x16)
+     * |+-------- PPU master/slave select
+     * |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     * +--------- Generate a NMI at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$setVramIncrementBy32GoingDown() @Inline {
+		!	LDA ?$ctrl?    !
+		!	ORA #%00000100 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 3 of PPUCTRL to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx <b>0</b>xxx
+     * |||| <b>|</b>|||
+     * |||| <b>|</b>|++- Base nametable address
+     * |||| <b>|</b>|    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * |||| <b>|</b>+--- VRAM address increment per CPU read/write of PPUDATA
+     * |||| <b>|</b>     (0: add 1, going across; 1: add 32, going down)
+     * |||| <b>+---- Sprite pattern table address for 8x8 sprites</b>
+     * |||| <b>      (0: $0000</b>; 1: $1000; ignored in 8x16 mode)
+     * |||+------ Background pattern table address (0: $0000; 1: $1000)
+     * ||+------- Sprite size (0: 8x8; 1: 8x16)
+     * |+-------- PPU master/slave select
+     * |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     * +--------- Generate a NMI at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
+     * </pre>
+     * <h2>Notes:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 * <p>It's ignored if sprite size is set to 8x16</p>
+	 */
+	$setFirstPatternTableFor8x8Sprites() @Inline {
+		!	LDA ?$ctrl?    !
+		!	AND #%11110111 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 3 of PPUCTRL to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx <b>1</b>xxx
+     * |||| <b>|</b>|||
+     * |||| <b>|</b>|++- Base nametable address
+     * |||| <b>|</b>|    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * |||| <b>|</b>+--- VRAM address increment per CPU read/write of PPUDATA
+     * |||| <b>|</b>     (0: add 1, going across; 1: add 32, going down)
+     * |||| <b>+---- Sprite pattern table address for 8x8 sprites</b>
+     * ||||       (0: $0000; <b>1: $1000</b>; ignored in 8x16 mode)
+     * |||+------ Background pattern table address (0: $0000; 1: $1000)
+     * ||+------- Sprite size (0: 8x8; 1: 8x16)
+     * |+-------- PPU master/slave select
+     * |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     * +--------- Generate a NMI at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
+     * </pre>
+     * <h2>Notes:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 * <p>It's ignored if sprite size is set to 8x16</p>
+	 */
+	$setLastPatternTableFor8x8Sprites() @Inline {
+		!	LDA ?$ctrl?    !
+		!	ORA #%00001000 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 4 of PPUCTRL to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxx<b>0</b> xxxx
+     * |||<b>|</b> ||||
+     * |||<b>|</b> ||++- Base nametable address
+     * |||<b>|</b> ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * |||<b>|</b> |+--- VRAM address increment per CPU read/write of PPUDATA
+     * |||<b>|</b> |     (0: add 1, going across; 1: add 32, going down)
+     * |||<b>|</b> +---- Sprite pattern table address for 8x8 sprites
+     * |||<b>|</b>       (0: $0000; 1: $1000; ignored in 8x16 mode)
+     * |||<b>+------ Background pattern table address (0: $0000</b>; 1: $1000)
+     * ||+------- Sprite size (0: 8x8; 1: 8x16)
+     * |+-------- PPU master/slave select
+     * |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     * +--------- Generate a NMI at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$setFirstPatternTableForBackground() @Inline {
+		!	LDA ?$ctrl?    !
+		!	AND #%11101111 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 4 of PPUCTRL to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxx<b>1</b> xxxx
+     * |||<b>|</b> ||||
+     * |||<b>|</b> ||++- Base nametable address
+     * |||<b>|</b> ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * |||<b>|</b> |+--- VRAM address increment per CPU read/write of PPUDATA
+     * |||<b>|</b> |     (0: add 1, going across; 1: add 32, going down)
+     * |||<b>|</b> +---- Sprite pattern table address for 8x8 sprites
+     * |||<b>|</b>       (0: $0000; 1: $1000; ignored in 8x16 mode)
+     * |||<b>+------ Background pattern table address</b> (0: $0000; <b>1: $1000</b>)
+     * ||+------- Sprite size (0: 8x8; 1: 8x16)
+     * |+-------- PPU master/slave select
+     * |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     * +--------- Generate a NMI at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$setLastPatternTableForBackground() @Inline {
+		!	LDA ?$ctrl?    !
+		!	ORA #%00010000 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 5 of PPUCTRL to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xx<b>0</b>x xxxx
+     * ||<b>|</b>| ||||
+     * ||<b>|</b>| ||++- Base nametable address
+     * ||<b>|</b>| ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * ||<b>|</b>| |+--- VRAM address increment per CPU read/write of PPUDATA
+     * ||<b>|</b>| |     (0: add 1, going across; 1: add 32, going down)
+     * ||<b>|</b>| +---- Sprite pattern table address for 8x8 sprites
+     * ||<b>|</b>|       (0: $0000; 1: $1000; ignored in 8x16 mode)
+     * ||<b>|</b>+------ Background pattern table address (0: $0000; 1: $1000)
+     * ||<b>+------- Sprite size (0: 8x8</b>; 1: 8x16)
+     * |+-------- PPU master/slave select
+     * |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     * +--------- Generate a NMI at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$setSpriteSizeTo8x8() @Inline {
+		!	LDA ?$ctrl?    !
+		!	AND #%11011111 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 5 of PPUCTRL to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xx<b>1</b>x xxxx
+     * ||<b>|</b>| ||||
+     * ||<b>|</b>| ||++- Base nametable address
+     * ||<b>|</b>| ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * ||<b>|</b>| |+--- VRAM address increment per CPU read/write of PPUDATA
+     * ||<b>|</b>| |     (0: add 1, going across; 1: add 32, going down)
+     * ||<b>|</b>| +---- Sprite pattern table address for 8x8 sprites
+     * ||<b>|</b>|       (0: $0000; 1: $1000; ignored in 8x16 mode)
+     * ||<b>|</b>+------ Background pattern table address (0: $0000; 1: $1000)
+     * ||<b>+------- Sprite size</b> (0: 8x8; <b>1: 8x16</b>)
+     * |+-------- PPU master/slave select
+     * |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     * +--------- Generate a NMI at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$setSpriteSizeTo8x16() @Inline {
+		!	LDA ?$ctrl?    !
+		!	ORA #%00100000 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 6 of PPUCTRL to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * x<b>0</b>xx xxxx
+     * |<b>|</b>|| ||||
+     * |<b>|</b>|| ||++- Base nametable address
+     * |<b>|</b>|| ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * |<b>|</b>|| |+--- VRAM address increment per CPU read/write of PPUDATA
+     * |<b>|</b>|| |     (0: add 1, going across; 1: add 32, going down)
+     * |<b>|</b>|| +---- Sprite pattern table address for 8x8 sprites
+     * |<b>|</b>||       (0: $0000; 1: $1000; ignored in 8x16 mode)
+     * |<b>|</b>|+------ Background pattern table address (0: $0000; 1: $1000)
+     * |<b>|</b>+------- Sprite size (0: 8x8; 1: 8x16)
+     * |<b>+-------- PPU master/slave select</b>
+     * |<b>          (0: read backdrop from EXT pins</b>; 1: output color on EXT pins)
+     * +--------- Generate a NMI at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$enableMasterMode() @Inline {
+		!	LDA ?$ctrl?    !
+		!	AND #%10111111 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 6 of PPUCTRL to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * x<b>1</b>xx xxxx
+     * |<b>|</b>|| ||||
+     * |<b>|</b>|| ||++- Base nametable address
+     * |<b>|</b>|| ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * |<b>|</b>|| |+--- VRAM address increment per CPU read/write of PPUDATA
+     * |<b>|</b>|| |     (0: add 1, going across; 1: add 32, going down)
+     * |<b>|</b>|| +---- Sprite pattern table address for 8x8 sprites
+     * |<b>|</b>||       (0: $0000; 1: $1000; ignored in 8x16 mode)
+     * |<b>|</b>|+------ Background pattern table address (0: $0000; 1: $1000)
+     * |<b>|</b>+------- Sprite size (0: 8x8; 1: 8x16)
+     * |<b>+-------- PPU master/slave select</b>
+     * |          (0: read backdrop from EXT pins; <b>1: output color on EXT pins</b>)
+     * +--------- Generate a NMI at the start of the
+     *            <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a> (0: off; 1: on)
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$disableMasterMode() @Inline {
+		!	LDA ?$ctrl?    !
+		!	ORA #%01000000 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 7 of PPUCTRL to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * <b>1</b>xxx xxxx
+     * <b>|</b>||| ||||
+     * <b>|</b>||| ||++- Base nametable address
+     * <b>|</b>||| ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * <b>|</b>||| |+--- VRAM address increment per CPU read/write of PPUDATA
+     * <b>|</b>||| |     (0: add 1, going across; 1: add 32, going down)
+     * <b>|</b>||| +---- Sprite pattern table address for 8x8 sprites
+     * <b>|</b>|||       (0: $0000; 1: $1000; ignored in 8x16 mode)
+     * <b>|</b>||+------ Background pattern table address (0: $0000; 1: $1000)
+     * <b>|</b>|+------- Sprite size (0: 8x8; 1: 8x16)
+     * <b>|</b>+-------- PPU master/slave select
+     * <b>|</b>          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     * <b>+--------- Generate a NMI at the start of the</b>
+     * <b>           <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a></b> (0: off; <b>1: on</b>)
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$enableNMI() @Inline {
+		!	LDA ?$ctrl?    !
+		!	ORA #%10000000 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 7 of PPUCTRL to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * <b>0</b>xxx xxxx
+     * <b>|</b>||| ||||
+     * <b>|</b>||| ||++- Base nametable address
+     * <b>|</b>||| ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     * <b>|</b>||| |+--- VRAM address increment per CPU read/write of PPUDATA
+     * <b>|</b>||| |     (0: add 1, going across; 1: add 32, going down)
+     * <b>|</b>||| +---- Sprite pattern table address for 8x8 sprites
+     * <b>|</b>|||       (0: $0000; 1: $1000; ignored in 8x16 mode)
+     * <b>|</b>||+------ Background pattern table address (0: $0000; 1: $1000)
+     * <b>|</b>|+------- Sprite size (0: 8x8; 1: 8x16)
+     * <b>|</b>+-------- PPU master/slave select
+     * <b>|</b>          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     * <b>+--------- Generate a NMI at the start of the</b>
+     * <b>           <a href="https://en.wikipedia.org/wiki/Vertical_blanking_interval" class="extiw" title="wikipedia:Vertical blanking interval">vertical blanking interval</a></b> (<b>0: off</b>; 1: on)
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
+	 */
+	$disableNMI() @Inline {
+		!	LDA ?$ctrl?    !
+		!	AND #%01111111 !
+		!	STA ?$ctrl?    !
+	}
+	
+	/*
+	 * <p>Sets bit 0 of PPUMASK to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx xxx<b>0</b>
+     * |||| |||<b>|</b>
+     * |||| |||<b>+- Greyscale</b> (0: normal color, <b>1: produce a greyscale display</b>)
+     * |||| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * |||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * |||| +---- 1: Show background
+     * |||+------ 1: Show sprites
+     * ||+------- Emphasize red
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 */
+	$enableGreyscale() @Inline {
+		!	LDA ?$mask?    !
+		!	ORA #%00000001 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 0 of PPUMASK to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx xxx<b>1</b>
+     * |||| |||<b>|</b>
+     * |||| |||<b>+- Greyscale (0: normal color</b>, 1: produce a greyscale display)
+     * |||| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * |||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * |||| +---- 1: Show background
+     * |||+------ 1: Show sprites
+     * ||+------- Emphasize red
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 */
+	$disableGreyscale() @Inline {
+		!	LDA ?$mask?    !
+		!	AND #%11111110 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 1 of PPUMASK to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx xx<b>1</b>x
+     * |||| ||<b>|</b>|
+     * |||| ||<b>|</b>+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * |||| ||<b>+-- 1: Show background in leftmost 8 pixels of screen</b>, 0: Hide
+     * |||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * |||| +---- 1: Show background
+     * |||+------ 1: Show sprites
+     * ||+------- Emphasize red
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 */
+	$showBackgroundInLeftmostColumn() @Inline {
+		!	LDA ?$mask?    !
+		!	ORA #%00000010 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 1 of PPUMASK to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx xx<b>1</b>x
+     * |||| ||<b>|</b>|
+     * |||| ||<b>|</b>+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * |||| ||+-- 1: Show background in leftmost 8 pixels of screen, <b>0: Hide</b>
+     * |||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * |||| +---- 1: Show background
+     * |||+------ 1: Show sprites
+     * ||+------- Emphasize red
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 */
+	$hideBackgroundInLeftmostColumn() @Inline {
+		!	LDA ?$mask?    !
+		!	AND #%11111101 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 2 of PPUMASK to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx x<b>1</b>xx
+     * |||| |<b>|</b>||
+     * |||| |<b>|</b>|+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * |||| |<b>|</b>+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * |||| |<b>+--- 1: Show sprites in leftmost 8 pixels of screen</b>, 0: Hide
+     * |||| +---- 1: Show background
+     * |||+------ 1: Show sprites
+     * ||+------- Emphasize red
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 */
+	$showSpritesInLeftmostColumn() @Inline {
+		!	LDA ?$mask?    !
+		!	ORA #%00000100 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 2 of PPUMASK to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx x<b>0</b>xx
+     * |||| |<b>|</b>||
+     * |||| |<b>|</b>|+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * |||| |<b>|</b>+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * |||| |+--- 1: Show sprites in leftmost 8 pixels of screen, <b>0: Hide</b>
+     * |||| +---- 1: Show background
+     * |||+------ 1: Show sprites
+     * ||+------- Emphasize red
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 */
+	$hideSpritesInLeftmostColumn() @Inline {
+		!	LDA ?$mask?    !
+		!	AND #%11111011 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 3 of PPUMASK to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx <b>1</b>xxx
+     * |||| <b>|</b>|||
+     * |||| <b>|</b>||+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * |||| <b>|</b>|+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * |||| <b>|</b>+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * |||| <b>+---- 1: Show background</b>
+     * |||+------ 1: Show sprites
+     * ||+------- Emphasize red
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 */
+	$showBackground() @Inline {
+		!	LDA ?$mask?    !
+		!	ORA #%00001000 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 3 of PPUMASK to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxxx <b>0</b>xxx
+     * |||| <b>|</b>|||
+     * |||| <b>|</b>||+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * |||| <b>|</b>|+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * |||| <b>|</b>+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * |||| +---- 1: Show background; <b>0: Hide background</b>
+     * |||+------ 1: Show sprites
+     * ||+------- Emphasize red
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 */
+	$hideBackground() @Inline {
+		!	LDA ?$mask?    !
+		!	AND #%11110111 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 4 of PPUMASK to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxx<b>1</b> xxxx
+     * |||<b>|</b> ||||
+     * |||<b>|</b> |||+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * |||<b>|</b> ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * |||<b>|</b> |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * |||<b>|</b> +---- 1: Show background
+     * |||<b>+------ 1: Show sprites</b>
+     * ||+------- Emphasize red
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 */
+	$showSprites() @Inline {
+		!	LDA ?$mask?    !
+		!	ORA #%00010000 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 4 of PPUMASK to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xxx<b>0</b> xxxx
+     * |||<b>|</b> ||||
+     * |||<b>|</b> |||+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * |||<b>|</b> ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * |||<b>|</b> |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * |||<b>|</b> +---- 1: Show background
+     * |||+------ 1: Show sprites; <b>0: Hide sprites</b>
+     * ||+------- Emphasize red
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Note:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 */
+	$hideSprites() @Inline {
+		!	LDA ?$mask?    !
+		!	AND #%11101111 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 5 of PPUMASK to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xx<b>1</b>x xxxx
+     * ||<b>|</b>| ||||
+     * ||<b>|</b>| |||+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * ||<b>|</b>| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * ||<b>|</b>| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * ||<b>|</b>| +---- 1: Show background
+     * ||<b>|</b>+------ 1: Show sprites
+     * ||<b>+------- Emphasize red</b>
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Notes:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 * <p>PAL and Dendy swaps green and red</p>
+	 */
+	$enableRedEmphasis() @Inline {
+		!	LDA ?$mask?    !
+		!	ORA #%00100000 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 5 of PPUMASK to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * xx<b>0</b>x xxxx
+     * ||<b>|</b>| ||||
+     * ||<b>|</b>| |||+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * ||<b>|</b>| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * ||<b>|</b>| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * ||<b>|</b>| +---- 1: Show background
+     * ||<b>|</b>+------ 1: Show sprites
+     * ||<b>+------- Don't emphasize red</b>
+     * |+-------- Emphasize green
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Notes:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 * <p>PAL and Dendy swaps green and red</p>
+	 */
+	$disableRedEmphasis() @Inline {
+		!	LDA ?$mask?    !
+		!	AND #%11011111 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 6 of PPUMASK to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * x<b>1</b>xx xxxx
+     * |<b>|</b>|| ||||
+     * |<b>|</b>|| |||+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * |<b>|</b>|| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * |<b>|</b>|| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * |<b>|</b>|| +---- 1: Show background
+     * |<b>|</b>|+------ 1: Show sprites
+     * |<b>|</b>+------- Emphasize red
+     * |<b>+-------- Emphasize green</b>
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Notes:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 * <p>PAL and Dendy swaps green and red</p>
+	 */
+	$enableGreenEmphasis() @Inline {
+		!	LDA ?$mask?    !
+		!	ORA #%01000000 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 6 of PPUMASK to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * x<b>0</b>xx xxxx
+     * |<b>|</b>|| ||||
+     * |<b>|</b>|| |||+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * |<b>|</b>|| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * |<b>|</b>|| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * |<b>|</b>|| +---- 1: Show background
+     * |<b>|</b>|+------ 1: Show sprites
+     * |<b>|</b>+------- Emphasize red
+     * |<b>+-------- Don't emphasize green</b>
+     * +--------- Emphasize blue
+     * </pre>
+     * <h2>Notes:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 * <p>PAL and Dendy swaps green and red</p>
+	 */
+	$disableGreenEmphasis() @Inline {
+		!	LDA ?$mask?    !
+		!	AND #%10111111 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 7 of PPUMASK to 1</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * <b>1</b>xxx xxxx
+     * <b>|</b>||| ||||
+     * <b>|</b>||| |||+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * <b>|</b>||| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * <b>|</b>||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * <b>|</b>||| +---- 1: Show background
+     * <b>|</b>||+------ 1: Show sprites
+     * <b>|</b>|+------- Emphasize red
+     * <b>|</b>+-------- Emphasize green
+     * <b>+--------- Emphasize blue</b>
+     * </pre>
+     * <h2>Notes:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 * <p>PAL and Dendy swaps green and red</p>
+	 */
+	$enableBlueEmphasis() @Inline {
+		!	LDA ?$mask?    !
+		!	ORA #%10000000 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
+	 * <p>Sets bit 7 of PPUMASK to 0</p>
+	 * <pre>7  bit  0
+     * ---- ----
+     * <b>0</b>xxx xxxx
+     * <b>|</b>||| ||||
+     * <b>|</b>||| |||+- Greyscale (0: normal color, 1: produce a greyscale display)
+     * <b>|</b>||| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+     * <b>|</b>||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+     * <b>|</b>||| +---- 1: Show background
+     * <b>|</b>||+------ 1: Show sprites
+     * <b>|</b>|+------- Emphasize red
+     * <b>|</b>+-------- Emphasize green
+     * <b>+--------- Don't emphasize blue</b>
+     * </pre>
+     * <h2>Notes:</h2>
+	 * <p>For this change to take effect (to be written to PPUMASK register) call <i>$update()</i> or <i>$updateMask()</i></p>
+	 * <p>PAL and Dendy swaps green and red</p>
+	 */
+	$disableBlueEmphasis() @Inline {
+		!	LDA ?$mask?    !
+		!	AND #%01111111 !
+		!	STA ?$mask?    !
+	}
+	
+	/*
     * <p>Load the background palettes</p>
     * <h2>Parameters</h2>
     * <ul>
-    * <li><b>palettes</b>: an array containing 16 colors from NES palettes</li>
+    * <li><b>palettes</b>: an array containing 16 colors from NES palette</li>
     * </ul>
     * <h2>NES palette colors</h2>
 	* <table class="wikitable">
@@ -419,7 +1257,7 @@ PPU {
     * <p>Load the sprites palettes</p>
     * <h2>Parameters</h2>
     * <ul>
-    * <li><b>palettes</b>: an array containing 16 colors from NES palettes</li>
+    * <li><b>palettes</b>: an array containing 16 colors from NES palette</li>
     * </ul>
     * <h2>NES palette colors</h2>
 	* <table class="wikitable">
@@ -698,7 +1536,7 @@ PPU {
     	!	LDA #?$SCREEN_WIDTH_TILES?  !
     	!	DEX                         !
     	!	BNE -loop                   !
-    	!	LDA ?$control?              !
+    	!	LDA ?$ctrl?                 !
     	!	STA ?$PPUCTRL?              !
     }
     
@@ -812,7 +1650,7 @@ PPU {
     
     $currentScreen() {
     	current : $SCREEN_TOP_LEFT
-    	!	LDA ?$control?    !
+    	!	LDA ?$ctrl?       !
     	!	AND #%00000011    !
     	!	ASL A             !
     	!	ASL A             !
@@ -824,7 +1662,7 @@ PPU {
     
     $nextHorizontalScreen() {
     	next : $SCREEN_TOP_LEFT
-    	!	LDA ?$control? !
+    	!	LDA ?$ctrl?    !
     	!	AND #%00000011 !
     	!	EOR #%00000001 !
     	!	ASL A          !
@@ -837,7 +1675,7 @@ PPU {
     
     $nextVerticalScreen() {
     	next : $SCREEN_TOP_LEFT
-    	!	LDA ?$control? !
+    	!	LDA ?$ctrl?    !
     	!	AND #%00000011 !
     	!	EOR #%00000010 !
     	!	ASL A          !
@@ -849,15 +1687,15 @@ PPU {
     }
     
     $swapScreensHorizontally() @Inline {
-    	!	LDA ?$control? !
+    	!	LDA ?$ctrl?    !
     	!	EOR #%00000001 !
-    	!	STA ?$control? !
+    	!	STA ?$ctrl?    !
     }
     
     $swapScreensVertically() @Inline {
-    	!	LDA ?$control? !
+    	!	LDA ?$ctrl?    !
     	!	EOR #%00000010 !
-    	!	STA ?$control? !
+    	!	STA ?$ctrl?    !
     }
     
     $waitVBlank() @Inline {
@@ -872,7 +1710,7 @@ PPU {
     }
     
     $turnOn() @Inline {
-    	!	LDA ?$control?   !
+    	!	LDA ?$ctrl?      !
     	!	STA ?$PPUCTRL?   !
     	!	LDA ?$mask?      !
     	!	STA ?$PPUMASK?   !
@@ -882,10 +1720,22 @@ PPU {
     	!	LDA #0           !
     	!	STA ?$PPUADDR?   !
     	!	STA ?$PPUADDR?   !
-		!	LDA ?$control?   !
+		$updateCtrl
+    	$updateMask
+    	$updateScroll
+    }
+    
+    $updateCtrl() @Inline {
+    	!	LDA ?$ctrl?      !
     	!	STA ?$PPUCTRL?   !
+    }
+    
+    $updateMask() @Inline {
     	!	LDA ?$mask?      !
     	!	STA ?$PPUMASK?   !
+    }
+    
+    $updateScroll() @Inline {
     	!	LDA ?$scrollX?   !
     	!	STA ?$PPUSCROLL? !
     	!	LDA ?$scrollY?   !
