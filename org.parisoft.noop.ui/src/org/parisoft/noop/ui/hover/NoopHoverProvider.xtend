@@ -69,14 +69,26 @@ class NoopHoverProvider extends DefaultEObjectHoverProvider {
 	}
 
 	override protected getDocumentation(EObject o) {
-		val doc = super.getDocumentation(o)
+		var doc = super.getDocumentation(o)
 		var index = -1
 
-		if (doc !== null && (index = doc.indexOf('*/')) !== -1) {
+		if (doc === null) {
+			val overriden = if (o instanceof Variable) {
+					o.containerClass.superClass.allFieldsTopDown.findFirst[o.isOverrideOf(it)]
+				} else if (o instanceof Method) {
+					o.containerClass.superClass.allMethodsTopDown.findFirst[o.isOverrideOf(it)]
+				}
+
+			if (overriden === null || (doc = super.getDocumentation(overriden)) === null) {
+				return null
+			}
+		}
+
+		if ((index = doc.indexOf('*/')) !== -1) {
 			return doc.substring(0, index)
 		}
-		
-		if (doc?.endsWith('/')) {
+
+		if (doc.endsWith('/')) {
 			return doc.substring(0, doc.length - 1)
 		}
 
