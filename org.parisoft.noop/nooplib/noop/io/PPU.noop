@@ -1430,6 +1430,32 @@ PPU {
     	!	BNE -loop           !
     }
     
+    $drawScoreBoardAtTop() {
+    	!	LDA #0           !
+    	!	STA ?$PPUADDR?   !
+    	!	STA ?$PPUADDR?   !
+    	!	STA ?$PPUSCROLL? !
+    	!	STA ?$PPUSCROLL? !
+    	!	LDA ?$ctrl?      !
+		!	AND #%11111100   !
+		!	STA ?$PPUCTRL?   !
+		!	LDA ?$mask?      !
+		!	STA ?$PPUMASK?   !
+    	$waitSprite0Hit
+    }
+    
+    $drawScoreBoardAtBottom() {
+    	$waitSprite0Hit
+    	!	LDA #0           !
+    	!	STA ?$PPUSCROLL? !
+    	!	STA ?$PPUSCROLL? !
+    	!	LDA ?$ctrl?      !
+		!	AND #%11111100   !
+		!	STA ?$PPUCTRL?   !
+		!	LDA ?$mask?      !
+		!	STA ?$PPUMASK?   !
+    }
+    
     $drawSprite(Byte number, Byte xOffset, Byte yOffset, Byte sprite, Byte options) {
     	!	LDA ?number?  !
 		!	ASL A         !

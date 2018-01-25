@@ -60,13 +60,15 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	val storageKeywords = StorageType::VALUES.map[literal].toList
 	val proposableKeywords = (newArrayList('extends', 'instanceOf', 'as', 'return', 'this', 'super', 'break',
 		'continue') + storageKeywords).toList
-	val matcher = new SmartPrefixMatcher
+	val smartMatcher = new SmartPrefixMatcher
 	val camelCasePattern = Pattern::compile('(?=[A-Z])')
 
 	override completeNoopClass_SuperClass(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
+		val ctx = context.copy.setMatcher(smartMatcher).toContext
+
 		if (model instanceof NoopClass) {
-			lookupCrossReference((assignment.getTerminal() as CrossReference), context, acceptor) [
+			lookupCrossReference((assignment.getTerminal() as CrossReference), ctx, acceptor) [
 				val superClass = if(EObjectOrProxy.eIsProxy) EObjectOrProxy.resolve(model) else EObjectOrProxy
 
 				if (superClass instanceof NoopClass) {
@@ -79,7 +81,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				true
 			]
 		} else {
-			super.completeNoopClass_SuperClass(model, assignment, context, acceptor)
+			super.completeNoopClass_SuperClass(model, assignment, ctx, acceptor)
 		}
 	}
 
@@ -90,22 +92,25 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				acceptor.accept(method.createOverrideProposal(context))
 			]
 		} else {
-			super.completeNoopClass_Members(model, assignment, context, acceptor)
+			super.completeNoopClass_Members(model, assignment, context.copy.setMatcher(smartMatcher).toContext,
+				acceptor)
 		}
 	}
 
 	override completeParameter_Name(EObject model, Assignment assignment, ContentAssistContext context,
 		ICompletionProposalAcceptor acceptor) {
+		val ctx = context.copy.setMatcher(smartMatcher).toContext
+
 		if (model instanceof Variable) {
 			for (name : model.names) {
 				val displayString = new StyledString(name)
 				val image = labelProvider.getImage(name)
 				val priority = keywordPriority
 				val prefix = context.prefix
-				acceptor.accept(createCompletionProposal(name, displayString, image, priority, prefix, context))
+				acceptor.accept(createCompletionProposal(name, displayString, image, priority, prefix, ctx))
 			}
 		} else {
-			super.completeParameter_Name(model, assignment, context, acceptor)
+			super.completeParameter_Name(model, assignment, ctx, acceptor)
 		}
 	}
 
@@ -145,7 +150,8 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				]
 			}
 		} else {
-			super.completeSelectionExpression_Member(model, assignment, context, acceptor)
+			super.completeSelectionExpression_Member(model, assignment, context.copy.setMatcher(smartMatcher).toContext,
+				acceptor)
 		}
 	}
 
@@ -181,7 +187,8 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			return
 		}
 
-		super.completeTerminalExpression_Type(model, assignment, context, acceptor)
+		super.completeTerminalExpression_Type(model, assignment, context.copy.setMatcher(smartMatcher).toContext,
+			acceptor)
 	}
 
 	override completeKeyword(Keyword keyword, ContentAssistContext context, ICompletionProposalAcceptor acceptor) {
@@ -207,7 +214,7 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				}
 			}
 
-			super.completeKeyword(keyword, context, acceptor)
+			super.completeKeyword(keyword, context.copy.setMatcher(smartMatcher).toContext, acceptor)
 		}
 	}
 
@@ -223,8 +230,9 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			val image = labelProvider.getImage('true')
 			val priority = keywordPriority
 			val prefix = context.prefix
-			acceptor.accept(createCompletionProposal('true', trueDisplay, image, priority, prefix, context))
-			acceptor.accept(createCompletionProposal('false', falseDisplay, image, priority, prefix, context))
+			val ctx = context.copy.setMatcher(smartMatcher).toContext
+			acceptor.accept(createCompletionProposal('true', trueDisplay, image, priority, prefix, ctx))
+			acceptor.accept(createCompletionProposal('false', falseDisplay, image, priority, prefix, ctx))
 		}
 	}
 
@@ -236,7 +244,8 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 			val image = labelProvider.getImage('0')
 			val priority = keywordPriority
 			val prefix = context.prefix
-			acceptor.accept(createCompletionProposal('0', displayString, image, priority, prefix, context))
+			val ctx = context.copy.setMatcher(smartMatcher).toContext
+			acceptor.accept(createCompletionProposal('0', displayString, image, priority, prefix, ctx))
 		}
 	}
 
@@ -249,16 +258,22 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				val image = labelProvider.getImage(file)
 				val priority = keywordPriority
 				val prefix = context.prefix
+				val ctx = context.copy.setMatcher(smartMatcher).toContext
 				acceptor.accept(
-					createCompletionProposal(proposalString, displayString, image, priority, prefix, context))
+					createCompletionProposal(proposalString, displayString, image, priority, prefix, ctx))
 			}
 		}
 	}
 
 	override protected doCreateProposal(String proposal, StyledString displayString, Image image, int replacementOffset,
 		int replacementLength) {
-		new NoopMethodCompletionProposal(proposal, replacementOffset, replacementLength, proposal.length(), image,
-			displayString, null, null) => [it.matcher = matcher]
+		new NoopCompletionProposal(proposal, replacementOffset, replacementLength, proposal.length(), image,
+			displayString, null, null) => [it.matcher = smartMatcher]
+	}
+
+	override protected doCreateProposal(String proposal, StyledString displayString, Image image, int priority,
+		ContentAssistContext context) {
+		super.doCreateProposal(proposal, displayString, image, priority, context) => [it.matcher = smartMatcher]
 	}
 
 	private def createReferenceProposal(Variable variable, ContentAssistContext context) {
@@ -270,12 +285,13 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				6000
 			}
 
+		val ctx = context.copy.setMatcher(smartMatcher).toContext
 		val prefix = context.prefix
-		val proposal = createCompletionProposal(variable.name, variable.text, variable.image, priority, prefix, context)
+		val proposal = createCompletionProposal(variable.name, variable.text, variable.image, priority, prefix, ctx)
 
 		if (proposal instanceof ConfigurableCompletionProposal) {
 			proposal => [
-				it.matcher = matcher
+				it.matcher = smartMatcher
 				it.hover = hover
 				it.additionalProposalInfo = variable
 			]
@@ -289,12 +305,12 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 				3000
 			}
 
+		val ctx = context.copy.setMatcher(smartMatcher).toContext
 		val prefix = context.prefix
-		val proposal = createCompletionProposal(method.name, method.text, method.image, priority, prefix, context)
+		val proposal = createCompletionProposal(method.name, method.text, method.image, priority, prefix, ctx)
 
-		if (proposal instanceof NoopMethodCompletionProposal) {
+		if (proposal instanceof NoopCompletionProposal) {
 			proposal => [
-				it.matcher = matcher
 				it.hover = hover
 				it.additionalProposalInfo = method
 				it.setLinkedModeForInvocation(context.viewer, method)
@@ -303,13 +319,13 @@ class NoopProposalProvider extends AbstractNoopProposalProvider {
 	}
 
 	private def createOverrideProposal(Member member, ContentAssistContext context) {
+		val ctx = context.copy.setMatcher(smartMatcher).toContext
 		val prefix = context.prefix
 		val displayString = new StyledString('override ').append(member.text)
-		val proposal = createCompletionProposal(member.name, displayString, member.image, 0, prefix, context)
+		val proposal = createCompletionProposal(member.name, displayString, member.image, 0, prefix, ctx)
 
-		if (proposal instanceof NoopMethodCompletionProposal) {
+		if (proposal instanceof NoopCompletionProposal) {
 			proposal => [
-				it.matcher = matcher
 				it.hover = hover
 				it.additionalProposalInfo = member
 

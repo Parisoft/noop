@@ -22,9 +22,9 @@ import org.parisoft.noop.noop.Expression
 import org.eclipse.xtext.EcoreUtil2
 import org.parisoft.noop.noop.NoopClass
 
-class NoopMethodCompletionProposal extends ConfigurableCompletionProposal {
+class NoopCompletionProposal extends ConfigurableCompletionProposal {
 
-	static val Logger log = Logger::getLogger(NoopMethodCompletionProposal);
+	static val Logger log = Logger::getLogger(NoopCompletionProposal);
 	static val LINKED_MODE_INVOCATION = 1
 	static val LINKED_MODE_OVERRIDE = 2
 
