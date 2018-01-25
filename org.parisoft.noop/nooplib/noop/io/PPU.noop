@@ -85,28 +85,43 @@ PPU {
 	$SCREEN_BOTTOM_RIGHT : 0x2C00
 	
 	/*
-	 * <p>Number of width pixels on the screen</p>
+	 * <p>Number pixels in one row of the screen</p>
 	 */
 	$SCREEN_WIDTH_PX : 256
 	
 	/*
-	 * <p>Number of height pixels on the screen</p>
+	 * <p>Number of pixels in one column of the screen</p>
 	 */
     $SCREEN_HEIGHT_PX : 240
     
     /*
-     * <p>Number of width tiles on the screen<p>
+     * <p>Number of tiles in one row of the screen<p>
      * <h2>Note:</h2>
      * <p>Each tile has 8 pixels</p>
      */
     $SCREEN_WIDTH_TILES : 32
     
     /*
-     * <p>Number of height tiles on the screen<p>
+     * <p>Number of tiles in one column of the screen<p>
      * <h2>Note:</h2>
      * <p>Each tile has 8 pixels</p>
      */
     $SCREEN_HEIGHT_TILES : 30
+	
+	/*
+	 * <p>Option to drawn sprites behind background</p>
+	 */
+	$SPRITE_BEHIND_BACKGROUND : 0b00100000
+	
+	/*
+	 * <p>Option to drawn the sprite mirrored (flipped horizontally)</p>
+	 */
+	$SPRITE_MIRROR : 0b01000000
+	
+	/*
+	 * <p>Option to drawn the sprite flipped vertically</p>
+	 */
+	$SPRITE_FLIP : 0b10000000
 	
 	/*
 	 * <p>Various flags controlling PPU operation</p>
@@ -1101,7 +1116,7 @@ PPU {
     * <p>Load the background palettes</p>
     * <h2>Parameters</h2>
     * <ul>
-    * <li><b>palettes</b>: an array containing 16 colors from NES palette</li>
+    * <li><b>palettes</b>: an array of 4 palettes containing 4 colors each from NES palette</li>
     * </ul>
     * <h2>NES palette colors</h2>
 	* <table class="wikitable">
@@ -1132,7 +1147,7 @@ PPU {
 	* </td>
 	* <td style="border:0px;background-color:#004848;width:32px;height:32px;color:#fff;text-align:center">0x0C
 	* </td>
-	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x0D
+	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#f00;text-align:center">0x0D
 	* </td>
 	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x0E
 	* </td>
@@ -1198,7 +1213,7 @@ PPU {
 	* </td>
 	* <td style="border:0px;background-color:#00FFFF;width:32px;height:32px;color:#000;text-align:center">0x2C
 	* </td>
-	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#f00;text-align:center">0x2D
+	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x2D
 	* </td>
 	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x2E
 	* </td>
@@ -1231,13 +1246,16 @@ PPU {
 	* </td>
 	* <td style="border:0px;background-color:#91DAFF;width:32px;height:32px;color:#000;text-align:center">0x3C
 	* </td>
-	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#f00;text-align:center">0x3D
+	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x3D
 	* </td>
 	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x3E
 	* </td>
 	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x3F
-	* </td></tr></tbody></table>*/
-    $setBackgroundPalettes(Byte[16] palettes) {
+	* </td></tr></tbody></table>
+	* <h2>Note:</h2>
+	* <p>These colors vary depending on TV/Console/Emulator in which the game plays
+	* */
+    $setBackgroundPalettes(Byte[4][4] palettes) {
     	!	LDA ?$PPUSTATUS?    !
     	!	LDA #>$3F00         !
     	!	STA ?$PPUADDR?      !
@@ -1257,7 +1275,7 @@ PPU {
     * <p>Load the sprites palettes</p>
     * <h2>Parameters</h2>
     * <ul>
-    * <li><b>palettes</b>: an array containing 16 colors from NES palette</li>
+    * <li><b>palettes</b>: an array of 4 palettes containing 16 colors each from NES palette</li>
     * </ul>
     * <h2>NES palette colors</h2>
 	* <table class="wikitable">
@@ -1288,7 +1306,7 @@ PPU {
 	* </td>
 	* <td style="border:0px;background-color:#004848;width:32px;height:32px;color:#fff;text-align:center">0x0C
 	* </td>
-	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x0D
+	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#f00;text-align:center">0x0D
 	* </td>
 	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x0E
 	* </td>
@@ -1354,7 +1372,7 @@ PPU {
 	* </td>
 	* <td style="border:0px;background-color:#00FFFF;width:32px;height:32px;color:#000;text-align:center">0x2C
 	* </td>
-	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#f00;text-align:center">0x2D
+	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x2D
 	* </td>
 	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x2E
 	* </td>
@@ -1387,13 +1405,16 @@ PPU {
 	* </td>
 	* <td style="border:0px;background-color:#91DAFF;width:32px;height:32px;color:#000;text-align:center">0x3C
 	* </td>
-	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#f00;text-align:center">0x3D
+	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x3D
 	* </td>
 	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x3E
 	* </td>
 	* <td style="border:0px;background-color:#000000;width:32px;height:32px;color:#fff;text-align:center">0x3F
-	* </td></tr></tbody></table>*/
-    $setSpritesPalettes(Byte[16] palettes) {
+	* </td></tr></tbody></table>
+	* <h2>Note:</h2>
+	* <p>These colors vary depending on TV/Console/Emulator in which the game plays
+	* */
+    $setSpritesPalettes(Byte[4][4] palettes) {
     	!	LDA ?$PPUSTATUS?    !
     	!	LDA #>$3F10         !
     	!	STA ?$PPUADDR?      !
@@ -1409,7 +1430,22 @@ PPU {
     	!	BNE -loop           !
     }
     
-    $setNameTable(Int screen, Byte[960] nameTable) {
+    $drawSprite(Byte number, Byte xOffset, Byte yOffset, Byte sprite, Byte options) {
+    	!	LDA ?number?  !
+		!	ASL A         !
+		!	ASL A         !
+		!	TAX           !
+		!	LDA ?yOffset? !
+		!	STA $0200, X  !
+		!	LDA ?xOffset? !
+		!	STA $0203, X  !
+		!	LDA ?sprite?  !
+		!	STA $0201, X  !
+		!	LDA ?options? !
+		!	STA $0202, X  !
+	}
+    
+    $drawBackground(Int screen, Byte[30][32] nameTable) {
     	!	LDA ?$PPUSTATUS?     !
     	!	LDA ?screen? + 1     !
     	!	STA ?$PPUADDR?       !
@@ -1433,7 +1469,7 @@ PPU {
     	!	BNE -frag            !
     }
     
-    $setNameTableTile(Int screen, Byte rowOffset, Byte colOffset, Byte tile) {
+    $drawBackgroundTile(Int screen, Byte rowOffset, Byte colOffset, Byte tile) {
     	!	LDA ?$PPUSTATUS?           !
     	offset : rowOffset * 32 + colOffset
 		!	CLC                        !
@@ -1449,7 +1485,7 @@ PPU {
     	!	STA ?$PPUDATA?             !
     }
     
-    $setNameTableTiles(Int screen, Byte rowOffset, Byte colOffset, Byte[][] tiles) {
+    $drawBackgroundTiles(Int screen, Byte rowOffset, Byte colOffset, Byte[][] tiles) {
     	offset : rowOffset * 32 + colOffset
     	!	LDA ?$PPUSTATUS?           !
     	screen += offset
@@ -1485,7 +1521,7 @@ PPU {
     	!	BNE --loop                 !
     }
     
-    $setNameTableRow(Int screen, Byte rowOffset, Byte[960] nameTable) {
+    $drawBackgroundRow(Int screen, Byte rowOffset, Byte[30][32] nameTable) {
     	offset : rowOffset * $SCREEN_WIDTH_TILES
     	!	LDA ?$PPUSTATUS?           !
     	!	CLC                        !
@@ -1514,7 +1550,7 @@ PPU {
     	!	BNE -loop                  !
     }
     
-    $setNameTableColumn(Int screen, Byte colOffset, Byte[960] nameTable) {
+    $drawBackgroundColumn(Int screen, Byte colOffset, Byte[30][32] nameTable) {
     	!	LDY #0                      !
     	!	LDX #?$SCREEN_HEIGHT_TILES? !
     	!	LDA #%00000100              !
@@ -1540,7 +1576,7 @@ PPU {
     	!	STA ?$PPUCTRL?              !
     }
     
-    $setNameAndAttributeTable(Int screen, Byte[1024] nameAndAttributeTable) {
+    $drawAndPaintBackground(Int screen, Byte[1024] nameAndAttributeTable) {
     	!	LDA ?$PPUSTATUS?                 !
     	!	LDA ?screen? + 1                 !
     	!	STA ?$PPUADDR?                   !
@@ -1558,24 +1594,24 @@ PPU {
     	!	BNE -loop                        !
     }
     
-    $setAttributeTable(Int screen, Byte[64] attributeTable) {
-    	!	LDA ?$PPUSTATUS?             !
-    	!	CLC                          !
-    	!	LDA ?screen? + 1             !
-    	!	ADC #>$03C0                  !
-    	!	STA ?$PPUADDR?               !
-    	!	LDA #<$03C0                  !
-    	!	STA ?$PPUADDR?               !
-    	!	LDY #0                       !
-    	!-loop:                          !
-    	!	LDA (?attributeTable?), Y    !
-    	!	STA ?$PPUDATA?               !
-    	!	INY                          !
-    	!	CPY #?attributeTable.length? !
-    	!	BNE -loop                    !
+    $paintBackground(Int screen, Byte[8][8] attributeTable) {
+    	!	LDA ?$PPUSTATUS?          !
+    	!	CLC                       !
+    	!	LDA ?screen? + 1          !
+    	!	ADC #>$03C0               !
+    	!	STA ?$PPUADDR?            !
+    	!	LDA #<$03C0               !
+    	!	STA ?$PPUADDR?            !
+    	!	LDY #0                    !
+    	!-loop:                       !
+    	!	LDA (?attributeTable?), Y !
+    	!	STA ?$PPUDATA?            !
+    	!	INY                       !
+    	!	CPY #64                   !
+    	!	BNE -loop                 !
     }
     
-    $setAttributeTableRow(Int screen, Byte rowOffset, Byte[64] attributeTable) {
+    $paintBackgroundRow(Int screen, Byte rowOffset, Byte[8][8] attributeTable) {
     	!	LDA ?$PPUSTATUS?          !
 		!	LDA ?rowOffset?           !
     	!	ASL A                     !
@@ -1599,7 +1635,7 @@ PPU {
     	!	BNE -loop                 !
     }
     
-    $setAttributeTableColumn(Int screen, Byte colOffset, Byte[64] attributeTable) {
+    $paintBackgroundColumn(Int screen, Byte colOffset, Byte[8][8] attributeTable) {
     	!	LDA ?$PPUSTATUS?          !
     	!	LDX #8                    !
 		!	LDA ?colOffset?           !
@@ -1629,7 +1665,7 @@ PPU {
     	!+done:                       !
     }
     
-    $setAttribute(Int screen, Byte rowOffset, Byte colOffset, Byte attribute) {
+    $paintBackgroundTiles(Int screen, Byte rowOffset, Byte colOffset, Byte attribute) {
     	!	LDA ?$PPUSTATUS? !
     	!	LDA ?rowOffset?  !
     	!	ASL A            !
@@ -1703,23 +1739,26 @@ PPU {
 		!	BPL -            !
     }
     
+    $waitSprite0Hit() @Inline {
+    	!-waitSprite0Clear:       !
+		!	BIT ?$PPUSTATUS?      !
+		!	BVS -waitSprite0Clear !
+		!-waitSprite0Hit:         !
+		!	BIT ?$PPUSTATUS?      !
+		!	BVC -waitSprite0Hit   !
+    }
+    
     $turnOff() @Inline {
     	!	LDA #0         !
-    	!	STA ?$PPUCTRL? !
     	!	STA ?$PPUMASK? !
     }
     
     $turnOn() @Inline {
-    	!	LDA ?$ctrl?      !
-    	!	STA ?$PPUCTRL?   !
-    	!	LDA ?$mask?      !
-    	!	STA ?$PPUMASK?   !
+    	$waitVBlank
+    	$updateMask
     }
     
     $update() @Inline {
-    	!	LDA #0           !
-    	!	STA ?$PPUADDR?   !
-    	!	STA ?$PPUADDR?   !
 		$updateCtrl
     	$updateMask
     	$updateScroll
@@ -1740,5 +1779,11 @@ PPU {
     	!	STA ?$PPUSCROLL? !
     	!	LDA ?$scrollY?   !
     	!	STA ?$PPUSCROLL? !
+    }
+    
+    $updateAddr() @Inline {
+    	!	LDA #0         !
+    	!	STA ?$PPUADDR? !
+    	!	STA ?$PPUADDR? !
     }
 }

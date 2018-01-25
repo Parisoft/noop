@@ -810,7 +810,7 @@ public class Members {
 				«staticVar.compile(new CompileContext => [container = resetMethod])»
 			«ENDFOR»
 			
-			-waitVBlank2
+			-waitVBlank2:
 				BIT $2002
 				BPL -waitVBlank2
 				;;;;;;;;;; Initial setup end
