@@ -1,2 +1,7 @@
+/*
+ * <p>Bool is a boolean primitive type.</p>
+ * <p>It's size is 8 bits or 1 byte.</p>
+ * <p>A Bool object can only be assigned to <i>true</i> or <i>false</i> and can be operated by the logical operations: <i>or</i>, <i>and</i> and <i>not</i>.</p>
+ */
 Bool extends Primitive {
 }

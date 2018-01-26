@@ -1,5 +1,16 @@
+/*
+ * <p>SByte is a numeric signed type.</p>
+ * <p>It's size is 8 bits or 1 byte and ranges from -128 to 127.</p>
+ */
 SByte extends Primitive {
 
+	/*
+	 * <p>The minimum value of a SByte.</p>
+	 */
 	$MIN : -128
+	
+	/*
+	 * <p>The maximum value of a SByte.</p>
+	 */
 	$MAX : 127
 }

@@ -1,5 +1,16 @@
+/*
+ * <p>UInt is a numeric unsigned type.</p>
+ * <p>It's size is 16 bits or 2 bytes and ranges from 0 to 65535.</p>
+ */
 UInt extends Primitive {
 
+	/*
+	 * <p>The minimum value of an UInt.</p>
+	 */
 	$MIN : 0
+	
+	/*
+	 * <p>The maximum value of an UInt.</p>
+	 */
 	$MAX : 65535
 }

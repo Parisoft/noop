@@ -1,5 +1,16 @@
+/*
+ * <p>Int is a numeric signed type.</p>
+ * <p>It's size is 16 bits or 2 bytes and ranges from -32768 to 32767.</p>
+ */
 Int extends Primitive {
 
+	/*
+	 * <p>The minimum value of an Int.</p>
+	 */
 	$MIN : -32768
+	
+	/*
+	 * <p>The maximum value of an Int.</p>
+	 */
 	$MAX : 32767
 }

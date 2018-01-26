@@ -1,2 +1,5 @@
+/*
+ * <p>Void is used to typify methods with no returns.</p>
+ */
 Void {
 }

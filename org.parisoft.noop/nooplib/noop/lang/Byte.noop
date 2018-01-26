@@ -1,5 +1,16 @@
+/*
+ * <p>Byte is a numeric unsigned type.</p>
+ * <p>It's size is 8 bits or 1 byte and ranges from 0 to 255.</p>
+ */
 Byte extends Primitive {
 
+	/*
+	 * <p>The minimum value of a Byte.</p>
+	 */
 	$MIN : 0
+	
+	/*
+	 * <p>The maximum value of a Byte.</p>
+	 */
 	$MAX : 255
 }

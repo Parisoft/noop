@@ -1,7 +1,14 @@
+/*
+ * <p>Base type of all primitives types: <i>Byte</i>, <i>SByte</i>, <i>Int</i>, <i>UInt</i> and <i>Bool</i>.</p>
+ */
 Primitive {
 
     //-- Arrays methods ---
     
+    /* 
+     * <h2>Returns:</h2>
+     * <p>how many elements this array contains</p>
+     */
     length() {
     	return UInt
     }

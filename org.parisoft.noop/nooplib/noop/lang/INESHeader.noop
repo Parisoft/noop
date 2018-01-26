@@ -1,3 +1,19 @@
+/*
+ * <p>Holds structural properties of the game:</p>
+ * <ul>
+ * <li>Mapper used</li>
+ * <li>Size of PRG-ROM</li>
+ * <li>Size of CHR-ROM</li>
+ * <li>Screen mirroring</li>
+ * </ul>
+ * <h2>Default:</h2>
+ * <ul>
+ * <li>Mapper 0 (NROM)</li>
+ * <li>32KB of PRG-ROM</li>
+ * <li>8KB of CHR-ROM</li>
+ * <li>Vertical mirroring (horizontal scrolling)</li>
+ * </ul>
+ */
 INESHeader {
 
 	$NROM : 0

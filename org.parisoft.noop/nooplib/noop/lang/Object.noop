@@ -1,6 +1,14 @@
+/*
+ * <p>The base class of all classes.</p>
+ * <p>All non-Void non-Primitive classes inherits, directly or indirectly, the Object class</p>
+ */
 Object {
 
-    /* <b>Returns</b> true if this object has the same content as other object */
+    /* 
+     * <p>Compare two objects byte by byte.</p>
+     * <h2>Returns:</h2>
+     * <p>true if this object has the same bytes as other object</p>
+     */
     equals(Object other) {
     	size()
         !	LDY #0           !
@@ -16,7 +24,11 @@ Object {
         return false
     }
     
-    /* <b>Returns</b> true if this object is exactly the same object as other */
+    /* 
+     * <p>Compare the address in memory of two objects.</p>
+     * <h2>Returns:</h2>
+     * <p>true if this object is exactly the same object as other</p>
+     */
     same(Object other) {
     	!	LDA ?this? + 0  !
     	!	CMP ?other? + 0 !
@@ -29,7 +41,10 @@ Object {
     	return false
     }
     
-    /* <b>Returns</b> the size in bytes of this object */
+    /* 
+     * <h2>Returns:</h2>
+     * <p>the size in bytes of this object</p>
+     */
     size() {
     	s : 0
     	!	LDY #0               !
@@ -42,7 +57,10 @@ Object {
     
     //-- Arrays methods ---
     
-    /* <b>Returns</b> how many elements this array contains */
+    /* 
+     * <h2>Returns:</h2>
+     * <p>how many elements this array contains</p>
+     */
     length() {
     	//native implementation
     	return UInt

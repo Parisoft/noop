@@ -144,7 +144,7 @@ Math {
 		!	ADC #$01 !
 		!	STA ?a?  !
 		!+div:       !
-		a : $divide8Bit(a as Byte, b as Byte)
+		a := $divide8Bit(a as Byte, b as Byte)
 		!	PLA      !
 		!	BPL +end !
 		return -a as SByte
@@ -169,7 +169,7 @@ Math {
 		!	ADC #$01 !
 		!	STA ?b?  !
 		!+div:       !
-		a : $divide8Bit(a as Byte, b as Byte)
+		a := $divide8Bit(a as Byte, b as Byte)
 		!	PLP      !
 		!	BPL +end !
 		return -a as SByte
