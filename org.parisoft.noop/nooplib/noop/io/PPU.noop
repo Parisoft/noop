@@ -1,4 +1,4 @@
-PPU {
+PPU2 {
 	
 	/*
 	 * <p>Screen number 0 localized at top left</p>
@@ -85,7 +85,7 @@ PPU {
 	$SCREEN_BOTTOM_RIGHT : 0x2C00
 	
 	/*
-	 * <p>Number pixels in one row of the screen</p>
+	 * <p>Number of pixels in one row of the screen</p>
 	 */
 	$SCREEN_WIDTH_PX : 256
 	
@@ -114,7 +114,7 @@ PPU {
 	$SPRITE_BEHIND_BACKGROUND : 0b00100000
 	
 	/*
-	 * <p>Option to drawn the sprite mirrored (flipped horizontally)</p>
+	 * <p>Option to drawn sprites mirrored (flipped horizontally)</p>
 	 */
 	$SPRITE_MIRROR : 0b01000000
 	
@@ -245,7 +245,7 @@ PPU {
 	$ctrl : 0b10010000
 	
 	/*
-	 * <p>Bits written to <i>$PPUMASK</i> when <i>$update()</i> is called</p>
+	 * <p>Bits written to <i>$PPUMASK</i> when <i>$update()</i> or <i>updateMask()</i> is called</p>
 	 * <h2>Default:</h2>
 	 * <pre>
      * 0001 1110
@@ -265,17 +265,17 @@ PPU {
 	$mask : 0b00011110
 	
 	/*
-	 * <p>Horizontal scroll value written to <i>$PPUSCROLL</i> when <i>$update()</i> is called</p>
+	 * <p>Horizontal scroll value written to <i>$PPUSCROLL</i> when <i>$update()</i> or <i>$updateScroll()</i> is called</p>
 	 */
 	$scrollX : 0
 	
 	/*
-	 * <p>Vertical scroll value written to <i>$PPUSCROLL</i> when <i>$update()</i> is called</p>
+	 * <p>Vertical scroll value written to <i>$PPUSCROLL</i> when <i>$update()</i> or <i>$updateScroll()</i> is called</p>
 	 */
 	$scrollY : 0
 	
 	/*
-	 * <p>Sets bits 0 and 1 of PPUCTRL to 00, setting the screen address to 0x2000</p>
+	 * <p>Sets bits 0 and 1 of PPUCTRL to 00<sub>2</sub>, setting the screen address to 0x2000</p>
 	 * <pre>     (0,0)     (256,0)     (511,0)
      *        +-----------+-----------+
      *        |           |           |
@@ -302,7 +302,7 @@ PPU {
 	}
 	
 	/*
-	 * <p>Sets bits 0 and 1 of PPUCTRL to 01, setting the screen address to 0x2400</p>
+	 * <p>Sets bits 0 and 1 of PPUCTRL to 01<sub>2</sub>, setting the screen address to 0x2400</p>
 	 * <pre>     (0,0)     (256,0)     (511,0)
      *        +-----------+-----------+
      *        |           |           |
@@ -330,7 +330,7 @@ PPU {
 	}
 	
 	/*
-	 * <p>Sets bits 0 and 1 of PPUCTRL to 10, setting the screen address to 0x2800</p>
+	 * <p>Sets bits 0 and 1 of PPUCTRL to 10<sub>2</sub>, setting the screen address to 0x2800</p>
 	 * <pre>     (0,0)     (256,0)     (511,0)
      *        +-----------+-----------+
      *        |           |           |
@@ -358,7 +358,7 @@ PPU {
 	}
 	
 	/*
-	 * <p>Sets bits 0 and 1 of PPUCTRL to 11, setting the screen address to 0x2C00</p>
+	 * <p>Sets bits 0 and 1 of PPUCTRL to 11<sub>2</sub>, setting the screen address to 0x2C00</p>
 	 * <pre>     (0,0)     (256,0)     (511,0)
      *        +-----------+-----------+
      *        |           |           |
@@ -717,6 +717,7 @@ PPU {
 	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
 	 */
 	$disableNMI() @Inline {
+		!	LDA ?$PPUSTATUS? !
 		!	LDA ?$ctrl?    !
 		!	AND #%01111111 !
 		!	STA ?$ctrl?    !
@@ -1430,7 +1431,20 @@ PPU {
     	!	BNE -loop           !
     }
     
-    $drawScoreBoardAtTop() {
+    /*
+     * <p>Draws a status bar on top of the screen by the "sprite 0 hit" technique.</p>
+     * <p>In order to this method work, the name table containing the status bar must be located at top left screen (0x2000).</p>
+	 * <p>Call this method on <i>$nmi()</i> before any updates to PPU like this:</p>
+	 * <pre>
+	 * $nmi() {
+	 *     PPU.$drawStatusBarOnTop // reset scroll and render the top left name table until sprite 0 location
+	 *     PPU.$updateCtrl // switch back to current name table 
+	 *     PPU.$updateScroll // restore current scroll
+	 *     ...
+	 * }
+	 * </pre>
+     */
+    $drawStatusBarOnTop() {
     	!	LDA #0           !
     	!	STA ?$PPUADDR?   !
     	!	STA ?$PPUADDR?   !
@@ -1444,7 +1458,21 @@ PPU {
     	$waitSprite0Hit
     }
     
-    $drawScoreBoardAtBottom() {
+    /*
+     * <p>Draws a status bar on bottom of the screen by the "sprite 0 hit" technique.</p>
+     * <p>In order to this method work, the name table containing the status bar must be located at top left screen (0x2000).</p>
+	 * <p>Call this method on <i>$nmi()</i> after any updates to PPU like this:</p>
+	 * <pre>
+	 * $nmi() {
+	 *     PPU.$update // start rendering the current name table
+	 *     PPU.$drawStatusBarOnTop // wait to sprite 0 hit and then reset scroll and render the top left name table
+	 *     ...
+	 * }
+	 * </pre>
+	 * <h2>Note:</h2>
+	 * <p>Drawing a status bar by the "sprite 0 hit" technique usually is done with a top status bar, cause waiting for a sprite hit far from top can be slow.<br>Some mappers like MMC3 offer other ways to do this efficiently</p>
+     */
+    $drawStatusBarOnBottom() {
     	$waitSprite0Hit
     	!	LDA #0           !
     	!	STA ?$PPUSCROLL? !
@@ -1456,6 +1484,23 @@ PPU {
 		!	STA ?$PPUMASK?   !
     }
     
+    /*
+     * <p>Draws a sprite at a given position on screen with proper effects and palette</p>
+     * <h2>Parameters:</h2>
+     * <ul>
+     * <li><b>number: </b>the sprite number from 0 to 63 (PPU supports 64 sprites at all)</li>
+     * <li><b>xOffset: </b>the horizontal position on the screen: 0 is on leftmost and 255 is the rightmost</li>
+     * <li><b>yOffset: </b>the vertical position on the screen: 0 is on topmost and 239 is the bottommost</li>
+     * <li><b>sprite: </b>the tile index from the pattern table starting at 0</b></li>
+     * <li><b>options: </b>the rendering effects and the palette index (0 to 3) from the palettes.<br>
+     *  For effects see PPU.$SPRITE_BEHIND_BACKGROUND, PPU.$SPRITE_MIRROR and PPU.$SPRITE_FLIP</li>
+     * </ul>
+     * <h2>Example:</h2>
+     * <pre>
+     * // Draws the sprite number 0 at position 1x2 using the 4th tile with mirror and flip effects and the 2nd palette   
+     * PPU.$drawSprite(0, 1, 2, 3, PPU.$SPRITE_MIRROR | PPU.$SPRITE_FLIP | 1)
+     * </pre>
+     */
     $drawSprite(Byte number, Byte xOffset, Byte yOffset, Byte sprite, Byte options) {
     	!	LDA ?number?  !
 		!	ASL A         !
@@ -1511,42 +1556,6 @@ PPU {
     	!	STA ?$PPUDATA?             !
     }
     
-    $drawBackgroundTiles(Int screen, Byte rowOffset, Byte colOffset, Byte[][] tiles) {
-    	offset : rowOffset * 32 + colOffset
-    	!	LDA ?$PPUSTATUS?           !
-    	screen += offset
-    	!	LDX ?tiles.length?         !
-    	!	BNE +loop                  !
-    	!--loop:                       !
-    	!	CLC                        !
-    	!	LDA ?tiles? + 0            !
-    	!	ADC ?tiles[0].length?      !
-    	!	STA ?tiles? + 0            !
-    	!	LDA ?tiles? + 1            !
-    	!	ADC #0                     !
-    	!	STA ?tiles? + 1            !
-    	!	CLC                        !
-    	!	LDA ?screen? + 0           !
-    	!	ADC #?$SCREEN_WIDTH_TILES? !
-    	!	STA ?screen? + 0           !
-    	!	LDA ?screen? + 1           !
-    	!	ADC #0                     !
-    	!	STA ?screen? + 1           !
-    	!+loop:                        !
-    	!	STA ?$PPUADDR?             !
-    	!	LDA ?screen? + 0           !
-    	!	STA ?$PPUADDR?             !
-    	!	LDY #0                     !
-    	!-loop:                        !
-    	!	LDA (?tiles?), Y           !
-    	!	STA ?$PPUDATA?             !
-    	!	INY                        !
-    	!	CPY ?tiles[0].length?      !
-    	!	BNE -loop                  !
-    	!	DEX                        !
-    	!	BNE --loop                 !
-    }
-    
     $drawBackgroundRow(Int screen, Byte rowOffset, Byte[30][32] nameTable) {
     	offset : rowOffset * $SCREEN_WIDTH_TILES
     	!	LDA ?$PPUSTATUS?           !
@@ -1563,7 +1572,6 @@ PPU {
     	!	STA ?screen? + 0           !
     	!	LDA ?offset? + 1           !
     	!	ADC ?screen? + 1           !
-    	!	STA ?screen? + 1           !
     	!	STA ?$PPUADDR?             !
     	!	LDA ?screen? + 0           !
     	!	STA ?$PPUADDR?             !
@@ -1600,6 +1608,98 @@ PPU {
     	!	BNE -loop                   !
     	!	LDA ?$ctrl?                 !
     	!	STA ?$PPUCTRL?              !
+    }
+    
+    $drawBackgroundSection(Int screen, Byte rowOffset, Byte colOffset, Byte[][] nameTableSection) {
+    	offset : rowOffset * 32 + colOffset
+    	!	LDA ?$PPUSTATUS?                 !
+    	screen += offset
+    	!	LDX ?nameTableSection.length?    !
+    	!	BNE +loop                        !
+    	!--loop:                             !
+    	!	CLC                              !
+    	!	LDA ?nameTableSection? + 0       !
+    	!	ADC ?nameTableSection[0].length? !
+    	!	STA ?nameTableSection? + 0       !
+    	!	LDA ?nameTableSection? + 1       !
+    	!	ADC #0                           !
+    	!	STA ?nameTableSection? + 1       !
+    	!	CLC                              !
+    	!	LDA ?screen? + 0                 !
+    	!	ADC #?$SCREEN_WIDTH_TILES?       !
+    	!	STA ?screen? + 0                 !
+    	!	LDA ?screen? + 1                 !
+    	!	ADC #0                           !
+    	!	STA ?screen? + 1                 !
+    	!+loop:                              !
+    	!	STA ?$PPUADDR?                   !
+    	!	LDA ?screen? + 0                 !
+    	!	STA ?$PPUADDR?                   !
+    	!	LDY #0                           !
+    	!-loop:                              !
+    	!	LDA (?nameTableSection?), Y      !
+    	!	STA ?$PPUDATA?                   !
+    	!	INY                              !
+    	!	CPY ?nameTableSection[0].length? !
+    	!	BNE -loop                        !
+    	!	DEX                              !
+    	!	BNE --loop                       !
+    }
+    
+    $drawBackgroundRowSection(Int screen, Byte screenRow, Byte sectionRow, Byte[][] nameTableSection) {
+    	screenOffset : screenRow * $SCREEN_WIDTH_TILES
+    	sectionOffset : sectionRow * nameTableSection[0].length
+    	!	LDA ?$PPUSTATUS?                 !
+    	!	CLC                              !
+    	!	LDA ?sectionOffset? + 0          !
+    	!	ADC ?nameTableSection? + 0       !
+    	!	STA ?nameTableSection? + 0       !
+    	!	LDA ?sectionOffset? + 1          !
+    	!	ADC ?nameTableSection? + 1       !
+		!	STA ?nameTableSection? + 1       !
+    	!	CLC                              !
+    	!	LDA ?screenOffset? + 0           !
+    	!	ADC ?screen? + 0                 !
+    	!	STA ?screen? + 0                 !
+    	!	LDA ?screenOffset? + 1           !
+    	!	ADC ?screen? + 1                 !
+    	!	STA ?$PPUADDR?                   !
+    	!	LDA ?screen? + 0                 !
+    	!	STA ?$PPUADDR?                   !
+    	!	LDY #0                           !
+    	!-loop:                              !
+    	!	LDA (?nameTableSection?), Y      !
+    	!	STA ?$PPUDATA?                   !
+    	!	INY                              !
+    	!	CPY ?nameTableSection[0].length? !
+    	!	BNE -loop                        !
+    }
+    
+    $drawBackgroundColumnSection(Int screen, Byte screenCol, Byte sectionCol, Byte[][] nameTableSection) {
+    	!	LDY #0                           !
+    	!	LDX ?nameTableSection.length?    !
+    	!	LDA #%00000100                   !
+    	!	STA ?$PPUCTRL?                   !
+    	!	LDA ?$PPUSTATUS?                 !
+    	!	LDA ?screen? + 1                 !
+    	!	STA ?$PPUADDR?                   !
+    	!	LDA ?screenCol?                  !
+    	!	STA ?$PPUADDR?                   !
+    	!	LDA ?sectionCol?                 !
+    	!-loop:                              !
+    	!	CLC                              !
+    	!	ADC ?nameTableSection? + 0       !
+    	!	STA ?nameTableSection? + 0       !
+    	!	LDA #0                           !
+    	!	ADC ?nameTableSection? + 1       !
+    	!	STA ?nameTableSection? + 1       !
+    	!	LDA (?nameTableSection?), Y      !
+    	!	STA ?$PPUDATA?                   !
+    	!	LDA ?nameTableSection[0].length? !
+    	!	DEX                              !
+    	!	BNE -loop                        !
+    	!	LDA ?$ctrl?                      !
+    	!	STA ?$PPUCTRL?                   !
     }
     
     $drawAndPaintBackground(Int screen, Byte[1024] nameAndAttributeTable) {
@@ -1761,8 +1861,9 @@ PPU {
     }
     
     $waitVBlank() @Inline {
-    	!-	BIT ?$PPUSTATUS? !
-		!	BPL -            !
+    	!-waitVBlank:        !
+    	!	BIT ?$PPUSTATUS? !
+		!	BPL -waitVBlank  !
     }
     
     $waitSprite0Hit() @Inline {
@@ -1775,21 +1876,43 @@ PPU {
     }
     
     $turnOff() @Inline {
-    	!	LDA #0         !
-    	!	STA ?$PPUMASK? !
+    	$waitVBlank
+		!	LDA ?$PPUSTATUS? !
+		!	LDA ?$ctrl?      !
+		!	AND #%01111111   !
+		!	STA ?$ctrl?      !
+		!	STA ?$PPUCTRL?   !
+		!	LDA ?$mask?      !
+		!	AND #%11100111   !
+		!	STA ?$mask?      !
+		!	STA ?$PPUMASK?   !
     }
     
     $turnOn() @Inline {
     	$waitVBlank
-    	$updateMask
+		!	LDA ?$mask?    !
+		!	ORA #%00011000 !
+		!	STA ?$mask?    !
+		!	STA ?$PPUMASK? !  
+		!	LDA ?$ctrl?    !
+		!	ORA #%10000000 !
+		!	STA ?$ctrl?    !
+		!	STA ?$PPUCTRL? !
     }
     
     $update() @Inline {
+    	$updateAddr
 		$updateCtrl
     	$updateMask
     	$updateScroll
     }
     
+    $updateAddr() @Inline {
+    	!	LDA #0         !
+    	!	STA ?$PPUADDR? !
+    	!	STA ?$PPUADDR? !
+    }
+
     $updateCtrl() @Inline {
     	!	LDA ?$ctrl?      !
     	!	STA ?$PPUCTRL?   !
@@ -1807,9 +1930,4 @@ PPU {
     	!	STA ?$PPUSCROLL? !
     }
     
-    $updateAddr() @Inline {
-    	!	LDA #0         !
-    	!	STA ?$PPUADDR? !
-    	!	STA ?$PPUADDR? !
-    }
 }

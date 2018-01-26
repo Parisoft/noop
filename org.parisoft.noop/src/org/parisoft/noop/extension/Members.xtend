@@ -292,7 +292,7 @@ public class Members {
 	}
 	
 	def isArrayReference(Member member, List<Index> indexes) {
-		member.dimensionOf.size > indexes.size
+		member.dimensionOf.size > indexes?.size
 	}
 
 	def typeOf(Member member) {
