@@ -2116,13 +2116,13 @@ PPU {
      * <h2>Note:</h2>
      * <p>If disabling NMI is unnecessary, rather than invoke the tuple <i>turnOff()</i> / <i>turnOn()</i> do:</p>
      * <pre>
-     * PPU.$disableSprites
-     * PPU.$disableBackground
+     * PPU.$hideSprites
+     * PPU.$hideBackground
      * PPU.$updateMask
      * // draw some tiles
      * PPU.$waitVBlank
-     * PPU.$enableSprites
-     * PPU.$enableBackground
+     * PPU.$showSprites
+     * PPU.$showBackground
      * PPU.$updateMask
      * </pre>
      */
