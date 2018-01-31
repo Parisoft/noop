@@ -1457,59 +1457,6 @@ PPU {
     }
     
     /*
-     * <p>Draws a status bar on top of the screen by the "sprite 0 hit" technique.</p>
-     * <p>In order to this method work, the name table containing the status bar must be located at top left screen (0x2000).</p>
-	 * <p>Call this method on <i>$nmi()</i> before any updates to PPU like this:</p>
-	 * <pre>
-	 * $nmi() {
-	 *     PPU.$drawStatusBarOnTop // reset scroll and render the top left name table until sprite 0 location
-	 *     PPU.$updateCtrl // switch back to current name table 
-	 *     PPU.$updateScroll // restore current scroll
-	 *     ...
-	 * }
-	 * </pre>
-     */
-    $drawStatusBarOnTop() {
-    	!	LDA #0           !
-    	!	STA ?$PPUADDR?   !
-    	!	STA ?$PPUADDR?   !
-    	!	STA ?$PPUSCROLL? !
-    	!	STA ?$PPUSCROLL? !
-    	!	LDA ?$ctrl?      !
-		!	AND #%11111100   !
-		!	STA ?$PPUCTRL?   !
-		!	LDA ?$mask?      !
-		!	STA ?$PPUMASK?   !
-    	$waitSprite0Hit
-    }
-    
-    /*
-     * <p>Draws a status bar on bottom of the screen by the "sprite 0 hit" technique.</p>
-     * <p>In order to this method work, the name table containing the status bar must be located at top left screen (0x2000).</p>
-	 * <p>Call this method on <i>$nmi()</i> after any updates to PPU like this:</p>
-	 * <pre>
-	 * $nmi() {
-	 *     PPU.$update // start rendering the current name table
-	 *     PPU.$drawStatusBarOnTop // wait to sprite 0 hit and then reset scroll and render the top left name table
-	 *     ...
-	 * }
-	 * </pre>
-	 * <h2>Note:</h2>
-	 * <p>Drawing a status bar by the "sprite 0 hit" technique usually is done with a top status bar, cause waiting for a sprite hit far from top can be slow.<br>Some mappers like MMC3 offer other ways to do this efficiently</p>
-     */
-    $drawStatusBarOnBottom() {
-    	$waitSprite0Hit
-    	!	LDA #0           !
-    	!	STA ?$PPUSCROLL? !
-    	!	STA ?$PPUSCROLL? !
-    	!	LDA ?$ctrl?      !
-		!	AND #%11111100   !
-		!	STA ?$PPUCTRL?   !
-		!	LDA ?$mask?      !
-		!	STA ?$PPUMASK?   !
-    }
-    
-    /*
      * <p>Draws a sprite at a given position on screen with proper effects and palette.</p>
      * <h2>Parameters:</h2>
      * <ul>
@@ -2104,87 +2051,67 @@ PPU {
     }
     
     /*
-     * <p>Turns off the PPU rendering.</p>
-     * <p>Useful to draw some tiles or a full background in mid game.</p>
-     * <p>This method does these steps:</p>
-     * <ol>
-     * <li>Waits for a VBLANK</i>
-     * <li>Reads the PPUSTATUS</li>
-     * <li>Turn off NMI (disable 7th bit of PPUCTRL)</li>
-     * <li>Turn off Background and sprites rendering (disable 3rd and 4th bits of PPUMASK)</li>
-     * </ol>
-     * <h2>Note:</h2>
-     * <p>If disabling NMI is unnecessary, rather than invoke the tuple <i>turnOff()</i> / <i>turnOn()</i> do:</p>
-     * <pre>
-     * PPU.$hideSprites
-     * PPU.$hideBackground
-     * PPU.$updateMask
-     * // draw some tiles
-     * PPU.$waitVBlank
-     * PPU.$showSprites
-     * PPU.$showBackground
-     * PPU.$updateMask
-     * </pre>
+     * <p>Reads the PPUSTATUS register.</p>
      */
-    $turnOff() @Inline {
-    	$waitVBlank
-		!	LDA ?$PPUSTATUS? !
-		!	LDA ?$ctrl?      !
-		!	AND #%01111111   !
-		!	STA ?$ctrl?      !
-		!	STA ?$PPUCTRL?   !
-		!	LDA ?$mask?      !
-		!	AND #%11100111   !
-		!	STA ?$mask?      !
-		!	STA ?$PPUMASK?   !
+    $readStatus() @Inline {
+    	!	LDA ?$PPUSTATUS? !
     }
     
     /*
-     * <p>Turns on the PPU rendering.</p>
-     * <p>Usually called after draws some tiles or a full background preceded by a <i>$turnOff()</i> call.</p>
-     * <p>This method does these steps:</p>
-     * <ol>
-     * <li>Waits for a VBLANK</li>
-     * <li>Turn on Background and sprites rendering (enable 3rd and 4th bits of PPUMASK)</li>
-     * <li>Turn on NMI (enable 7th bit of PPUCTRL)</li>
-     * </ol>
+     * <p>Clears the PPUADDR register.</p>
      */
-    $turnOn() @Inline {
-    	$waitVBlank
-		!	LDA ?$mask?    !
-		!	ORA #%00011000 !
-		!	STA ?$mask?    !
-		!	STA ?$PPUMASK? !  
-		!	LDA ?$ctrl?    !
-		!	ORA #%10000000 !
-		!	STA ?$ctrl?    !
-		!	STA ?$PPUCTRL? !
+    $clearAddr() @Inline {
+    	!	LDA #0         !
+    	!	STA ?$PPUADDR? !
+    	!	STA ?$PPUADDR? !
+    }
+
+	/*
+     * <p>Clears the PPUCTRL register.</p>
+     * <h2>Note:</h2>
+     * <p>The <i>$ctrl</i> byte remains intact</p>
+     */    
+    $clearCtrl() @Inline {
+    	!	LDA #0     !
+    	!	?$PPUCTRL? !
+    }
+    
+    /*
+     * <p>Clears the PPUMASK register.</p>
+     * <h2>Note:</h2>
+     * <p>The <i>$mask</i> byte remains intact</p>
+     */
+    $clearMask() @Inline {
+    	!	LDA #0         !
+    	!	STA ?$PPUMASK? !
+    }
+    
+    /*
+     * <p>Clears the PPUSCROLL register.</p>
+     * <h2>Note:</h2>
+     * <p>The <i>$scrollX</i> and <i>$scrollY</i> bytes remains intact</p>
+     */
+    $clearScroll() {
+    	!	LDA #0           !
+    	!	STA ?$PPUSCROLL? !
+    	!	STA ?$PPUSCROLL? !
     }
     
     /*
      * <p>Update the PPU registers.</p>
      * <p>This method does these steps:</p>
      * <ol>
-     * <li>Resets the PPUADDR register to 0</i>
+     * <li>Clears the PPUADDR register</i>
      * <li>Writes the <i>$ctrl</i> byte to the PPUCTRL register</li>
      * <li>Writes the <i>$mask</i> byte to the PPUMASK register</li>
      * <li>Writes the <i>$scrollX</i> and <i>$scrollY</i> bytes to PPUSCROLL register</li>
      * </ol>
      */
     $update() @Inline {
-    	$updateAddr
+    	$clearAddr
 		$updateCtrl
     	$updateMask
     	$updateScroll
-    }
-    
-    /*
-     * <p>Resets the PPUADDR register to 0.</p>
-     */
-    $updateAddr() @Inline {
-    	!	LDA #0         !
-    	!	STA ?$PPUADDR? !
-    	!	STA ?$PPUADDR? !
     }
 
 	/*
