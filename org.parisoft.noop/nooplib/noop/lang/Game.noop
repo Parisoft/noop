@@ -1,5 +1,14 @@
 Game {
 
+	$MIRROR_HORIZONTAL : 0
+	$MIRROR_VERTICAL : 1
+	$MIRROR_FOUR_SCREEN : 0b1000
+		
+	$INES_MAPPER : 0
+	$INES_PRG_ROM_SIZE : 32
+	$INES_CHR_ROM_SIZE : 8
+	$INES_MIRRORING : $MIRROR_HORIZONTAL
+
 	$header : INESHeader{
 		mapper : INESHeader.$NROM,
 		mirroring : INESHeader.$VERTICAL, //(H Scroll)
@@ -7,9 +16,32 @@ Game {
 		chrRomPages : 1  //1 x 08 = 08Kb
 	}
 	
+	/*
+	 * <p>The start point of a game.</p>
+	 * <p>Called every time the console gets reseted or powered on.</p>
+	 * <p>General implementations ends with a infinite loop to keep the game running:</p>
+	 * <pre>
+	 * $reset() {
+	 *     // some initialization code
+	 *     ....
+	 * 
+	 *     //infinite loop to keep game up and running
+	 *     forever {
+	 *         // game logic
+	 *         ...
+	 *     }
+	 * }
+	 * </pre>
+	 */
 	$reset() {
 	}
-		
+	
+	/*
+	 * <p><b>N</b>on-<b>M</b>askable <b>I</b>nterrupt.</p>
+	 * <p>Called at the start of the vertical blanking interval (VBLANK) if the 7th bit of PPUCTRL is set.</p>
+	 * <h2>Warning:</h2>
+	 * <p>In order to prevent inconsistencies avoid to invoke methods and do assignments to fields that are also invoked/assigned outside this method</p>
+	 */
 	$nmi() {
 	}
 	
