@@ -781,7 +781,7 @@ public class Members {
 				STX $4017    ; disable APU frame IRQ
 				LDX #$FF
 				TXS          ; Set up stack
-				INX          ; now X = 0
+				INX          
 				STX $2000    ; disable NMI
 				STX $2001    ; disable rendering
 				STX $4010    ; disable DMC IRQs
@@ -826,10 +826,10 @@ public class Members {
 				TYA
 				PHA
 			
-				LDA #$00
-				STA $2003       ; set the low byte (00) of the RAM address
-				LDA #$02
-				STA $4014       ; set the high byte (02) of the RAM address, start the transfer
+				LDA #<$0200
+				STA $2003  
+				LDA #>$0200
+				STA $4014  
 				;;;;;;;;;; NMI initialization end
 				;;;;;;;;;; Effective code begin
 			«FOR statement : method.body.statements»

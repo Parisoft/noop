@@ -2,7 +2,7 @@
  * <p>Representes the NES/Famicom <b>P</b>icture <b>P</b>rocessing <b>U</b>nit resposible to handle the graphics of the console.</p>
  * <p>This class contains methods to draw backgrounds and sprites and also to control the screen scrolling.</p>
  * <h2>Note:</h2>
- * <p>This class is not intended to be instantiated. It's implemented to be used in singleton a way, with all field and methods being static</p>
+ * <p>This class is not intended to be instantiated. It's implemented to be used in a singleton way, with all fields and methods being static</p>
  */
 PPU {
 	
@@ -1522,7 +1522,7 @@ PPU {
     }
     
     /*
-     * <p>Draws a single tile of the background a screen.</p>
+     * <p>Draws a single tile of the background of a screen.</p>
      * <h1>Parameters:</h1>
      * <ul>
      * <li><b>screen: </b>one of the four screens to be drown.<br>

@@ -656,8 +656,17 @@ class Expressions {
 					} else {
 						expression.type
 					}
-				MemberSelect:
-					expression.member.valueOf
+				MemberSelect: {
+					val member = expression.member
+					val receiver = expression.receiver
+
+					if (member instanceof Method && (member as Method).isArrayLength && receiver instanceof MemberRef &&
+						(receiver as MemberRef).member.isBounded) {
+						expression.receiver.dimensionOf.head
+					} else {
+						expression.member.valueOf
+					}
+				}
 				MemberRef:
 					expression.member.valueOf
 				default:
@@ -722,6 +731,8 @@ class Expressions {
 					expression.assignment === AssignmentType::MOD_ASSIGN) {
 					expression.moduloVariable.prepare(ctx)
 				}
+
+				expression.left.prepare(ctx)
 
 				if (expression.right.containsMulDivMod) {
 					try {
@@ -893,6 +904,8 @@ class Expressions {
 				} else if (expression.assignment === AssignmentType::MOD_ASSIGN) {
 					getModuloMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
 				}
+
+				expression.left.alloc(ctx)
 
 				if (expression.right.containsMulDivMod) {
 					try {
