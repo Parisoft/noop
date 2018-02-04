@@ -34,7 +34,7 @@ public class Members {
 	public static val PRIVATE_PREFIX = '_'
 	public static val TEMP_VAR_NAME1 = 'rash'
 	public static val TEMP_VAR_NAME2 = 'zitz'
-	public static val TEMP_VAR_NAME3 = 'pimple'
+	public static val TEMP_VAR_NAME3 = 'pimp'
 	public static val FT_DPCM_OFF = 'FT_DPCM_OFF'
 	public static val FT_DPCM_PTR = 'FT_DPCM_PTR'
 	public static val TRUE = 'TRUE'
