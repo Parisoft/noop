@@ -96,6 +96,10 @@ public class Members {
 			context.containerClass.isSubclassOf(member.containerClass)
 		} 
 	}
+	
+	def isNonAccessibleFrom(Member member, EObject context) {
+		!member.isAccessibleFrom(context)
+	}
 
 	def isStatic(Member member) {
 		if (member === null || member.name === null) {
@@ -209,7 +213,8 @@ public class Members {
 	}
 
 	def isOverrideOf(Method m1, Method m2) {
-		if (m1.name == m2.name 
+		if (m1 != m2
+			&& m1.name == m2.name 
 			&& m1.params.size == m2.params.size 
 			&& m1.containerClass.isSubclassOf(m2.containerClass)) {
 			for (i : 0 ..< m1.params.size) {
@@ -232,7 +237,7 @@ public class Members {
 	}
 
 	def isOverrideOf(Variable v1, Variable v2) {
-		return v1.name == v2.name && v1.containerClass.isSubclassOf(v2.containerClass)
+		return v1 != v2 && v1.name == v2.name && v1.containerClass.isSubclassOf(v2.containerClass)
 	}
 
 	def isIrq(Method method) {

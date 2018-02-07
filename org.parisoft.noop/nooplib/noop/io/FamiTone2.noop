@@ -310,15 +310,15 @@ FamiTone2 {
 	_$FT_MR_NOISE_V		: _$FT_OUT_BUF+9
 	_$FT_MR_NOISE_F		: _$FT_OUT_BUF+10
 	
-	/* NTSC region */
+	/* <p>NTSC region</p> */
 	$NTSC : 64
-	/* PAL-M region */
+	/* <p>PAL-M region</p> */
 	$PALM : 0
 	
 	/*
 	 * <p>Open a music file for further play</p>
 	 * 
-	 * <h2>Example</h2>
+	 * <h2>Example:</h2>
 	 * <code>
 	 * $someMusics @PRG-ROM : "file://some-musics.asm"<br>
 	 * <br>
@@ -328,7 +328,7 @@ FamiTone2 {
 	 * FamiTone2.$playMusic(0) // plays the 1st track in the recent opened music file<br>
 	 * </code>
 	 * 
-	 * <h2>Parameters</h2>
+	 * <h2>Parameters:</h2>
 	 * <ul>
 	 * <li><b>region</b>: choose between PAL-M (a zero value) and NTSC (non zero value)</li>
 	 * <li><b>music</b>: the music file to be opened</li>
@@ -398,7 +398,7 @@ FamiTone2 {
 	/*
 	 * <p>Stops the music currently playing, if any</p>
 	 * 
-	 * <h2>Example</h2>
+	 * <h2>Example:</h2>
 	 * <code>
 	 * $someMusics @PRG-ROM : "file://some-musics.asm"<br>
 	 * <br>
@@ -452,7 +452,7 @@ FamiTone2 {
 	/*
 	 * <p>Play a music</p>
 	 * 
-	 * <h2>Example</h2>
+	 * <h2>Example:</h2>
 	 * <code>
 	 * $someMusics @PRG-ROM : "file://some-musics.asm"<br>
 	 * <br>
@@ -462,7 +462,7 @@ FamiTone2 {
 	 * FamiTone2.$playMusic(0) // plays the 1st track in the recent opened music file<br>
 	 * </code>
 	 * 
-	 * <h2>Parameters</h2>
+	 * <h2>Parameters:</h2>
 	 * <ul>
 	 * <li><b>track</b>: song number to play</li>
 	 * </ul>	 */
@@ -543,7 +543,7 @@ FamiTone2 {
 	/*
 	 * <p>Pause the playing music</p>
 	 * 
-	 * <h2>Example</h2>
+	 * <h2>Example:</h2>
 	 * <code>
 	 * $someMusics @PRG-ROM : "file://some-musics.asm"<br>
 	 * <br>
@@ -574,7 +574,7 @@ FamiTone2 {
 	/*
 	 * <p>Resume the paused music</p>
 	 * 
-	 * <h2>Example</h2>
+	 * <h2>Example:</h2>
 	 * <code>
 	 * $someMusics @PRG-ROM : "file://some-musics.asm"<br>
 	 * <br>
@@ -597,7 +597,7 @@ FamiTone2 {
 	/*
 	 * <p>Update FamiTone2 state, should be called every NMI</p>
 	 * 
-	 * <h2>Example</h2>
+	 * <h2>Example:</h2>
 	 * <code>
 	 * $nmi() {<br>
 	 * &nbsp; &nbsp; // some draw stuff<br>
@@ -1136,7 +1136,7 @@ FamiTone2 {
 	 * controllers polling. You should poll controllers three times in a row, 
 	 * then use matching result. </p>
 	 * 
-	 * <h2>Example</h2>
+	 * <h2>Example:</h2>
 	 * <code>
 	 * $someSamplesFile @PRG-ROM : "file://some-samples.asm"<br>
 	 * $someSamplesData @PRG-ROM : "file://some-samples.dcm"<br>
@@ -1147,7 +1147,7 @@ FamiTone2 {
 	 * FamiTone2.$playDmcSample(0) // plays the 1st sample<br>
 	 * </code>
 	 *
-	 * <h2>Parameters</h2>
+	 * <h2>Parameters:</h2>
 	 * <ul>
 	 * <li><b>sample</b>: the number of sample to play</li>
 	 * </ul>	 */
@@ -1192,7 +1192,7 @@ FamiTone2 {
 	/*
 	 * <p>Open a SFX file for further playing</p>
 	 * 
-	 * <h2>Example</h2>
+	 * <h2>Example:</h2>
 	 * <code>
 	 * $someEffects @PRG-ROM : "file://some-effects.asm"<br>
 	 * <br>
@@ -1202,7 +1202,7 @@ FamiTone2 {
 	 * FamiTone2.$playSfx(0, FamiTone2.$FT_SFX_CH0) // plays the 1st effect on channel 0<br>
 	 * </code>
 	 * 
-	 * <h2>Parameters</h2>
+	 * <h2>Parameters:</h2>
 	 * <ul>
 	 * <li><b>sfx</b>: the file with effects to open</li>
 	 * </ul> */
@@ -1240,6 +1240,7 @@ FamiTone2 {
 		!	tax                                                                 !
 		!	cpx #?_$FT_SFX_STRUCT_SIZE?*?_$FT_SFX_STREAMS?                              !
 		!	bne @set_channels                                                   !
+		$stopDcmSample()
 	}
 	
 	/*
@@ -1262,7 +1263,7 @@ FamiTone2 {
 	/*
 	 * <p>Play a Sound Effect (SFX)</p>
 	 * 
-	 * <h2>Example</h2>
+	 * <h2>Example:</h2>
 	 * <code>
 	 * $someEffects @PRG-ROM : "file://some-effects.asm"<br>
 	 * <br>
@@ -1272,7 +1273,7 @@ FamiTone2 {
 	 * FamiTone2.$playSfx(0, FamiTone2.$FT_SFX_CH0) // plays the 1st effect on channel 0<br>
 	 * </code>
 	 * 
-	 * <h2>Parameters</h2>
+	 * <h2>Parameters:</h2>
 	 * <ul>
 	 * <li><b>number</b>: the number of the effect to play</li>
 	 * <li><b>channel</b>: the channel offset for playing. Choose one of FamiTone2.$ST_SFX_CH0 .. FamiTone2.$ST_SFX_CH3</li>

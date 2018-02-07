@@ -204,6 +204,7 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val CONSTRUCTOR_FIELD_TYPE = 'org.parisoft.noop.CONSTRUCTOR_FIELD_TYPE'
 	public static val CONSTRUCTOR_FIELD_DIMENSION = 'org.parisoft.noop.CONSTRUCTOR_FIELD_DIMENSION'
 	public static val INES_HEADER_FIELD_VALUE = 'org.parisoft.noop.INES_HEADER_FIELD_VALUE'
+	public static val MEMBER_SELECT_VISIBILITY = 'org.parisoft.noop.MEMBER_SELECT_VISIBILITY'
 	public static val MEMBER_SELECT_DIMENSION = 'org.parisoft.noop.MEMBER_SELECT_DIMENSION'
 	public static val MEMBER_REF_DIMENSION = 'org.parisoft.noop.MEMBER_REF_DIMENSION'
 	public static val STORAGE_LOCATION = 'org.parisoft.noop.STORAGE_LOCATION'
@@ -317,7 +318,7 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def fieldOverriddenDimension(Variable v) {
-		if (v.isField) {
+		if (v.isField && v.isNonROM) {
 			val overridden = v.containerClass.superClass.allFieldsTopDown.findFirst[v.isOverrideOf(it)]
 
 			if (overridden !== null) {
@@ -1600,6 +1601,13 @@ class NoopValidator extends AbstractNoopValidator {
 		if (field.getContainerOfType(NewInstance).type.isINESHeader && field.value?.isNonConstant) {
 			error('''Field «field.variable.name» value must be a constant expression''', CONSTRUCTOR_FIELD__VALUE,
 				INES_HEADER_FIELD_VALUE)
+		}
+	}
+
+	@Check
+	def memberSelectVisibility(MemberSelect select) {
+		if (select.member.isNonAccessibleFrom(select)) {
+			error('''Field «select.member.name» is not visible''', MEMBER_SELECT__MEMBER, MEMBER_SELECT_VISIBILITY)
 		}
 	}
 
