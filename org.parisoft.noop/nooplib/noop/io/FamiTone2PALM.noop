@@ -154,7 +154,6 @@ FamiTone2PALM extends FamiTone2 {
 	 * 
 	 * <h2>Parameters:</h2>
 	 * <ul>
-	 * <li><b>region</b>: choose between PAL-M (a zero value) and NTSC (non zero value)</li>
 	 * <li><b>music</b>: the music file to be opened</li>
 	 * </ul>	 */
 	$openMusic(Byte[] music) {

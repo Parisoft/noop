@@ -210,7 +210,7 @@ FamiTone2NTSC extends FamiTone2 {
 	 * $someMusics @PRG-ROM : "file://some-musics.asm"<br>
 	 * <br>
 	 * // somewhere in the code<br>
-	 * FamiTone2NTSC.$openMusic(FamiTone2NTSC.$NTSC, $someMusics)<br>
+	 * FamiTone2NTSC.$openMusic($someMusics)<br>
 	 * ...<br>
 	 * FamiTone2NTSC.$playMusic(0) // plays the 1st track in the recent opened music file<br>
 	 * </code>
