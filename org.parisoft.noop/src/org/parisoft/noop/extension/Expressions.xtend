@@ -871,6 +871,10 @@ class Expressions {
 
 					if (expression.type.isNonPrimitive) {
 						expression.fieldsInitializedOnContructor.forEach[prepare(ctx)]
+						
+						if (expression.constructor !== null) {
+							expression.constructor.fields.forEach[value.prepare(ctx)]
+						}
 					}
 				}
 			MemberSelect: {
