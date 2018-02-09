@@ -1034,14 +1034,14 @@ class Expressions {
 					ctx.container = constructorName
 
 					chunks += ctx.computePtr(expression.nameOfReceiver)
-					chunks += expression.fieldsInitializedOnContructor.map[value.alloc(ctx)].flatten
+					chunks += expression.fieldsInitializedOnContructor.map[value.alloc(ctx)].flatten.toList
 					chunks.disoverlap(constructorName)
 
 					ctx.restoreTo(snapshot)
 					ctx.constructors.put(expression.type.nameOf, expression)
 
 					if (expression.constructor !== null) {
-						chunks += expression.constructor.fields.map[variable.value.alloc(ctx)].flatten
+						chunks += expression.constructor.fields.map[variable.value.alloc(ctx)].flatten.toList
 					}
 				}
 

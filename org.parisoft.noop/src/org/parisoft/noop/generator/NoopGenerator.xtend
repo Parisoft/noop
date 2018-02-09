@@ -75,9 +75,12 @@ class NoopGenerator extends AbstractGenerator {
 		}
 
 		val ctx = gameImpl.prepare
+
 		gameImpl.alloc(ctx)
+
 		ctx.prgRoms.entrySet.removeIf[ctx.prgRoms.values.exists[rom|rom.isOverrideOf(value)]]
 		ctx.chrRoms.entrySet.removeIf[ctx.chrRoms.values.exists[rom|rom.isOverrideOf(value)]]
+
 		val content = ctx.compile.optimize
 
 		new ASM(gameImpl.name, content)

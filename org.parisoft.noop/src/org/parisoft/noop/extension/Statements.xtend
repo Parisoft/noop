@@ -211,7 +211,7 @@ class Statements {
 			}
 			IfStatement: {
 				val snapshot = ctx.snapshot
-				val chunks = statement.condition.alloc(ctx) + statement.body.statements.map[alloc(ctx)].flatten
+				val chunks = statement.condition.alloc(ctx) + statement.body.statements.map[alloc(ctx)].flatten.toList
 
 				chunks.disoverlap(ctx.container)
 
@@ -222,10 +222,10 @@ class Statements {
 			ForStatement: {
 				val snapshot = ctx.snapshot
 				val chunks = statement.variables.map[alloc(ctx)].flatten.toList
-				chunks += statement.assignments.map[alloc(ctx)].flatten
+				chunks += statement.assignments.map[alloc(ctx)].flatten.toList
 				chunks += statement.condition?.alloc(ctx)
-				chunks += statement.expressions.map[alloc(ctx)].flatten
-				chunks += statement.body.statements.map[alloc(ctx)].flatten
+				chunks += statement.expressions.map[alloc(ctx)].flatten.toList
+				chunks += statement.body.statements.map[alloc(ctx)].flatten.toList
 				chunks.disoverlap(ctx.container)
 
 				ctx.restoreTo(snapshot)
@@ -234,7 +234,7 @@ class Statements {
 			}
 			ForeverStatement: {
 				val snapshot = ctx.snapshot
-				val chunks = statement.body.statements.map[alloc(ctx)].flatten
+				val chunks = statement.body.statements.map[alloc(ctx)].flatten.toList
 
 				chunks.disoverlap(ctx.container)
 
@@ -266,7 +266,7 @@ class Statements {
 		}
 
 		val snapshot = ctx.snapshot
-		val chunks = statement.body.statements.map[alloc(ctx)].flatten
+		val chunks = statement.body.statements.map[alloc(ctx)].flatten.toList
 
 		chunks.disoverlap(ctx.container)
 		ctx.restoreTo(snapshot)

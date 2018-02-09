@@ -697,7 +697,7 @@ public class Members {
 		val methodChunks = method.alloc(ctx)
 		
 		if (method.overriders.isNotEmpty && receiver.isNonThisNorSuper) {
-			methodChunks += method.overriders.map[alloc(ctx)].flatten
+			methodChunks += method.overriders.map[alloc(ctx)].flatten.toList
 		}
 		
 		chunks += receiver.alloc(ctx)

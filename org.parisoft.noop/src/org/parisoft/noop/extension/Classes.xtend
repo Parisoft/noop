@@ -220,7 +220,11 @@ class Classes {
 	}
 
 	def int sizeOf(NoopClass c) {
-		classeSizeCache.computeIfAbsent(c, [fullSizeOf])
+		classeSizeCache.get(c) ?: {
+			val size = c.fullSizeOf
+			classeSizeCache.put(c, size)
+			size
+		}
 	}
 
 	private def int fullSizeOf(NoopClass c) {
@@ -251,10 +255,10 @@ class Classes {
 	}
 
 	def prepare(NoopClass gameImplClass) {
-		contextCache.computeIfAbsent(gameImplClass, [
-			TypeSystem::context.set(gameImplClass)
-
+		contextCache.get(gameImplClass) ?: {
 			val ctx = new AllocContext
+
+			TypeSystem::context.set(gameImplClass)
 
 			gameImplClass.prepare(ctx)
 
@@ -266,8 +270,9 @@ class Classes {
 			classeSizeCache.clear
 			ctx.classes.values.forEach[sizeOf]
 
-			return ctx
-		])
+			contextCache.put(gameImplClass, ctx)
+			ctx
+		}
 	}
 
 	def void prepare(NoopClass noopClass, AllocContext ctx) {
