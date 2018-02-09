@@ -2,8 +2,10 @@ package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
 import java.util.Collection
+import java.util.HashMap
+import java.util.HashSet
 import java.util.NoSuchElementException
-import java.util.concurrent.ConcurrentHashMap
+import java.util.WeakHashMap
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.AllocContext
@@ -12,7 +14,6 @@ import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import java.util.WeakHashMap
 
 class Classes {
 
@@ -23,9 +24,9 @@ class Classes {
 	@Inject extension TypeSystem
 	@Inject extension IQualifiedNameProvider
 
-	static val classeSizeCache = new ConcurrentHashMap<NoopClass, Integer>
-	static val classesCache = ConcurrentHashMap::<NoopClass>newKeySet
-	static val contextCache = java.util.Collections::synchronizedMap(new WeakHashMap<NoopClass, AllocContext>)
+	static val classeSizeCache = new HashMap<NoopClass, Integer>
+	static val classesCache = new HashSet<NoopClass>
+	static val contextCache = new WeakHashMap<NoopClass, AllocContext>
 
 	def getSuperClasses(NoopClass c) {
 		val visited = <NoopClass>newArrayList()
