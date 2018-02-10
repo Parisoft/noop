@@ -63,6 +63,7 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.IfStatement
 
 class Expressions {
 
@@ -314,6 +315,12 @@ class Expressions {
 								it.invokes(method)
 							]
 						}
+					IfStatement:
+						statement.condition.invokes(method) || statement.body.statements.exists [
+							it.invokes(method)
+						] || statement.^else?.^if?.invokes(method) || statement.^else?.body?.statements?.exists [
+							it.invokes(method)
+						]
 					default:
 						statement.eAllContentsAsList.filter(Statement).exists[it.invokes(method)]
 				}
@@ -871,7 +878,7 @@ class Expressions {
 
 					if (expression.type.isNonPrimitive) {
 						expression.fieldsInitializedOnContructor.forEach[prepare(ctx)]
-						
+
 						if (expression.constructor !== null) {
 							expression.constructor.fields.forEach[value.prepare(ctx)]
 						}
