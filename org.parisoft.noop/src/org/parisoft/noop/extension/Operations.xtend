@@ -1089,15 +1089,17 @@ class Operations {
 
 	private def incIndirect(CompileContext operand) '''
 		«noop»
-			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
-			INC («operand.indirect»), Y
-		«IF operand.sizeOf > 1»
-			«val labelDone = labelForIncDone»
-				BNE +«labelDone»
+			LDY «IF operand.isIndexed»«operand.index»«ELSE»#0«ENDIF»
+			LDA («operand.indirect»), Y
+			CLC
+			ADC #1
+			STA («operand.indirect»), Y
+			«IF operand.sizeOf > 1»
 				INY
-				INC («operand.indirect»), Y
-			+«labelDone»:
-		«ENDIF»
+				LDA («operand.indirect»), Y
+				ADC #0
+				STA («operand.indirect»), Y
+			«ENDIF»
 	'''
 
 	private def decAbsolute(CompileContext ctx) '''
