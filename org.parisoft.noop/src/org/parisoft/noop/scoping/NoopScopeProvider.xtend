@@ -27,6 +27,7 @@ import org.parisoft.noop.noop.ConstructorField
 import org.parisoft.noop.noop.ForStatement
 import org.parisoft.noop.noop.AsmStatement
 import org.eclipse.xtext.naming.IQualifiedNameProvider
+import java.util.Collections
 
 /**
  * This class contains custom scoping description.
@@ -97,8 +98,9 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		return switch (container) {
 			NoopClass: {
 				val thisMembers = container.members.takeWhile[it != context].filter(Variable) +
-					container.declaredMethods
-				val superMembers = container.allFieldsBottomUp + container.allMethodsBottomUp
+					container.declaredMethods.filterOverload(Collections::emptyList)
+				val superMembers = container.allFieldsBottomUp +
+					container.allMethodsBottomUp.filterOverload(Collections::emptyList)
 				Scopes.scopeFor(thisMembers, Scopes.scopeFor(superMembers))
 			}
 			Method:
@@ -151,28 +153,19 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		} else if (isArrayReceiver) {
 			Scopes.scopeFor(type.allMethodsBottomUp.filter[nativeArray])
 		} else if (receiver instanceof NewInstance && (receiver as NewInstance).constructor === null) {
-			if (selection.hasArgs) {
-				val args = selection.args
-				val declaredMembers = type.declaredMethods.filter[static].filterOverload(args) +
-					type.declaredFields.filter[static]
-				val allMembers = type.allMethodsBottomUp.filter[static].filterOverload(args) +
-					type.allFieldsBottomUp.filter[static]
-				Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
-			} else {
-				val declaredMembers = type.declaredFields.filter[static] + type.declaredMethods.filter[static]
-				val allMembers = type.allFieldsBottomUp.filter[static] + type.allMethodsBottomUp.filter[static]
-				Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
-			}
-		} else if (selection.hasArgs) {
+			val args = selection.args
+			val declaredMembers = type.declaredMethods.filter[static].filterOverload(args) + type.declaredFields.filter [
+				static
+			]
+			val allMembers = type.allMethodsBottomUp.filter[static].filterOverload(args) + type.allFieldsBottomUp.filter [
+				static
+			]
+			Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
+		} else {
 			val args = selection.args
 			val declaredMembers = type.declaredMethods.filter[nonStatic].filterOverload(args) +
 				type.declaredFields.filter[nonStatic]
 			val allMembers = type.allMethodsBottomUp.filter[nonStatic].filterOverload(args).filter[nonNativeArray] +
-				type.allFieldsBottomUp.filter[nonStatic]
-			Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
-		} else {
-			val declaredMembers = type.declaredMethods.filter[nonStatic] + type.declaredFields.filter[nonStatic]
-			val allMembers = type.allMethodsBottomUp.filter[nonStatic].filter[nonNativeArray] +
 				type.allFieldsBottomUp.filter[nonStatic]
 			Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
 		}
