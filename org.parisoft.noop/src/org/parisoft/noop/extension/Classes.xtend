@@ -14,6 +14,7 @@ import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import java.util.ArrayList
 
 class Classes {
 
@@ -109,11 +110,11 @@ class Classes {
 	}
 
 	def getAllFieldsBottomUp(NoopClass c) {
-		c.superClasses.map[members].flatten.filter(Variable)
+		c.superClasses.map[new ArrayList(members).reverse].flatten.filter(Variable)
 	}
 
 	def getAllMethodsBottomUp(NoopClass c) {
-		c.superClasses.map[members].flatten.filter(Method)
+		c.superClasses.map[new ArrayList(members).reverse].flatten.filter(Method)
 	}
 
 	def getAllFieldsTopDown(NoopClass c) {

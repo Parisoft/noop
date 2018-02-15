@@ -60,6 +60,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 				ConstructorField:
 					if (eRef == NoopPackage::eINSTANCE.constructorField_Variable) {
 						return scopeForNewInstance(context.eContainer.eContainer as NewInstance)
+					} else {
+						return scopeForVariableRef(context)
 					}
 				MemberRef:
 					if (eRef == NoopPackage::eINSTANCE.memberRef_Member) {
@@ -99,9 +101,14 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			NoopClass: {
 				val thisMembers = container.members.takeWhile[it != context].filter(Variable) +
 					container.declaredMethods.filterOverload(Collections::emptyList)
-				val superMembers = container.allFieldsBottomUp +
+				val superMembers = container.allFieldsBottomUp.dropWhile[it != context] +
 					container.allMethodsBottomUp.filterOverload(Collections::emptyList)
 				Scopes.scopeFor(thisMembers, Scopes.scopeFor(superMembers))
+			}
+			NewInstance: {
+				val members = container.type.allFieldsBottomUp +
+					container.type.allMethodsBottomUp.filterOverload(Collections::emptyList)
+				Scopes.scopeFor(members, scopeForVariableRef(container))
 			}
 			Method:
 				Scopes.scopeFor(container.params, scopeForVariableRef(container))
@@ -173,10 +180,9 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 	protected def scopeForNewInstance(NewInstance newInstance) {
 		val container = newInstance.type
-		val thisFields = container.members.filter(Variable).filter[nonStatic]
-		val superFields = container.allFieldsBottomUp.filter[nonStatic]
+		val fields = container.allFieldsBottomUp.filter[nonStatic]
 
-		return Scopes.scopeFor(thisFields, Scopes.scopeFor(superFields))
+		return Scopes.scopeFor(fields)
 	}
 
 	private def filterOverload(Iterable<Method> methods, List<Expression> args) {
