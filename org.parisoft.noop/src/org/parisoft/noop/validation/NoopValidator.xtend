@@ -91,6 +91,7 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val CLASS_SIZE_OVERFLOW = 'org.parisoft.noop.CLASS_SIZE_OVERFLOW'
 	public static val CLASS_FILE_NAME = 'org.parisoft.noop.CLASS_FILE_NAME'
 	public static val FIELD_TYPE_SAME_HIERARCHY = 'org.parisoft.noop.FIELD_TYPE_SAME_HIERARCHY'
+	public static val FIELD_CROSS_REFERENCE = 'org.parisoft.noop.FIELD_CROSS_REFERENCE'
 	public static val FIELD_STORAGE = 'org.parisoft.noop.FIELD_STORAGE'
 	public static val FIELD_DUPLICITY = 'org.parisoft.noop.FIELD_DUPLICITY'
 	public static val FIELD_UNDECLARED_VALUE = 'org.parisoft.noop.FIELD_UNDECLARED_VALUE'
@@ -249,10 +250,23 @@ class NoopValidator extends AbstractNoopValidator {
 		if (v.isField && v.isNonStatic) {
 			val varClass = v.containerClass
 			val varType = v.typeOf
+			val sameHierarchy = varClass.isInstanceOf(varType) || varType.isInstanceOf(varClass) ||
+				varType.allFieldsBottomUp.exists[varClass.isInstanceOf(typeOf)]
 
-			if (varClass.isInstanceOf(varType) || varType.isInstanceOf(varClass)) {
-				error('Type of non-static fields cannot be on the same hierarchy of the field\'s class',
+			if (sameHierarchy) {
+				error('Type of non-static fields cannot be nor contains fields on the same hierarchy of the field\'s class',
 					VARIABLE__VALUE, FIELD_TYPE_SAME_HIERARCHY)
+			}
+		}
+	}
+
+	@Check
+	def fieldCrossReference(Variable v) {
+		if (v.isField && v.isNonStatic) {
+			val varClass = v.containerClass
+
+			if (v.typeOf.allFieldsBottomUp.exists[typeOf.isSubclassOf(varClass)]) {
+				error('Cross-reference field is not allowed', VARIABLE__VALUE, FIELD_CROSS_REFERENCE)
 			}
 		}
 	}
