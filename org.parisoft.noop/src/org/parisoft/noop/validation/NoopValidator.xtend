@@ -4,33 +4,67 @@
 package org.parisoft.noop.validation
 
 import com.google.inject.Inject
+import java.io.File
+import java.util.List
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.validation.Check
+import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.TypeSystem
+import org.parisoft.noop.noop.AddExpression
+import org.parisoft.noop.noop.AndExpression
+import org.parisoft.noop.noop.ArrayLiteral
 import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.AssignmentExpression
+import org.parisoft.noop.noop.BAndExpression
+import org.parisoft.noop.noop.BOrExpression
 import org.parisoft.noop.noop.Block
 import org.parisoft.noop.noop.BreakStatement
+import org.parisoft.noop.noop.ByteLiteral
+import org.parisoft.noop.noop.CastExpression
+import org.parisoft.noop.noop.ComplementExpression
+import org.parisoft.noop.noop.ConstructorField
 import org.parisoft.noop.noop.ContinueStatement
 import org.parisoft.noop.noop.DecExpression
+import org.parisoft.noop.noop.DifferExpression
+import org.parisoft.noop.noop.DivExpression
 import org.parisoft.noop.noop.ElseStatement
+import org.parisoft.noop.noop.EqualsExpression
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.ForStatement
 import org.parisoft.noop.noop.ForeverStatement
+import org.parisoft.noop.noop.GeExpression
+import org.parisoft.noop.noop.GtExpression
 import org.parisoft.noop.noop.IfStatement
 import org.parisoft.noop.noop.IncExpression
+import org.parisoft.noop.noop.InstanceOfExpression
+import org.parisoft.noop.noop.LShiftExpression
+import org.parisoft.noop.noop.LeExpression
+import org.parisoft.noop.noop.LtExpression
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
+import org.parisoft.noop.noop.ModExpression
+import org.parisoft.noop.noop.MulExpression
+import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.NotExpression
+import org.parisoft.noop.noop.OrExpression
+import org.parisoft.noop.noop.RShiftExpression
 import org.parisoft.noop.noop.ReturnStatement
+import org.parisoft.noop.noop.SigNegExpression
+import org.parisoft.noop.noop.SigPosExpression
 import org.parisoft.noop.noop.Statement
+import org.parisoft.noop.noop.Storage
 import org.parisoft.noop.noop.StorageType
+import org.parisoft.noop.noop.StringLiteral
+import org.parisoft.noop.noop.SubExpression
+import org.parisoft.noop.noop.Super
+import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
 
 import static org.parisoft.noop.noop.AssignmentType.*
@@ -38,40 +72,6 @@ import static org.parisoft.noop.noop.NoopPackage.Literals.*
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.OrExpression
-import org.parisoft.noop.noop.AndExpression
-import org.parisoft.noop.noop.BOrExpression
-import org.parisoft.noop.noop.BAndExpression
-import org.parisoft.noop.noop.EqualsExpression
-import org.parisoft.noop.noop.DifferExpression
-import org.parisoft.noop.noop.LtExpression
-import org.parisoft.noop.noop.LeExpression
-import org.parisoft.noop.noop.GtExpression
-import org.parisoft.noop.noop.GeExpression
-import org.parisoft.noop.noop.LShiftExpression
-import org.parisoft.noop.noop.RShiftExpression
-import org.parisoft.noop.noop.AddExpression
-import org.parisoft.noop.noop.SubExpression
-import org.parisoft.noop.noop.MulExpression
-import org.parisoft.noop.noop.DivExpression
-import org.parisoft.noop.noop.ModExpression
-import org.parisoft.noop.noop.InstanceOfExpression
-import org.parisoft.noop.noop.CastExpression
-import org.parisoft.noop.exception.NonConstantExpressionException
-import org.parisoft.noop.noop.ComplementExpression
-import org.parisoft.noop.noop.NotExpression
-import org.parisoft.noop.noop.SigNegExpression
-import org.parisoft.noop.noop.SigPosExpression
-import org.parisoft.noop.noop.ByteLiteral
-import org.parisoft.noop.noop.StringLiteral
-import org.parisoft.noop.noop.ArrayLiteral
-import java.util.List
-import org.parisoft.noop.noop.This
-import org.parisoft.noop.noop.Super
-import org.parisoft.noop.noop.NewInstance
-import org.parisoft.noop.noop.ConstructorField
-import org.parisoft.noop.noop.Storage
-import java.io.File
 
 /**
  * This class contains custom validation rules. 
@@ -95,14 +95,12 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val FIELD_CROSS_REFERENCE = 'org.parisoft.noop.FIELD_CROSS_REFERENCE'
 	public static val FIELD_STORAGE = 'org.parisoft.noop.FIELD_STORAGE'
 	public static val FIELD_DUPLICITY = 'org.parisoft.noop.FIELD_DUPLICITY'
-	public static val FIELD_UNDECLARED_VALUE = 'org.parisoft.noop.FIELD_UNDECLARED_VALUE'
 	public static val FIELD_OVERRIDDEN_TYPE = 'org.parisoft.noop.FIELD_OVERRIDDEN_TYPE'
 	public static val FIELD_OVERRIDDEN_DIMENSION = 'org.parisoft.noop.FIELD_OVERRIDDEN_DIMENSION'
 	public static val STATIC_FIELD_CONTAINER = 'org.parisoft.noop.STATIC_FIELD_CONTAINER'
 	public static val STATIC_FIELD_STORAGE_TYPE = 'org.parisoft.noop.STATIC_FIELD_STORAGE_TYPE'
 	public static val STATIC_FIELD_ROM_TYPE = 'org.parisoft.noop.STATIC_FIELD_ROM_TYPE'
 	public static val STATIC_FIELD_ROM_VALUE = 'org.parisoft.noop.STATIC_FIELD_ROM_VALUE'
-	public static val STATIC_FIELD_NON_STATIC_VALUE = 'org.parisoft.noop.STATIC_FIELD_NON_STATIC_VALUE'
 	public static val STATIC_FIELD_UNDECLARED_VALUE = 'org.parisoft.noop.STATIC_FIELD_UNDECLARED_VALUE'
 	public static val CONSTANT_FIELD_TYPE = 'org.parisoft.noop.CONSTANT_FIELD_TYPE'
 	public static val CONSTANT_FIELD_DIMENSION = 'org.parisoft.noop.CONSTANT_FIELD_DIMENSION'
@@ -255,7 +253,8 @@ class NoopValidator extends AbstractNoopValidator {
 				varType.allFieldsBottomUp.exists[varClass.isInstanceOf(typeOf)]
 
 			if (sameHierarchy) {
-				error('Type of non-static fields cannot be nor contains fields on the same hierarchy of the field\'s class',
+				error(
+					'Type of non-static fields cannot be nor contains fields on the same hierarchy of the field\'s class',
 					VARIABLE__VALUE, FIELD_TYPE_SAME_HIERARCHY)
 			}
 		}
@@ -289,28 +288,6 @@ class NoopValidator extends AbstractNoopValidator {
 				duplicates.forEach [
 					error('''Field «v.name» is duplicated''', it, MEMBER__NAME, FIELD_DUPLICITY)
 				]
-			}
-		}
-	}
-
-	@Check
-	def fieldUndeclaredValue(Variable v) {
-		if (v.isField && v.isNonStatic) {
-			val value = v.value
-			val member = if (value instanceof MemberSelect) {
-					value.member
-				} else if (value instanceof MemberRef) {
-					value.member
-				} else {
-					value.getAllContentsOfType(MemberSelect).map[member].findFirst[isNonStatic] ?:
-						value.getAllContentsOfType(MemberRef).map[member].findFirst[isNonStatic]
-				}
-
-			if (member !== null && member.isField && member.isNonStatic) {
-				if (!v.containerClass.allFieldsTopDown.takeWhile[it != v].exists[it == member]) {
-					error('''Field «v.name» cannot reference the field «member.name» before it is declared''',
-						VARIABLE__VALUE, FIELD_UNDECLARED_VALUE)
-				}
 			}
 		}
 	}
@@ -381,48 +358,6 @@ class NoopValidator extends AbstractNoopValidator {
 		if (v.isStatic && v.isROM && v.dimensionOf.isEmpty && v.value.isNonConstant) {
 			error('''Fields tagged as «v.storage.type.literal.substring(0)» must be declared with a constant value''',
 				VARIABLE__VALUE, STATIC_FIELD_ROM_VALUE)
-		}
-	}
-
-	@Check
-	def staticFieldNonStaticValue(Variable v) {
-		if (v.isStatic) {
-			val value = v.value
-			val member = if (value instanceof MemberSelect) {
-					value.member
-				} else if (value instanceof MemberRef) {
-					value.member
-				} else {
-					value.getAllContentsOfType(MemberSelect).map[member].findFirst[isNonStatic] ?:
-						value.getAllContentsOfType(MemberRef).map[member].findFirst[isNonStatic]
-				}
-
-			if (member?.isNonStatic) {
-				error('''Static field «v.name» cannot reference the non-static «IF member.isField»field«ELSE»method«ENDIF» «member.name»''',
-					VARIABLE__VALUE, STATIC_FIELD_NON_STATIC_VALUE)
-			}
-		}
-	}
-
-	@Check
-	def staticUndeclaredValue(Variable v) {
-		if (v.isStatic) {
-			val value = v.value
-			val member = if (value instanceof MemberSelect) {
-					value.member
-				} else if (value instanceof MemberRef) {
-					value.member
-				} else {
-					value.getAllContentsOfType(MemberSelect).map[member].findFirst[isStatic] ?:
-						value.getAllContentsOfType(MemberRef).map[member].findFirst[isStatic]
-				}
-
-			if (member !== null && member.isStatic && member.containerClass.isEquals(v.containerClass)) {
-				if (!v.containerClass.allFieldsTopDown.takeWhile[it != v].exists[it == member]) {
-					error('''Field «v.name» cannot reference the field «member.name» before it is declared''',
-						VARIABLE__VALUE, FIELD_UNDECLARED_VALUE)
-				}
-			}
 		}
 	}
 

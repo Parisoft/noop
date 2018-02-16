@@ -102,27 +102,30 @@ class Classes {
 	}
 
 	def getDeclaredFields(NoopClass c) {
-		c.members.filter(Variable)
+		val fields = c.members.filter(Variable)
+		(fields.filter[static] + fields.filter[nonStatic]).toList
 	}
 
 	def getDeclaredMethods(NoopClass c) {
-		c.members.filter(Method)
+		c.members.filter(Method).toList
 	}
 
 	def getAllFieldsBottomUp(NoopClass c) {
-		c.superClasses.map[new ArrayList(members).reverse].flatten.filter(Variable)
+		val fields = c.superClasses.map[new ArrayList(members).reverse].flatten.filter(Variable)
+		(fields.filter[nonStatic] + fields.filter[static]).toList
 	}
 
 	def getAllMethodsBottomUp(NoopClass c) {
-		c.superClasses.map[new ArrayList(members).reverse].flatten.filter(Method)
+		c.superClasses.map[new ArrayList(members).reverse].flatten.filter(Method).toList
 	}
 
 	def getAllFieldsTopDown(NoopClass c) {
-		c.superClasses.reverse.map[members].flatten.filter(Variable)
+		val fields = c.superClasses.reverse.map[members].flatten.filter(Variable)
+		(fields.filter[static] + fields.filter[nonStatic]).toList
 	}
 
 	def getAllMethodsTopDown(NoopClass c) {
-		c.superClasses.reverse.map[members].flatten.filter(Method)
+		c.superClasses.reverse.map[members].flatten.filter(Method).toList
 	}
 
 	def isEquals(NoopClass c1, NoopClass c2) {
