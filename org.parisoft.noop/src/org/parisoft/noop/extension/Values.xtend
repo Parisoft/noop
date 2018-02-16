@@ -5,6 +5,7 @@ import org.parisoft.noop.noop.ArrayLiteral
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.StringLiteral
+import java.io.File
 
 class Values {
 
@@ -60,7 +61,7 @@ class Values {
 
 	def List<Integer> dimensionOf(List<?> list) {
 		if (list.isEmpty) {
-			java.util.Collections.emptyList
+			emptyList
 		} else {
 			val dimension = newArrayList(list.size)
 			dimension.addAll(list.head.dimensionOf)
@@ -71,6 +72,8 @@ class Values {
 	def dimensionOf(Object object) {
 		if (object instanceof List<?>) {
 			object.dimensionOf
+		} else if (object instanceof File) {
+			newArrayList(object.length as int)
 		} else {
 			emptyList
 		}

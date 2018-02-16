@@ -71,6 +71,7 @@ import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.ConstructorField
 import org.parisoft.noop.noop.Storage
+import java.io.File
 
 /**
  * This class contains custom validation rules. 
@@ -1661,6 +1662,8 @@ class NoopValidator extends AbstractNoopValidator {
 	private def int depth(Object o) {
 		if (o instanceof List<?>) {
 			1 + if(o.isNotEmpty) o.map[depth].max else 0
+		} else if (o instanceof File) {
+			1
 		} else {
 			0
 		}
@@ -1669,6 +1672,8 @@ class NoopValidator extends AbstractNoopValidator {
 	private def int length(Object o) {
 		if (o instanceof List<?>) {
 			o.size
+		} else if (o instanceof File) {
+			o.length as int
 		} else {
 			0
 		}

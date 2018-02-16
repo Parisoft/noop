@@ -25,14 +25,15 @@ import org.parisoft.noop.noop.BOrExpression
 import org.parisoft.noop.noop.BoolLiteral
 import org.parisoft.noop.noop.ByteLiteral
 import org.parisoft.noop.noop.CastExpression
+import org.parisoft.noop.noop.ComplementExpression
 import org.parisoft.noop.noop.DecExpression
 import org.parisoft.noop.noop.DifferExpression
 import org.parisoft.noop.noop.DivExpression
-import org.parisoft.noop.noop.ComplementExpression
 import org.parisoft.noop.noop.EqualsExpression
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.GeExpression
 import org.parisoft.noop.noop.GtExpression
+import org.parisoft.noop.noop.IfStatement
 import org.parisoft.noop.noop.IncExpression
 import org.parisoft.noop.noop.Index
 import org.parisoft.noop.noop.InstanceOfExpression
@@ -63,7 +64,6 @@ import org.parisoft.noop.noop.Variable
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.IfStatement
 
 class Expressions {
 
@@ -656,7 +656,11 @@ class Expressions {
 				ArrayLiteral:
 					expression.values.map[valueOf]
 				StringLiteral:
-					expression.value.chars.boxed.collect(Collectors::toList)
+					if (expression.isFileInclude) {
+						expression.toFile					
+					} else {
+						expression.value.chars.boxed.collect(Collectors::toList)
+					}
 				NewInstance:
 					if (expression.type.isPrimitive && expression.dimension.isEmpty) {
 						expression.type.defaultValueOf
@@ -1257,7 +1261,9 @@ class Expressions {
 				'''
 				StringLiteral: '''
 					«IF ctx.db !== null»
-						«ctx.db»:
+						«IF ctx.db != '+'»
+							«ctx.db»:
+						«ENDIF»
 						«IF expression.isFileInclude»
 							«val filepath = expression.toFile.absolutePath»
 								«IF expression.isAsmFile || expression.isIncFile»
@@ -1266,8 +1272,10 @@ class Expressions {
 									.incbin "«filepath»"
 								«ENDIF»
 						«ELSE»
-							«noop»
-								.db «expression.value.toBytes.join(', ', [toHex])»
+							«FOR chunk : expression.value.toBytes.chunked»
+								«noop»
+									.db «(chunk as List<?>).map[it as Integer].join(', ', [toHex])»
+							«ENDFOR»
 						«ENDIF»
 					«ELSEIF ctx.absolute !== null»
 						«ctx.pushAccIfOperating»
@@ -1301,13 +1309,16 @@ class Expressions {
 				ArrayLiteral: '''
 					«IF ctx.db !== null»
 						«ctx.db»:
-						«val bytes = expression.valueOf.toBytes»
-						«val chunks = (bytes.size / 32).max(1) + if (bytes.size > 32 && bytes.size % 32 != 0) 1 else 0»
-							«FOR i : 0..< chunks»
-								«val from = i * 32»
-								«val to = (from + 32).min(bytes.size)»
-								.db «bytes.subList(from, to).join(', ', [toHex])»
-							«ENDFOR»
+						«val chunks = expression.values.flat.chunked»
+						«val db = if (expression.sizeOf > 1) '.dw' else '.db'»
+						«FOR chunk : chunks»
+							«IF chunk instanceof List<?>»
+								«noop»
+									«db» «chunk.map[it as Integer].join(', ', [toHex])»
+							«ELSE»
+								«(chunk as StringLiteral).compile(new CompileContext => [it.db = '+'])»
+							«ENDIF»
+						«ENDFOR»
 					«ELSE»
 						«val tmp = if (expression.isOnMemberSelectionOrReference) {	
 								new CompileContext => [	
@@ -1789,6 +1800,42 @@ class Expressions {
 			«instance.referenceInto(ctx)»
 		«ENDIF»
 	'''
+
+	private def List<?> flat(List<Expression> list) {
+		val flatten = <Object>newArrayList
+
+		for (expr : list) {
+			switch (expr) {
+				ByteLiteral: flatten += expr.value
+				BoolLiteral: flatten += if(expr.value) 1 else 0
+				ArrayLiteral: flatten += expr.values.flat
+				StringLiteral: flatten += expr
+			}
+		}
+
+		flatten
+	}
+
+	private def List<?> chunked(List<?> list) {
+		val chunks = <Object>newArrayList
+		var List<Integer> last
+
+		for (value : list) {
+			if (value instanceof Integer) {
+				if (last === null || last.size == 32) {
+					last = <Integer>newArrayList
+					chunks.add(last)
+				}
+
+				last += value
+			} else {
+				last = null
+				chunks += value
+			}
+		}
+
+		chunks
+	}
 
 	private def void noop() {
 	}
