@@ -14,6 +14,13 @@ Workflow {
 				rootPath = rootPath
 				eclipsePlugin = {
 					enabled = true
+					name = 'org.parisoft.noop.ui'
+					root = '../../noopster/org.parisoft.noop.ui'
+				}
+				genericIde = {
+					enabled = true
+					name = 'org.parisoft.noop.ide'
+					root = '../../noopster/org.parisoft.noop.ide'
 				}
 				createEclipseMetaData = true
 			}
