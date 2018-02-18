@@ -938,7 +938,7 @@ public class Members {
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
+			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -967,7 +967,7 @@ public class Members {
 		«ENDIF»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
+			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -984,7 +984,7 @@ public class Members {
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
+			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -1000,7 +1000,7 @@ public class Members {
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
+			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -1016,7 +1016,7 @@ public class Members {
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
+			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -1132,7 +1132,7 @@ public class Members {
 				]»
 				«method.compileIndexes(indexes, ret)»
 				«IF ctx.mode === Mode::COPY && method.isArrayReference(indexes)»
-					«ret.copyArrayTo(ctx, method.lenOfArrayReference(indexes))»
+					«ret.copyArrayTo(ctx, method.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
 				«ELSE»
 					«ret.resolveTo(ctx)»
 				«ENDIF»
@@ -1322,6 +1322,10 @@ public class Members {
 	
 	private def isAbsolute(String index) {
 		index !== null && index.split('\\+').exists[!trim.startsWith('#')]
+	}
+	
+	private def min(Integer a, Integer b) {
+		Math::min(a ?: Integer::MAX_VALUE, b ?: Integer::MAX_VALUE)
 	}
 	
 	private def void noop() {

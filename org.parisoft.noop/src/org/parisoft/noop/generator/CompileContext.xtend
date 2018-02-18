@@ -52,6 +52,7 @@ class CompileContext {
 	@Accessors var AllocContext allocation
 	@Accessors var boolean accLoaded = false
 	@Accessors var Set<Variable> recursiveVars = newHashSet
+	@Accessors var Integer assignmentLength
 
 	override toString() '''
 		StorageData{

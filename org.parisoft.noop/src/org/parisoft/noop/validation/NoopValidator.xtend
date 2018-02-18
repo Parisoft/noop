@@ -775,7 +775,7 @@ class NoopValidator extends AbstractNoopValidator {
 			if (member.isConstant) {
 				error('Cannot assign a value to a constant field', ASSIGNMENT_EXPRESSION__LEFT,
 					ASSIGN_TO_CONSTANT_OR_ROM)
-			} else if (member.isStatic && member.isROM) {
+			} else if (member.isROM) {
 				error('''Cannot assign a value to a field tagged as «member.storage.type.literal.substring(1)»''',
 					ASSIGNMENT_EXPRESSION__LEFT, ASSIGN_TO_CONSTANT_OR_ROM)
 			}
@@ -784,8 +784,10 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def assignValueDimension(AssignmentExpression assignment) {
-		val leftDim = assignment.left.dimensionOf
-		val rightDim = assignment.right.dimensionOf
+		val left = assignment.left
+		val right = assignment.right
+		val leftDim = left.dimensionOf
+		val rightDim = right.dimensionOf
 
 		if (leftDim.isEmpty && rightDim.isNotEmpty) {
 			error('''Cannot assign an array value to a non-array variable''', ASSIGNMENT_EXPRESSION__RIGHT,
@@ -796,6 +798,26 @@ class NoopValidator extends AbstractNoopValidator {
 		} else if (leftDim.size != rightDim.size) {
 			error('''Cannot assign an array value to an array variable with incompatible dimensions''',
 				ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_DIMENSION)
+		} else if (leftDim.isNotEmpty && rightDim.isNotEmpty) {
+			val leftMember = switch (left) {
+				MemberSelect: left.member
+				MemberRef: left.member
+			}
+
+			val rightMember = switch (right) {
+				MemberSelect: right.member
+				MemberRef: right.member
+			}
+
+			if (leftMember?.isUnbounded) {
+				error('''Cannot assign an array value to an unbounded array variable''', ASSIGNMENT_EXPRESSION__LEFT,
+					ASSIGN_VALUE_DIMENSION)
+			}
+
+			if (rightMember?.isUnbounded) {
+				error('''Cannot assign an unbounded array value to an array variable''', ASSIGNMENT_EXPRESSION__LEFT,
+					ASSIGN_VALUE_DIMENSION)
+			}
 		}
 	}
 
@@ -1392,10 +1414,19 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def castDimension(CastExpression cast) {
-		val leftDim = cast.left.dimensionOf
+		val left = cast.left
+		val leftType = left.typeOf
+		val leftDim = left.dimensionOf
+		val leftMember = switch (left) {
+			MemberRef: left.member
+			MemberSelect: left.member
+		}
 
-		if (leftDim.size > 0 || cast.dimension.size > 0) {
-			val leftType = cast.left.typeOf
+		if (leftMember?.isUnbounded) {
+			val leftString = '''«leftType.name»«leftDim.map['[?]'].join»'''
+			val castString = '''«cast.type.name»«cast.dimension.map['''[«value?.valueOf»]'''].join»'''
+			error('''«leftString» cannot be cast to «castString»''', cast, null, CAST_DIMENSION)
+		} else if (leftDim.size > 0 || cast.dimension.size > 0) {
 			val leftLength = leftDim.reduce[a, b|a * b] ?: 1
 			val castLength = cast.dimension.map [
 				try {

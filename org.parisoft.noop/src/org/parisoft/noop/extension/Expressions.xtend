@@ -1138,7 +1138,10 @@ class Expressions {
 					]»
 					«expression.left.compile(ref)»
 					«IF expression.assignment === AssignmentType::ASSIGN»
-						«expression.right.compile(ref => [mode = Mode::COPY])»
+						«expression.right.compile(ref => [
+							mode = Mode::COPY
+							assignmentLength = expression.left.dimensionOf.reduce[d1, d2| d1 * d2]
+						])»
 					«ELSEIF expression.assignment === AssignmentType::ADD_ASSIGN»
 						«val add = NoopFactory::eINSTANCE.createAddExpression => [
 							left = expression.left
