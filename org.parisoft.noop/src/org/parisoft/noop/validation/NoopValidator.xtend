@@ -832,18 +832,27 @@ class NoopValidator extends AbstractNoopValidator {
 			if (leftType.isNonNumeric) {
 				error('''Invalid assignment to a non-numeric variable of type «leftType.name»''',
 					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
+			} else if (assignment.left.dimensionOf.isNotEmpty) {
+				error('''Invalid assignment to an array variable''', ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
 			} else if (rightType.isNonNumeric) {
-				error('''Right-hand side of assignment must be a numberic value''', ASSIGNMENT_EXPRESSION__RIGHT,
+				error('''Right-hand side of assignment must be a numeric value''', ASSIGNMENT_EXPRESSION__RIGHT,
+					ASSIGN_VALUE_TYPE)
+			} else if (assignment.right.dimensionOf.isNotEmpty) {
+				error('''Right-hand side of assignment must be a non-array value''', ASSIGNMENT_EXPRESSION__RIGHT,
 					ASSIGN_VALUE_TYPE)
 			}
 		} else if (type == BAN_ASSIGN || type == BOR_ASSIGN) {
 			if (leftType.isNonPrimitive) {
 				error('''Invalid assignment to a non-«TypeSystem::LIB_PRIMITIVE.toLowerCase» variable of type «assignment.left.typeOf.name»''',
 					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
+			} else if (assignment.left.dimensionOf.isNotEmpty) {
+				error('''Invalid assignment to an array variable''', ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
 			} else if (rightType.isNonPrimitive) {
 				error('''Right-hand side of assignment must be a «TypeSystem::LIB_PRIMITIVE» value''',
 					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
-
+			} else if (assignment.right.dimensionOf.isNotEmpty) {
+				error('''Right-hand side of assignment must be a non-array value''', ASSIGNMENT_EXPRESSION__RIGHT,
+					ASSIGN_VALUE_TYPE)
 			}
 		} else if (type == ASSIGN) {
 			if (rightType.isNonInstanceOf(leftType)) {
