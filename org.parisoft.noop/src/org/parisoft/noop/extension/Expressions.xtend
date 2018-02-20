@@ -912,6 +912,8 @@ class Expressions {
 				}
 			MemberSelect: {
 				val member = expression.member
+				
+				expression.receiver.prepare(ctx)
 
 				if (member instanceof Variable) {
 					member.prepareReference(expression.receiver, expression.indexes, ctx)
@@ -1098,6 +1100,8 @@ class Expressions {
 				val chunks = newArrayList
 				val member = expression.member
 				val receiver = expression.receiver
+
+				chunks += receiver.alloc(ctx)
 
 				if (member instanceof Variable) {
 					if (member.isConstant) {
@@ -1470,6 +1474,13 @@ class Expressions {
 				MemberSelect: '''
 					«val member = expression.member»
 					«val receiver = expression.receiver»
+					«receiver.compile(new CompileContext => [
+						container = ctx.container
+						accLoaded = ctx.isAccLoaded
+						operation = ctx.operation
+						type = receiver.typeOf
+						mode = null
+					])»
 					«IF member instanceof Variable»
 						«IF member.isConstant»
 							«member.compileConstantReference(ctx)»
