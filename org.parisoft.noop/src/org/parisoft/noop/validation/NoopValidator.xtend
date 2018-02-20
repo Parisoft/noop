@@ -225,8 +225,7 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def classRecursiveHierarchy(NoopClass c) {
 		if (c.superClass == c || c.superClasses.drop(1).exists[isInstanceOf(c)]) {
-			error('Recursive hierarchy is not allowed', NOOP_CLASS__SUPER_CLASS, CLASS_RECURSIVE_HIERARCHY,
-				c.superClass.name)
+			error('Recursive hierarchy is not allowed', NOOP_CLASS__SUPER_CLASS, CLASS_RECURSIVE_HIERARCHY, c.name)
 		}
 	}
 
@@ -796,7 +795,9 @@ class NoopValidator extends AbstractNoopValidator {
 			error('''Cannot assign a non-array value to an array variable''', ASSIGNMENT_EXPRESSION__RIGHT,
 				ASSIGN_VALUE_DIMENSION)
 		} else if (leftDim.size != rightDim.size) {
-			error('''Cannot assign an array value to an array variable with incompatible dimensions''',
+			val leftStr = left.dimensionOf.map['''[«it ?: '?'»]'''].join
+			val rightStr = right.dimensionOf.map['''[«it ?: '?'»]'''].join
+			error('''Cannot assign a value of type «right.typeOf.name»«rightStr» to a variable of type «left.typeOf.name»«leftStr»''',
 				ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_DIMENSION)
 		}
 	}
@@ -804,20 +805,22 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def assignType(AssignmentExpression assignment) {
 		val type = assignment.assignment
-		val leftType = assignment.left.typeOf
-		val rightType = assignment.right.typeOf
+		val left = assignment.left
+		val right = assignment.right
+		val leftType = left.typeOf
+		val rightType = right.typeOf
 
 		if (type == ADD_ASSIGN || type == SUB_ASSIGN || type == MUL_ASSIGN || type == DIV_ASSIGN ||
 			type == MOD_ASSIGN || type == BLS_ASSIGN || type == BRS_ASSIGN) {
 			if (leftType.isNonNumeric) {
 				error('''Invalid assignment to a non-numeric variable of type «leftType.name»''',
 					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
-			} else if (assignment.left.dimensionOf.isNotEmpty) {
+			} else if (left.dimensionOf.isNotEmpty) {
 				error('''Invalid assignment to an array variable''', ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
 			} else if (rightType.isNonNumeric) {
 				error('''Right-hand side of assignment must be a numeric value''', ASSIGNMENT_EXPRESSION__RIGHT,
 					ASSIGN_VALUE_TYPE)
-			} else if (assignment.right.dimensionOf.isNotEmpty) {
+			} else if (right.dimensionOf.isNotEmpty) {
 				error('''Right-hand side of assignment must be a non-array value''', ASSIGNMENT_EXPRESSION__RIGHT,
 					ASSIGN_VALUE_TYPE)
 			}
@@ -825,17 +828,22 @@ class NoopValidator extends AbstractNoopValidator {
 			if (leftType.isNonPrimitive) {
 				error('''Invalid assignment to a non-«TypeSystem::LIB_PRIMITIVE.toLowerCase» variable of type «assignment.left.typeOf.name»''',
 					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
-			} else if (assignment.left.dimensionOf.isNotEmpty) {
+			} else if (left.dimensionOf.isNotEmpty) {
 				error('''Invalid assignment to an array variable''', ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
 			} else if (rightType.isNonPrimitive) {
 				error('''Right-hand side of assignment must be a «TypeSystem::LIB_PRIMITIVE» value''',
 					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
-			} else if (assignment.right.dimensionOf.isNotEmpty) {
+			} else if (right.dimensionOf.isNotEmpty) {
 				error('''Right-hand side of assignment must be a non-array value''', ASSIGNMENT_EXPRESSION__RIGHT,
 					ASSIGN_VALUE_TYPE)
 			}
 		} else if (type == ASSIGN) {
-			if (rightType.isNonInstanceOf(leftType)) {
+			if (left.dimensionOf.isNotEmpty && right.dimensionOf.isNotEmpty && leftType.isNotEquals(rightType)) {
+				val leftDim = left.dimensionOf.map['''[«it ?: '?'»]'''].join
+				val rightDim = right.dimensionOf.map['''[«it ?: '?'»]'''].join
+				error('''Cannot assign a value of type «rightType.name»«rightDim» to a variable of type «leftType.name»«leftDim»''',
+					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
+			} else if (rightType.isNonInstanceOf(leftType)) {
 				error('''Cannot assign a value of type «rightType.name» to a variable of type «leftType.name»''',
 					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
 			}
@@ -1470,7 +1478,7 @@ class NoopValidator extends AbstractNoopValidator {
 					STRING_FILE_NON_VARIABLE)
 			} else if (v.isNonROM) {
 				error('''Variable «v.name» must be tagged with «StorageType::PRGROM.literal» or «StorageType::CHRROM.literal»''',
-					v, null, STRING_FILE_NON_ROM)
+					v, null, STRING_FILE_NON_ROM, v.name)
 			}
 		}
 	}
