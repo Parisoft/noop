@@ -556,7 +556,7 @@ class Datas {
 
 	private def copyArrayAbsoluteToAbsoulte(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
-		«val length = Math::min((src.lengthExpression as ByteLiteral).value, (dst.lengthExpression as ByteLiteral).value)»
+		«val length = src.minLength(dst)»
 		«val bytes = length * dst.sizeOf»
 		«IF bytes < loopThreshold»
 			«noop»
@@ -586,7 +586,7 @@ class Datas {
 		«IF src.lengthExpression instanceof ByteLiteral && dst.lengthExpression instanceof ByteLiteral»
 			«tmp1.pointIndirectToAbsolute(src)»
 			«tmp3.pointIndirectToIndirect(dst)»
-			«val length = Math::min((src.lengthExpression as ByteLiteral).value, (dst.lengthExpression as ByteLiteral).value)»
+			«val length = src.minLength(dst)»
 			«val bytes = length * dst.sizeOf»
 			«bytes.copyArrayIndirectToIndirect»
 		«ELSE»
@@ -630,7 +630,7 @@ class Datas {
 		«IF src.lengthExpression instanceof ByteLiteral && dst.lengthExpression instanceof ByteLiteral»
 			«tmp1.pointIndirectToIndirect(src)»
 			«tmp3.pointIndirectToAbsolute(dst)»
-			«val length = Math::min((src.lengthExpression as ByteLiteral).value, (dst.lengthExpression as ByteLiteral).value)»
+			«val length = src.minLength(dst)»
 			«val bytes = length * dst.sizeOf»
 			«bytes.copyArrayIndirectToIndirect»
 		«ELSE»
@@ -674,7 +674,7 @@ class Datas {
 		«IF src.lengthExpression instanceof ByteLiteral && dst.lengthExpression instanceof ByteLiteral»
 			«tmp1.pointIndirectToIndirect(src)»
 			«tmp3.pointIndirectToIndirect(dst)»
-			«val length = Math::min((src.lengthExpression as ByteLiteral).value, (dst.lengthExpression as ByteLiteral).value)»
+			«val length = src.minLength(dst)»
 			«val bytes = length * dst.sizeOf»
 			«bytes.copyArrayIndirectToIndirect»
 		«ELSE»
@@ -945,5 +945,11 @@ class Datas {
 		if (enabled && methodName?.contains('$reset')) {
 			println(message)
 		}
+	}
+	
+	private def minLength(CompileContext c1, CompileContext c2) {
+		val len1 = (c1.lengthExpression as ByteLiteral)?.value ?: Integer::MAX_VALUE
+		val len2 = (c2.lengthExpression as ByteLiteral)?.value ?: Integer::MAX_VALUE
+		Math::min(len1, len2)
 	}
 }

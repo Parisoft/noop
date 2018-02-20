@@ -251,8 +251,10 @@ class Expressions {
 		!expression.isThisOrSuper
 	}
 
-	def isUnbounded(Expression expression) {
+	def boolean isUnbounded(Expression expression) {
 		switch (expression) {
+			AssignmentExpression:
+				expression.left.isUnbounded
 			MemberSelect:
 				expression.member.isUnbounded
 			MemberRef:
@@ -1177,60 +1179,60 @@ class Expressions {
 						])»
 					«ELSEIF expression.assignment === AssignmentType::ADD_ASSIGN»
 						«val add = NoopFactory::eINSTANCE.createAddExpression => [
-							left = expression.left
-							right = expression.right
+							left = expression.left.copy
+							right = expression.right.copy
 						]»
 						«add.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::SUB_ASSIGN»
 						«val sub = NoopFactory::eINSTANCE.createSubExpression => [
-							left = expression.left
-							right = expression.right
+							left = expression.left.copy
+							right = expression.right.copy
 						]»
 						«sub.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::MUL_ASSIGN»
 						«val mul = NoopFactory::eINSTANCE.createMulExpression => [
-							left = expression.left
-							right = expression.right
+							left = expression.left.copy
+							right = expression.right.copy
 						]»
 						«mul.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::DIV_ASSIGN»
 						«val div = NoopFactory::eINSTANCE.createDivExpression => [
-							left = expression.left
-							right = expression.right
+							left = expression.left.copy
+							right = expression.right.copy
 						]»
 						«div.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::MOD_ASSIGN»
 						«val mod = NoopFactory::eINSTANCE.createModExpression => [
-							left = expression.left
-							right = expression.right
+							left = expression.left.copy
+							right = expression.right.copy
 						]»
 						«mod.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BOR_ASSIGN»
 						«val bor = NoopFactory::eINSTANCE.createBOrExpression => [
-							left = expression.left
-							right = expression.right
+							left = expression.left.copy
+							right = expression.right.copy
 						]»
 						«bor.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BAN_ASSIGN»
 						«val ban = NoopFactory::eINSTANCE.createBAndExpression => [
-							left = expression.left
-							right = expression.right
+							left = expression.left.copy
+							right = expression.right.copy
 						]»
 						«ban.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BLS_ASSIGN»
 						«val bls = NoopFactory::eINSTANCE.createLShiftExpression => [
-							left = expression.left
-							right = expression.right
+							left = expression.left.copy
+							right = expression.right.copy
 						]»
 						«bls.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BRS_ASSIGN»
 						«val brs = NoopFactory::eINSTANCE.createRShiftExpression => [
-							left = expression.left
-							right = expression.right
+							left = expression.left.copy
+							right = expression.right.copy
 						]»
 						«brs.compile(ref => [mode = Mode::COPY])»
 					«ENDIF»
-					«ref.resolveTo(ctx)»
+					«expression.left.compile(ctx)»
 				'''
 				OrExpression: '''«expression.left.compileOr(expression.right, ctx)»'''
 				AndExpression: '''«expression.left.compileAnd(expression.right, ctx)»'''
