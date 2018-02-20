@@ -1,6 +1,7 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
+import java.util.ArrayList
 import java.util.List
 import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.emf.ecore.EObject
@@ -82,6 +83,50 @@ public class Members {
 		].flatten.filter(MemberRef).map[member].filter(Variable).filter[variable|
 			localVars.exists[it == variable]
 		].toSet
+	}
+	
+	def getLengthExpression(Member member, List<Index> indices) {
+		if (member.isBounded) {
+			NoopFactory::eINSTANCE.createByteLiteral => [
+				value = member.typeOf.sizeOf * (member.dimensionOf.drop(indices.size).reduce[d1, d2| d1 * d2] ?: 1)
+			]
+		} else if (member instanceof Variable) {
+			val allIndices = new ArrayList<List<Expression>>
+			
+			for (i : indices.size ..< member.dimensionOf.size) {
+				val list = new ArrayList<Expression>
+				
+				for (j : 0 ..< i) {
+					list += NoopFactory::eINSTANCE.createByteLiteral => [value = 0]
+				}
+				
+				allIndices.add(list)
+			}
+			
+			val arrayLengthMethod = member.typeOf.allMethodsTopDown.findFirst[arrayLength]
+			val size = NoopFactory::eINSTANCE.createByteLiteral => [value = member.typeOf.sizeOf]
+			val length = allIndices.map[list|
+				NoopFactory::eINSTANCE.createMemberSelect => [
+					it.member = arrayLengthMethod
+					it.receiver = NoopFactory::eINSTANCE.createMemberRef => [
+						it.member = member
+						it.indexes += list.map[aByte| NoopFactory::eINSTANCE.createIndex => [value = aByte]]
+					]
+				]
+			].reduce[Expression len1, len2|
+				val mul = NoopFactory.eINSTANCE.createMulExpression => [
+					left = len1
+					right = len2
+				]
+				
+				mul
+			]
+			
+			NoopFactory::eINSTANCE.createMulExpression => [
+				left = size
+				right = length
+			]
+		}
 	}
 	
 	def isField(Member member) {
@@ -352,10 +397,6 @@ public class Members {
 				running.remove(variable)
 			}
 		}
-	}
-
-	def lenOfArrayReference(Member member, List<Index> indexes) {
-		member.dimensionOf.drop(indexes.size).reduce[d1, d2| d1 * d2]
 	}
 
 	def List<Integer> dimensionOf(Member member) {
@@ -938,7 +979,8 @@ public class Members {
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -967,7 +1009,8 @@ public class Members {
 		«ENDIF»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -984,7 +1027,8 @@ public class Members {
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -1000,7 +1044,8 @@ public class Members {
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -1016,7 +1061,8 @@ public class Members {
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -1132,7 +1178,8 @@ public class Members {
 				]»
 				«method.compileIndexes(indexes, ret)»
 				«IF ctx.mode === Mode::COPY && method.isArrayReference(indexes)»
-					«ret.copyArrayTo(ctx, method.lenOfArrayReference(indexes).min(ctx.assignmentLength))»
+					«ret.lengthExpression = method.getLengthExpression(indexes)»
+					«ret.copyArrayTo(ctx)»
 				«ELSE»
 					«ret.resolveTo(ctx)»
 				«ENDIF»
@@ -1146,14 +1193,14 @@ public class Members {
 				«val dim = (receiver as MemberRef).indexes.size»
 				«val len = new CompileContext => [
 					container = ctx.container
-					type = ctx.type.toIntClass
+					type = ctx.type.toUIntClass
 					absolute = ((receiver as MemberRef).member as Variable).nameOfLen(dim)
 				]»
 				«len.resolveTo(ctx)»
 			«ELSE»
 				«val len = new CompileContext => [
 					container = ctx.container
-					type = ctx.type.toIntClass
+					type = ctx.type.toUIntClass
 					immediate = receiver.dimensionOf.head.toString
 				]»
 				«len.resolveTo(ctx)»
@@ -1322,10 +1369,6 @@ public class Members {
 	
 	private def isAbsolute(String index) {
 		index !== null && index.split('\\+').exists[!trim.startsWith('#')]
-	}
-	
-	private def min(Integer a, Integer b) {
-		Math::min(a ?: Integer::MAX_VALUE, b ?: Integer::MAX_VALUE)
 	}
 	
 	private def void noop() {

@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.MemChunk
+import org.parisoft.noop.noop.ByteLiteral
 
 class Datas {
 
@@ -16,6 +17,7 @@ class Datas {
 	@Inject extension Members
 	@Inject extension Classes
 	@Inject extension Operations
+	@Inject extension Expressions
 
 	def sizeOf(CompileContext ctx) {
 		ctx.type.sizeOf
@@ -540,21 +542,22 @@ class Datas {
 			BNE +«dst.relative»
 	'''
 
-	def copyArrayTo(CompileContext src, CompileContext dst, int len) '''
+	def copyArrayTo(CompileContext src, CompileContext dst) '''
 		«IF src.absolute !== null && dst.absolute !== null»
-			«src.copyArrayAbsoluteToAbsoulte(dst, len)»
+			«src.copyArrayAbsoluteToAbsoulte(dst)»
 		«ELSEIF src.absolute !== null && dst.indirect !== null»
-			«src.copyArrayAbsoluteToIndirect(dst, len)»
+			«src.copyArrayAbsoluteToIndirect(dst)»
 		«ELSEIF src.indirect !== null && dst.absolute !== null»
-			«src.copyArrayIndirectToAbsolute(dst, len)»
+			«src.copyArrayIndirectToAbsolute(dst)»
 		«ELSEIF src.indirect !== null && dst.indirect !== null»
-			«src.copyArrayIndirectToIndirect(dst, len)»
+			«src.copyArrayIndirectToIndirect(dst)»
 		«ENDIF»
 	'''
 
-	private def copyArrayAbsoluteToAbsoulte(CompileContext src, CompileContext dst, int len) '''
+	private def copyArrayAbsoluteToAbsoulte(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
-		«val bytes = len * dst.sizeOf»
+		«val length = Math::min((src.lengthExpression as ByteLiteral).value, (dst.lengthExpression as ByteLiteral).value)»
+		«val bytes = length * dst.sizeOf»
 		«IF bytes < loopThreshold»
 			«noop»
 				«IF src.isIndexed»
@@ -576,30 +579,135 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyArrayAbsoluteToIndirect(CompileContext src, CompileContext dst, int len) '''
+	private def copyArrayAbsoluteToIndirect(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToAbsolute(src)»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToIndirect(dst)»
-		«val bytes = len * dst.sizeOf»
-		«bytes.copyArrayIndirectToIndirect»
+		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
+		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
+		«IF src.lengthExpression instanceof ByteLiteral && dst.lengthExpression instanceof ByteLiteral»
+			«tmp1.pointIndirectToAbsolute(src)»
+			«tmp3.pointIndirectToIndirect(dst)»
+			«val length = Math::min((src.lengthExpression as ByteLiteral).value, (dst.lengthExpression as ByteLiteral).value)»
+			«val bytes = length * dst.sizeOf»
+			«bytes.copyArrayIndirectToIndirect»
+		«ELSE»
+			«src.lengthExpression.compile(tmp1 => [
+				absolute = indirect
+				indirect = null
+				type = src.lengthExpression.typeOf
+			])»
+			«dst.lengthExpression.compile(tmp3 => [
+				absolute = indirect
+				indirect = null
+				type = dst.lengthExpression.typeOf
+			])»
+			«val reg = new CompileContext => [
+				register = 'A'
+				type = tmp1.type
+			]»
+			«tmp1.copyTo(reg)»
+			«reg.relative = 'set'»
+			«reg.lessThan(tmp3)»
+				LDA «tmp3.absolute» + 0
+				PHA
+				LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+				JMP +point
+			+set:
+				LDA «tmp1.absolute» + 0
+				PHA
+				LDX «IF tmp1.sizeOf > 1»«tmp1.absolute» + 1«ELSE»#0«ENDIF»
+			+point:
+			«(tmp1 => [indirect = absolute]).pointIndirectToAbsolute(src)»
+			«(tmp3 => [indirect = absolute]).pointIndirectToIndirect(dst)»
+			«copyArrayIndirectToIndirectByXY»
+		«ENDIF»
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyArrayIndirectToAbsolute(CompileContext src, CompileContext dst, int len) '''
+	private def copyArrayIndirectToAbsolute(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToIndirect(src)»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToAbsolute(dst)»
-		«val bytes = len * dst.sizeOf»
-		«bytes.copyArrayIndirectToIndirect»
+		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
+		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
+		«IF src.lengthExpression instanceof ByteLiteral && dst.lengthExpression instanceof ByteLiteral»
+			«tmp1.pointIndirectToIndirect(src)»
+			«tmp3.pointIndirectToAbsolute(dst)»
+			«val length = Math::min((src.lengthExpression as ByteLiteral).value, (dst.lengthExpression as ByteLiteral).value)»
+			«val bytes = length * dst.sizeOf»
+			«bytes.copyArrayIndirectToIndirect»
+		«ELSE»
+			«src.lengthExpression.compile(tmp1 => [
+				absolute = indirect
+				indirect = null
+				type = src.lengthExpression.typeOf
+			])»
+			«dst.lengthExpression.compile(tmp3 => [
+				absolute = indirect
+				indirect = null
+				type = dst.lengthExpression.typeOf
+			])»
+			«val reg = new CompileContext => [
+				register = 'A'
+				type = tmp1.type
+			]»
+			«tmp1.copyTo(reg)»
+			«reg.relative = 'set'»
+			«reg.lessThan(tmp3)»
+				LDA «tmp3.absolute» + 0
+				PHA
+				LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+				JMP +point
+			+set:
+				LDA «tmp1.absolute» + 0
+				PHA
+				LDX «IF tmp1.sizeOf > 1»«tmp1.absolute» + 1«ELSE»#0«ENDIF»
+			+point:
+			«(tmp1 => [indirect = absolute]).pointIndirectToIndirect(src)»
+			«(tmp3 => [indirect = absolute]).pointIndirectToAbsolute(dst)»
+			«copyArrayIndirectToIndirectByXY»
+		«ENDIF»
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyArrayIndirectToIndirect(CompileContext src, CompileContext dst, int len) '''
+	private def copyArrayIndirectToIndirect(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToIndirect(src)»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToIndirect(dst)»
-		«val bytes = len * dst.sizeOf»
-		«bytes.copyArrayIndirectToIndirect»
+		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
+		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
+		«IF src.lengthExpression instanceof ByteLiteral && dst.lengthExpression instanceof ByteLiteral»
+			«tmp1.pointIndirectToIndirect(src)»
+			«tmp3.pointIndirectToIndirect(dst)»
+			«val length = Math::min((src.lengthExpression as ByteLiteral).value, (dst.lengthExpression as ByteLiteral).value)»
+			«val bytes = length * dst.sizeOf»
+			«bytes.copyArrayIndirectToIndirect»
+		«ELSE»
+			«src.lengthExpression.compile(tmp1 => [
+				absolute = indirect
+				indirect = null
+				type = src.lengthExpression.typeOf
+			])»
+			«dst.lengthExpression.compile(tmp3 => [
+				absolute = indirect
+				indirect = null
+				type = dst.lengthExpression.typeOf
+			])»
+			«val reg = new CompileContext => [
+				register = 'A'
+				type = tmp1.type
+			]»
+			«tmp1.copyTo(reg)»
+			«reg.relative = 'set'»
+			«reg.lessThan(tmp3)»
+				LDA «tmp3.absolute» + 0
+				PHA
+				LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+				JMP +point
+			+set:
+				LDA «tmp1.absolute» + 0
+				PHA
+				LDX «IF tmp1.sizeOf > 1»«tmp1.absolute» + 1«ELSE»#0«ENDIF»
+			+point:
+			«(tmp1 => [indirect = absolute]).pointIndirectToIndirect(src)»
+			«(tmp3 => [indirect = absolute]).pointIndirectToIndirect(dst)»
+			«copyArrayIndirectToIndirectByXY»
+		«ENDIF»
 		«dst.pullAccIfOperating»
 	'''
 
@@ -629,6 +737,33 @@ class Datas {
 				CPY #«frags»
 				BNE -«copyLoop»
 		«ENDIF»
+	'''
+
+	private def copyArrayIndirectToIndirectByXY() '''
+		«val copyLoop = labelForCopyLoop»
+			CPX #0
+			BEQ +«copyLoop»
+			LDY #0
+		--«copyLoop»:
+			LDA («Members::TEMP_VAR_NAME1»), Y
+			STA («Members::TEMP_VAR_NAME3»), Y
+			INY
+			BNE --«copyLoop»
+			INC «Members::TEMP_VAR_NAME1» + 1
+			INC «Members::TEMP_VAR_NAME3» + 1
+			DEX
+			BNE --«copyLoop»
+		+«copyLoop»:
+			PLA
+			TAY
+			BEQ +done
+		-«copyLoop»:
+			DEY
+			LDA («Members::TEMP_VAR_NAME1»), Y
+			STA («Members::TEMP_VAR_NAME3»), Y
+			CPY #0
+			BNE -«copyLoop»
+		+done:
 	'''
 
 	def fillArray(CompileContext array, int len) '''

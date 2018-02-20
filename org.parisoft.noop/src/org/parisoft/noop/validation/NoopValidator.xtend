@@ -798,26 +798,6 @@ class NoopValidator extends AbstractNoopValidator {
 		} else if (leftDim.size != rightDim.size) {
 			error('''Cannot assign an array value to an array variable with incompatible dimensions''',
 				ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_DIMENSION)
-		} else if (leftDim.isNotEmpty && rightDim.isNotEmpty) {
-			val leftMember = switch (left) {
-				MemberSelect: left.member
-				MemberRef: left.member
-			}
-
-			val rightMember = switch (right) {
-				MemberSelect: right.member
-				MemberRef: right.member
-			}
-
-			if (leftMember?.isUnbounded) {
-				error('''Cannot assign an array value to an unbounded array variable''', ASSIGNMENT_EXPRESSION__LEFT,
-					ASSIGN_VALUE_DIMENSION)
-			}
-
-			if (rightMember?.isUnbounded) {
-				error('''Cannot assign an unbounded array value to an array variable''', ASSIGNMENT_EXPRESSION__LEFT,
-					ASSIGN_VALUE_DIMENSION)
-			}
 		}
 	}
 

@@ -218,6 +218,19 @@ class Expressions {
 		expression.toMathClass.declaredFields.findFirst[name == '''«Members::STATIC_PREFIX»mod'''.toString]
 	}
 
+	def getLengthExpression(Expression expression) {
+		switch (expression) {
+			CastExpression:
+				NoopFactory::eINSTANCE.createByteLiteral => [
+					value = expression.type.sizeOf * expression.dimensionOf.reduce[d1, d2|d1 * d2]
+				]
+			MemberSelect:
+				expression.member.getLengthExpression(expression.indexes)
+			MemberRef:
+				expression.member.getLengthExpression(expression.indexes)
+		}
+	}
+
 	def isConstant(Expression expression) {
 		try {
 			expression.valueOf !== null
@@ -657,7 +670,7 @@ class Expressions {
 					expression.values.map[valueOf]
 				StringLiteral:
 					if (expression.isFileInclude) {
-						expression.toFile					
+						expression.toFile
 					} else {
 						expression.value.chars.boxed.collect(Collectors::toList)
 					}
@@ -690,8 +703,10 @@ class Expressions {
 		}
 	}
 
-	def dimensionOf(Expression expression) {
+	def List<Integer> dimensionOf(Expression expression) {
 		switch (expression) {
+			AssignmentExpression:
+				expression.left.dimensionOf
 			StringLiteral:
 				if (expression.isFileInclude) {
 					newArrayList(expression.toFile.length as int)
@@ -703,9 +718,9 @@ class Expressions {
 			CastExpression:
 				expression.dimension.map[value.valueOf as Integer]
 			MemberSelect:
-				expression.member.dimensionOf.subListFrom(expression.indexes.size)
+				expression.member.dimensionOf.drop(expression.indexes.size).toList
 			MemberRef:
-				expression.member.dimensionOf.subListFrom(expression.indexes.size)
+				expression.member.dimensionOf.drop(expression.indexes.size).toList
 			NewInstance:
 				expression.dimension.map[value.valueOf as Integer]
 			default:
@@ -741,6 +756,11 @@ class Expressions {
 				} else if (expression.assignment === AssignmentType::DIV_ASSIGN ||
 					expression.assignment === AssignmentType::MOD_ASSIGN) {
 					expression.moduloVariable.prepare(ctx)
+				}
+
+				if (expression.assignment === AssignmentType::ASSIGN && expression.left.dimensionOf.isNotEmpty) {
+					expression.left.lengthExpression?.prepare(ctx)
+					expression.right.lengthExpression?.prepare(ctx)
 				}
 
 				expression.left.prepare(ctx)
@@ -912,25 +932,38 @@ class Expressions {
 	def List<MemChunk> alloc(Expression expression, AllocContext ctx) {
 		switch (expression) {
 			AssignmentExpression: {
+				val chunks = newArrayList
+
 				if (expression.assignment === AssignmentType::MUL_ASSIGN) {
-					getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
+					chunks +=
+						getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method?.
+							alloc(ctx) ?: emptyList
 				} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
-					getDivideMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
+					chunks +=
+						getDivideMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx) ?:
+							emptyList
 				} else if (expression.assignment === AssignmentType::MOD_ASSIGN) {
-					getModuloMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
+					chunks +=
+						getModuloMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx) ?:
+							emptyList
+				} else if (expression.assignment === AssignmentType::ASSIGN && expression.left.dimensionOf.isNotEmpty) {
+					chunks += expression.left.lengthExpression?.alloc(ctx) ?: emptyList
+					chunks += expression.right.lengthExpression?.alloc(ctx) ?: emptyList
 				}
 
-				expression.left.alloc(ctx)
+				chunks += expression.left.alloc(ctx)
 
 				if (expression.right.containsMulDivMod) {
 					try {
-						expression.right.alloc(ctx => [types.put(expression.left.typeOf)])
+						chunks += expression.right.alloc(ctx => [types.put(expression.left.typeOf)])
 					} finally {
 						ctx.types.pop
 					}
 				} else {
-					expression.right.alloc(ctx)
+					chunks += expression.right.alloc(ctx)
 				}
+
+				return chunks
 			}
 			OrExpression:
 				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
@@ -1140,7 +1173,7 @@ class Expressions {
 					«IF expression.assignment === AssignmentType::ASSIGN»
 						«expression.right.compile(ref => [
 							mode = Mode::COPY
-							assignmentLength = expression.left.dimensionOf.reduce[d1, d2| d1 * d2]
+							lengthExpression = expression.left.lengthExpression
 						])»
 					«ELSEIF expression.assignment === AssignmentType::ADD_ASSIGN»
 						«val add = NoopFactory::eINSTANCE.createAddExpression => [
