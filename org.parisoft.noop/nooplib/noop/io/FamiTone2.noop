@@ -434,9 +434,9 @@ FamiTone2 {
 		!                                                                           !
 		!@set_envelopes:                                                            !
 		!                                                                           !
-		!	lda #<(?_$FT2DummyEnvelope?)                                              !
+		!	lda #<(?_$FT2_DUMMY_ENVELOPE?)                                              !
 		!	sta ?_$FT_ENV_ADR_L?,x                                                      !
-		!	lda #>(?_$FT2DummyEnvelope?)                                               !
+		!	lda #>(?_$FT2_DUMMY_ENVELOPE?)                                               !
 		!	sta ?_$FT_ENV_ADR_H?,x                                                      !
 		!	lda #0                                                                  !
 		!	sta ?_$FT_ENV_REPEAT?,x                                                     !
@@ -761,14 +761,14 @@ FamiTone2 {
 		!	tax                                                                                               !
 		!	lda ?_$FT_CH1_PITCH_OFF?                                                                              !
 		!	tay                                                                                               !
-		!	adc ?_$FT2NoteTableLSB?,x                                                                            !
+		!	adc ?_$FT2_NOTE_TABLE_LSB?,x                                                                            !
 		!	sta ?_$FT_MR_PULSE1_L?                                                                                !
 		!	tya						;sign extension for the pitch offset                                      !
 		!	ora #$7f                                                                                          !
 		!	bmi @ch1sign                                                                                      !
 		!	lda #0                                                                                            !
 		!@ch1sign:                                                                                            !
-		!	adc ?_$FT2NoteTableMSB?,x                                                                            !
+		!	adc ?_$FT2_NOTE_TABLE_MSB?,x                                                                            !
 		!                                                                                                     !
 		!	.ifndef ?_$FT_SFX_ENABLE?                                                                             !
 		!	cmp ?_$FT_PULSE1_PREV?                                                                                !
@@ -794,14 +794,14 @@ FamiTone2 {
 		!	tax                                                                                               !
 		!	lda ?_$FT_CH2_PITCH_OFF?                                                                              !
 		!	tay                                                                                               !
-		!	adc ?_$FT2NoteTableLSB?,x                                                                            !
+		!	adc ?_$FT2_NOTE_TABLE_LSB?,x                                                                            !
 		!	sta ?_$FT_MR_PULSE2_L?                                                                                !
 		!	tya                                                                                               !
 		!	ora #$7f                                                                                          !
 		!	bmi @ch2sign                                                                                      !
 		!	lda #0                                                                                            !
 		!@ch2sign:                                                                                            !
-		!	adc ?_$FT2NoteTableMSB?,x                                                                            !
+		!	adc ?_$FT2_NOTE_TABLE_MSB?,x                                                                            !
 		!                                                                                                     !
 		!	.ifndef ?_$FT_SFX_ENABLE?                                                                             !
 		!	cmp ?_$FT_PULSE2_PREV?                                                                                !
@@ -827,14 +827,14 @@ FamiTone2 {
 		!	tax                                                                                               !
 		!	lda ?_$FT_CH3_PITCH_OFF?                                                                              !
 		!	tay                                                                                               !
-		!	adc ?_$FT2NoteTableLSB?,x                                                                            !
+		!	adc ?_$FT2_NOTE_TABLE_LSB?,x                                                                            !
 		!	sta ?_$FT_MR_TRI_L?                                                                                   !
 		!	tya                                                                                               !
 		!	ora #$7f                                                                                          !
 		!	bmi @ch3sign                                                                                      !
 		!	lda #0                                                                                            !
 		!@ch3sign:                                                                                            !
-		!	adc ?_$FT2NoteTableMSB?,x                                                                            !
+		!	adc ?_$FT2_NOTE_TABLE_MSB?,x                                                                            !
 		!	sta ?_$FT_MR_TRI_H?                                                                                   !
 		!	lda ?_$FT_CH3_VOLUME?                                                                                 !
 		!@ch3cut:                                                                                             !
@@ -1400,9 +1400,9 @@ FamiTone2 {
 		!@no_noise:                                                                                !
 	}
 	
-	_$FT2DummyEnvelope @PRG-ROM : [0xC0, 0x00, 0x00]
+	_$FT2_DUMMY_ENVELOPE @PRG-ROM : [0xC0, 0x00, 0x00]
 	
-	_$FT2NoteTableLSB @PRG-ROM : [
+	_$FT2_NOTE_TABLE_LSB @PRG-ROM : [
 		 [0x00, 0x33, 0xDA, 0x86, 0x36, 0xEB, 0xA5, 0x62, 0x23, 0xE7, 0xAF, 0x7A, 0x48, 0x19, 0xEC, 0xC2],
 		 [0x9A, 0x75, 0x52, 0x30, 0x11, 0xF3, 0xD7, 0xBC, 0xA3, 0x8C, 0x75, 0x60, 0x4C, 0x3A, 0x28, 0x17],
 		 [0x08, 0xF9, 0xEB, 0xDD, 0xD1, 0xC5, 0xBA, 0xAF, 0xA5, 0x9C, 0x93, 0x8B, 0x83, 0x7C, 0x75, 0x6E],
@@ -1413,7 +1413,7 @@ FamiTone2 {
 		 [0x70, 0x69, 0x63, 0x5E, 0x58, 0x53, 0x4F, 0x4A, 0x46, 0x42, 0x3E, 0x3A, 0x37, 0x34, 0x31, 0x2E]
 	 ]
 
-	_$FT2NoteTableMSB @PRG-ROM : [
+	_$FT2_NOTE_TABLE_MSB @PRG-ROM : [
 		 [0x00, 0x06, 0x05, 0x05, 0x05, 0x04, 0x04, 0x04, 0x04, 0x03, 0x03, 0x03, 0x03, 0x03, 0x02, 0x02],
 		 [0x02, 0x02, 0x02, 0x02, 0x02, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01],
 		 [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],

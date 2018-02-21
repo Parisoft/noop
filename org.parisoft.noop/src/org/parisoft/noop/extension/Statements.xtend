@@ -141,14 +141,14 @@ class Statements {
 			Variable: {
 				statement.value?.prepare(ctx)
 
-				if (statement.isConstant) {
-					ctx.constants.put(statement.nameOfConstant, statement)
-				} else if (statement.isROM) {
+				if (statement.isROM) {
 					if (statement.storage.type == StorageType.PRGROM) {
-						ctx.prgRoms.put(statement.nameOfStatic, statement)
+						ctx.prgRoms.put(statement.nameOfConstant, statement)
 					} else if (statement.storage.type == StorageType.CHRROM) {
-						ctx.chrRoms.put(statement.nameOfStatic, statement)
+						ctx.chrRoms.put(statement.nameOfConstant, statement)
 					}
+				} else if (statement.isConstant) {
+					ctx.constants.put(statement.nameOfConstant, statement)
 				} else if (statement.isStatic && statement.typeOf.isNonINESHeader) {
 					ctx.statics.put(statement.nameOfStatic, statement)
 				}

@@ -99,9 +99,8 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val FIELD_OVERRIDDEN_DIMENSION = 'org.parisoft.noop.FIELD_OVERRIDDEN_DIMENSION'
 	public static val STATIC_FIELD_CONTAINER = 'org.parisoft.noop.STATIC_FIELD_CONTAINER'
 	public static val STATIC_FIELD_STORAGE_TYPE = 'org.parisoft.noop.STATIC_FIELD_STORAGE_TYPE'
-	public static val STATIC_FIELD_ROM_TYPE = 'org.parisoft.noop.STATIC_FIELD_ROM_TYPE'
-	public static val STATIC_FIELD_ROM_VALUE = 'org.parisoft.noop.STATIC_FIELD_ROM_VALUE'
 	public static val STATIC_FIELD_UNDECLARED_VALUE = 'org.parisoft.noop.STATIC_FIELD_UNDECLARED_VALUE'
+	public static val ROM_FIELD_NON_CONSTANT = 'org.parisoft.noop.ROM_FIELD_NON_CONSTANT'
 	public static val CONSTANT_FIELD_TYPE = 'org.parisoft.noop.CONSTANT_FIELD_TYPE'
 	public static val CONSTANT_FIELD_DIMENSION = 'org.parisoft.noop.CONSTANT_FIELD_DIMENSION'
 	public static val CONSTANT_FIELD_STORAGE = 'org.parisoft.noop.CONSTANT_FIELD_STORAGE'
@@ -345,18 +344,10 @@ class NoopValidator extends AbstractNoopValidator {
 	}
 
 	@Check
-	def staticFieldRomType(Variable v) {
-		if (v.isStatic && v.isROM && v.typeOf.isNonPrimitive) {
-			error('''Type of static fields tagged as «v.storage.type.literal.substring(1)» must be «TypeSystem::LIB_PRIMITIVES.join(', ')»''',
-				VARIABLE__VALUE, STATIC_FIELD_ROM_TYPE)
-		}
-	}
-
-	@Check
-	def staticFieldRomValue(Variable v) {
-		if (v.isStatic && v.isROM && v.dimensionOf.isEmpty && v.value.isNonConstant) {
-			error('''Fields tagged as «v.storage.type.literal.substring(0)» must be declared with a constant value''',
-				VARIABLE__VALUE, STATIC_FIELD_ROM_VALUE)
+	def romFieldNonConstant(Variable v) {
+		if (v.isROM && v.isNonConstant) {
+			error('''Fields tagged as «v.storage.type.literal.substring(0)» must be constant''', v, null,
+				ROM_FIELD_NON_CONSTANT, v.name, v.storage.type.literal)
 		}
 	}
 
@@ -370,15 +361,17 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def constantFieldDimension(Variable v) {
-		if (v.isConstant && v.dimensionOf.isNotEmpty) {
-			error('Constant fields must be non-array', VARIABLE__DIMENSION, CONSTANT_FIELD_DIMENSION)
+		if (v.isConstant && v.dimensionOf.isNotEmpty && v.isNonROM) {
+			error('''Missing «StorageType::PRGROM.literal» or «StorageType::CHRROM.literal» tag''', VARIABLE__DIMENSION,
+				CONSTANT_FIELD_DIMENSION, v.name)
 		}
 	}
 
 	@Check
 	def constantFieldStorage(Variable v) {
-		if (v.isConstant && v.storage !== null) {
-			error('Constant fields cannot be tagged', MEMBER__STORAGE, CONSTANT_FIELD_STORAGE)
+		if (v.isConstant && v.storage !== null && v.isNonROM) {
+			error('''Constant fields cannot be tagged as «v.storage.type.literal.substring(1)»''', MEMBER__STORAGE,
+				CONSTANT_FIELD_STORAGE, v.name, v.storage.type.literal.substring(0))
 		}
 	}
 
@@ -774,9 +767,6 @@ class NoopValidator extends AbstractNoopValidator {
 			if (member.isConstant) {
 				error('Cannot assign a value to a constant field', ASSIGNMENT_EXPRESSION__LEFT,
 					ASSIGN_TO_CONSTANT_OR_ROM)
-			} else if (member.isROM) {
-				error('''Cannot assign a value to a field tagged as «member.storage.type.literal.substring(1)»''',
-					ASSIGNMENT_EXPRESSION__LEFT, ASSIGN_TO_CONSTANT_OR_ROM)
 			}
 		}
 	}
@@ -1476,7 +1466,7 @@ class NoopValidator extends AbstractNoopValidator {
 			if (v === null) {
 				error('Files can only be referenced on variables declaration', STRING_LITERAL__VALUE,
 					STRING_FILE_NON_VARIABLE)
-			} else if (v.isNonROM) {
+			} else if (v.isNonROM && v.isNonConstant) {
 				error('''Variable «v.name» must be tagged with «StorageType::PRGROM.literal» or «StorageType::CHRROM.literal»''',
 					v, null, STRING_FILE_NON_ROM, v.name)
 			}

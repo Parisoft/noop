@@ -1104,7 +1104,9 @@ class Expressions {
 				chunks += receiver.alloc(ctx)
 
 				if (member instanceof Variable) {
-					if (member.isConstant) {
+					if (member.isROM) {
+						chunks += member.allocRomReference(expression.indexes, ctx)
+					} else if (member.isConstant) {
 						chunks += member.allocConstantReference(ctx)
 					} else if (member.isStatic) {
 						chunks += member.allocStaticReference(expression.indexes, ctx)
@@ -1135,6 +1137,8 @@ class Expressions {
 						chunks += member.allocPointerReference('''«ctx.container».rcv''', expression.indexes, ctx)
 					} else if (member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)) {
 						chunks += member.allocPointerReference(member.nameOf, expression.indexes, ctx)
+					} else if (member.isROM) {
+						chunks += member.allocRomReference(expression.indexes, ctx)
 					} else if (member.isConstant) {
 						chunks += member.allocConstantReference(ctx)
 					} else if (member.isStatic) {
@@ -1474,15 +1478,10 @@ class Expressions {
 				MemberSelect: '''
 					«val member = expression.member»
 					«val receiver = expression.receiver»
-					«receiver.compile(new CompileContext => [
-						container = ctx.container
-						accLoaded = ctx.isAccLoaded
-						operation = ctx.operation
-						type = receiver.typeOf
-						mode = null
-					])»
 					«IF member instanceof Variable»
-						«IF member.isConstant»
+						«IF member.isROM»
+							«member.compileRomReference(expression.indexes, ctx)»
+						«ELSEIF member.isConstant»
 							«member.compileConstantReference(ctx)»
 						«ELSEIF member.isStatic»
 							«member.compileStaticReference(expression.indexes, ctx)»
@@ -1506,6 +1505,8 @@ class Expressions {
 							«member.compilePointerReference('''«ctx.container».rcv''', expression.indexes, ctx)»
 						«ELSEIF member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)»
 							«member.compilePointerReference(member.nameOf, expression.indexes, ctx)»
+						«ELSEIF member.isROM»
+							«member.compileRomReference(expression.indexes, ctx)»
 						«ELSEIF member.isConstant»
 							«member.compileConstantReference(ctx)»
 						«ELSEIF member.isStatic»

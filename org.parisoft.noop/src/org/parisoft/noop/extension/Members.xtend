@@ -706,6 +706,11 @@ public class Members {
 		return chunks
 	}
 	
+	def allocRomReference(Variable variable, List<Index> indexes, AllocContext ctx) {
+		val ref = new CompileContext => [absolute = variable.nameOfConstant]
+		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
+	}
+	
 	def allocConstantReference(Variable variable, AllocContext ctx) {
 		variable.alloc(ctx)
 	}
@@ -912,7 +917,7 @@ public class Members {
 	}
 
 	def compileConstant(Variable variable) {
-		if (variable.isNonConstant) {
+		if (variable.isNonConstant || variable.isROM) {
 			throw new NonConstantMemberException
 		}
 		
@@ -926,13 +931,15 @@ public class Members {
 	}
 		
 	def compileReference(Variable variable, Expression receiver, List<Index> indexes, CompileContext ctx) '''
-		«val overriders = if (receiver.isNonThisNorSuper) variable.overriders else emptyList»
 		«val rcv = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
 			accLoaded = ctx.isAccLoaded
 			type = receiver.typeOf
+			mode = null
 		]»
+		«receiver.compile(rcv)»
+		«val overriders = if (receiver.isNonThisNorSuper) variable.overriders else emptyList»
 		«IF overriders.isEmpty»
 			«receiver.compile(rcv => [mode = Mode::REFERENCE])»
 			«IF rcv.absolute !== null»
@@ -1034,6 +1041,36 @@ public class Members {
 		«ENDIF»
 	'''
 
+	def compileRomReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
+		«val ref = new CompileContext => [
+			container = ctx.container
+			operation = ctx.operation
+			accLoaded = ctx.accLoaded
+			type = variable.typeOf
+			absolute = variable.nameOfConstant
+		]»
+		«variable.compileIndexes(indexes, ref)»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
+		«ELSE»
+			«ref.resolveTo(ctx)»
+		«ENDIF»
+	'''
+	
+	def compileConstantReference(Variable variable, CompileContext ctx) '''
+		«val const = new CompileContext => [
+			container = ctx.container
+			type = variable.typeOf
+			immediate = variable.nameOfConstant
+		]»
+		«IF ctx.mode === Mode::OPERATE»
+			«ctx.operateOn(const)»
+		«ELSEIF ctx.mode === Mode::COPY»
+			«const.copyTo(ctx)»
+		«ENDIF»
+	'''
+
 	def compileStaticReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
 		«val ref = new CompileContext => [
 			container = ctx.container
@@ -1068,32 +1105,22 @@ public class Members {
 		«ENDIF»
 	'''
 	
-	def compileConstantReference(Variable variable, CompileContext ctx) '''
-		«val const = new CompileContext => [
-			container = ctx.container
-			type = variable.typeOf
-			immediate = variable.nameOfConstant
-		]»
-		«IF ctx.mode === Mode::OPERATE»
-			«ctx.operateOn(const)»
-		«ELSEIF ctx.mode === Mode::COPY»
-			«const.copyTo(ctx)»
-		«ENDIF»
-	'''
-
 	def compileInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, CompileContext ctx) '''
+		«val rcv = new CompileContext => [
+			container = ctx.container
+			operation = ctx.operation
+			accLoaded = ctx.accLoaded
+			type = receiver.typeOf
+		]»
 		«IF method.isNative»
+			«receiver.compile(rcv => [mode = null])»
 			«method.compileNativeInvocation(receiver, args, ctx)»
 		«ELSE»
-			«val overriders = if (receiver.isNonThisNorSuper) method.overriders else emptyList»
-			«receiver.compile(new CompileContext => [
-				container = ctx.container
-				operation = ctx.operation
-				accLoaded = ctx.accLoaded
+			«receiver.compile(rcv => [
 				indirect = method.nameOfReceiver
-				type = receiver.typeOf
 				mode = Mode::POINT
 			])»
+			«val overriders = if (receiver.isNonThisNorSuper) method.overriders else emptyList»
 			«IF overriders.isEmpty»
 				«method.compileInvocation(args, indexes, ctx)»
 			«ELSE»
