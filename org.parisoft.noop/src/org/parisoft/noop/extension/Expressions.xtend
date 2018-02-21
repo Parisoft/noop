@@ -896,23 +896,20 @@ class Expressions {
 				expression.typeOf.prepare(ctx)
 				expression.values.forEach[prepare(ctx)]
 			}
-			NewInstance:
-				if (expression.type.isINESHeader) {
-					ctx.header = expression
-				} else {
-					expression.type.prepare(ctx)
+			NewInstance: {
+				expression.type.prepare(ctx)
 
-					if (expression.type.isNonPrimitive) {
-						expression.fieldsInitializedOnContructor.forEach[prepare(ctx)]
+				if (expression.type.isNonPrimitive) {
+					expression.fieldsInitializedOnContructor.forEach[prepare(ctx)]
 
-						if (expression.constructor !== null) {
-							expression.constructor.fields.forEach[value.prepare(ctx)]
-						}
+					if (expression.constructor !== null) {
+						expression.constructor.fields.forEach[value.prepare(ctx)]
 					}
 				}
+			}
 			MemberSelect: {
 				val member = expression.member
-				
+
 				expression.receiver.prepare(ctx)
 
 				if (member instanceof Variable) {
@@ -1062,10 +1059,6 @@ class Expressions {
 			}
 			NewInstance: {
 				val chunks = newArrayList
-
-				if (expression.type.isINESHeader) {
-					return chunks
-				}
 
 				if (expression.isOnMemberSelectionOrReference) {
 					if (expression.dimension.isEmpty && expression.type.isNonPrimitive) {

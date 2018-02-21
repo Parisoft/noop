@@ -10,7 +10,6 @@ import org.parisoft.noop.noop.Variable
 
 class AllocContext {
 
-	@Accessors var NewInstance header
 	@Accessors val classes = <String, NoopClass>newLinkedHashMap
 	@Accessors val statics = <String, Variable>newLinkedHashMap
 	@Accessors val constants = <String, Variable>newLinkedHashMap

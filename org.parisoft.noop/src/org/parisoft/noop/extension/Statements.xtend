@@ -149,7 +149,7 @@ class Statements {
 					}
 				} else if (statement.isConstant) {
 					ctx.constants.put(statement.nameOfConstant, statement)
-				} else if (statement.isStatic && statement.typeOf.isNonINESHeader) {
+				} else if (statement.isStatic) {
 					ctx.statics.put(statement.nameOfStatic, statement)
 				}
 			}

@@ -284,17 +284,49 @@ public class Members {
 	def isOverrideOf(Variable v1, Variable v2) {
 		return v1 != v2 && v1.name == v2.name && v1.containerClass.isSubclassOf(v2.containerClass)
 	}
+	
+	def isINesHeader(Variable variable) {
+		variable.isINesPrg || variable.isINesChr || variable.isINesMapper || variable.isINesMir
+	}
+	
+	def isNonINesHeader(Variable variable) {
+		!variable.isINesHeader
+	}
+	
+	def isINesPrg(Variable variable) {
+		variable.storage?.type == StorageType::INESPRG
+	}
+	
+	def isINesChr(Variable variable) {
+		variable.storage?.type == StorageType::INESCHR
+	}
+	
+	def isINesMapper(Variable variable) {
+		variable.storage?.type == StorageType::INESMAPPER
+	}
+	
+	def isINesMir(Variable variable) {
+		variable.storage?.type == StorageType::INESMIR
+	}
+	
+	def isIrqImpl(Method m) {
+		m.isIrq || m.isNmi || m.isReset
+	}
+	
+	def isNonIrqImpl(Method m) {
+		!m.isIrqImpl
+	}
 
 	def isIrq(Method method) {
-		method.containerClass.isGame && method.name == '''«STATIC_PREFIX»irq'''.toString && method.params.isEmpty
+		method.storage?.type == StorageType::IRQ
 	}
 
 	def isNmi(Method method) {
-		method.containerClass.isGame && method.name == '''«STATIC_PREFIX»nmi'''.toString && method.params.isEmpty
+		method.storage?.type == StorageType::NMI
 	}
 	
 	def isReset(Method method) {
-		method.containerClass.isGame && method.name == '''«STATIC_PREFIX»reset'''.toString && method.params.isEmpty
+		method.storage?.type == StorageType::RESET
 	}
 	
 	def isObjectSize(Method method) {
@@ -386,7 +418,7 @@ public class Members {
 	}
 
 	def valueOf(Variable variable) {
-		if (variable.isNonConstant && variable.containerClass.isNonINESHeader) {
+		if (variable.isNonConstant || (variable.isROM && variable.dimensionOf.isNotEmpty)) {
 			throw new NonConstantMemberException
 		}
 		

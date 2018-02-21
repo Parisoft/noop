@@ -20,7 +20,6 @@ import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.Statements
-import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 
 import static org.parisoft.noop.generator.Asm8.*
@@ -68,22 +67,22 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def compile(Resource resource) {
-		val gameImpl = resource.contents.filter(NoopClass).findFirst[game]
+		val mainClass = resource.contents.filter(NoopClass).findFirst[main]
 
-		if (gameImpl === null) {
+		if (mainClass === null) {
 			return null
 		}
 
-		val ctx = gameImpl.prepare
+		val ctx = mainClass.prepare
 
-		gameImpl.alloc(ctx)
+		mainClass.alloc(ctx)
 
 		ctx.prgRoms.entrySet.removeIf[ctx.prgRoms.values.exists[rom|rom.isOverrideOf(value)]]
 		ctx.chrRoms.entrySet.removeIf[ctx.chrRoms.values.exists[rom|rom.isOverrideOf(value)]]
 
 		val content = ctx.compile.optimize
 
-		new ASM(gameImpl.name, content)
+		new ASM(mainClass.name, content)
 	}
 
 	private def optimize(CharSequence code) {
@@ -211,19 +210,23 @@ class NoopGenerator extends AbstractGenerator {
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
 		
+		«val inesPrg = ctx.constants.values.findFirst[INesPrg]?.valueOf as Integer ?: 32»
+		«val inesChr = ctx.constants.values.findFirst[INesChr]?.valueOf as Integer ?: 8»
+		«val inesMap = ctx.constants.values.findFirst[INesMapper]?.valueOf as Integer ?: 0»
+		«val inesMir = ctx.constants.values.findFirst[INesMir]?.valueOf as Integer ?: 1»
 		;----------------------------------------------------------------
 		; iNES Header
 		;----------------------------------------------------------------
 			.db 'NES', $1A ;identification of the iNES header
-			.db «(ctx.header.fieldValue('prgRomPages') as Integer).toHexString» ;number of 16KB PRG-ROM pages
-			.db «(ctx.header.fieldValue('chrRomPages') as Integer).toHexString» ;number of 8KB CHR-ROM pages
-			.db «(ctx.header.fieldValue('mapper') as Integer).toHexString» | «(ctx.header.fieldValue('mirroring') as Integer).toHexString»
+			.db «(inesPrg / 16).toHexString» ;number of 16KB PRG-ROM pages
+			.db «(inesChr / 8).toHexString» ;number of 8KB CHR-ROM pages
+			.db «inesMap.toHexString» | «inesMir.toHexString»
 			.dsb 9, $00 ;clear the remaining bytes to 16
 			
 		;----------------------------------------------------------------
 		; PRG-ROM Bank(s)
 		;----------------------------------------------------------------
-			.base $10000 - («(ctx.header.fieldValue('prgRomPages') as Integer).toHexString» * $4000) 
+			.base $10000 - («(inesPrg / 16).toHexString» * $4000) 
 		
 		«FOR rom : ctx.prgRoms.values.filter[nonDMC]»
 			«rom.compile(new CompileContext)»
@@ -257,9 +260,9 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 			.org $FFFA     
 		
-		 	.dw «ctx.methods.values.findFirst[nmi].nameOf»
-		 	.dw «ctx.methods.values.findFirst[reset].nameOf»
-		 	.dw «ctx.methods.values.findFirst[irq].nameOf»
+		 	.dw «ctx.methods.values.findFirst[nmi]?.nameOf ?: 0»
+		 	.dw «ctx.methods.values.findFirst[reset]?.nameOf ?: 0»
+		 	.dw «ctx.methods.values.findFirst[irq]?.nameOf ?: 0»
 		
 		;----------------------------------------------------------------
 		; CHR-ROM bank(s)
@@ -283,15 +286,6 @@ class NoopGenerator extends AbstractGenerator {
 		}
 
 		return '$' + string
-	}
-
-	private def fieldValue(NewInstance instance, String fieldname) {
-		instance?.constructor?.fields?.findFirst [
-			variable.name == fieldname
-		]?.value?.valueOf ?: instance.type.allFieldsBottomUp.findFirst [
-			name == fieldname
-		].valueOf
-
 	}
 
 	private def void noop() {

@@ -119,8 +119,15 @@
   <eClassifiers xsi:type="ecore:EEnum" name="StorageType">
     <eLiterals name="PRGROM" literal="@PRG-ROM"/>
     <eLiterals name="CHRROM" value="1" literal="@CHR-ROM"/>
-    <eLiterals name="ZP" value="2" literal="@ZP-RAM"/>
-    <eLiterals name="INLINE" value="3" literal="@Inline"/>
+    <eLiterals name="INESPRG" value="2" literal="@INES-PRG"/>
+    <eLiterals name="INESCHR" value="3" literal="@INES-CHR"/>
+    <eLiterals name="INESMAPPER" value="4" literal="@INES-Mapper"/>
+    <eLiterals name="INESMIR" value="5" literal="@INES-Mirror"/>
+    <eLiterals name="ZP" value="6" literal="@ZP-RAM"/>
+    <eLiterals name="INLINE" value="7" literal="@Inline"/>
+    <eLiterals name="RESET" value="8" literal="@Reset"/>
+    <eLiterals name="NMI" value="9" literal="@NMI"/>
+    <eLiterals name="IRQ" value="10" literal="@IRQ"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="AssignmentExpression" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"

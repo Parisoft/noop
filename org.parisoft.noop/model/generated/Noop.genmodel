@@ -21,8 +21,15 @@
     <genEnums typeSafeEnumCompatible="false" ecoreEnum="Noop.ecore#//StorageType">
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/PRGROM"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/CHRROM"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INESPRG"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INESCHR"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INESMAPPER"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INESMIR"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/ZP"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INLINE"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/RESET"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/NMI"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/IRQ"/>
     </genEnums>
     <genClasses ecoreClass="Noop.ecore#//NoopClass">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//NoopClass/name"/>

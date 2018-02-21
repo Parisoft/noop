@@ -184,20 +184,8 @@ class Classes {
 		!c.isPrimitive
 	}
 
-	def isGame(NoopClass c) {
-		c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_GAME]
-	}
-
-	def isNonGame(NoopClass c) {
-		!c.isGame
-	}
-
-	def isINESHeader(NoopClass c) {
-		c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_NES_HEADER]
-	}
-
-	def isNonINESHeader(NoopClass c) {
-		!c.isINESHeader
+	def isMain(NoopClass c) {
+		c.allMethodsBottomUp.exists[reset]
 	}
 
 	def isSigned(NoopClass c) {
@@ -283,40 +271,37 @@ class Classes {
 	def void prepare(NoopClass noopClass, AllocContext ctx) {
 		if (ctx.classes.put(noopClass.nameOf, noopClass) === null) {
 			noopClass.allFieldsTopDown.filter[ROM].forEach[prepare(ctx)]
-
-			if (noopClass.isGame) {
-				noopClass.allFieldsBottomUp.findFirst[typeOf.INESHeader].prepare(ctx)
-				noopClass.allMethodsBottomUp.findFirst[reset].prepare(ctx)
-				noopClass.allMethodsBottomUp.findFirst[nmi].prepare(ctx)
-				noopClass.allMethodsBottomUp.findFirst[irq].prepare(ctx)
-			}
+			noopClass.allFieldsTopDown.filter[INesHeader].forEach[prepare(ctx)]
+			noopClass.allMethodsBottomUp.findFirst[reset]?.prepare(ctx)
+			noopClass.allMethodsBottomUp.findFirst[nmi]?.prepare(ctx)
+			noopClass.allMethodsBottomUp.findFirst[irq]?.prepare(ctx)
 		}
 	}
 
 	def void alloc(NoopClass noopClass, AllocContext ctx) {
-		if (noopClass.isGame) {
+		if (noopClass.isMain) {
 			ctx.statics.values.forEach[alloc(ctx)]
-
-			val chunks = noopClass.allMethodsBottomUp.findFirst[nmi].alloc(ctx)
-
-			ctx.counters.forEach [ counter, page |
-				try {
-					counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
-				} catch (NoSuchElementException e) {
-				}
-			]
-
-			chunks += noopClass.allMethodsBottomUp.findFirst[irq].alloc(ctx)
-
-			ctx.counters.forEach [ counter, page |
-				try {
-					counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
-				} catch (NoSuchElementException e) {
-				}
-			]
-
-			noopClass.allMethodsBottomUp.findFirst[reset].alloc(ctx)
 		}
+
+		val chunks = noopClass.allMethodsBottomUp.findFirst[nmi]?.alloc(ctx) ?: newArrayList
+
+		ctx.counters.forEach [ counter, page |
+			try {
+				counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
+			} catch (NoSuchElementException e) {
+			}
+		]
+
+		chunks += noopClass.allMethodsBottomUp.findFirst[irq]?.alloc(ctx) ?: emptyList
+
+		ctx.counters.forEach [ counter, page |
+			try {
+				counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
+			} catch (NoSuchElementException e) {
+			}
+		]
+
+		noopClass.allMethodsBottomUp.findFirst[reset]?.alloc(ctx)
 	}
 
 }

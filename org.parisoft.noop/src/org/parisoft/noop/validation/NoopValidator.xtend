@@ -101,17 +101,17 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val STATIC_FIELD_STORAGE_TYPE = 'org.parisoft.noop.STATIC_FIELD_STORAGE_TYPE'
 	public static val STATIC_FIELD_UNDECLARED_VALUE = 'org.parisoft.noop.STATIC_FIELD_UNDECLARED_VALUE'
 	public static val ROM_FIELD_NON_CONSTANT = 'org.parisoft.noop.ROM_FIELD_NON_CONSTANT'
+	public static val INES_FIELD_NON_CONSTANT = 'org.parisoft.noop.INES_FIELD_NON_CONSTANT'
+	public static val INES_FIELD_DIMENSION = 'org.parisoft.noop.INES_FIELD_DIMENSION'
 	public static val CONSTANT_FIELD_TYPE = 'org.parisoft.noop.CONSTANT_FIELD_TYPE'
 	public static val CONSTANT_FIELD_DIMENSION = 'org.parisoft.noop.CONSTANT_FIELD_DIMENSION'
 	public static val CONSTANT_FIELD_STORAGE = 'org.parisoft.noop.CONSTANT_FIELD_STORAGE'
 	public static val CONSTANT_FIELD_VALUE = 'org.parisoft.noop.CONSTANT_FIELD_VALUE'
 	public static val VARIABLE_VOID_TYPE = 'org.parisoft.noop.VARIABLE_VOID_TYPE'
-	public static val VARIABLE_INES_HEADER_TYPE = 'org.parisoft.noop.VARIABLE_INES_HEADER_TYPE'
 	public static val VARIABLE_DUPLICITY = 'org.parisoft.noop.VARIABLE_DUPLICITY'
 	public static val VARIABLE_NEVER_USED = 'org.parisoft.noop.VARIABLE_NEVER_USED'
 	public static val VARIABLE_DIMENSION = 'org.parisoft.noop.VARIABLE_DIMENSION'
 	public static val PARAMETER_VOID_TYPE = 'org.parisoft.noop.PARAMETER VOID_TYPE'
-	public static val PARAMETER_INES_HEADER_TYPE = 'org.parisoft.noop.PARAMETER INES_HEADER_TYPE'
 	public static val PARAMETER_STORAGE_TYPE = 'org.parisoft.noop.PARAMETER_STORAGE_TYPE'
 	public static val PARAMETER_DUPLICITY = 'org.parisoft.noop.PARAMETER_DUPLICITY'
 	public static val PARAMETER_DIMENSION_VALUE = 'org.parisoft.noop.PARAMETER_DIMENSION_VALUE'
@@ -122,6 +122,8 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val METHOD_STORAGE_TYPE = 'org.parisoft.noop.METHOD_STORAGE_TYPE'
 	public static val METHOD_OVERRIDDEN_TYPE = 'org.parisoft.noop.METHOD_OVERRIDDEN_TYPE'
 	public static val METHOD_OVERRIDDEN_DIMENSION = 'org.parisoft.noop.METHOD_OVERRIDDEN_DIMENSION'
+	public static val METHOD_IRQ_NON_STATIC = 'org.parisoft.noop.METHOD_IRQ_NON_STATIC'
+	public static val METHOD_IRQ_PARAMS = 'org.parisoft.noop.METHOD_IRQ_PARAMS'
 	public static val RETURN_UNBOUNDED_DIMENSION = 'org.parisoft.noop.RETURN_UNBOUNDED_DIMENSION'
 	public static val RETURN_INCONSISTENT_DIMENSION = 'org.parisoft.noop.RETURN_INCONSISTENT_DIMENSION'
 	public static val STATEMENT_UNREACHABLE = 'org.parisoft.noop.STATEMENT_UNREACHABLE'
@@ -202,7 +204,6 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val NEW_INSTANCE_DIMENSION = 'org.parisoft.noop.NEW_INSTANCE_DIMENSION'
 	public static val CONSTRUCTOR_FIELD_TYPE = 'org.parisoft.noop.CONSTRUCTOR_FIELD_TYPE'
 	public static val CONSTRUCTOR_FIELD_DIMENSION = 'org.parisoft.noop.CONSTRUCTOR_FIELD_DIMENSION'
-	public static val INES_HEADER_FIELD_VALUE = 'org.parisoft.noop.INES_HEADER_FIELD_VALUE'
 	public static val MEMBER_SELECT_VISIBILITY = 'org.parisoft.noop.MEMBER_SELECT_VISIBILITY'
 	public static val MEMBER_SELECT_DIMENSION = 'org.parisoft.noop.MEMBER_SELECT_DIMENSION'
 	public static val MEMBER_REF_DIMENSION = 'org.parisoft.noop.MEMBER_REF_DIMENSION'
@@ -210,7 +211,7 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
-		if (c.isGame) {
+		if (c.isMain) {
 			val project = c.URI.project.name
 			val classes = c.prepare.classes.values.filter[URI.project?.name == project]
 
@@ -352,6 +353,22 @@ class NoopValidator extends AbstractNoopValidator {
 	}
 
 	@Check
+	def inesFieldNonConstant(Variable v) {
+		if (v.isINesHeader && v.isNonConstant) {
+			error('''Fields tagged as «v.storage.type.literal.substring(0)» must be constant''', v, null,
+				INES_FIELD_NON_CONSTANT, v.name, v.storage.type.literal)
+		}
+	}
+
+	@Check
+	def inesFieldDimension(Variable v) {
+		if (v.isINesHeader && v.dimensionOf.isNotEmpty) {
+			error('''Fields tagged as «v.storage.type.literal.substring(0)» cannot be an array''', v, null,
+				INES_FIELD_DIMENSION)
+		}
+	}
+
+	@Check
 	def constantFieldType(Variable v) {
 		if (v.isConstant && v.typeOf.isNonPrimitive) {
 			error('''Type of constant fields must be «TypeSystem::LIB_PRIMITIVES.join(', ')»''', VARIABLE__VALUE,
@@ -361,7 +378,7 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def constantFieldDimension(Variable v) {
-		if (v.isConstant && v.dimensionOf.isNotEmpty && v.isNonROM) {
+		if (v.isConstant && v.dimensionOf.isNotEmpty && v.storage === null) {
 			error('''Missing «StorageType::PRGROM.literal» or «StorageType::CHRROM.literal» tag''', VARIABLE__DIMENSION,
 				CONSTANT_FIELD_DIMENSION, v.name)
 		}
@@ -369,7 +386,7 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def constantFieldStorage(Variable v) {
-		if (v.isConstant && v.storage !== null && v.isNonROM) {
+		if (v.isConstant && v.storage !== null && v.isNonROM && v.isNonINesHeader) {
 			error('''Constant fields cannot be tagged as «v.storage.type.literal.substring(1)»''', MEMBER__STORAGE,
 				CONSTANT_FIELD_STORAGE, v.name, v.storage.type.literal.substring(0))
 		}
@@ -387,14 +404,6 @@ class NoopValidator extends AbstractNoopValidator {
 		if (v.isNonParameter && v.typeOf.isVoid) {
 			error('''«TypeSystem::LIB_VOID» is not a valid type for «IF v.isField»fields«ELSE»variables«ENDIF»''',
 				VARIABLE__VALUE, VARIABLE_VOID_TYPE)
-		}
-	}
-
-	@Check
-	def variableINesHeaderType(Variable v) {
-		if (v.isNonParameter && v.isNonStatic && v.typeOf.isINESHeader) {
-			error('''«TypeSystem::LIB_NES_HEADER» is not a valid type for «IF v.isField»non-static fields«ELSE»variables«ENDIF»''',
-				VARIABLE__VALUE, VARIABLE_INES_HEADER_TYPE)
 		}
 	}
 
@@ -434,14 +443,6 @@ class NoopValidator extends AbstractNoopValidator {
 	def parameterVoidType(Variable v) {
 		if (v.isParameter && v.type.isVoid) {
 			error('''«TypeSystem::LIB_VOID» is not a valid type for parameters''', VARIABLE__TYPE, PARAMETER_VOID_TYPE)
-		}
-	}
-
-	@Check
-	def parameterINesHeaderType(Variable v) {
-		if (v.isParameter && v.type.isINESHeader) {
-			error('''«TypeSystem::LIB_NES_HEADER» is not a valid type for parameters''', VARIABLE__TYPE,
-				PARAMETER_INES_HEADER_TYPE)
 		}
 	}
 
@@ -568,9 +569,9 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def methodStorageType(Method m) {
-		if (m.storage?.type != StorageType::PRGROM && m.storage?.type != StorageType::INLINE) {
+		if (m.storage !== null && m.isNonInline && m.isNonIrqImpl) {
 			error('''Methods cannot be tagged as «m.storage.type.literal.substring(0)»''', MEMBER__STORAGE,
-				METHOD_STORAGE_TYPE)
+				METHOD_STORAGE_TYPE, m.name, m.storage.type.literal)
 		}
 	}
 
@@ -601,6 +602,22 @@ class NoopValidator extends AbstractNoopValidator {
 						MEMBER__NAME, METHOD_OVERRIDDEN_DIMENSION)
 				}
 			}
+		}
+	}
+
+	@Check
+	def methodIrqNonStatic(Method m) {
+		if (m.isIrqImpl && m.isNonStatic) {
+			error('''Methods tagged as «m.storage.type.literal.substring(0)» must be static''', m, null,
+				METHOD_IRQ_NON_STATIC, m.name, m.storage.type.literal)
+		}
+	}
+	
+	@Check
+	def methodIrqParams(Method m) {
+		if (m.isIrqImpl && m.params.isNotEmpty) {
+			error('''Methods tagged as «m.storage.type.literal.substring(0)» must be non-args''', m, null,
+				METHOD_IRQ_PARAMS, m.name, m.storage.type.literal)
 		}
 	}
 
@@ -1561,14 +1578,6 @@ class NoopValidator extends AbstractNoopValidator {
 		} else if (leftDim.size != rightDim.size) {
 			error('''Cannot assign an array value to an array field with incompatible dimensions''',
 				CONSTRUCTOR_FIELD__VALUE, CONSTRUCTOR_FIELD_DIMENSION)
-		}
-	}
-
-	@Check
-	def iNesHeaderFieldValue(ConstructorField field) {
-		if (field.getContainerOfType(NewInstance).type.isINESHeader && field.value?.isNonConstant) {
-			error('''Field «field.variable.name» value must be a constant expression''', CONSTRUCTOR_FIELD__VALUE,
-				INES_HEADER_FIELD_VALUE)
 		}
 	}
 
