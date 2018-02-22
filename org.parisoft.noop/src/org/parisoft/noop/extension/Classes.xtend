@@ -287,7 +287,7 @@ class Classes {
 
 		ctx.counters.forEach [ counter, page |
 			try {
-				counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
+				counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
 			} catch (NoSuchElementException e) {
 			}
 		]
@@ -296,7 +296,7 @@ class Classes {
 
 		ctx.counters.forEach [ counter, page |
 			try {
-				counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
+				counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
 			} catch (NoSuchElementException e) {
 			}
 		]

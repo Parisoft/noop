@@ -83,7 +83,7 @@ class Expressions {
 		instance.type.allFieldsTopDown.filter[nonStatic]
 	}
 
-	private def getMultiplyMethod(Expression left, Expression right, NoopClass type) {
+	def getMultiplyMethod(Expression left, Expression right, NoopClass type) {
 		try {
 			try {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
@@ -142,7 +142,7 @@ class Expressions {
 		}
 	}
 
-	private def getDivideMethod(Expression left, Expression right, NoopClass type) {
+	def getDivideMethod(Expression left, Expression right, NoopClass type) {
 		try {
 			if (left.sizeOf == 1) {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
@@ -183,7 +183,7 @@ class Expressions {
 		}
 	}
 
-	private def getModuloMethod(Expression left, Expression right, NoopClass type) {
+	def getModuloMethod(Expression left, Expression right, NoopClass type) {
 		try {
 			if (left.sizeOf == 1) {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
@@ -910,8 +910,6 @@ class Expressions {
 			MemberSelect: {
 				val member = expression.member
 
-				expression.receiver.prepare(ctx)
-
 				if (member instanceof Variable) {
 					member.prepareReference(expression.receiver, expression.indexes, ctx)
 				} else if (member instanceof Method) {
@@ -1093,8 +1091,6 @@ class Expressions {
 				val chunks = newArrayList
 				val member = expression.member
 				val receiver = expression.receiver
-
-				chunks += receiver.alloc(ctx)
 
 				if (member instanceof Variable) {
 					if (member.isROM) {

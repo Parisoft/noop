@@ -28,6 +28,10 @@ import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import java.util.concurrent.atomic.AtomicInteger
+import org.parisoft.noop.noop.MulExpression
+import org.parisoft.noop.noop.DivExpression
+import org.parisoft.noop.noop.ModExpression
 
 public class Members {
 
@@ -363,14 +367,22 @@ public class Members {
 		method.isNativeArray && method.name == METHOD_ARRAY_LENGTH
 	}
 	
-	def boolean isInvokedOn(Method method, Statement statement) {
-		statement !== null &&
-		statement.eAllContents.filter(MemberRef).map[member].filter(Method).exists[
-			it == method || body.statements.filter[it != statement].exists[method.isInvokedOn(it)]
-		] ||
-		statement.eAllContents.filter(MemberSelect).map[member].filter(Method).exists[
-			it == method || body.statements.filter[it != statement].exists[method.isInvokedOn(it)]
-		]
+	def boolean isInvokedOn(Method method, Statement statement, CompileContext ctx) {
+		switch (statement) {
+			MulExpression: method.isInvokedOn(statement.left.getMultiplyMethod(statement.right, ctx.type).method, ctx)
+			DivExpression: method.isInvokedOn(statement.left.getDivideMethod(statement.right, ctx.type).method, ctx)
+			ModExpression: method.isInvokedOn(statement.left.getModuloMethod(statement.right, ctx.type).method, ctx)
+			MemberSelect: if (statement.member instanceof Method) method.isInvokedOn(statement.member as Method, ctx) else false
+			MemberRef: if (statement.member instanceof Method) method.isInvokedOn(statement.member as Method, ctx) else false
+			default: 				
+				statement !== null &&
+				statement.eAllContents.filter(MemberRef).map[member].filter(Method).exists[method.isInvokedOn(it, ctx)] ||
+				statement.eAllContents.filter(MemberSelect).map[member].filter(Method).exists[method.isInvokedOn(it, ctx)]
+		}
+	}
+	
+	def boolean isInvokedOn(Method m1, Method m2, CompileContext ctx) {
+		m1 == m2 || (m2 !== null && m2.body.statements.exists[m1.isInvokedOn(it, ctx)])
 	}
 	
 	def isArrayReference(Member member, List<Index> indexes) {
@@ -1145,7 +1157,6 @@ public class Members {
 			type = receiver.typeOf
 		]»
 		«IF method.isNative»
-			«receiver.compile(rcv => [mode = null])»
 			«method.compileNativeInvocation(receiver, args, ctx)»
 		«ELSE»
 			«receiver.compile(rcv => [
@@ -1188,9 +1199,15 @@ public class Members {
 			«ctx.pushAccIfOperating»
 			«ctx.pushRecusiveVars»
 			«val methodName = method.nameOf»
+			«var lastPushedParam = new AtomicInteger(-1)»
 			«FOR i : 0..< args.size»
 				«val param = method.params.get(i)»
 				«val arg = args.get(i)»
+				«IF i > 0 && method.isInvokedOn(arg, ctx)»
+					«FOR p : lastPushedParam.incrementAndGet ..< i»
+						«method.params.get(p).push»
+					«ENDFOR»
+				«ENDIF»
 				«arg.compile(new CompileContext => [
 					container = ctx.container
 					type = param.type
@@ -1204,15 +1221,22 @@ public class Members {
 					}
 				])»
 				«IF param.isUnbounded»
-					«val dimension = arg.dimensionOf»
-					«FOR dim : 0..< dimension.size»
-						«val len = dimension.get(dim).toHex»
-							LDA #<«len»
-							STA «param.nameOfLen(methodName, dim)»
-							LDA #>«len»
-							STA «param.nameOfLen(methodName, dim)» + 1
-					«ENDFOR»
+					«IF arg.isUnbounded»
+						;FIXME repassing unbounded lengths
+					«ELSE»
+						«val dimension = arg.dimensionOf»
+						«FOR dim : 0..< dimension.size»
+							«val len = dimension.get(dim).toHex»
+								LDA #<«len»
+								STA «param.nameOfLen(methodName, dim)»
+								LDA #>«len»
+								STA «param.nameOfLen(methodName, dim)» + 1
+						«ENDFOR»
+					«ENDIF»
 				«ENDIF»
+			«ENDFOR»
+			«FOR i : lastPushedParam.incrementAndGet >.. 0»
+				«method.params.get(i).pull»
 			«ENDFOR»
 			«IF method.isInline»
 				«FOR statement : method.body.statements»
@@ -1246,6 +1270,7 @@ public class Members {
 		«ENDIF»
 	'''
 	
+	//TODO today receiver is not compiled (if so a stack overflow occurs), when the pointers come out it'll be needed
 	private def compileNativeInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
 		«IF method.name == METHOD_ARRAY_LENGTH»
 			«IF receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable && ((receiver as MemberRef).member as Variable).isUnbounded»
@@ -1283,7 +1308,7 @@ public class Members {
 					
 					immediate += indexes.get(i).value.valueOf.toString
 					
-					for (j : i + 1 ..< indexes.size) {
+					for (j : i + 1 ..< dimension.size) {
 						immediate += '''*«dimension.get(j)»'''
 					}
 				}
@@ -1354,21 +1379,22 @@ public class Members {
 	
 	private def getIndexExpression(Member member, List<Index> indexes) {
 		val memberTypeSize = member.typeOf.sizeOf
+		val memberDimension = member.dimensionOf
 		
 		if (memberTypeSize > 1) {
 			NoopFactory::eINSTANCE.createMulExpression => [
-				left = if (member.isBounded) indexes.sum(member.dimensionOf, 0) else indexes.sum(member as Variable, 0)
+				left = if (member.isBounded) indexes.sum(memberDimension, 0) else indexes.sum(memberDimension, member as Variable, 0)
 				right = NoopFactory::eINSTANCE.createByteLiteral => [value = memberTypeSize]
 			]
 		} else if (member.isBounded) {
-			indexes.sum(member.dimensionOf, 0)
+			indexes.sum(memberDimension, 0)
 		} else {
-			indexes.sum(member as Variable, 0)
+			indexes.sum(memberDimension, member as Variable, 0)
 		}
 	}
 	
-	private def Expression mult(List<Index> indexes, Variable parameter, int i, int j) {
-		if (j < indexes.size) {
+	private def Expression mult(List<Index> indexes, List<Integer> dimension, Variable parameter, int i, int j) {
+		if (j < dimension.size) {
 			NoopFactory::eINSTANCE.createMulExpression => [
 				left = NoopFactory::eINSTANCE.createMemberSelect => [
 					receiver = NoopFactory::eINSTANCE.createMemberRef => [
@@ -1382,26 +1408,26 @@ public class Members {
 					]
 					member = parameter.type.allMethodsTopDown.findFirst[arrayLength]
 				]
-				right = indexes.mult(parameter, i, j + 1)
+				right = indexes.mult(dimension, parameter, i, j + 1)
 			]
 		} else {
 			indexes.get(i).value.copy
 		}
 	}
 	
-	private def Expression sum(List<Index> indexes, Variable parameter, int i) {
+	private def Expression sum(List<Index> indexes, List<Integer> dimension, Variable parameter, int i) {
 		if (i + 1 < indexes.size) {
 			NoopFactory::eINSTANCE.createAddExpression => [
-				left = indexes.mult(parameter, i, i + 1)
-				right = indexes.sum(parameter, i + 1)
+				left = indexes.mult(dimension, parameter, i, i + 1)
+				right = indexes.sum(dimension, parameter, i + 1)
 			]
 		} else {
-			indexes.mult(parameter, i, i + 1)
+			indexes.mult(dimension, parameter, i, i + 1)
 		}
 	}
 	
 	private def Expression mult(List<Index> indexes, List<Integer> dimension, int i, int j) {
-		if (j < indexes.size) {
+		if (j < dimension.size) {
 			NoopFactory::eINSTANCE.createMulExpression => [
 				left = NoopFactory::eINSTANCE.createByteLiteral => [value = dimension.get(j)]
 				right = indexes.mult(dimension, i, j + 1)
@@ -1423,7 +1449,7 @@ public class Members {
 	}
 	
 	private def isIndexImmediate(Member member, List<Index> indexes) {
-		(member.isBounded || indexes.size == 1) && indexes.forall[value.isConstant]
+		(member.isBounded || member.dimensionOf.size == 1) && indexes.forall[value?.isConstant]
 	}
 	
 	private def isAbsolute(String index) {
