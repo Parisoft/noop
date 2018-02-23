@@ -891,11 +891,7 @@ class Datas {
 	}
 
 	def computeTmp(AllocContext ctx, String varName, int size) {
-		if (size > 2) {
-			ctx.computeVar(varName, VAR_PAGE, size).map[it => [tmp = true]]
-		} else {
-			ctx.computeVar(varName, PTR_PAGE, size).map[it => [tmp = true]]
-		}
+		ctx.computeVar(varName, VAR_PAGE, size).map[it => [tmp = true]]
 	}
 
 	def void disoverlap(Iterable<MemChunk> chunks, String methodName) {

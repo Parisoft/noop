@@ -1,5 +1,6 @@
 package org.parisoft.noop.^extension
 
+import com.google.common.collect.HashBasedTable
 import com.google.inject.Inject
 import java.io.File
 import java.util.List
@@ -77,79 +78,107 @@ class Expressions {
 	@Inject extension TypeSystem
 	@Inject extension Collections
 
+	static val mulMethodCache = HashBasedTable::<Expression, Expression, MethodReference>create
+	static val divMethodCache = HashBasedTable::<Expression, Expression, MethodReference>create
+	static val modMethodCache = HashBasedTable::<Expression, Expression, MethodReference>create
+
 	static val recursions = ConcurrentHashMap::<Statement>newKeySet
 
 	def getFieldsInitializedOnContructor(NewInstance instance) {
 		instance.type.allFieldsTopDown.filter[nonStatic]
 	}
 
+	def getMultiplyMethod(Expression left, Expression right) {
+		mulMethodCache.get(left, right) ?: {
+			val mul = try {
+					val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+					new MethodReference => [args = newArrayList(left, const)]
+				} catch (NonConstantExpressionException exception) {
+					val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
+					new MethodReference => [args = newArrayList(right, const)]
+				}
+
+			mulMethodCache.put(left, right, mul)
+
+			mul
+		}
+	}
+
 	def getMultiplyMethod(Expression left, Expression right, NoopClass type) {
 		try {
-			try {
-				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
-				new MethodReference => [args = newArrayList(left, const)]
-			} catch (NonConstantExpressionException exception) {
-				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
-				new MethodReference => [args = newArrayList(right, const)]
-			}
+			left.getMultiplyMethod(right)
 		} catch (NonConstantExpressionException exception) {
-			if (type.sizeOf > 1) {
-				val lhsType = if (left.sizeOf < right.sizeOf) {
-						if (left.typeOf.isSigned) {
-							left.typeOf.toIntClass
+			val mul = if (type.sizeOf > 1) {
+					val lhsType = if (left.sizeOf < right.sizeOf) {
+							if (left.typeOf.isSigned) {
+								left.typeOf.toIntClass
+							} else {
+								left.typeOf.toUIntClass
+							}
 						} else {
-							left.typeOf.toUIntClass
+							left.typeOf
 						}
-					} else {
-						left.typeOf
-					}
 
-				val rhsType = if (left.sizeOf > right.sizeOf) {
-						if (right.typeOf.isSigned) {
-							right.typeOf.toIntClass
+					val rhsType = if (left.sizeOf > right.sizeOf) {
+							if (right.typeOf.isSigned) {
+								right.typeOf.toIntClass
+							} else {
+								right.typeOf.toUIntClass
+							}
 						} else {
-							right.typeOf.toUIntClass
+							right.typeOf
 						}
-					} else {
-						right.typeOf
-					}
 
-				if (lhsType.isSigned && rhsType.isUnsigned) {
-					new MethodReference => [
-						method = type.toMathClass().declaredMethods.findFirst [
-							name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
-								params.head.type.isEquals(rhsType) && params.last.type.isEquals(lhsType)
+					if (lhsType.isSigned && rhsType.isUnsigned) {
+						new MethodReference => [
+							method = type.toMathClass().declaredMethods.findFirst [
+								name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
+									params.head.type.isEquals(rhsType) && params.last.type.isEquals(lhsType)
+							]
+							args = newArrayList(right, left)
 						]
-						args = newArrayList(right, left)
-					]
+					} else {
+						new MethodReference => [
+							method = type.toMathClass().declaredMethods.findFirst [
+								name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
+									params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+							]
+							args = newArrayList(left, right)
+						]
+					}
 				} else {
 					new MethodReference => [
 						method = type.toMathClass().declaredMethods.findFirst [
-							name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
-								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+							name == '''«Members::STATIC_PREFIX»multiply8Bit'''.toString
 						]
 						args = newArrayList(left, right)
 					]
 				}
-			} else {
-				new MethodReference => [
-					method = type.toMathClass().declaredMethods.findFirst [
-						name == '''«Members::STATIC_PREFIX»multiply8Bit'''.toString
-					]
-					args = newArrayList(left, right)
-				]
-			}
+
+			mulMethodCache.put(left, right, mul)
+
+			mul
+		}
+	}
+
+	def getDivideMethod(Expression left, Expression right) {
+		divMethodCache.get(left, right) ?: {
+			val div = if (left.sizeOf == 1) {
+					val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+					new MethodReference => [args = newArrayList(left, const)]
+				} else {
+					throw new NonConstantExpressionException(left)
+				}
+
+			divMethodCache.put(left, right, div)
+
+			div
 		}
 	}
 
 	def getDivideMethod(Expression left, Expression right, NoopClass type) {
 		try {
-			if (left.sizeOf == 1) {
-				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
-				new MethodReference => [args = newArrayList(left, const)]
-			} else {
-				throw new NonConstantExpressionException(left)
-			}
+			left.getDivideMethod(right)
 		} catch (NonConstantExpressionException exception) {
 			val lhsType = if (left.sizeOf < right.sizeOf) {
 					if (left.typeOf.isSigned) {
@@ -163,34 +192,48 @@ class Expressions {
 
 			val rhsType = right.typeOf
 
-			if (lhsType.sizeOf > 1 || (lhsType.isUnsigned && rhsType.isSigned)) {
-				new MethodReference => [
-					method = type.toMathClass().declaredMethods.findFirst [
-						name == '''«Members::STATIC_PREFIX»divide'''.toString && params.isNotEmpty &&
-							params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+			val div = if (lhsType.sizeOf > 1 || (lhsType.isUnsigned && rhsType.isSigned)) {
+					new MethodReference => [
+						method = type.toMathClass().declaredMethods.findFirst [
+							name == '''«Members::STATIC_PREFIX»divide'''.toString && params.isNotEmpty &&
+								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+						]
+						args = newArrayList(left, right)
 					]
-					args = newArrayList(left, right)
-				]
-			} else {
-				new MethodReference => [
-					method = type.toMathClass().declaredMethods.findFirst [
-						name == '''«Members::STATIC_PREFIX»divide8Bit'''.toString && params.isNotEmpty &&
-							params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+				} else {
+					new MethodReference => [
+						method = type.toMathClass().declaredMethods.findFirst [
+							name == '''«Members::STATIC_PREFIX»divide8Bit'''.toString && params.isNotEmpty &&
+								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+						]
+						args = newArrayList(left, right)
 					]
-					args = newArrayList(left, right)
-				]
-			}
+				}
+
+			divMethodCache.put(left, right, div)
+
+			div
+		}
+	}
+
+	def getModuloMethod(Expression left, Expression right) {
+		modMethodCache.get(left, right) ?: {
+			val mod = if (left.sizeOf == 1) {
+					val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+					new MethodReference => [args = newArrayList(left, const)]
+				} else {
+					throw new NonConstantExpressionException(left)
+				}
+
+			modMethodCache.put(left, right, mod)
+
+			mod
 		}
 	}
 
 	def getModuloMethod(Expression left, Expression right, NoopClass type) {
 		try {
-			if (left.sizeOf == 1) {
-				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
-				new MethodReference => [args = newArrayList(left, const)]
-			} else {
-				throw new NonConstantExpressionException(left)
-			}
+			left.getModuloMethod(right)
 		} catch (NonConstantExpressionException exception) {
 			val lhsType = if (left.sizeOf < right.sizeOf) {
 					if (left.typeOf.isSigned) {
@@ -204,13 +247,17 @@ class Expressions {
 
 			val rhsType = right.typeOf
 
-			new MethodReference => [
+			val mod =new MethodReference => [
 				method = type.toMathClass().declaredMethods.findFirst [
 					name == '''«Members::STATIC_PREFIX»modulo'''.toString && params.isNotEmpty &&
 						params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
 				]
 				args = newArrayList(left, right)
 			]
+			
+			modMethodCache.put(left, right, mod)
+			
+			mod
 		}
 	}
 
@@ -229,6 +276,77 @@ class Expressions {
 			MemberRef:
 				expression.member.getLengthExpression(expression.indexes)
 		}
+	}
+
+	def isMethodInvocation(Expression expression) {
+		switch (expression) {
+			MulExpression:
+				try {
+					expression.left.getMultiplyMethod(expression.right).method !== null
+				} catch (NonConstantExpressionException e) {
+					true
+				}
+			DivExpression:
+				try {
+					expression.left.getDivideMethod(expression.right).method !== null
+				} catch (NonConstantExpressionException e) {
+					true
+				}
+			ModExpression:
+				try {
+					expression.left.getModuloMethod(expression.right).method !== null
+				} catch (NonConstantExpressionException e) {
+					true
+				}
+			MemberSelect:
+				expression.member instanceof Method && (expression.member as Method).isNonNativeArray
+			MemberRef:
+				expression.member instanceof Method && (expression.member as Method).isNonNativeArray
+		}
+	}
+
+	def boolean isComplexMemberArrayReference(Expression expression) {
+		switch (expression) {
+			AssignmentExpression:
+				expression.left.isComplexMemberArrayReference
+			MemberSelect:
+				if (expression.member.isIndexMulDivModExpression(expression.indexes)) {
+					val container = expression.eContainer
+					val member = if (container instanceof MemberSelect) {
+							container.member
+						} else if (container instanceof MemberRef) {
+							container.member
+						}
+
+					if (member instanceof Method) {
+						return member.isNonNativeArray
+					}
+
+					true
+				}
+			MemberRef:
+				if (expression.member.isIndexMulDivModExpression(expression.indexes)) {
+					val container = expression.eContainer
+					val member = if (container instanceof MemberSelect) {
+							container.member
+						} else if (container instanceof MemberRef) {
+							container.member
+						}
+
+					if (member instanceof Method) {
+						return member.isNonNativeArray
+					}
+
+					true
+				}
+		}
+	}
+
+	def containsMethodInvocation(Expression expression) {
+		expression.isMethodInvocation || expression.isComplexMemberArrayReference ||
+			expression.eAllContents.filter(Expression).exists [
+				methodInvocation || complexMemberArrayReference
+			]
 	}
 
 	def isConstant(Expression expression) {
@@ -734,12 +852,8 @@ class Expressions {
 		expression.typeOf.sizeOf
 	}
 
-	def fullSizeOf(ArrayLiteral array) {
-		array.sizeOf * (array.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1)
-	}
-
-	def fullSizeOf(NewInstance instance) {
-		instance.sizeOf * (instance.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1)
+	def fullSizeOf(Expression expression) {
+		expression.sizeOf * (expression.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1)
 	}
 
 	def void prepare(Expression expression, AllocContext ctx) {
@@ -991,7 +1105,7 @@ class Expressions {
 					method
 
 				if (method !== null) {
-					(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
+					method.allocInvocation(newArrayList(expression.left, expression.right), emptyList, ctx)
 				} else {
 					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 				}
@@ -1001,7 +1115,7 @@ class Expressions {
 					method
 
 				if (method !== null) {
-					(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
+					method.allocInvocation(newArrayList(expression.left, expression.right), emptyList, ctx)
 				} else {
 					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 				}
@@ -1011,7 +1125,7 @@ class Expressions {
 					method
 
 				if (method !== null) {
-					(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
+					method.allocInvocation(newArrayList(expression.left, expression.right), emptyList, ctx)
 				} else {
 					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 				}

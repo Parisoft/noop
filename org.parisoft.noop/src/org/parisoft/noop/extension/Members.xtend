@@ -19,7 +19,6 @@ import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.ReturnStatement
-import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.Variable
@@ -28,10 +27,7 @@ import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import java.util.concurrent.atomic.AtomicInteger
-import org.parisoft.noop.noop.MulExpression
-import org.parisoft.noop.noop.DivExpression
-import org.parisoft.noop.noop.ModExpression
+import com.google.common.collect.HashBasedTable
 
 public class Members {
 
@@ -61,6 +57,8 @@ public class Members {
 	@Inject extension Collections
 	@Inject extension IQualifiedNameProvider
 
+	static val indexExpressionCache = HashBasedTable::<Member, List<Index>, Expression>create
+	
 	static val running = ConcurrentHashMap::<Member>newKeySet
 	static val allocating = ConcurrentHashMap::<Member>newKeySet
 	static val preparing = ConcurrentHashMap::<Member>newKeySet
@@ -367,22 +365,8 @@ public class Members {
 		method.isNativeArray && method.name == METHOD_ARRAY_LENGTH
 	}
 	
-	def boolean isInvokedOn(Method method, Statement statement, CompileContext ctx) {
-		switch (statement) {
-			MulExpression: method.isInvokedOn(statement.left.getMultiplyMethod(statement.right, ctx.type).method, ctx)
-			DivExpression: method.isInvokedOn(statement.left.getDivideMethod(statement.right, ctx.type).method, ctx)
-			ModExpression: method.isInvokedOn(statement.left.getModuloMethod(statement.right, ctx.type).method, ctx)
-			MemberSelect: if (statement.member instanceof Method) method.isInvokedOn(statement.member as Method, ctx) else false
-			MemberRef: if (statement.member instanceof Method) method.isInvokedOn(statement.member as Method, ctx) else false
-			default: 				
-				statement !== null &&
-				statement.eAllContents.filter(MemberRef).map[member].filter(Method).exists[method.isInvokedOn(it, ctx)] ||
-				statement.eAllContents.filter(MemberSelect).map[member].filter(Method).exists[method.isInvokedOn(it, ctx)]
-		}
-	}
-	
-	def boolean isInvokedOn(Method m1, Method m2, CompileContext ctx) {
-		m1 == m2 || (m2 !== null && m2.body.statements.exists[m1.isInvokedOn(it, ctx)])
+	def isIndexMulDivModExpression(Member member, List<Index> indexes) {
+		!member.isIndexImmediate(indexes) && member.dimensionOf.size > 1
 	}
 	
 	def isArrayReference(Member member, List<Index> indexes) {
@@ -511,6 +495,10 @@ public class Members {
 	
 	def nameOfLen(Variable variable, int i) {
 		variable.nameOfLen(variable.getContainerOfType(Method).nameOf, i)
+	}
+	
+	def nameOfTmpParam(Variable param, Expression arg, String container) {
+		'''«container».tmp«param.name.toFirstUpper»@«arg.hashCode.toHexString»'''.toString
 	}
 
 	def nameOf(Method method) {
@@ -790,7 +778,9 @@ public class Members {
 			methodChunks += method.overriders.map[alloc(ctx)].flatten.toList
 		}
 		
-		chunks += receiver.alloc(ctx)
+		if (receiver !== null) {
+			chunks += receiver.alloc(ctx)
+		}
 
 		args.forEach [ arg, i |
 			if (arg.containsMulDivMod) {
@@ -801,6 +791,10 @@ public class Members {
 				}
 			} else {
 				chunks += arg.alloc(ctx)
+			}
+			
+			if (arg.containsMethodInvocation && !arg.isComplexMemberArrayReference) {
+				chunks += ctx.computeTmp(method.params.get(i).nameOfTmpParam(arg, ctx.container), arg.fullSizeOf)
 			}
 		]
 
@@ -811,30 +805,7 @@ public class Members {
 	}
 	
 	def allocInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
-		val chunks = newArrayList
-		
-		if (method.isNative) {
-			return chunks
-		}
-		
-		val methodChunks = method.alloc(ctx)
-		
-		args.forEach [ arg, i |
-			if (arg.containsMulDivMod) {
-				try {
-					chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
-				} finally {
-					ctx.types.pop
-				}
-			} else {
-				chunks += arg.alloc(ctx)
-			}
-		]
-
-		chunks += method.allocIndexes(indexes, new CompileContext => [indirect = method.nameOfReturn], ctx)
-		chunks += methodChunks
-
-		return chunks
+		method.allocInvocation(null, args, indexes, ctx)
 	}
 	
 	private def allocIndexes(Member member, List<Index> indexes, CompileContext ref, AllocContext ctx) {
@@ -858,7 +829,7 @@ public class Members {
 			}
 			
 			if (isIndexNonImmediate || ref.indirect !== null) {
-				chunks += ctx.computeTmp(indexes.nameOfElement(ctx.container), 2)
+				chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
 			}
 		}
 		
@@ -1199,16 +1170,34 @@ public class Members {
 			«ctx.pushAccIfOperating»
 			«ctx.pushRecusiveVars»
 			«val methodName = method.nameOf»
-			«var lastPushedParam = new AtomicInteger(-1)»
-			«FOR i : 0..< args.size»
+			«val tmps = newArrayList»
+			«tmps.add(0, null)»
+			«FOR i : 0 ..< args.size»
 				«val param = method.params.get(i)»
 				«val arg = args.get(i)»
-				«IF i > 0 && method.isInvokedOn(arg, ctx)»
-					«FOR p : lastPushedParam.incrementAndGet ..< i»
-						«method.params.get(p).push»
-					«ENDFOR»
+				«IF arg.containsMethodInvocation»
+					«val tmp = new CompileContext => [
+						container = ctx.container
+						type = param.type
+						
+						if (arg.isComplexMemberArrayReference) {
+							mode = Mode::REFERENCE							
+						} else {
+							absolute = param.nameOfTmpParam(arg, ctx.container)
+							mode = Mode::COPY
+						}
+					]»
+					«tmps.add(i, tmp)»
+					«arg.compile(tmp)»
+				«ELSE»
+					«tmps.add(i, null)»
 				«ENDIF»
-				«arg.compile(new CompileContext => [
+			«ENDFOR»
+			«FOR i : 0 ..< args.size»
+				«val param = method.params.get(i)»
+				«val arg = args.get(i)»
+				«val tmpCtx = tmps.get(i)»
+				«val paramCtx = new CompileContext => [
 					container = ctx.container
 					type = param.type
 					
@@ -1219,7 +1208,12 @@ public class Members {
 						indirect = param.nameOf
 						mode = Mode::POINT
 					}
-				])»
+				]»
+				«IF tmpCtx !== null»
+					«tmpCtx.resolveTo(paramCtx)»
+				«ELSE»
+					«arg.compile(paramCtx)»
+				«ENDIF»
 				«IF param.isUnbounded»
 					«IF arg.isUnbounded»
 						;FIXME repassing unbounded lengths
@@ -1234,9 +1228,6 @@ public class Members {
 						«ENDFOR»
 					«ENDIF»
 				«ENDIF»
-			«ENDFOR»
-			«FOR i : lastPushedParam.incrementAndGet >.. 0»
-				«method.params.get(i).pull»
 			«ENDFOR»
 			«IF method.isInline»
 				«FOR statement : method.body.statements»
@@ -1378,18 +1369,24 @@ public class Members {
 	'''
 	
 	private def getIndexExpression(Member member, List<Index> indexes) {
-		val memberTypeSize = member.typeOf.sizeOf
-		val memberDimension = member.dimensionOf
-		
-		if (memberTypeSize > 1) {
-			NoopFactory::eINSTANCE.createMulExpression => [
-				left = if (member.isBounded) indexes.sum(memberDimension, 0) else indexes.sum(memberDimension, member as Variable, 0)
-				right = NoopFactory::eINSTANCE.createByteLiteral => [value = memberTypeSize]
-			]
-		} else if (member.isBounded) {
-			indexes.sum(memberDimension, 0)
-		} else {
-			indexes.sum(memberDimension, member as Variable, 0)
+		indexExpressionCache.get(member, indexes) ?: {
+			val typeSize = member.typeOf.sizeOf
+			val dimension = member.dimensionOf
+			
+			val expr = if (typeSize > 1) {
+				NoopFactory::eINSTANCE.createMulExpression => [
+					left = if (member.isBounded) indexes.sum(dimension, 0) else indexes.sum(dimension, member as Variable, 0)
+					right = NoopFactory::eINSTANCE.createByteLiteral => [value = typeSize]
+				]
+			} else if (member.isBounded) {
+				indexes.sum(dimension, 0)
+			} else {
+				indexes.sum(dimension, member as Variable, 0)
+			}
+			
+			indexExpressionCache.put(member, indexes, expr)
+			
+			expr
 		}
 	}
 	
