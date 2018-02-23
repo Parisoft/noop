@@ -1217,12 +1217,22 @@ public class Members {
 				«IF param.isUnbounded»
 					«IF arg.isUnbounded»
 						;FIXME repassing unbounded lengths
+						«IF arg instanceof MemberRef»
+							«val member = arg.member as Variable»
+							«FOR src : arg.indexes.size ..< arg.member.dimensionOf.size»
+								«val dst = src - arg.indexes.size»
+									LDA «member.nameOfLen(src)» + 0
+									STA «param.nameOfLen(methodName, dst)» + 0
+									LDA «member.nameOfLen(src)» + 1
+									STA «param.nameOfLen(methodName, dst)» + 1
+							«ENDFOR»
+						«ENDIF»
 					«ELSE»
 						«val dimension = arg.dimensionOf»
 						«FOR dim : 0..< dimension.size»
 							«val len = dimension.get(dim).toHex»
 								LDA #<«len»
-								STA «param.nameOfLen(methodName, dim)»
+								STA «param.nameOfLen(methodName, dim)» + 0
 								LDA #>«len»
 								STA «param.nameOfLen(methodName, dim)» + 1
 						«ENDFOR»
