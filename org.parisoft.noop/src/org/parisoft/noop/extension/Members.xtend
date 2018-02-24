@@ -1216,7 +1216,7 @@ public class Members {
 				«ENDIF»
 				«IF param.isUnbounded»
 					«IF arg.isUnbounded»
-						;FIXME repassing unbounded lengths
+						;TODO make this for MemberSelect and AssignmentExpression too
 						«IF arg instanceof MemberRef»
 							«val member = arg.member as Variable»
 							«FOR src : arg.indexes.size ..< arg.member.dimensionOf.size»
@@ -1271,9 +1271,10 @@ public class Members {
 		«ENDIF»
 	'''
 	
-	//TODO today receiver is not compiled (if so a stack overflow occurs), when the pointers come out it'll be needed
 	private def compileNativeInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
+		;TODO compile receiver by copying it, removing indexes, and call receiver.compile with a new context moded as null
 		«IF method.name == METHOD_ARRAY_LENGTH»
+			;TODO make this for MemberSelect and AssignmentExpression too
 			«IF receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable && ((receiver as MemberRef).member as Variable).isUnbounded»
 				«val dim = (receiver as MemberRef).indexes.size»
 				«val len = new CompileContext => [
