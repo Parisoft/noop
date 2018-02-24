@@ -15,18 +15,18 @@ import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.ForStatement
 import org.parisoft.noop.noop.ForeverStatement
 import org.parisoft.noop.noop.IfStatement
+import org.parisoft.noop.noop.MemberRef
+import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.ReturnStatement
 import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.StorageType
+import org.parisoft.noop.noop.Super
+import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
-
+import static org.parisoft.noop.^extension.Cache.*;
 import static extension java.lang.Integer.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.MemberRef
-import org.parisoft.noop.noop.This
-import org.parisoft.noop.noop.MemberSelect
-import org.parisoft.noop.noop.Super
 
 class Statements {
 
@@ -137,142 +137,151 @@ class Statements {
 	}
 
 	def void prepare(Statement statement, AllocContext ctx) {
-		switch (statement) {
-			Variable: {
-				statement.value?.prepare(ctx)
+		if (prepared.add(statement)) {
+			switch (statement) {
+				Variable: {
+					statement.value?.prepare(ctx)
 
-				if (statement.isROM) {
-					if (statement.storage.type == StorageType.PRGROM) {
-						ctx.prgRoms.put(statement.nameOfConstant, statement)
-					} else if (statement.storage.type == StorageType.CHRROM) {
-						ctx.chrRoms.put(statement.nameOfConstant, statement)
+					if (statement.isROM) {
+						if (statement.storage.type == StorageType.PRGROM) {
+							ctx.prgRoms.put(statement.nameOfConstant, statement)
+						} else if (statement.storage.type == StorageType.CHRROM) {
+							ctx.chrRoms.put(statement.nameOfConstant, statement)
+						}
+					} else if (statement.isConstant) {
+						ctx.constants.put(statement.nameOfConstant, statement)
+					} else if (statement.isStatic) {
+						ctx.statics.put(statement.nameOfStatic, statement)
 					}
-				} else if (statement.isConstant) {
-					ctx.constants.put(statement.nameOfConstant, statement)
-				} else if (statement.isStatic) {
-					ctx.statics.put(statement.nameOfStatic, statement)
 				}
-			}
-			IfStatement: {
-				statement.condition.prepare(ctx)
-				statement.body.statements.forEach[prepare(ctx)]
-				statement.^else?.prepare(ctx)
-			}
-			ForStatement: {
-				statement.variables.forEach[prepare(ctx)]
-				statement.assignments.forEach[prepare(ctx)]
-				statement.condition?.prepare(ctx)
-				statement.expressions.forEach[prepare(ctx)]
-				statement.body.statements.forEach[prepare(ctx)]
-			}
-			ForeverStatement: {
-				statement.body.statements.forEach[prepare(ctx)]
-			}
-			AsmStatement: {
-				statement.vars.forEach[prepare(ctx)]
-			}
-			ReturnStatement: {
-				statement.value?.prepare(ctx)
-			}
-			Expression: {
-				statement.prepare(ctx)
+				IfStatement: {
+					statement.condition.prepare(ctx)
+					statement.body.statements.forEach[prepare(ctx)]
+					statement.^else?.prepare(ctx)
+				}
+				ForStatement: {
+					statement.variables.forEach[prepare(ctx)]
+					statement.assignments.forEach[prepare(ctx)]
+					statement.condition?.prepare(ctx)
+					statement.expressions.forEach[prepare(ctx)]
+					statement.body.statements.forEach[prepare(ctx)]
+				}
+				ForeverStatement: {
+					statement.body.statements.forEach[prepare(ctx)]
+				}
+				AsmStatement: {
+					statement.vars.forEach[prepare(ctx)]
+				}
+				ReturnStatement: {
+					statement.value?.prepare(ctx)
+				}
+				Expression: {
+					prepared.remove(statement)
+					statement.prepare(ctx)
+				}
 			}
 		}
 	}
 
 	def prepare(ElseStatement elseStatement, AllocContext ctx) {
-		if (elseStatement.^if !== null) {
-			elseStatement.^if.prepare(ctx)
-		} else if (elseStatement.body !== null) {
-			elseStatement.body.statements.forEach[prepare(ctx)]
+		if (prepared.add(elseStatement)) {
+			if (elseStatement.^if !== null) {
+				elseStatement.^if.prepare(ctx)
+			} else if (elseStatement.body !== null) {
+				elseStatement.body.statements.forEach[prepare(ctx)]
+			}
 		}
 	}
 
 	def List<MemChunk> alloc(Statement statement, AllocContext ctx) {
-		switch (statement) {
-			Variable: {
-				val name = statement.nameOf(ctx.container)
-				val chunks = newArrayList
+		allocated.get(statement, [
+			switch (statement) {
+				Variable: {
+					val name = statement.nameOf(ctx.container)
+					val chunks = newArrayList
 
-				if (statement.isParameter && (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty)) {
-					chunks += ctx.computePtr(name)
+					if (statement.isParameter && (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty)) {
+						chunks += ctx.computePtr(name)
 
-					if (statement.isUnbounded) {
-						for (i : 0 ..< statement.dimensionOf.size) {
-							chunks += ctx.computeVar(statement.nameOfLen(ctx.container, i), 2)
+						if (statement.isUnbounded) {
+							for (i : 0 ..< statement.dimensionOf.size) {
+								chunks += ctx.computeVar(statement.nameOfLen(ctx.container, i), 2)
+							}
 						}
+					} else if (statement.isNonStatic) {
+						val page = statement?.storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE
+						chunks += ctx.computeVar(name, page, statement.sizeOf)
 					}
-				} else if (statement.isNonStatic) {
-					val page = statement?.storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE
-					chunks += ctx.computeVar(name, page, statement.sizeOf)
+
+					return (chunks + statement?.value.alloc(ctx)).filterNull.toList
 				}
+				IfStatement: {
+					val snapshot = ctx.snapshot
+					val chunks = statement.condition.alloc(ctx) +
+						statement.body.statements.map[alloc(ctx)].flatten.toList
 
-				return (chunks + statement?.value.alloc(ctx)).filterNull.toList
-			}
-			IfStatement: {
-				val snapshot = ctx.snapshot
-				val chunks = statement.condition.alloc(ctx) + statement.body.statements.map[alloc(ctx)].flatten.toList
+					chunks.disoverlap(ctx.container)
 
-				chunks.disoverlap(ctx.container)
+					ctx.restoreTo(snapshot)
 
-				ctx.restoreTo(snapshot)
-
-				return (chunks + (statement?.^else?.alloc(ctx) ?: emptyList)).filterNull.toList
-			}
-			ForStatement: {
-				val snapshot = ctx.snapshot
-				val chunks = statement.variables.map[alloc(ctx)].flatten.toList
-				chunks += statement.assignments.map[alloc(ctx)].flatten.toList
-				chunks += statement.condition?.alloc(ctx)
-				chunks += statement.expressions.map[alloc(ctx)].flatten.toList
-				chunks += statement.body.statements.map[alloc(ctx)].flatten.toList
-				chunks.disoverlap(ctx.container)
-
-				ctx.restoreTo(snapshot)
-
-				return chunks.filterNull.toList
-			}
-			ForeverStatement: {
-				val snapshot = ctx.snapshot
-				val chunks = statement.body.statements.map[alloc(ctx)].flatten.toList
-
-				chunks.disoverlap(ctx.container)
-
-				ctx.restoreTo(snapshot)
-
-				return chunks.toList
-			}
-			ReturnStatement: {
-				val chunks = newArrayList
-
-				if (statement.isNonVoid) {
-					chunks += ctx.computePtr(statement.nameOf)
+					return (chunks + (statement?.^else?.alloc(ctx) ?: emptyList)).filterNull.toList
 				}
+				ForStatement: {
+					val snapshot = ctx.snapshot
+					val chunks = statement.variables.map[alloc(ctx)].flatten.toList
+					chunks += statement.assignments.map[alloc(ctx)].flatten.toList
+					chunks += statement.condition?.alloc(ctx)
+					chunks += statement.expressions.map[alloc(ctx)].flatten.toList
+					chunks += statement.body.statements.map[alloc(ctx)].flatten.toList
+					chunks.disoverlap(ctx.container)
 
-				chunks += statement.value?.alloc(ctx)
+					ctx.restoreTo(snapshot)
 
-				return chunks.filterNull.toList
+					return chunks.filterNull.toList
+				}
+				ForeverStatement: {
+					val snapshot = ctx.snapshot
+					val chunks = statement.body.statements.map[alloc(ctx)].flatten.toList
+
+					chunks.disoverlap(ctx.container)
+
+					ctx.restoreTo(snapshot)
+
+					return chunks.toList
+				}
+				ReturnStatement: {
+					val chunks = newArrayList
+
+					if (statement.isNonVoid) {
+						chunks += ctx.computePtr(statement.nameOf)
+					}
+
+					chunks += statement.value?.alloc(ctx)
+
+					return chunks.filterNull.toList
+				}
+				Expression:
+					statement.alloc(ctx)
+				default:
+					newArrayList
 			}
-			Expression:
-				statement.alloc(ctx)
-			default:
-				newArrayList
-		}
+		])
 	}
 
 	def alloc(ElseStatement statement, AllocContext ctx) {
-		if (statement.^if !== null) {
-			return statement.^if.alloc(ctx)
-		}
+		allocated.get(statement, [
+			if (statement.^if !== null) {
+				return statement.^if.alloc(ctx)
+			}
 
-		val snapshot = ctx.snapshot
-		val chunks = statement.body.statements.map[alloc(ctx)].flatten.toList
+			val snapshot = ctx.snapshot
+			val chunks = statement.body.statements.map[alloc(ctx)].flatten.toList
 
-		chunks.disoverlap(ctx.container)
-		ctx.restoreTo(snapshot)
+			chunks.disoverlap(ctx.container)
+			ctx.restoreTo(snapshot)
 
-		return chunks
-
+			return chunks
+		])
 	}
 
 	def String compile(Statement statement, CompileContext ctx) {

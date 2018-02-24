@@ -23,11 +23,12 @@ import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.Variable
 
+import static org.parisoft.noop.^extension.Cache.*
+
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import com.google.common.collect.HashBasedTable
 
 public class Members {
 
@@ -57,11 +58,8 @@ public class Members {
 	@Inject extension Collections
 	@Inject extension IQualifiedNameProvider
 
-	static val indexExpressionCache = HashBasedTable::<Member, List<Index>, Expression>create
-	
 	static val running = ConcurrentHashMap::<Member>newKeySet
 	static val allocating = ConcurrentHashMap::<Member>newKeySet
-	static val preparing = ConcurrentHashMap::<Member>newKeySet
 
 	def getOverriders(Method method) {
 		method.containerClass.subClasses.map[declaredMethods.filter[it.isOverrideOf(method)]].filterNull.flatten
@@ -599,12 +597,8 @@ public class Members {
 	'''
 
 	def prepare(Method method, AllocContext ctx) {
-		if (preparing.add(method)) {
-			try {
-				method.body.statements.forEach[prepare(ctx)]
-			} finally {
-				preparing.remove(method)		
-			}
+		if (prepared.add(method)) {
+			method.body.statements.forEach[prepare(ctx)]
 		}
 	}
 	
@@ -683,25 +677,27 @@ public class Members {
 	def alloc(Method method, AllocContext ctx) {
 		if (allocating.add(method)) {
 			try {
-				val snapshot = ctx.snapshot
-				val methodName = method.nameOf
-
-				ctx.container = methodName
-
-				val receiver = if (method.isNonStatic) {
-						ctx.computePtr(method.nameOfReceiver)
-					} else {
-						emptyList
-					}
-
-				val chunks = (receiver + method.params.map[alloc(ctx)].flatten).toList
-				chunks += method.body.statements.map[alloc(ctx)].flatten.toList
-				chunks.disoverlap(methodName)
-
-				ctx.restoreTo(snapshot)
-				ctx.methods.put(method.nameOf, method)
-
-				return chunks
+				allocated.get(method, [
+					val snapshot = ctx.snapshot
+					val methodName = method.nameOf
+	
+					ctx.container = methodName
+	
+					val receiver = if (method.isNonStatic) {
+							ctx.computePtr(method.nameOfReceiver)
+						} else {
+							emptyList
+						}
+	
+					val chunks = (receiver + method.params.map[alloc(ctx)].flatten).toList
+					chunks += method.body.statements.map[alloc(ctx)].flatten.toList
+					chunks.disoverlap(methodName)
+	
+					ctx.restoreTo(snapshot)
+					ctx.methods.put(method.nameOf, method)
+	
+					return chunks
+				])
 			} finally {
 				allocating.remove(method)
 			}
@@ -1381,25 +1377,22 @@ public class Members {
 	'''
 	
 	private def getIndexExpression(Member member, List<Index> indexes) {
-		indexExpressionCache.get(member, indexes) ?: {
+		indexExpressions.get(member, indexes, [
 			val typeSize = member.typeOf.sizeOf
 			val dimension = member.dimensionOf
 			
-			val expr = if (typeSize > 1) {
-				NoopFactory::eINSTANCE.createMulExpression => [
+			if (typeSize > 1) {
+				val mul = NoopFactory::eINSTANCE.createMulExpression => [
 					left = if (member.isBounded) indexes.sum(dimension, 0) else indexes.sum(dimension, member as Variable, 0)
 					right = NoopFactory::eINSTANCE.createByteLiteral => [value = typeSize]
 				]
+				mul
 			} else if (member.isBounded) {
 				indexes.sum(dimension, 0)
 			} else {
 				indexes.sum(dimension, member as Variable, 0)
 			}
-			
-			indexExpressionCache.put(member, indexes, expr)
-			
-			expr
-		}
+		])
 	}
 	
 	private def Expression mult(List<Index> indexes, List<Integer> dimension, Variable parameter, int i, int j) {

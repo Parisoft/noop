@@ -1,11 +1,9 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
+import java.util.ArrayList
 import java.util.Collection
-import java.util.HashMap
-import java.util.HashSet
 import java.util.NoSuchElementException
-import java.util.WeakHashMap
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.AllocContext
@@ -13,8 +11,9 @@ import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 
+import static org.parisoft.noop.^extension.Cache.*
+
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import java.util.ArrayList
 
 class Classes {
 
@@ -23,11 +22,8 @@ class Classes {
 	@Inject extension Members
 	@Inject extension Statements
 	@Inject extension TypeSystem
+	@Inject extension Collections
 	@Inject extension IQualifiedNameProvider
-
-	static val classeSizeCache = new HashMap<NoopClass, Integer>
-	static val classesCache = new HashSet<NoopClass>
-	static val contextCache = new WeakHashMap<NoopClass, AllocContext>
 
 	def getSuperClasses(NoopClass c) {
 		val visited = <NoopClass>newArrayList()
@@ -50,7 +46,7 @@ class Classes {
 	}
 
 	def getSubClasses(NoopClass c) {
-		classesCache.filter[isNotEquals(c)].filter[isInstanceOf(c)]
+		classes.filter[isNotEquals(c)].filter[isInstanceOf(c)]
 	}
 
 	def getContainerClass(EObject e) {
@@ -213,11 +209,7 @@ class Classes {
 	}
 
 	def int sizeOf(NoopClass c) {
-		classeSizeCache.get(c) ?: {
-			val size = c.fullSizeOf
-			classeSizeCache.put(c, size)
-			size
-		}
+		classeSize.get(c, [c.fullSizeOf])
 	}
 
 	private def int fullSizeOf(NoopClass c) {
@@ -248,7 +240,7 @@ class Classes {
 	}
 
 	def prepare(NoopClass gameImplClass) {
-		contextCache.get(gameImplClass) ?: {
+		contexts.get(gameImplClass, [
 			val ctx = new AllocContext
 
 			TypeSystem::context.set(gameImplClass)
@@ -257,15 +249,14 @@ class Classes {
 
 			ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
 
-			classesCache.clear
-			classesCache.addAll(ctx.classes.values)
+			classes.clear
+			classes.addAll(ctx.classes.values)
 
-			classeSizeCache.clear
+			classeSize.clear
 			ctx.classes.values.forEach[sizeOf]
 
-			contextCache.put(gameImplClass, ctx)
 			ctx
-		}
+		])
 	}
 
 	def void prepare(NoopClass noopClass, AllocContext ctx) {
@@ -279,29 +270,31 @@ class Classes {
 	}
 
 	def void alloc(NoopClass noopClass, AllocContext ctx) {
-		if (noopClass.isMain) {
-			ctx.statics.values.forEach[alloc(ctx)]
-		}
-
-		val chunks = noopClass.allMethodsBottomUp.findFirst[nmi]?.alloc(ctx) ?: newArrayList
-
-		ctx.counters.forEach [ counter, page |
-			try {
-				counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
-			} catch (NoSuchElementException e) {
+		allocated.get(noopClass, [
+			if (noopClass.isMain) {
+				ctx.statics.values.forEach[alloc(ctx)]
 			}
-		]
 
-		chunks += noopClass.allMethodsBottomUp.findFirst[irq]?.alloc(ctx) ?: emptyList
+			val chunks = noopClass.allMethodsBottomUp.findFirst[nmi]?.alloc(ctx) ?: newArrayList
 
-		ctx.counters.forEach [ counter, page |
-			try {
-				counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
-			} catch (NoSuchElementException e) {
-			}
-		]
+			ctx.counters.forEach [ counter, page |
+				try {
+					counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
+				} catch (NoSuchElementException e) {
+				}
+			]
 
-		noopClass.allMethodsBottomUp.findFirst[reset]?.alloc(ctx)
+			chunks += noopClass.allMethodsBottomUp.findFirst[irq]?.alloc(ctx) ?: emptyList
+
+			ctx.counters.forEach [ counter, page |
+				try {
+					counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
+				} catch (NoSuchElementException e) {
+				}
+			]
+
+			noopClass.allMethodsBottomUp.findFirst[reset]?.alloc(ctx)
+		])
 	}
 
 }

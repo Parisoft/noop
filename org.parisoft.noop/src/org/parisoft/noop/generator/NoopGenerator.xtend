@@ -23,6 +23,7 @@ import org.parisoft.noop.^extension.Statements
 import org.parisoft.noop.noop.NoopClass
 
 import static org.parisoft.noop.generator.Asm8.*
+import org.parisoft.noop.^extension.Cache
 
 /**
  * Generates code from your model files on save.
@@ -55,12 +56,17 @@ class NoopGenerator extends AbstractGenerator {
 				inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
 				outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
 				listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
+	
+				val ini = System::currentTimeMillis
 
 				try {
 					compile
 				} catch (Exception exception) {
 					Asm8.errStream.println(exception.message)
 					throw exception
+				} finally {
+					println('''Assembly = «System::currentTimeMillis - ini»ms''')
+					Cache::clear
 				}
 			]
 		}
@@ -73,14 +79,24 @@ class NoopGenerator extends AbstractGenerator {
 			return null
 		}
 
+		var ini = System::currentTimeMillis
 		val ctx = mainClass.prepare
+		println('''RePrepare = «System::currentTimeMillis - ini»ms''')
 
+		ini = System::currentTimeMillis
 		mainClass.alloc(ctx)
+		println('''Alloc = «System::currentTimeMillis - ini»ms''')
 
 		ctx.prgRoms.entrySet.removeIf[ctx.prgRoms.values.exists[rom|rom.isOverrideOf(value)]]
 		ctx.chrRoms.entrySet.removeIf[ctx.chrRoms.values.exists[rom|rom.isOverrideOf(value)]]
 
-		val content = ctx.compile.optimize
+		ini = System::currentTimeMillis
+		val code = ctx.compile
+		println('''Compile = «System::currentTimeMillis - ini»ms''')
+		
+		ini = System::currentTimeMillis
+		val content = code.optimize
+		println('''Optimize = «System::currentTimeMillis - ini»ms''')
 
 		new ASM(mainClass.name, content)
 	}

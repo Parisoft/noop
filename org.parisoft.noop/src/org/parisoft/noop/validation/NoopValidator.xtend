@@ -212,8 +212,13 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
 		if (c.isMain) {
+			val ini = System::currentTimeMillis
+			
+			val ctx = c.prepare
 			val project = c.URI.project.name
-			val classes = c.prepare.classes.values.filter[URI.project?.name == project]
+			val classes = ctx.classes.values.filter[URI.project?.name == project]
+			
+			println('''Prepare = «System::currentTimeMillis - ini»ms''')
 
 			classes.filter[sizeOf > 0x100].forEach [
 				error('''Class «name» size is «sizeOf» bytes which overflows the maximum of 256 bytes''', it,
