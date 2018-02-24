@@ -1261,6 +1261,7 @@ public class Members {
 					}
 				]»
 				«method.compileIndexes(indexes, ret)»
+				;TODO if ctx is indirect (mode POINT) then copy ret to a aux var then point to ctx
 				«IF ctx.mode === Mode::COPY && method.isArrayReference(indexes)»
 					«ret.lengthExpression = method.getLengthExpression(indexes)»
 					«ret.copyArrayTo(ctx)»
