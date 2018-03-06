@@ -11,19 +11,18 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
-import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.consoles.Console
+import org.parisoft.noop.^extension.Cache
 import org.parisoft.noop.^extension.Classes
-import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Datas
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
-import org.parisoft.noop.^extension.Statements
 import org.parisoft.noop.noop.NoopClass
 
 import static org.parisoft.noop.generator.Asm8.*
-import org.parisoft.noop.^extension.Cache
+import org.parisoft.noop.generator.mapper.Nrom
+import org.parisoft.noop.generator.mapper.Unrom
 
 /**
  * Generates code from your model files on save.
@@ -35,12 +34,11 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject extension Files
 	@Inject extension Classes
 	@Inject extension Members
-	@Inject extension Statements
-	@Inject extension Collections
 	@Inject extension Expressions
-	@Inject extension IQualifiedNameProvider
 
 	@Inject Provider<Console> console
+	@Inject Nrom nrom
+	@Inject Unrom unrom
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 		val asm = resource.compile
@@ -202,7 +200,7 @@ class NoopGenerator extends AbstractGenerator {
 			«IF ctx.resetCounter(page) == 0»«noop»«ENDIF»
 		«ENDFOR»
 		«FOR page : 0..< ctx.counters.size»
-			«val staticVars = ctx.statics.values.filter[storageOf == page]»
+			«val staticVars = ctx.statics.values.filter[(storageOf ?: 0) == page]»
 			«FOR staticVar : staticVars»
 				«staticVar.nameOfStatic» = «ctx.counters.get(page).getAndAdd(staticVar.sizeOf).toHexString(4)»
 			«ENDFOR»
@@ -239,56 +237,15 @@ class NoopGenerator extends AbstractGenerator {
 			.db «inesMap.toHexString» | «inesMir.toHexString»
 			.dsb 9, $00 ;clear the remaining bytes to 16
 			
-		;----------------------------------------------------------------
-		; PRG-ROM Bank(s)
-		;----------------------------------------------------------------
-			.base $10000 - («(inesPrg / 16).toHexString» * $4000) 
-		
-		«FOR rom : ctx.prgRoms.values.filter[nonDMC]»
-			«rom.compile(new CompileContext)»
-		«ENDFOR»
-		«IF ctx.methods.values.exists[objectSize] && ctx.constructors.size > 0»
-			Object.$sizes:
-				.db «ctx.constructors.values.sortBy[type.name].map[type.rawSizeOf].join(', ', [toHexString])»
-		«ENDIF»
-		
-		;-- Methods -----------------------------------------------------
-		«FOR method : ctx.methods.values.sortBy[fullyQualifiedName]»
-			«method.compile(new CompileContext => [allocation = ctx])»
-			
-		«ENDFOR»
-		;-- Constructors ------------------------------------------------
-		«FOR constructor : ctx.constructors.values.sortBy[type.name]»
-			«constructor.compile(null)»
-			
-		«ENDFOR»
-		«val dmcList = ctx.prgRoms.values.filter[DMC].toList»
-		«IF dmcList.isNotEmpty»
-			;-- DMC sound data-----------------------------------------------
-				.org «Members::FT_DPCM_OFF»
-			«FOR dmcRom : dmcList»
-				«dmcRom.compile(new CompileContext)»
-			«ENDFOR»
-		«ENDIF»
-		
-		;----------------------------------------------------------------
-		; Interrupt vectors
-		;----------------------------------------------------------------
-			.org $FFFA     
-		
-		 	.dw «ctx.methods.values.findFirst[nmi]?.nameOf ?: 0»
-		 	.dw «ctx.methods.values.findFirst[reset]?.nameOf ?: 0»
-		 	.dw «ctx.methods.values.findFirst[irq]?.nameOf ?: 0»
-		
-		;----------------------------------------------------------------
-		; CHR-ROM bank(s)
-		;----------------------------------------------------------------
-		   .base $0000
-		
-		«FOR rom : ctx.chrRoms.values»
-			«rom.compile(new CompileContext)»
-		«ENDFOR»
+		«mapper(inesMap)?.compile(ctx)»
 	'''
+
+	private def mapper(int inesmap) {
+		switch (inesmap) {
+			case 0: nrom
+			case 2: unrom
+		}
+	}
 
 	private def toHexString(int value) {
 		value.toHexString(2)

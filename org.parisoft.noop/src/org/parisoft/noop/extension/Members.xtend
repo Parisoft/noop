@@ -513,7 +513,7 @@ public class Members {
 	
 	def storageOf(Member member) {
 		if (member.isROM) {
-			member.storage.location?.valueOf as Integer ?: 0 // FIXME change to the current mapper's default bank
+			member.storage.location?.valueOf as Integer
 		} else if (member instanceof Variable) {
 			if (member.storage?.type == StorageType::ZP) {
 				Datas::PTR_PAGE
@@ -596,9 +596,11 @@ public class Members {
 		«ENDIF»
 	'''
 
-	def prepare(Method method, AllocContext ctx) {
+	def void prepare(Method method, AllocContext ctx) {
 		if (prepared.add(method)) {
+			val ini = System::currentTimeMillis
 			method.body.statements.forEach[prepare(ctx)]
+			println('''prepared «method.containerClass.name».«method.name» = «System::currentTimeMillis - ini»ms''')
 		}
 	}
 	
@@ -613,11 +615,11 @@ public class Members {
 		variable.prepareIndexes(indexes, ctx)
 	}
 	
-	def prepareInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
+	def void prepareInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
 		if (method.isNative) {
 			return
 		}
-		
+		val ini = System::currentTimeMillis
 		receiver.prepare(ctx)
 		
 		args.forEach [ arg, i |
@@ -635,6 +637,9 @@ public class Members {
 		method.prepare(ctx)
 		method.overriders.forEach[prepare(ctx)]
 		method.prepareIndexes(indexes, ctx)
+		if (method.name == '$paintBackground' || method.name == '$drawBackgroundSection') {
+			println('''prepared call to «method.name» = «System::currentTimeMillis - ini»ms''')
+		}
 	}
 	
 	def prepareInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
