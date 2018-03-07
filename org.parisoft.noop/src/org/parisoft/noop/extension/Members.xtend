@@ -204,8 +204,8 @@ public class Members {
 		}
 	}
 
-	def isNonROM(Variable variable) {
-		!variable.isROM
+	def isNonROM(Member member) {
+		!member.isROM
 	}
 	
 	def isDMC(Variable variable) {
@@ -521,7 +521,7 @@ public class Members {
 				Datas::VAR_PAGE
 			}
 		} else {
-			0
+			null
 		}
 	}
 

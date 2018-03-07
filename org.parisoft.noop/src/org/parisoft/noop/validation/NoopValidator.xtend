@@ -574,7 +574,7 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def methodStorageType(Method m) {
-		if (m.storage !== null && m.isNonInline && m.isNonIrqImpl) {
+		if (m.storage !== null && m.isNonROM && m.isNonInline && m.isNonIrqImpl) {
 			error('''Methods cannot be tagged as «m.storage.type.literal.substring(0)»''', MEMBER__STORAGE,
 				METHOD_STORAGE_TYPE, m.name, m.storage.type.literal)
 		}

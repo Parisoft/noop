@@ -18,11 +18,10 @@ import org.parisoft.noop.^extension.Datas
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.noop.NoopClass
 
 import static org.parisoft.noop.generator.Asm8.*
-import org.parisoft.noop.generator.mapper.Nrom
-import org.parisoft.noop.generator.mapper.Unrom
 
 /**
  * Generates code from your model files on save.
@@ -37,8 +36,7 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject extension Expressions
 
 	@Inject Provider<Console> console
-	@Inject Nrom nrom
-	@Inject Unrom unrom
+	@Inject MapperFactory mapperFactory
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 		val asm = resource.compile
@@ -234,18 +232,11 @@ class NoopGenerator extends AbstractGenerator {
 			.db 'NES', $1A ;identification of the iNES header
 			.db «(inesPrg / 16).toHexString» ;number of 16KB PRG-ROM pages
 			.db «(inesChr / 8).toHexString» ;number of 8KB CHR-ROM pages
-			.db «inesMap.toHexString» | «inesMir.toHexString»
+			.db «inesMap.toHexString(1)»0 | «inesMir.toHexString»
 			.dsb 9, $00 ;clear the remaining bytes to 16
 			
-		«mapper(inesMap)?.compile(ctx)»
+		«mapperFactory.get(inesMap)?.compile(ctx)»
 	'''
-
-	private def mapper(int inesmap) {
-		switch (inesmap) {
-			case 0: nrom
-			case 2: unrom
-		}
-	}
 
 	private def toHexString(int value) {
 		value.toHexString(2)

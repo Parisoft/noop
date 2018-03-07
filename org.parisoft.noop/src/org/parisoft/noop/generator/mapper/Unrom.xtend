@@ -27,7 +27,7 @@ class Unrom extends Mapper {
 			;----------------------------------------------------------------
 			; PRG-ROM Bank #«bank»«IF bank == defaultBank» FIXED«ENDIF»
 			;----------------------------------------------------------------
-				.base «IF bank == defaultBank»$C0000«ELSE»$8000«ENDIF» 
+				.base «IF bank == defaultBank»$C000«ELSE»$8000«ENDIF» 
 			
 			«FOR rom : ctx.prgRoms.values.filter[nonDMC].filter[(storageOf ?: defaultBank) == bank]»
 				«rom.compile(new CompileContext)»
@@ -36,18 +36,25 @@ class Unrom extends Mapper {
 				Object.$sizes:
 					.db «ctx.constructors.values.sortBy[type.name].map[type.rawSizeOf].join(', ', [toHexString])»
 			«ENDIF»
-			
-			;-- Methods -----------------------------------------------------
-			«FOR method : ctx.methods.values.filter[(storageOf ?: defaultBank) == bank].sortBy[fullyQualifiedName]»
-				«method.compile(new CompileContext => [allocation = ctx])»
+			«val methods = ctx.methods.values.filter[(storageOf ?: defaultBank) == bank].sortBy[fullyQualifiedName]»
+			«IF methods.isNotEmpty»
+				«noop»
 				
-			«ENDFOR»
-			«IF bank == defaultBank»
-				;-- Constructors ------------------------------------------------
-				«FOR constructor : ctx.constructors.values.sortBy[type.name]»
-					«constructor.compile(null)»
+				;-- Methods -----------------------------------------------------
+				«FOR method : methods»
+					«method.compile(new CompileContext => [allocation = ctx])»
 					
 				«ENDFOR»
+			«ENDIF»
+			«IF bank == defaultBank»
+				«val constructors = ctx.constructors.values.sortBy[type.name]»
+				«IF constructors.isNotEmpty»
+					;-- Constructors ------------------------------------------------
+					«FOR constructor : constructors»
+						«constructor.compile(null)»
+						
+					«ENDFOR»
+				«ENDIF»
 			«ENDIF»
 			«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: defaultBank) == bank].toList»
 			«IF dmcList.isNotEmpty»
@@ -56,6 +63,10 @@ class Unrom extends Mapper {
 				«FOR dmcRom : dmcList»
 					«dmcRom.compile(new CompileContext)»
 				«ENDFOR»
+			«ENDIF»
+			«IF bank != defaultBank»
+				«noop»
+					.org $C000
 			«ENDIF»
 		«ENDFOR»
 		
