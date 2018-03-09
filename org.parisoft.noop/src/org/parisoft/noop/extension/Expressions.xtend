@@ -1141,7 +1141,9 @@ class Expressions {
 					expression.right.alloc(ctx)
 				IncExpression:
 					expression.right.alloc(ctx)
-				CastExpression:
+				CastExpression: {
+					expression.type.alloc(ctx)
+
 					if (expression.left.containsMulDivMod) {
 						try {
 							expression.left.alloc(ctx => [types.put(expression.type)])
@@ -1151,6 +1153,7 @@ class Expressions {
 					} else {
 						expression.left.alloc(ctx)
 					}
+				}
 				ArrayLiteral: {
 					val chunks = expression.values.map[alloc(ctx)].flatten.toList
 
@@ -1172,6 +1175,8 @@ class Expressions {
 					}
 
 					if (expression.type.isNonPrimitive) {
+						expression.type.alloc(ctx)
+
 						val snapshot = ctx.snapshot
 						val constructorName = expression.nameOfConstructor
 
@@ -1196,6 +1201,10 @@ class Expressions {
 					val chunks = newArrayList
 					val member = expression.member
 					val receiver = expression.receiver
+	
+					if (member.isStatic && receiver instanceof NewInstance) {
+						(receiver as NewInstance).type.alloc(ctx)
+					}
 
 					if (member instanceof Variable) {
 						if (member.isROM) {
