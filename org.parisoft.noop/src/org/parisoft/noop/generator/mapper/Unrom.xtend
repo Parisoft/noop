@@ -22,21 +22,21 @@ class Unrom extends Mapper {
 	override compile(AllocContext ctx) '''
 		«val inesPrg = ctx.constants.values.findFirst[INesPrg]?.valueOf as Integer ?: 32»
 		«val banks = inesPrg / 16»
-		«val defaultBank = banks - 1»
+		«val fixedBank = banks - 1»
 		«FOR bank : 0 ..< banks»
 			;----------------------------------------------------------------
-			; PRG-ROM Bank #«bank»«IF bank == defaultBank» FIXED«ENDIF»
+			; PRG-ROM Bank #«bank»«IF bank == fixedBank» FIXED«ENDIF»
 			;----------------------------------------------------------------
-				.base «IF bank == defaultBank»$C000«ELSE»$8000«ENDIF» 
+				.base «IF bank == fixedBank»$C000«ELSE»$8000«ENDIF» 
 			
-			«FOR rom : ctx.prgRoms.values.filter[nonDMC].filter[(storageOf ?: defaultBank) == bank]»
+			«FOR rom : ctx.prgRoms.values.filter[nonDMC].filter[(storageOf ?: fixedBank) == bank]»
 				«rom.compile(new CompileContext)»
 			«ENDFOR»
-			«IF ctx.methods.values.exists[objectSize] && ctx.constructors.size > 0 && bank == defaultBank»
+			«IF ctx.methods.values.exists[objectSize] && ctx.constructors.size > 0 && bank == fixedBank»
 				Object.$sizes:
 					.db «ctx.constructors.values.sortBy[type.name].map[type.rawSizeOf].join(', ', [toHexString])»
 			«ENDIF»
-			«val methods = ctx.methods.values.filter[(storageOf ?: defaultBank) == bank].sortBy[fullyQualifiedName]»
+			«val methods = ctx.methods.values.filter[(storageOf ?: fixedBank) == bank].sortBy[fullyQualifiedName]»
 			«IF methods.isNotEmpty»
 				«noop»
 				
@@ -46,7 +46,7 @@ class Unrom extends Mapper {
 					
 				«ENDFOR»
 			«ENDIF»
-			«IF bank == defaultBank»
+			«IF bank == fixedBank»
 				«val constructors = ctx.constructors.values.sortBy[type.name]»
 				«IF constructors.isNotEmpty»
 					;-- Constructors ------------------------------------------------
@@ -56,7 +56,7 @@ class Unrom extends Mapper {
 					«ENDFOR»
 				«ENDIF»
 			«ENDIF»
-			«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: defaultBank) == bank].toList»
+			«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: fixedBank) == bank].toList»
 			«IF dmcList.isNotEmpty»
 				;-- DMC sound data-----------------------------------------------
 					.org «Members::FT_DPCM_OFF»
@@ -64,7 +64,7 @@ class Unrom extends Mapper {
 					«dmcRom.compile(new CompileContext)»
 				«ENDFOR»
 			«ENDIF»
-			«IF bank != defaultBank»
+			«IF bank != fixedBank»
 				«noop»
 					.org $C000
 			«ENDIF»

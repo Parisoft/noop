@@ -842,7 +842,11 @@ public class Members {
 			«method.nameOf»:
 			«IF method.isReset»
 				;;;;;;;;;; Initial setup begin
-				SEI          ; disable IRQs
+				«IF ctx.allocation.constants.values.findFirst[INesMapper]?.valueOf as Integer == 4»
+					CLI          ; enable IRQs
+				«ELSE»
+					SEI          ; disable IRQs
+				«ENDIF»
 				CLD          ; disable decimal mode
 				LDX #$40
 				STX $4017    ; disable APU frame IRQ

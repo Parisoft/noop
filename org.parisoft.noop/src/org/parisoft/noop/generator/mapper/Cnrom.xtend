@@ -60,15 +60,15 @@ class Cnrom extends Mapper {
 		;----------------------------------------------------------------
 			.org $FFFA     
 		
-		 	.dw «ctx.methods.values.findFirst[nmi]?.nameOf ?: 0»
-		 	.dw «ctx.methods.values.findFirst[reset]?.nameOf ?: 0»
-		 	.dw «ctx.methods.values.findFirst[irq]?.nameOf ?: 0»
+			.dw «ctx.methods.values.findFirst[nmi]?.nameOf ?: 0»
+			.dw «ctx.methods.values.findFirst[reset]?.nameOf ?: 0»
+			.dw «ctx.methods.values.findFirst[irq]?.nameOf ?: 0»
 		
 		«FOR bank : 0 ..< chrBanks»
 			;----------------------------------------------------------------
 			; CHR-ROM bank #«bank»
 			;----------------------------------------------------------------
-			   .base $0000
+				.base $0000
 			«FOR rom : ctx.chrRoms.values.filter[(storageOf ?: 0) == bank]»
 				«rom.compile(new CompileContext)»
 			«ENDFOR»
