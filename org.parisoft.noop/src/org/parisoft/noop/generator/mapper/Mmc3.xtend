@@ -22,15 +22,14 @@ class Mmc3 extends Mapper {
 	override compile(AllocContext ctx) '''
 		«val inesPrg = ctx.constants.values.findFirst[INesPrg]?.valueOf as Integer ?: 32»
 		«val inesChr = ctx.constants.values.findFirst[INesChr]?.valueOf as Integer ?: 32»
-		«val prgBanks = inesPrg / 8»
+		«val prgBanks = inesPrg / 8 - 1»
 		«val chrBanks = inesChr / 8»
-		«val secondFixedBank = prgBanks - 2»
 		«val fixedBank = prgBanks - 1»
 		«FOR bank : 0 ..< prgBanks»
 			;----------------------------------------------------------------
-			; PRG-ROM Bank #«bank»«IF bank >= secondFixedBank» FIXED«ENDIF»
+			; PRG-ROM Bank #«bank»«IF bank >= fixedBank» FIXED«ENDIF»
 			;----------------------------------------------------------------
-				.base «IF bank == fixedBank»$E000«ELSEIF bank == secondFixedBank»$C000«ELSEIF bank % 2 != 0»$A000«ELSE»$8000«ENDIF» 
+				.base «IF bank == fixedBank»$C000«ELSEIF bank % 2 != 0»$A000«ELSE»$8000«ENDIF» 
 			
 			«FOR rom : ctx.prgRoms.values.filter[nonDMC].filter[(storageOf ?: fixedBank) == bank]»
 				«rom.compile(new CompileContext)»
@@ -68,9 +67,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«noop»
-				«IF bank != fixedBank && bank == secondFixedBank»
-					.org $E000
-				«ELSEIF bank != fixedBank && bank % 2 != 0»
+				«IF bank != fixedBank && bank % 2 != 0»
 					.org $C000
 				«ELSEIF bank != fixedBank»
 					.org $A000
