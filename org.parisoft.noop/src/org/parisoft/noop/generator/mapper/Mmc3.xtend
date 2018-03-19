@@ -84,48 +84,67 @@ class Mmc3 extends Mapper {
 		 	.dw «ctx.methods.values.findFirst[irq]?.nameOf ?: 0»
 		
 		«FOR bank : 0 ..< chrBanks»
-			;----------------------------------------------------------------
-			; CHR-ROM bank #«bank * 6»
-			;----------------------------------------------------------------
-				.base $0000
-			«FOR rom : ctx.chrRoms.values.filter[(storageOf ?: 0) == bank * 6]»
-				«rom.compile(new CompileContext)»
-			«ENDFOR»
-			;----------------------------------------------------------------
-			; CHR-ROM bank #«bank * 6 + 1»
-			;----------------------------------------------------------------
-				.base $0800
-			«FOR rom : ctx.chrRoms.values.filter[(storageOf ?: 0) == bank * 6 + 1]»
-				«rom.compile(new CompileContext)»
-			«ENDFOR»
-			;----------------------------------------------------------------
-			; CHR-ROM bank #«bank * 6 + 2»
-			;----------------------------------------------------------------
-				.base $1000
-			«FOR rom : ctx.chrRoms.values.filter[(storageOf ?: 0) == bank * 6 + 2]»
-				«rom.compile(new CompileContext)»
-			«ENDFOR»
-			;----------------------------------------------------------------
-			; CHR-ROM bank #«bank * 6 + 3»
-			;----------------------------------------------------------------
-				.base $1400
-			«FOR rom : ctx.chrRoms.values.filter[(storageOf ?: 0) == bank * 6 + 3]»
-				«rom.compile(new CompileContext)»
-			«ENDFOR»
-			;----------------------------------------------------------------
-			; CHR-ROM bank #«bank * 6 + 4»
-			;----------------------------------------------------------------
-				.base $1800
-			«FOR rom : ctx.chrRoms.values.filter[(storageOf ?: 0) == bank * 6 + 4]»
-				«rom.compile(new CompileContext)»
-			«ENDFOR»
-			;----------------------------------------------------------------
-			; CHR-ROM bank #«bank * 6 + 5»
-			;----------------------------------------------------------------
-				.base $1C00
-			«FOR rom : ctx.chrRoms.values.filter[(storageOf ?: 0) == bank * 6 + 5]»
-				«rom.compile(new CompileContext)»
-			«ENDFOR»
+			«val bank0 = bank * 8»
+			«var roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank0]»
+			«IF roms.isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank0»
+				;----------------------------------------------------------------
+					.base $0000
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+			«val bank2 = bank0 + 2»
+			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank2]).isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank2»
+				;----------------------------------------------------------------
+					.base $0800
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+			«val bank4 = bank2 + 2»
+			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank4]).isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank4»
+				;----------------------------------------------------------------
+					.base $1000
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+			«val bank5 = bank4 + 1»
+			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank5]).isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank5»
+				;----------------------------------------------------------------
+					.base $1400
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+			«val bank6 = bank5 + 1»
+			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank6]).isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank6»
+				;----------------------------------------------------------------
+					.base $1800
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+			«val bank7 = bank6 + 1»
+			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank7]).isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank7»
+				;----------------------------------------------------------------
+					.base $1C00
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
 		«ENDFOR»
 	'''
 
