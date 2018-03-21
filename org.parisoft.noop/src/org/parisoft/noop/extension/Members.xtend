@@ -619,8 +619,10 @@ public class Members {
 		if (method.isNative) {
 			return
 		}
-		val ini = System::currentTimeMillis
-		receiver.prepare(ctx)
+
+		if (receiver !== null) {
+			receiver.prepare(ctx)
+		}
 		
 		args.forEach [ arg, i |
 			if (arg.containsMulDivMod) {
@@ -635,32 +637,16 @@ public class Members {
 		]
 		
 		method.prepare(ctx)
-		method.overriders.forEach[prepare(ctx)]
-		method.prepareIndexes(indexes, ctx)
-		if (method.name == '$paintBackground' || method.name == '$drawBackgroundSection') {
-			println('''prepared call to «method.name» = «System::currentTimeMillis - ini»ms''')
+		
+		if (receiver !== null && receiver.isNonThisNorSuper) {
+			method.overriders.forEach[prepare(ctx)]
 		}
+
+		method.prepareIndexes(indexes, ctx)
 	}
 	
 	def prepareInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
-		if (method.isNative) {
-			return
-		}
-		
-		args.forEach [ arg, i |
-			if (arg.containsMulDivMod) {
-				try {
-					arg.prepare(ctx => [types.put(method.params.get(i).type)])
-				} finally {
-					ctx.types.pop
-				}
-			} else {
-				arg.prepare(ctx)
-			}
-		]
-		
-		method.prepare(ctx)
-		method.prepareIndexes(indexes, ctx)
+		method.prepareInvocation(null, args, indexes, ctx)
 	}
 	
 	private def prepareIndexes(Member member, List<Index> indexes, AllocContext ctx) {
@@ -842,7 +828,7 @@ public class Members {
 			«method.nameOf»:
 			«IF method.isReset»
 				;;;;;;;;;; Initial setup begin
-				«IF ctx.allocation.constants.values.findFirst[INesMapper]?.valueOf as Integer == 4»
+				«IF ctx.allocation.constants.values.findFirst[INesMapper]?.valueOf ?: 0 as Integer == 4»
 					CLI          ; enable IRQs
 				«ELSE»
 					SEI          ; disable IRQs
