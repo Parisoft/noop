@@ -247,10 +247,21 @@ class Classes {
 
 			gameImplClass.prepare(ctx)
 
-			ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
+			val overriders = new ArrayList<Method>
 
-			classes.clear
-			classes.addAll(ctx.classes.values)
+			do {
+				ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
+
+				classes.clear
+				classes.addAll(ctx.classes.values)
+
+				overriders.clear
+				overriders += prepared.filter(Method).filter[nonStatic].map[it.overriders].flatten.filter [
+					!prepared.contains(it)
+				].toList
+
+				overriders.forEach[it.prepare(ctx)]
+			} while (overriders.isNotEmpty)
 
 			classeSize.clear
 			ctx.classes.values.forEach[sizeOf]
