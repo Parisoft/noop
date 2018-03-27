@@ -1147,8 +1147,15 @@ public class Members {
 						indirect = overrider.nameOfReceiver
 					]»
 					++«realReceiver.pointTo(falseReceiver)»
-					«overrider.compileInvocation(args, indexes, ctx)»
+					«val relative = ctx.relative»
+					«val bypass = if (relative !== null) '''«relative».bypass'''»
+					«overrider.compileInvocation(args, indexes, ctx => [it.relative = bypass])»
 						JMP +«invocationEnd»
+					«IF relative !== null»
+						+«bypass»:
+							JMP +«relative»
+						«ctx.relative = relative»
+					«ENDIF»
 				«ENDFOR»
 				+«method.compileInvocation(args, indexes, ctx)»
 				+«invocationEnd»:
