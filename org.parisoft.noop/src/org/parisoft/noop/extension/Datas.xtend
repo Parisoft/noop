@@ -583,7 +583,7 @@ class Datas {
 		«dst.pushAccIfOperating»
 		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
 		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
-		«IF src.lengthExpression instanceof ByteLiteral && dst.lengthExpression instanceof ByteLiteral»
+		«IF src.lengthExpression instanceof ByteLiteral && (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral)»
 			«tmp1.pointIndirectToAbsolute(src)»
 			«tmp3.pointIndirectToIndirect(dst)»
 			«val length = src.minLength(dst)»
@@ -595,22 +595,24 @@ class Datas {
 				indirect = null
 				type = src.lengthExpression.typeOf
 			])»
-			«dst.lengthExpression.compile(tmp3 => [
-				absolute = indirect
-				indirect = null
-				type = dst.lengthExpression.typeOf
-			])»
-			«val reg = new CompileContext => [
-				register = 'A'
-				type = tmp1.type
-			]»
-			«tmp1.copyTo(reg)»
-			«reg.relative = 'set'»
-			«reg.lessThan(tmp3)»
-				LDA «tmp3.absolute» + 0
-				PHA
-				LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
-				JMP +point
+			«IF dst.lengthExpression !== null»
+				«dst.lengthExpression.compile(tmp3 => [
+					absolute = indirect
+					indirect = null
+					type = dst.lengthExpression.typeOf
+				])»
+				«val reg = new CompileContext => [
+					register = 'A'
+					type = tmp1.type
+				]»
+				«tmp1.copyTo(reg)»
+				«reg.relative = 'set'»
+				«reg.lessThan(tmp3)»
+					LDA «tmp3.absolute» + 0
+					PHA
+					LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+					JMP +point
+			«ENDIF»
 			+set:
 				LDA «tmp1.absolute» + 0
 				PHA
@@ -627,7 +629,7 @@ class Datas {
 		«dst.pushAccIfOperating»
 		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
 		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
-		«IF src.lengthExpression instanceof ByteLiteral && dst.lengthExpression instanceof ByteLiteral»
+		«IF src.lengthExpression instanceof ByteLiteral && (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral)»
 			«tmp1.pointIndirectToIndirect(src)»
 			«tmp3.pointIndirectToAbsolute(dst)»
 			«val length = src.minLength(dst)»
@@ -639,22 +641,24 @@ class Datas {
 				indirect = null
 				type = src.lengthExpression.typeOf
 			])»
-			«dst.lengthExpression.compile(tmp3 => [
-				absolute = indirect
-				indirect = null
-				type = dst.lengthExpression.typeOf
-			])»
-			«val reg = new CompileContext => [
-				register = 'A'
-				type = tmp1.type
-			]»
-			«tmp1.copyTo(reg)»
-			«reg.relative = 'set'»
-			«reg.lessThan(tmp3)»
-				LDA «tmp3.absolute» + 0
-				PHA
-				LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
-				JMP +point
+			«IF dst.lengthExpression !== null»
+				«dst.lengthExpression.compile(tmp3 => [
+					absolute = indirect
+					indirect = null
+					type = dst.lengthExpression.typeOf
+				])»
+				«val reg = new CompileContext => [
+					register = 'A'
+					type = tmp1.type
+				]»
+				«tmp1.copyTo(reg)»
+				«reg.relative = 'set'»
+				«reg.lessThan(tmp3)»
+					LDA «tmp3.absolute» + 0
+					PHA
+					LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+					JMP +point
+			«ENDIF»
 			+set:
 				LDA «tmp1.absolute» + 0
 				PHA
@@ -671,7 +675,7 @@ class Datas {
 		«dst.pushAccIfOperating»
 		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
 		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
-		«IF src.lengthExpression instanceof ByteLiteral && dst.lengthExpression instanceof ByteLiteral»
+		«IF src.lengthExpression instanceof ByteLiteral && (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral)»
 			«tmp1.pointIndirectToIndirect(src)»
 			«tmp3.pointIndirectToIndirect(dst)»
 			«val length = src.minLength(dst)»
@@ -683,22 +687,24 @@ class Datas {
 				indirect = null
 				type = src.lengthExpression.typeOf
 			])»
-			«dst.lengthExpression.compile(tmp3 => [
-				absolute = indirect
-				indirect = null
-				type = dst.lengthExpression.typeOf
-			])»
-			«val reg = new CompileContext => [
-				register = 'A'
-				type = tmp1.type
-			]»
-			«tmp1.copyTo(reg)»
-			«reg.relative = 'set'»
-			«reg.lessThan(tmp3)»
-				LDA «tmp3.absolute» + 0
-				PHA
-				LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
-				JMP +point
+			«IF dst.lengthExpression !== null»
+				«dst.lengthExpression.compile(tmp3 => [
+					absolute = indirect
+					indirect = null
+					type = dst.lengthExpression.typeOf
+				])»
+				«val reg = new CompileContext => [
+					register = 'A'
+					type = tmp1.type
+				]»
+				«tmp1.copyTo(reg)»
+				«reg.relative = 'set'»
+				«reg.lessThan(tmp3)»
+					LDA «tmp3.absolute» + 0
+					PHA
+					LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+					JMP +point
+			«ENDIF»
 			+set:
 				LDA «tmp1.absolute» + 0
 				PHA
@@ -942,7 +948,7 @@ class Datas {
 			println(message)
 		}
 	}
-	
+
 	private def minLength(CompileContext c1, CompileContext c2) {
 		val len1 = (c1.lengthExpression as ByteLiteral)?.value ?: Integer::MAX_VALUE
 		val len2 = (c2.lengthExpression as ByteLiteral)?.value ?: Integer::MAX_VALUE

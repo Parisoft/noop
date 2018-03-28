@@ -1965,6 +1965,7 @@ class Expressions {
 				BoolLiteral: flatten += if(expr.value) 1 else 0
 				ArrayLiteral: flatten += expr.values.flat
 				StringLiteral: flatten += expr
+				default: flatten += expr.valueOf
 			}
 		}
 
