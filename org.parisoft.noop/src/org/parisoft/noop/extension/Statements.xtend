@@ -256,7 +256,9 @@ class Statements {
 						chunks += ctx.computePtr(statement.nameOf)
 					}
 
-					chunks += statement.value?.alloc(ctx)
+					if (statement.value !== null) {
+						chunks += statement.value.alloc(ctx)
+					}
 
 					return chunks.filterNull.toList
 				}
