@@ -15,6 +15,7 @@
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/MOD_ASSIGN"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/BOR_ASSIGN"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/BAN_ASSIGN"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/XOR_ASSIGN"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/BLS_ASSIGN"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//AssignmentType/BRS_ASSIGN"/>
     </genEnums>
@@ -124,6 +125,10 @@
     <genClasses ecoreClass="Noop.ecore#//BOrExpression">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BOrExpression/left"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BOrExpression/right"/>
+    </genClasses>
+    <genClasses ecoreClass="Noop.ecore#//BXorExpression">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BXorExpression/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BXorExpression/right"/>
     </genClasses>
     <genClasses ecoreClass="Noop.ecore#//BAndExpression">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference Noop.ecore#//BAndExpression/left"/>

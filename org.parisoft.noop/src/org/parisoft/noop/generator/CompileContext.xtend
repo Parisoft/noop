@@ -21,6 +21,7 @@ class CompileContext {
 		DIVISION,
 		MODULO,
 		BIT_OR,
+		BIT_XOR,
 		BIT_AND,
 		BIT_SHIFT_LEFT,
 		BIT_SHIFT_RIGHT,

@@ -48,6 +48,7 @@ class Operations {
 			case DIVISION: acc.divide(operand)
 			case MODULO: acc.modulo(operand)
 			case BIT_OR: acc.bitOr(operand)
+			case BIT_XOR: acc.bitXor(operand)
 			case BIT_AND: acc.bitAnd(operand)
 			case BIT_SHIFT_LEFT: acc.bitShiftLeft(operand)
 			case BIT_SHIFT_RIGHT: acc.bitShiftRight(operand)
@@ -171,6 +172,16 @@ class Operations {
 			acc.operateAbsolute('ORA', null, operand)
 		} else if (operand.indirect !== null) {
 			acc.operateIndirect('ORA', null, operand)
+		}
+	}
+	
+	def bitXor(CompileContext acc, CompileContext operand) {
+		if (operand.immediate !== null) {
+			acc.operateImmediate('EOR', null, operand)
+		} else if (operand.absolute !== null) {
+			acc.operateAbsolute('EOR', null, operand)
+		} else if (operand.indirect !== null) {
+			acc.operateIndirect('EOR', null, operand)
 		}
 	}
 

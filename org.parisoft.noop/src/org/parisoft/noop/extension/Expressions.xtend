@@ -66,6 +66,7 @@ import static org.parisoft.noop.^extension.Cache.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.BXorExpression
 
 class Expressions {
 
@@ -478,6 +479,8 @@ class Expressions {
 				true
 			BOrExpression:
 				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			BXorExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
 			BAndExpression:
 				expression.left.containsMulDivMod || expression.right.containsMulDivMod
 			LShiftExpression:
@@ -576,6 +579,8 @@ class Expressions {
 			ModExpression:
 				expression.left.typeOf
 			BOrExpression:
+				expression.typeOfValueOrMerge(expression.left, expression.right)
+			BXorExpression:
 				expression.typeOfValueOrMerge(expression.left, expression.right)
 			BAndExpression:
 				expression.typeOfValueOrMerge(expression.left, expression.right)
@@ -751,6 +756,8 @@ class Expressions {
 					(expression.left.valueOf as Integer) % (expression.right.valueOf as Integer)
 				BOrExpression:
 					(expression.left.valueOf as Integer).bitwiseOr(expression.right.valueOf as Integer)
+				BXorExpression:
+					(expression.left.valueOf as Integer).bitwiseXor(expression.right.valueOf as Integer)
 				BAndExpression:
 					(expression.left.valueOf as Integer).bitwiseAnd(expression.right.valueOf as Integer)
 				LShiftExpression:
@@ -957,6 +964,10 @@ class Expressions {
 					expression.left.prepare(ctx)
 					expression.right.prepare(ctx)
 				}
+				BXorExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
 				BAndExpression: {
 					expression.left.prepare(ctx)
 					expression.right.prepare(ctx)
@@ -1126,6 +1137,8 @@ class Expressions {
 					}
 				}
 				BOrExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				BXorExpression:
 					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 				BAndExpression:
 					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
@@ -1330,6 +1343,12 @@ class Expressions {
 							right = expression.right.copy
 						]»
 						«bor.compile(ref => [mode = Mode::COPY])»
+					«ELSEIF expression.assignment === AssignmentType::XOR_ASSIGN»
+						«val xor = NoopFactory::eINSTANCE.createBXorExpression => [
+							left = expression.left.copy
+							right = expression.right.copy
+						]»
+						«xor.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BAN_ASSIGN»
 						«val ban = NoopFactory::eINSTANCE.createBAndExpression => [
 							left = expression.left.copy
@@ -1365,6 +1384,7 @@ class Expressions {
 				DivExpression: '''«Operation::DIVISION.compileMultiplication(expression.left, expression.right, ctx)»'''
 				ModExpression: '''«Operation::MODULO.compileMultiplication(expression.left, expression.right, ctx)»'''
 				BOrExpression: '''«Operation::BIT_OR.compileBinary(expression.left, expression.right, ctx)»'''
+				BXorExpression: '''«Operation::BIT_XOR.compileBinary(expression.left, expression.right, ctx)»'''
 				BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, ctx)»'''
 				LShiftExpression: '''«Operation::BIT_SHIFT_LEFT.compileMultiplication(expression.left, expression.right, ctx)»'''
 				RShiftExpression: '''«Operation::BIT_SHIFT_RIGHT.compileMultiplication(expression.left, expression.right, ctx)»'''
@@ -1666,6 +1686,7 @@ class Expressions {
 				DivExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» / «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				ModExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» % «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				BOrExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» | «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				BXorExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» ^ «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				BAndExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» & «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				LShiftExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» << «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				RShiftExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» >> «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
