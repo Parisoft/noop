@@ -14,6 +14,7 @@ import org.parisoft.noop.noop.Variable
 import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import java.util.List
 
 class Classes {
 
@@ -97,7 +98,7 @@ class Classes {
 		}
 	}
 
-	def getDeclaredFields(NoopClass c) {
+	def List<Variable> getDeclaredFields(NoopClass c) {
 		val fields = c.members.filter(Variable)
 		(fields.filter[static] + fields.filter[nonStatic]).toList
 	}

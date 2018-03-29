@@ -56,11 +56,11 @@ import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.Storage
 import org.parisoft.noop.noop.SubExpression
 import org.parisoft.noop.noop.Variable
+import org.parisoft.noop.noop.BXorExpression
 
 class NoopFormatter extends AbstractFormatter2 {
 
 	@Inject extension Members
-//	@Inject extension Statements
 	@Inject extension Collections
 
 	def dispatch void format(NoopClass noopClass, extension IFormattableDocument document) {
@@ -217,6 +217,13 @@ class NoopFormatter extends AbstractFormatter2 {
 	def dispatch void format(BOrExpression expression, extension IFormattableDocument document) {
 		expression.preFormat(document)
 		expression.regionFor.keyword('|').surround[indent; oneSpace]
+		expression.left.format
+		expression.right.format
+	}
+	
+	def dispatch void format(BXorExpression expression, extension IFormattableDocument document) {
+		expression.preFormat(document)
+		expression.regionFor.keyword('^').surround[indent; oneSpace]
 		expression.left.format
 		expression.right.format
 	}
