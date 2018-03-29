@@ -638,7 +638,7 @@ public class Members {
 		
 		method.prepare(ctx)
 		
-		if (receiver !== null && receiver.isNonThisNorSuper) {
+		if (receiver !== null && receiver.isNonSuper) {
 			method.overriders.forEach[prepare(ctx)]
 		}
 
@@ -761,7 +761,7 @@ public class Members {
 		
 		val methodChunks = method.alloc(ctx)
 		
-		if (method.overriders.isNotEmpty && receiver.isNonThisNorSuper) {
+		if (method.overriders.isNotEmpty && receiver.isNonSuper) {
 			methodChunks += method.overriders.map[alloc(ctx)].flatten.toList
 		}
 		
@@ -1116,16 +1116,16 @@ public class Members {
 			container = ctx.container
 			operation = ctx.operation
 			accLoaded = ctx.accLoaded
-			type = receiver.typeOf
+			type = receiver?.typeOf
 		]»
 		«IF method.isNative»
 			«method.compileNativeInvocation(receiver, args, ctx)»
 		«ELSE»
-			«receiver.compile(rcv => [
+			«receiver?.compile(rcv => [
 				indirect = method.nameOfReceiver
 				mode = Mode::POINT
 			])»
-			«val overriders = if (receiver.isNonThisNorSuper) method.overriders else emptyList»
+			«val overriders = if (receiver.isNonSuper) method.overriders else emptyList»
 			«IF overriders.isEmpty»
 				«method.compileInvocation(args, indexes, ctx)»
 			«ELSE»

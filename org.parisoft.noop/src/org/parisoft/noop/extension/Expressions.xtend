@@ -350,9 +350,17 @@ class Expressions {
 	def isThisOrSuper(Expression expression) {
 		expression instanceof This || expression instanceof Super
 	}
+	
+	def isSuper(Expression expression) {
+		expression instanceof Super
+	}
 
 	def isNonThisNorSuper(Expression expression) {
 		!expression.isThisOrSuper
+	}
+	
+	def isNonSuper(Expression expression) {
+		!expression.isSuper
 	}
 
 	def boolean isUnbounded(Expression expression) {
@@ -1657,7 +1665,11 @@ class Expressions {
 							«innerReceiver.pointTo(outerReceiver)»
 						«ENDIF»
 						«expression.checkRecursion(ctx)»
-						«method.compileInvocation(expression.args, expression.indexes, ctx)»
+						«IF method.isStatic»
+							«method.compileInvocation(expression.args, expression.indexes, ctx)»
+						«ELSE»
+							«method.compileInvocation(null, expression.args, expression.indexes, ctx)»
+						«ENDIF»
 					«ENDIF»					
 				'''
 				default:
