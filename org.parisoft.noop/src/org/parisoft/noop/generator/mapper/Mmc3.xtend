@@ -22,33 +22,33 @@ class Mmc3 extends Mapper {
 	override compile(AllocContext ctx) '''
 		«val inesPrg = ctx.constants.values.findFirst[INesPrg]?.valueOf as Integer ?: 32»
 		«val inesChr = ctx.constants.values.findFirst[INesChr]?.valueOf as Integer ?: 32»
-		«val prgBanks = inesPrg / 8 - 1»
+		«val prgBanks = inesPrg / 8»
 		«val chrBanks = inesChr / 8»
-		«val fixedBank = prgBanks - 1»
+		«val fixedBank0 = prgBanks - 2»
+		«val fixedBank1 = prgBanks - 1»
 		«FOR bank : 0 ..< prgBanks»
 			;----------------------------------------------------------------
-			; PRG-ROM Bank #«bank»«IF bank >= fixedBank» FIXED«ENDIF»
+			; PRG-ROM Bank #«bank»«IF bank >= fixedBank0» FIXED«ENDIF»
 			;----------------------------------------------------------------
-				.base «IF bank == fixedBank»$C000«ELSEIF bank % 2 != 0»$A000«ELSE»$8000«ENDIF» 
+				.base «IF bank == fixedBank1»$E000«ELSEIF bank == fixedBank0»$C000«ELSEIF bank % 2 != 0»$A000«ELSE»$8000«ENDIF» 
 			
-			«FOR rom : ctx.prgRoms.values.filter[nonDMC].filter[(storageOf ?: fixedBank) == bank]»
+			«FOR rom : ctx.prgRoms.values.filter[nonDMC].filter[(storageOf ?: fixedBank1) == bank]»
 				«rom.compile(new CompileContext)»
 			«ENDFOR»
-			«IF ctx.methods.values.exists[objectSize] && ctx.constructors.size > 0 && bank == fixedBank»
+			«IF ctx.methods.values.exists[objectSize] && ctx.constructors.size > 0 && bank == fixedBank1»
 				Object.$sizes:
 					.db «ctx.constructors.values.sortBy[type.name].map[type.rawSizeOf].join(', ', [toHexString])»
 			«ENDIF»
-			«val methods = ctx.methods.values.filter[(storageOf ?: fixedBank) == bank].sortBy[fullyQualifiedName]»
+			«val methods = ctx.methods.values.filter[(storageOf ?: fixedBank1) == bank].sortBy[fullyQualifiedName]»
 			«IF methods.isNotEmpty»
 				«noop»
-				
 				;-- Methods -----------------------------------------------------
 				«FOR method : methods»
 					«method.compile(new CompileContext => [allocation = ctx])»
 					
 				«ENDFOR»
 			«ENDIF»
-			«IF bank == fixedBank»
+			«IF bank == fixedBank1»
 				«val constructors = ctx.constructors.values.sortBy[type.name]»
 				«IF constructors.isNotEmpty»
 					;-- Constructors ------------------------------------------------
@@ -58,20 +58,22 @@ class Mmc3 extends Mapper {
 					«ENDFOR»
 				«ENDIF»
 			«ENDIF»
-			«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: fixedBank) == bank].toList»
-			«IF dmcList.isNotEmpty»
-				;-- DMC sound data-----------------------------------------------
-					.org «Members::FT_DPCM_OFF»
-				«FOR dmcRom : dmcList»
-					«dmcRom.compile(new CompileContext)»
-				«ENDFOR»
-			«ENDIF»
-			«noop»
-				«IF bank != fixedBank && bank % 2 != 0»
-					.org $C000
-				«ELSEIF bank != fixedBank»
+			«IF bank == fixedBank0»
+				«noop»
+					.org $E000
+			«ELSEIF bank != fixedBank1 && bank % 2 == 0»
+				«noop»
 					.org $A000
+			«ELSEIF bank != fixedBank1»
+				«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: fixedBank1) == bank].toList»
+					.org $C000
+				«IF dmcList.isNotEmpty»
+					;-- DMC sound data-----------------------------------------------
+					«FOR dmcRom : dmcList»
+						«dmcRom.compile(new CompileContext)»
+					«ENDFOR»
 				«ENDIF»
+			«ENDIF»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
