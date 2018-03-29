@@ -59,20 +59,21 @@ class Mmc3 extends Mapper {
 				«ENDIF»
 			«ENDIF»
 			«IF bank == fixedBank0»
-				«noop»
-					.org $E000
-			«ELSEIF bank != fixedBank1 && bank % 2 == 0»
-				«noop»
-					.org $A000
-			«ELSEIF bank != fixedBank1»
 				«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: fixedBank1) == bank].toList»
-					.org $C000
 				«IF dmcList.isNotEmpty»
 					;-- DMC sound data-----------------------------------------------
 					«FOR dmcRom : dmcList»
 						«dmcRom.compile(new CompileContext)»
 					«ENDFOR»
 				«ENDIF»
+				«noop»
+					.org $E000
+			«ELSEIF bank != fixedBank1 && bank % 2 == 0»
+				«noop»
+					.org $A000
+			«ELSEIF bank != fixedBank1»
+				«noop»
+					.org $C000
 			«ENDIF»
 		«ENDFOR»
 		
