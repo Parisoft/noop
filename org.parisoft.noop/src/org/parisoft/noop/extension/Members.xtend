@@ -1214,7 +1214,7 @@ public class Members {
 				«ENDIF»
 				«IF param.isUnbounded»
 					«IF arg.isUnbounded»
-						;TODO make this for MemberSelect and AssignmentExpression too
+«««						;TODO make this for MemberSelect and AssignmentExpression too
 						«IF arg instanceof MemberRef»
 							«val member = arg.member as Variable»
 							«FOR src : arg.indexes.size ..< arg.member.dimensionOf.size»
@@ -1259,7 +1259,7 @@ public class Members {
 					}
 				]»
 				«method.compileIndexes(indexes, ret)»
-				;TODO if ctx is indirect (mode POINT) then copy ret to a aux var then point to ctx
+«««				;TODO if ctx is indirect (mode POINT) then copy ret to a aux var then point to ctx
 				«IF ctx.mode === Mode::COPY && method.isArrayReference(indexes)»
 					«ret.lengthExpression = method.getLengthExpression(indexes)»
 					«ret.copyArrayTo(ctx)»
@@ -1271,9 +1271,9 @@ public class Members {
 	'''
 	
 	private def compileNativeInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
-		;TODO compile receiver by copying it, removing indexes, and call receiver.compile with a new context moded as null
+«««		;TODO compile receiver by copying it, removing indexes, and call receiver.compile with a new context moded as null
 		«IF method.name == METHOD_ARRAY_LENGTH»
-			;TODO make this for MemberSelect and AssignmentExpression too
+«««			;TODO make this for MemberSelect and AssignmentExpression too
 			«IF receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable && ((receiver as MemberRef).member as Variable).isUnbounded»
 				«val dim = (receiver as MemberRef).indexes.size»
 				«val len = new CompileContext => [
@@ -1316,14 +1316,17 @@ public class Members {
 
 				'''(«immediate») * «member.typeOf.sizeOf»'''				
 			}»
+			«var mustReloadAcc = false»
 			«IF isIndexNonImmediate»
-				«member.getIndexExpression(indexes).compile(new CompileContext => [
+				«val idx = new CompileContext => [
 					container = ref.container
 					operation = ref.operation
 					accLoaded = ref.accLoaded
 					type = if (indexSize > 1) ref.type.toUIntClass else ref.type.toByteClass
 					register = 'A'
-				])»
+				]»
+				«member.getIndexExpression(indexes).compile(idx)»
+				«IF mustReloadAcc = ref.isAccLoaded && !idx.isAccLoaded»«ENDIF»
 			«ENDIF»
 			«IF isIndexImmediate»
 				«IF ref.absolute !== null»
@@ -1344,7 +1347,6 @@ public class Members {
 			«ELSE»
 				«IF ref.absolute !== null»
 					«val ptr = indexes.nameOfElement(ref.container)»
-					«ref.pushAccIfOperating»
 						CLC
 						ADC #<«ref.absolute»
 						STA «ptr»
@@ -1355,12 +1357,10 @@ public class Members {
 						«ENDIF»
 						ADC #>«ref.absolute»
 						STA «ptr» + 1
-					«ref.pullAccIfOperating»
 					«ref.absolute = null»
 					«ref.indirect = ptr»
 				«ELSEIF ref.indirect !== null»
 					«val ptr = indexes.nameOfElement(ref.container)»
-					«ref.pushAccIfOperating»
 						CLC
 						ADC «ref.indirect»
 						STA «ptr»
@@ -1371,8 +1371,11 @@ public class Members {
 						«ENDIF»
 						ADC «ref.indirect» + 1
 						STA «ptr» + 1
-					«ref.pullAccIfOperating»
 					«ref.indirect = ptr»
+				«ENDIF»
+				«IF mustReloadAcc»
+					«noop»
+						PLA
 				«ENDIF»
 			«ENDIF»
 		«ENDIF»

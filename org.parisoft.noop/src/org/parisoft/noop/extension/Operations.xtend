@@ -1088,7 +1088,7 @@ class Operations {
 	'''
 
 	private def incIndirect(CompileContext operand) '''
-		«noop»
+		«operand.pushAccIfOperating»
 			LDY «IF operand.isIndexed»«operand.index»«ELSE»#0«ENDIF»
 			LDA («operand.indirect»), Y
 			CLC
@@ -1100,6 +1100,7 @@ class Operations {
 				ADC #0
 				STA («operand.indirect»), Y
 			«ENDIF»
+		«operand.pullAccIfOperating»
 	'''
 
 	private def decAbsolute(CompileContext ctx) '''

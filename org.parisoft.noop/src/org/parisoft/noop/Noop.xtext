@@ -154,8 +154,8 @@ enum AssignmentType:
 	BOR_ASSIGN='|=' | BAN_ASSIGN='&=' | BLS_ASSIGN='<<=' | BRS_ASSIGN='>>=';
 
 enum StorageType:
-	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM' | INESPRG='@INES-PRG' | INESCHR='@INES-CHR' | INESMAPPER='@INES-Mapper' |
-	INESMIR='@INES-Mirror' | ZP='@ZP-RAM' | INLINE='@Inline' | RESET='@Reset' | NMI='@NMI' | IRQ='@IRQ';
+	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM' | INESPRG='@iNES-PRG' | INESCHR='@iNES-CHR' | INESMAPPER='@iNES-Mapper' |
+	INESMIR='@iNES-Mirror' | ZP='@ZP-RAM' | INLINE='@Inline' | RESET='@Reset' | NMI='@NMI' | IRQ='@IRQ';
 
 terminal ASM_TO_VAR:
 	'!' !('!' | '?')* '?';

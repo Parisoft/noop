@@ -996,7 +996,11 @@ class Expressions {
 				}
 				ArrayLiteral: {
 					expression.typeOf.prepare(ctx)
-					expression.values.forEach[prepare(ctx)]
+					expression.eAllContentsAsList.filter[
+						it instanceof MemberSelect || it instanceof MemberRef || it instanceof NewInstance
+					].forEach [
+						(it as Expression).prepare(ctx)
+					]
 				}
 				NewInstance: {
 					expression.type.prepare(ctx)
@@ -1201,7 +1205,7 @@ class Expressions {
 					val chunks = newArrayList
 					val member = expression.member
 					val receiver = expression.receiver
-	
+
 					if (member.isStatic && receiver instanceof NewInstance) {
 						(receiver as NewInstance).type.alloc(ctx)
 					}
@@ -1698,6 +1702,7 @@ class Expressions {
 	private def compileInc(Operation incOperation, Expression expression, CompileContext ctx) '''
 		«val inc = new CompileContext => [
 				container = ctx.container
+				accLoaded = ctx.accLoaded
 				type = expression.typeOf
 				operation = incOperation
 				mode = Mode::OPERATE
