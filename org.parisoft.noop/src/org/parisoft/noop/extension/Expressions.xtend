@@ -1971,7 +1971,7 @@ class Expressions {
 			GeExpression:
 				Operation::COMPARE_LT.compileBinary(expr.left, expr.right, ctx)
 			NotExpression:
-				expr.compile(ctx)
+				expr.right.compile(ctx)
 			default:
 				Operation::NEGATION.compileUnary(expr, ctx)
 		}
