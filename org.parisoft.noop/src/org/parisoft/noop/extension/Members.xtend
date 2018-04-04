@@ -875,37 +875,21 @@ public class Members {
 				«statement.compile(new CompileContext => [container = method.nameOf])»
 			«ENDFOR»
 				RTS
-			«ELSEIF method.isNmi»
-				;;;;;;;;;; NMI initialization begin
+			«ELSEIF method.isNmi || method.isIrq»
 				PHA
 				TXA
 				PHA
 				TYA
 				PHA
-			
-				LDA #<$0200
-				STA $2003  
-				LDA #>$0200
-				STA $4014  
-				;;;;;;;;;; NMI initialization end
-				;;;;;;;;;; Effective code begin
 			«FOR statement : method.body.statements»
 				«statement.compile(new CompileContext => [container = method.nameOf])»
 			«ENDFOR»
-				;;;;;;;;;; Effective code end
-				;;;;;;;;;; NMI finalization begin
 				PLA
 				TAY
 				PLA
 				TAX
 				PLA
-				;;;;;;;;;; NMI finalization end
 				RTI
-			«ELSEIF method.isIrq»
-				«FOR statement : method.body.statements»
-					«statement.compile(new CompileContext => [container = method.nameOf])»
-				«ENDFOR»
-					RTI
 			«ELSE»
 				«FOR statement : method.body.statements»
 					«statement.compile(new CompileContext => [container = method.nameOf])»
