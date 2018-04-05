@@ -350,7 +350,7 @@ class Expressions {
 	def isThisOrSuper(Expression expression) {
 		expression instanceof This || expression instanceof Super
 	}
-	
+
 	def isSuper(Expression expression) {
 		expression instanceof Super
 	}
@@ -358,7 +358,7 @@ class Expressions {
 	def isNonThisNorSuper(Expression expression) {
 		!expression.isThisOrSuper
 	}
-	
+
 	def isNonSuper(Expression expression) {
 		!expression.isSuper
 	}
@@ -1015,7 +1015,7 @@ class Expressions {
 				}
 				ArrayLiteral: {
 					expression.typeOf.prepare(ctx)
-					expression.eAllContentsAsList.filter[
+					expression.eAllContentsAsList.filter [
 						it instanceof MemberSelect || it instanceof MemberRef || it instanceof NewInstance
 					].forEach [
 						(it as Expression).prepare(ctx)
@@ -1059,35 +1059,38 @@ class Expressions {
 			switch (expression) {
 				AssignmentExpression: {
 					val chunks = newArrayList
+					val left = if (expression.assignment === AssignmentType::ASSIGN) {
+							expression.left
+						} else {
+							copies.computeIfAbsent(expression.left, [expression.left.copy]) as Expression
+						}
+					val right = if (expression.assignment === AssignmentType::ASSIGN) {
+							expression.right
+						} else {
+							copies.computeIfAbsent(expression.right, [expression.right.copy]) as Expression
+						}
 
 					if (expression.assignment === AssignmentType::MUL_ASSIGN) {
-						chunks +=
-							getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method?.
-								alloc(ctx) ?: emptyList
+						chunks += getMultiplyMethod(left, right, left.typeOf).method?.alloc(ctx) ?: emptyList
 					} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
-						chunks +=
-							getDivideMethod(expression.left, expression.right, expression.left.typeOf).method?.
-								alloc(ctx) ?: emptyList
+						chunks += getDivideMethod(left, right, left.typeOf).method?.alloc(ctx) ?: emptyList
 					} else if (expression.assignment === AssignmentType::MOD_ASSIGN) {
-						chunks +=
-							getModuloMethod(expression.left, expression.right, expression.left.typeOf).method?.
-								alloc(ctx) ?: emptyList
-					} else if (expression.assignment === AssignmentType::ASSIGN &&
-						expression.left.dimensionOf.isNotEmpty) {
-						chunks += expression.left.lengthExpression?.alloc(ctx) ?: emptyList
-						chunks += expression.right.lengthExpression?.alloc(ctx) ?: emptyList
+						chunks += getModuloMethod(left, right, left.typeOf).method?.alloc(ctx) ?: emptyList
+					} else if (expression.assignment === AssignmentType::ASSIGN && left.dimensionOf.isNotEmpty) {
+						chunks += left.lengthExpression?.alloc(ctx) ?: emptyList
+						chunks += right.lengthExpression?.alloc(ctx) ?: emptyList
 					}
 
-					chunks += expression.left.alloc(ctx)
+					chunks += left.alloc(ctx)
 
-					if (expression.right.containsMulDivMod) {
+					if (right.containsMulDivMod) {
 						try {
-							chunks += expression.right.alloc(ctx => [types.put(expression.left.typeOf)])
+							chunks += right.alloc(ctx => [types.put(left.typeOf)])
 						} finally {
 							ctx.types.pop
 						}
 					} else {
-						chunks += expression.right.alloc(ctx)
+						chunks += right.alloc(ctx)
 					}
 
 					return chunks
@@ -1317,62 +1320,62 @@ class Expressions {
 						])»
 					«ELSEIF expression.assignment === AssignmentType::ADD_ASSIGN»
 						«val add = NoopFactory::eINSTANCE.createAddExpression => [
-							left = expression.left.copy
-							right = expression.right.copy
+							left = copies.get(expression.left) as Expression
+							right = copies.get(expression.right) as Expression
 						]»
 						«add.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::SUB_ASSIGN»
 						«val sub = NoopFactory::eINSTANCE.createSubExpression => [
-							left = expression.left.copy
-							right = expression.right.copy
+							left = copies.get(expression.left) as Expression
+							right = copies.get(expression.right) as Expression
 						]»
 						«sub.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::MUL_ASSIGN»
 						«val mul = NoopFactory::eINSTANCE.createMulExpression => [
-							left = expression.left.copy
-							right = expression.right.copy
+							left = copies.get(expression.left) as Expression
+							right = copies.get(expression.right) as Expression
 						]»
 						«mul.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::DIV_ASSIGN»
 						«val div = NoopFactory::eINSTANCE.createDivExpression => [
-							left = expression.left.copy
-							right = expression.right.copy
+							left = copies.get(expression.left) as Expression
+							right = copies.get(expression.right) as Expression
 						]»
 						«div.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::MOD_ASSIGN»
 						«val mod = NoopFactory::eINSTANCE.createModExpression => [
-							left = expression.left.copy
-							right = expression.right.copy
+							left = copies.get(expression.left) as Expression
+							right = copies.get(expression.right) as Expression
 						]»
 						«mod.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BOR_ASSIGN»
 						«val bor = NoopFactory::eINSTANCE.createBOrExpression => [
-							left = expression.left.copy
-							right = expression.right.copy
+							left = copies.get(expression.left) as Expression
+							right = copies.get(expression.right) as Expression
 						]»
 						«bor.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::XOR_ASSIGN»
 						«val xor = NoopFactory::eINSTANCE.createBXorExpression => [
-							left = expression.left.copy
-							right = expression.right.copy
+							left = copies.get(expression.left) as Expression
+							right = copies.get(expression.right) as Expression
 						]»
 						«xor.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BAN_ASSIGN»
 						«val ban = NoopFactory::eINSTANCE.createBAndExpression => [
-							left = expression.left.copy
-							right = expression.right.copy
+							left = copies.get(expression.left) as Expression
+							right = copies.get(expression.right) as Expression
 						]»
 						«ban.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BLS_ASSIGN»
 						«val bls = NoopFactory::eINSTANCE.createLShiftExpression => [
-							left = expression.left.copy
-							right = expression.right.copy
+							left = copies.get(expression.left) as Expression
+							right = copies.get(expression.right) as Expression
 						]»
 						«bls.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BRS_ASSIGN»
 						«val brs = NoopFactory::eINSTANCE.createRShiftExpression => [
-							left = expression.left.copy
-							right = expression.right.copy
+							left = copies.get(expression.left) as Expression
+							right = copies.get(expression.right) as Expression
 						]»
 						«brs.compile(ref => [mode = Mode::COPY])»
 					«ENDIF»
