@@ -251,13 +251,24 @@ class Datas {
 					STA («dst.indirect»), Y
 					CPX «src.index»
 					BNE -«copyLoop»
-			«ELSEIF src.isIndexed || dst.isIndexed»
+			«ELSEIF src.isIndexed»
 				«noop»
-					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
+					LDX «src.index»
 					LDY #$00
 				-«copyLoop»:
-					LDA «src.absolute»«IF src.isIndexed», X«ELSE», Y«ENDIF»
-					STA («dst.indirect»«IF dst.isIndexed», X)«ELSE»), Y«ENDIF»
+					LDA «src.absolute», X
+					STA («dst.indirect»), Y
+					INX
+					INY
+					CPY «minSize»
+					BNE -«copyLoop»
+			«ELSEIF dst.isIndexed»
+				«noop»
+					LDX #$00
+					LDY «dst.index»
+				-«copyLoop»:
+					LDA «src.absolute», X
+					STA («dst.indirect»), Y
 					INX
 					INY
 					CPX «minSize»
@@ -345,13 +356,24 @@ class Datas {
 					STA «dst.absolute», X
 					CPY «src.index»
 					BNE -«copyLoop»
-			«ELSEIF src.isIndexed || dst.isIndexed»
+			«ELSEIF src.isIndexed»
 				«noop»
-					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
+					LDX #$00
+					LDY «src.index»
+				-«copyLoop»:
+					LDA («src.indirect»), Y
+					STA «dst.absolute», X
+					INX
+					INY
+					CPX «minSize»
+					BNE -«copyLoop»
+			«ELSEIF dst.isIndexed»
+				«noop»
+					LDX «dst.index»
 					LDY #$00
 				-«copyLoop»:
-					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
-					STA «dst.absolute»«IF dst.isIndexed», X«ELSE», Y«ENDIF»
+					LDA («src.indirect»), Y
+					STA «dst.absolute», X
 					INX
 					INY
 					CPY «minSize»
@@ -374,20 +396,25 @@ class Datas {
 		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
 			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
-				LDX «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
-				LDY «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
+				LDA «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
+				STA «Members::TEMP_VAR_NAME1»
+				LDA «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
+				STA «Members::TEMP_VAR_NAME3»
 			«FOR i : 0 ..< minSize»
 				«noop»
-					LDA («src.indirect», X)
+					LDY «Members::TEMP_VAR_NAME1»
+					LDA («src.indirect»), Y
+					LDY «Members::TEMP_VAR_NAME3»
 					STA («dst.indirect»), Y
 					«IF i < minSize - 1»
-						INX
-						INY
+						INC «Members::TEMP_VAR_NAME1»
+						INC «Members::TEMP_VAR_NAME3»
 					«ENDIF»
 			«ENDFOR»
 			«IF src.type.isNumeric»
 				«IF src.sizeOf < dst.sizeOf»
 					«src.loadMSBFromAcc»
+						LDY «Members::TEMP_VAR_NAME3»
 						INY
 				«ENDIF»
 				«FOR i : src.sizeOf ..< dst.sizeOf»
@@ -406,27 +433,53 @@ class Datas {
 					CLC
 					LDA «src.index»
 					ADC «minSize»
-					TAX
+					STA «Members::TEMP_VAR_NAME1»
 					CLC
 					LDA «dst.index»
 					ADC «minSize»
-					TAY
+					STA «Members::TEMP_VAR_NAME3»
 				-«copyLoop»:
-					DEY
-					DEX
-					LDA («src.indirect», X)
+					DEC «Members::TEMP_VAR_NAME1»
+					DEC «Members::TEMP_VAR_NAME3»
+					LDY «Members::TEMP_VAR_NAME1»
+					LDA («src.indirect»), Y
+					LDY «Members::TEMP_VAR_NAME3»
 					STA («dst.indirect»), Y
-					CPX «src.index»
+					CPY «dst.index»
 					BNE -«copyLoop»
-			«ELSEIF src.isIndexed || dst.isIndexed»
+			«ELSEIF src.isIndexed»
 				«noop»
-					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
-					LDY #$00
+					LDA «src.index»
+					STA «Members::TEMP_VAR_NAME1»
+					LDA #$00
+					STA «Members::TEMP_VAR_NAME3»
 				-«copyLoop»:
-					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
-					STA («dst.indirect»«IF dst.isIndexed», X)«ELSE»), Y«ENDIF»
-					INX
+					LDY «Members::TEMP_VAR_NAME1»
+					LDA («src.indirect»), Y
 					INY
+					STY «Members::TEMP_VAR_NAME1»
+					LDY «Members::TEMP_VAR_NAME3»
+					STA («dst.indirect»), Y
+					INY
+					STY «Members::TEMP_VAR_NAME3»
+					CPY «minSize»
+					BNE -«copyLoop»
+			«ELSEIF dst.isIndexed»
+				«noop»
+					LDA #$00
+					STA «Members::TEMP_VAR_NAME1»
+					LDA «dst.index»
+					STA «Members::TEMP_VAR_NAME3»
+				-«copyLoop»:
+					LDY «Members::TEMP_VAR_NAME1»
+					LDA («src.indirect»), Y
+					LDY «Members::TEMP_VAR_NAME3»
+					STA («dst.indirect»), Y
+					INY
+					STY «Members::TEMP_VAR_NAME3»
+					LDY «Members::TEMP_VAR_NAME1»
+					INY
+					STY «Members::TEMP_VAR_NAME1»
 					CPY «minSize»
 					BNE -«copyLoop»
 			«ELSE»
