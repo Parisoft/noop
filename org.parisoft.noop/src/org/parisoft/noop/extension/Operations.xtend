@@ -941,13 +941,13 @@ class Operations {
 		«ELSEIF acc.type.isUnsigned»
 			«FOR i : 0..< shift»
 				«noop»
-					CMP #$80
-					ROR A
+					LSR A
 			«ENDFOR»
 		«ELSE»
 			«FOR i : 0..< shift»
 				«noop»
-					LSR A
+					CMP #$80
+					ROR A
 			«ENDFOR»
 		«ENDIF»
 	'''
