@@ -69,6 +69,14 @@ public class Members {
 		variable.containerClass.subClasses.map[declaredFields.filter[it.isOverrideOf(variable)]].filterNull.flatten
 	}
 	
+	def getOverriderClasses(Method method) {
+		newArrayList(method.containerClass) + method.containerClass.subClasses.filter[declaredMethods.forall[!it.isOverrideOf(method)]]
+	}
+	
+	def getOverriderClasses(Variable variable) {
+		newArrayList(variable.containerClass) + variable.containerClass.subClasses.filter[declaredFields.forall[!it.isOverrideOf(variable)]]
+	}
+	
 	def getOverriddenVariablesOnRecursion(Method method, Expression expression) {
 		val statement = method.body.statements.findFirst[
 			it == expression || eAllContentsAsList.contains(expression)
@@ -700,8 +708,9 @@ public class Members {
 	def allocReference(Variable variable, Expression receiver, List<Index> indexes, AllocContext ctx) {
 		val chunks = receiver.alloc(ctx)
 		
-		if (variable.overriders.isNotEmpty && receiver.isNonThisNorSuper) {
-			chunks += ctx.computeTmp(receiver.nameOfTmpVar(ctx.container), 2)
+		if (variable.overriders.isNotEmpty && receiver.isNonThisNorSuper
+			&& !(receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable)) {
+			chunks += ctx.computePtr(receiver.nameOfTmpVar(ctx.container))
 		}
 		
 		val rcv = new CompileContext => [
@@ -928,7 +937,6 @@ public class Members {
 			type = receiver.typeOf
 			mode = null
 		]»
-		«receiver.compile(rcv)»
 		«val overriders = if (receiver.isNonThisNorSuper) variable.overriders else emptyList»
 		«IF overriders.isEmpty»
 			«receiver.compile(rcv => [mode = Mode::REFERENCE])»
@@ -939,27 +947,68 @@ public class Members {
 			«ENDIF»
 		«ELSE»
 			«receiver.compile(rcv => [
-				indirect = receiver.nameOfTmpVar(ctx.container)
-				mode = Mode::POINT
+				if (receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable) {
+					mode = Mode::REFERENCE
+				} else {
+					indirect = receiver.nameOfTmpVar(ctx.container)
+					mode = Mode::POINT
+				}
 			])»
-			«ctx.pushAccIfOperating»
-				LDY #$00
-				LDA («rcv.indirect»), Y
+			«IF rcv.absolute !== null»
+				«ctx.pushAccIfOperating»
+					LDA «rcv.absolute»
+			«ELSE»
+				«ctx.pushAccIfOperating»
+					LDY #$00
+					LDA («rcv.indirect»), Y
+			«ENDIF»
 			«val finish = '''reference.end'''»
 			«val pullAcc = ctx.pullAccIfOperating»
+			«val relative = ctx.relative»
+			«val bypass = if (relative !== null) '''«relative».bypass'''»
 			«FOR overrider : overriders»
+				«FOR container : overrider.overriderClasses»
+					«noop»
+					+	CMP #«container.nameOf»
+						BEQ ++
+				«ENDFOR»
 				«noop»
-				+	CMP #«overrider.containerClass.nameOf»
-					BNE +
-				«pullAcc»
-				«overrider.compileIndirectReference(rcv, indexes, ctx)»
+					JMP +
+				«IF pullAcc.length > 0»
+					++«pullAcc»
+					«IF rcv.absolute !== null»
+						«overrider.compileAbsoluteReference(rcv, indexes, ctx => [it.relative = bypass])»
+					«ELSE»
+						«overrider.compileIndirectReference(rcv, indexes, ctx => [it.relative = bypass])»
+					«ENDIF»
+				«ELSE»
+					«IF rcv.absolute !== null»
+						++«overrider.compileAbsoluteReference(rcv, indexes, ctx => [it.relative = bypass])»
+					«ELSE»
+						++«overrider.compileIndirectReference(rcv, indexes, ctx => [it.relative = bypass])»
+					«ENDIF»
+				«ENDIF»
+				«noop»
 					JMP +«finish»
+				«IF relative !== null»
+					+«bypass»:
+						JMP +«relative»
+					«ctx.relative = relative»
+				«ENDIF»
 			«ENDFOR»
 			«IF pullAcc.length > 0»
 				+«pullAcc»
-				«variable.compileIndirectReference(rcv, indexes, ctx)»
+				«IF rcv.absolute !== null»
+					«variable.compileAbsoluteReference(rcv, indexes, ctx)»
+				«ELSE»
+					«variable.compileIndirectReference(rcv, indexes, ctx)»
+				«ENDIF»
 			«ELSE»
-				+«variable.compileIndirectReference(rcv, indexes, ctx)»
+				«IF rcv.absolute !== null»
+					+«variable.compileAbsoluteReference(rcv, indexes, ctx)»
+				«ELSE»
+					+«variable.compileIndirectReference(rcv, indexes, ctx)»
+				«ENDIF»
 			«ENDIF»
 			+«finish»:
 		«ENDIF»
@@ -1117,23 +1166,30 @@ public class Members {
 					LDY #$00
 					LDA («method.nameOfReceiver»), Y
 				«val invocationEnd = '''invocation.end'''»
+				«val relative = ctx.relative»
+				«val bypass = if (relative !== null) '''«relative».bypass'''»
 				«FOR overrider : overriders»
+					«FOR container : overrider.overriderClasses»
+						«noop»
+						+	CMP #«container.nameOf»
+							BEQ ++
+					«ENDFOR»
 					«noop»
-					+	CMP #«overrider.containerClass.nameOf»
-						BEQ ++
 						JMP +
-					«val falseReceiver = new CompileContext => [
-						operation = ctx.operation
-						indirect = method.nameOfReceiver
-					]»
-					«val realReceiver = new CompileContext => [
-						operation = ctx.operation
-						indirect = overrider.nameOfReceiver
-					]»
-					++«realReceiver.pointTo(falseReceiver)»
-					«val relative = ctx.relative»
-					«val bypass = if (relative !== null) '''«relative».bypass'''»
-					«overrider.compileInvocation(args, indexes, ctx => [it.relative = bypass])»
+					«IF receiver !== null»
+						«val falseReceiver = new CompileContext => [
+							operation = ctx.operation
+							indirect = method.nameOfReceiver
+						]»
+						«val realReceiver = new CompileContext => [
+							operation = ctx.operation
+							indirect = overrider.nameOfReceiver
+						]»
+						++«realReceiver.pointTo(falseReceiver)»
+						«overrider.compileInvocation(args, indexes, ctx => [it.relative = bypass])»
+					«ELSE»
+						++«overrider.compileInvocation(args, indexes, ctx => [it.relative = bypass])»
+					«ENDIF»
 						JMP +«invocationEnd»
 					«IF relative !== null»
 						+«bypass»:

@@ -105,7 +105,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			NoopClass: {
 				val thisMembers = container.declaredFields.takeWhile[it != context] +
 					container.declaredMethods.filterOverload(emptyList)
-				val superMembers = container.allFieldsTopDown.takeWhile[it != context] +
+				val superMembers = container.allFieldsTopDown.takeWhile[it != context].toList.reverse +
 					container.allMethodsBottomUp.filterOverload(emptyList)
 				val classes = super.getScope(container, ref).allElements.filter [
 					EClass.name == NoopClass.simpleName
