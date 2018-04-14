@@ -1306,80 +1306,93 @@ class Expressions {
 		} catch (NonConstantExpressionException e) {
 			switch (expression) {
 				AssignmentExpression: '''
+					«val left = if (expression.assignment === AssignmentType::ASSIGN) {
+							expression.left
+						} else {
+							copies.get(expression.left) as Expression
+						}»
+					«val right = if (expression.assignment === AssignmentType::ASSIGN) {
+							expression.right
+						} else {
+							copies.get(expression.right) as Expression
+						}»
 					«val ref = new CompileContext => [
 						container = ctx.container
 						operation = ctx.operation
-						type = expression.left.typeOf
+						type = left.typeOf
 						mode = Mode::REFERENCE
 					]»
-					«expression.left.compile(ref)»
+					«val refCompiled = left.compile(ref)»
 					«IF expression.assignment === AssignmentType::ASSIGN»
-						«expression.right.compile(ref => [
+						«refCompiled»
+						«right.compile(ref => [
 							mode = Mode::COPY
-							lengthExpression = expression.left.lengthExpression
+							lengthExpression = left.lengthExpression
 						])»
 					«ELSEIF expression.assignment === AssignmentType::ADD_ASSIGN»
 						«val add = NoopFactory::eINSTANCE.createAddExpression => [
-							left = copies.get(expression.left) as Expression
-							right = copies.get(expression.right) as Expression
+							it.left = left
+							it.right = right
 						]»
 						«add.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::SUB_ASSIGN»
 						«val sub = NoopFactory::eINSTANCE.createSubExpression => [
-							left = copies.get(expression.left) as Expression
-							right = copies.get(expression.right) as Expression
+							it.left = left
+							it.right = right
 						]»
 						«sub.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::MUL_ASSIGN»
 						«val mul = NoopFactory::eINSTANCE.createMulExpression => [
-							left = copies.get(expression.left) as Expression
-							right = copies.get(expression.right) as Expression
+							it.left = left
+							it.right = right
 						]»
 						«mul.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::DIV_ASSIGN»
 						«val div = NoopFactory::eINSTANCE.createDivExpression => [
-							left = copies.get(expression.left) as Expression
-							right = copies.get(expression.right) as Expression
+							it.left = left
+							it.right = right
 						]»
 						«div.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::MOD_ASSIGN»
 						«val mod = NoopFactory::eINSTANCE.createModExpression => [
-							left = copies.get(expression.left) as Expression
-							right = copies.get(expression.right) as Expression
+							it.left = left
+							it.right = right
 						]»
 						«mod.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BOR_ASSIGN»
 						«val bor = NoopFactory::eINSTANCE.createBOrExpression => [
-							left = copies.get(expression.left) as Expression
-							right = copies.get(expression.right) as Expression
+							it.left = left
+							it.right = right
 						]»
 						«bor.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::XOR_ASSIGN»
 						«val xor = NoopFactory::eINSTANCE.createBXorExpression => [
-							left = copies.get(expression.left) as Expression
-							right = copies.get(expression.right) as Expression
+							it.left = left
+							it.right = right
 						]»
 						«xor.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BAN_ASSIGN»
 						«val ban = NoopFactory::eINSTANCE.createBAndExpression => [
-							left = copies.get(expression.left) as Expression
-							right = copies.get(expression.right) as Expression
+							it.left = left
+							it.right = right
 						]»
 						«ban.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BLS_ASSIGN»
 						«val bls = NoopFactory::eINSTANCE.createLShiftExpression => [
-							left = copies.get(expression.left) as Expression
-							right = copies.get(expression.right) as Expression
+							it.left = left
+							it.right = right
 						]»
 						«bls.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BRS_ASSIGN»
 						«val brs = NoopFactory::eINSTANCE.createRShiftExpression => [
-							left = copies.get(expression.left) as Expression
-							right = copies.get(expression.right) as Expression
+							it.left = left
+							it.right = right
 						]»
 						«brs.compile(ref => [mode = Mode::COPY])»
 					«ENDIF»
-					«expression.left.compile(ctx)»
+					«IF ctx.mode != Mode::COPY || ctx.absolute !== null || ctx.indirect !== null || ctx.register !== null || ctx.relative !== null»
+						«left.compile(ctx)»
+					«ENDIF»
 				'''
 				OrExpression: '''«expression.left.compileOr(expression.right, ctx)»'''
 				AndExpression: '''«expression.left.compileAnd(expression.right, ctx)»'''
