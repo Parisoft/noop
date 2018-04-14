@@ -1225,7 +1225,6 @@ class Expressions {
 					return chunks
 				}
 				MemberSelect: {
-					val snapshot = ctx.snapshot
 					val chunks = newArrayList
 					val member = expression.member
 					val receiver = expression.receiver
@@ -1251,10 +1250,6 @@ class Expressions {
 							chunks += member.allocInvocation(receiver, expression.args, expression.indexes, ctx)
 						}
 					}
-
-					chunks.disoverlap(ctx.container)
-
-					ctx.restoreTo(snapshot)
 
 					return chunks
 				}

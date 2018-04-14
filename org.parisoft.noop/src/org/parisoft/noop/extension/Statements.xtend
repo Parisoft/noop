@@ -486,7 +486,10 @@ class Statements {
 		«ELSE»
 			+«elseStatement.nameOf»:
 			«FOR stmt : elseStatement.body?.statements»
-				«stmt.compile(ctx)»
+				«stmt.compile(new CompileContext => [
+					container = ctx.container
+					operation = ctx.operation
+				])»
 			«ENDFOR»
 		«ENDIF»
 	'''
