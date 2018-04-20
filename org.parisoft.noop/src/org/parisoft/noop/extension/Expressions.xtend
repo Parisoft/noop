@@ -1776,7 +1776,7 @@ class Expressions {
 		«right.compile(opr)»
 		«IF ctx.mode === Mode::OPERATE»
 			«ctx.accLoaded = true»
-				«FOR i : 0..< accType.sizeOf»
+				«FOR i : 0..< ctx.type.sizeOf»
 					STA «Members::TEMP_VAR_NAME2»«IF i > 0» + «i»«ENDIF»
 					PLA
 				«ENDFOR»
