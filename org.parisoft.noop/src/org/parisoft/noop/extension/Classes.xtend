@@ -275,6 +275,7 @@ class Classes {
 		if (ctx.classes.put(noopClass.nameOf, noopClass) === null) {
 			noopClass.allFieldsTopDown.filter[ROM].forEach[prepare(ctx)]
 			noopClass.allFieldsTopDown.filter[INesHeader].forEach[prepare(ctx)]
+			noopClass.allFieldsTopDown.filter[mapperConfig].forEach[prepare(ctx)]
 			noopClass.allMethodsBottomUp.findFirst[reset]?.prepare(ctx)
 			noopClass.allMethodsBottomUp.findFirst[nmi]?.prepare(ctx)
 			noopClass.allMethodsBottomUp.findFirst[irq]?.prepare(ctx)

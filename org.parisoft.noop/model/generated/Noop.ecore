@@ -129,6 +129,7 @@
     <eLiterals name="RESET" value="8" literal="@Reset"/>
     <eLiterals name="NMI" value="9" literal="@NMI"/>
     <eLiterals name="IRQ" value="10" literal="@IRQ"/>
+    <eLiterals name="MMC3CFG" value="11" literal="@MMC3-Config"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="AssignmentExpression" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"

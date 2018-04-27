@@ -59,7 +59,6 @@ class Unrom extends Mapper {
 			«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: fixedBank) == bank].toList»
 			«IF dmcList.isNotEmpty»
 				;-- DMC sound data-----------------------------------------------
-					.org «Members::FT_DPCM_OFF»
 				«FOR dmcRom : dmcList»
 					«dmcRom.compile(new CompileContext)»
 				«ENDFOR»

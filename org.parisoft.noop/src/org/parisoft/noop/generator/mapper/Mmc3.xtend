@@ -9,6 +9,8 @@ import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Expressions
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.CompileContext
+import org.parisoft.noop.noop.StorageType
+import org.parisoft.noop.noop.Variable
 
 class Mmc3 extends Mapper {
 
@@ -24,13 +26,27 @@ class Mmc3 extends Mapper {
 		«val inesChr = ctx.constants.values.findFirst[INesChr]?.valueOf as Integer ?: 32»
 		«val prgBanks = inesPrg / 8»
 		«val chrBanks = inesChr / 8»
+		«val mode = (ctx.constants.values.findFirst[MMC3Config]?.valueOf as Integer ?: 0).bitwiseAnd(64)»
 		«val fixedBank0 = prgBanks - 2»
 		«val fixedBank1 = prgBanks - 1»
+		«val evenAddr = if (mode == 0) '$8000' else '$C000'»
+		«val oddAddr = '$A000'»
+		«val fixedAddr0 = if (mode == 0) '$C000' else '$8000'»
+		«val fixedAddr1 = '$E000'»
 		«FOR bank : 0 ..< prgBanks»
+			«val base = if (bank == fixedBank1) {
+				fixedAddr1
+			}else if (bank == fixedBank0){
+				fixedAddr0
+			}else if( bank % 2 == 0){
+				evenAddr
+			}else{
+				oddAddr
+			}»
 			;----------------------------------------------------------------
-			; PRG-ROM Bank #«bank»«IF bank >= fixedBank0» FIXED«ENDIF»
+			; PRG-ROM Bank #«bank»«IF bank == fixedBank0 || bank == fixedBank1» FIXED«ENDIF»
 			;----------------------------------------------------------------
-				.base «IF bank == fixedBank1»$E000«ELSEIF bank == fixedBank0»$C000«ELSEIF bank % 2 != 0»$A000«ELSE»$8000«ENDIF» 
+				.base «base» 
 			
 			«FOR rom : ctx.prgRoms.values.filter[nonDMC].filter[(storageOf ?: fixedBank1) == bank]»
 				«rom.compile(new CompileContext)»
@@ -48,6 +64,13 @@ class Mmc3 extends Mapper {
 					
 				«ENDFOR»
 			«ENDIF»
+			«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: fixedBank1) == bank].toList»
+			«IF dmcList.isNotEmpty»
+				;-- DMC sound data-----------------------------------------------
+				«FOR dmcRom : dmcList»
+					«dmcRom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
 			«IF bank == fixedBank1»
 				«val constructors = ctx.constructors.values.sortBy[type.name]»
 				«IF constructors.isNotEmpty»
@@ -57,23 +80,15 @@ class Mmc3 extends Mapper {
 						
 					«ENDFOR»
 				«ENDIF»
-			«ENDIF»
-			«IF bank == fixedBank0»
-				«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: fixedBank1) == bank].toList»
-				«IF dmcList.isNotEmpty»
-					;-- DMC sound data-----------------------------------------------
-					«FOR dmcRom : dmcList»
-						«dmcRom.compile(new CompileContext)»
-					«ENDFOR»
-				«ENDIF»
-				«noop»
-					.org $E000
-			«ELSEIF bank != fixedBank1 && bank % 2 == 0»
+			«ELSEIF base == '$8000'»
 				«noop»
 					.org $A000
-			«ELSEIF bank != fixedBank1»
+			«ELSEIF base == '$A000'»
 				«noop»
 					.org $C000
+			«ELSEIF base == '$C000'»
+				«noop»
+					.org $E000
 			«ENDIF»
 		«ENDFOR»
 		
@@ -151,4 +166,7 @@ class Mmc3 extends Mapper {
 		«ENDFOR»
 	'''
 
+	private def isMMC3Config(Variable variable) {
+		variable.storage?.type == StorageType::MMC3CFG
+	}
 }

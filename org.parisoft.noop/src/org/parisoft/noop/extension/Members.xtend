@@ -48,6 +48,7 @@ public class Members {
 	public static val MATH_MOD = '''«TypeSystem::LIB_MATH».«STATIC_PREFIX»mod'''
 	public static val METHOD_ARRAY_LENGTH = 'length'
 	
+	@Inject extension Tags
 	@Inject extension Datas
 	@Inject extension Values
 	@Inject extension Classes
@@ -315,6 +316,14 @@ public class Members {
 	
 	def isINesMir(Variable variable) {
 		variable.storage?.type == StorageType::INESMIR
+	}
+	
+	def isMapperConfig(Variable variable) {
+		variable.storage?.isMapperConfig
+	}
+	
+	def isNonMapperConfig(Variable variable) {
+		!variable.isMapperConfig
 	}
 	
 	def isIrqImpl(Method m) {

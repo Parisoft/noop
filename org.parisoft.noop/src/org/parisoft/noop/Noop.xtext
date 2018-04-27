@@ -158,7 +158,7 @@ enum AssignmentType:
 
 enum StorageType:
 	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM' | INESPRG='@iNES-PRG' | INESCHR='@iNES-CHR' | INESMAPPER='@iNES-Mapper' |
-	INESMIR='@iNES-Mirror' | ZP='@ZP-RAM' | INLINE='@Inline' | RESET='@Reset' | NMI='@NMI' | IRQ='@IRQ';
+	INESMIR='@iNES-Mirror' | ZP='@ZP-RAM' | INLINE='@Inline' | RESET='@Reset' | NMI='@NMI' | IRQ='@IRQ' | MMC3CFG='@MMC3-Config';
 
 terminal ASM_TO_VAR:
 	'!' !('!' | '?')* '?';

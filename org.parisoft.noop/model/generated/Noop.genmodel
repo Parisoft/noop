@@ -31,6 +31,7 @@
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/RESET"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/NMI"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/IRQ"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/MMC3CFG"/>
     </genEnums>
     <genClasses ecoreClass="Noop.ecore#//NoopClass">
       <genFeatures createChild="false" ecoreFeature="ecore:EAttribute Noop.ecore#//NoopClass/name"/>

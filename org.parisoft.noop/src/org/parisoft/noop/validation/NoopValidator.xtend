@@ -72,6 +72,7 @@ import static org.parisoft.noop.noop.NoopPackage.Literals.*
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.^extension.Tags
 
 /**
  * This class contains custom validation rules. 
@@ -80,6 +81,7 @@ import static extension org.eclipse.xtext.EcoreUtil2.*
  */
 class NoopValidator extends AbstractNoopValidator {
 
+	@Inject extension Tags
 	@Inject extension Files
 	@Inject extension Classes
 	@Inject extension Members
@@ -208,16 +210,17 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val MEMBER_SELECT_DIMENSION = 'org.parisoft.noop.MEMBER_SELECT_DIMENSION'
 	public static val MEMBER_REF_DIMENSION = 'org.parisoft.noop.MEMBER_REF_DIMENSION'
 	public static val STORAGE_LOCATION = 'org.parisoft.noop.STORAGE_LOCATION'
+	public static val STORAGE_MAPPER_CONFIG = 'org.parisoft.noop.STORAGE_MAPPER_CONFIG'
 
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
 		if (c.isMain) {
 			val ini = System::currentTimeMillis
-			
+
 			val ctx = c.prepare
 			val project = c.URI.project.name
 			val classes = ctx.classes.values.filter[URI.project?.name == project]
-			
+
 			println('''Prepare = «System::currentTimeMillis - ini»ms''')
 
 			classes.filter[sizeOf > 0x100].forEach [
@@ -391,7 +394,7 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def constantFieldStorage(Variable v) {
-		if (v.isConstant && v.storage !== null && v.isNonROM && v.isNonINesHeader) {
+		if (v.isConstant && v.storage !== null && v.isNonROM && v.isNonINesHeader && v.isNonMapperConfig) {
 			error('''Constant fields cannot be tagged as «v.storage.type.literal.substring(1)»''', MEMBER__STORAGE,
 				CONSTANT_FIELD_STORAGE, v.name, v.storage.type.literal.substring(0))
 		}
@@ -617,7 +620,7 @@ class NoopValidator extends AbstractNoopValidator {
 				METHOD_IRQ_NON_STATIC, m.name, m.storage.type.literal)
 		}
 	}
-	
+
 	@Check
 	def methodIrqParams(Method m) {
 		if (m.isIrqImpl && m.params.isNotEmpty) {
@@ -1623,6 +1626,18 @@ class NoopValidator extends AbstractNoopValidator {
 				} catch (ClassCastException e) {
 					error('Bank must be a numeric expression', STORAGE__LOCATION, STORAGE_LOCATION)
 				}
+		}
+	}
+
+	@Check
+	def storageMapperConfig(Storage s) {
+		if (s.isMapperConfig) {
+			val c = s.eContainer
+
+			if (!(c instanceof Variable) || (c as Variable).isNonConstant) {
+				error('''Tag «s.type.literal.substring(1)» can only be applied to constant fields''', s, null,
+					STORAGE_MAPPER_CONFIG)
+			}
 		}
 	}
 
