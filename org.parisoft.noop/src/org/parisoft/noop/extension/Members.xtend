@@ -237,7 +237,12 @@ public class Members {
 	
 	def isBounded(Member member) {
 		switch (member) {
-			Variable: member.dimension?.forall[value !== null]
+			Variable: 
+				if (member.dimension.isEmpty) {
+					true
+				} else {
+					member.dimension.forall[value !== null]
+				} 
 			Method: true 
 		}
 	}

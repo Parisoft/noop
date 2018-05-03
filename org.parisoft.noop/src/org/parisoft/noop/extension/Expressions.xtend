@@ -364,7 +364,7 @@ class Expressions {
 	}
 
 	def boolean isUnbounded(Expression expression) {
-		switch (expression) {
+		expression.dimensionOf.isNotEmpty && switch (expression) {
 			AssignmentExpression:
 				expression.left.isUnbounded
 			MemberSelect:
