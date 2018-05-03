@@ -334,15 +334,15 @@ public class Members {
 		!m.isIrqImpl
 	}
 
-	def isIrq(Method method) {
+	def isIrq(Member method) {
 		method.storage?.type == StorageType::IRQ
 	}
 
-	def isNmi(Method method) {
+	def isNmi(Member method) {
 		method.storage?.type == StorageType::NMI
 	}
 	
-	def isReset(Method method) {
+	def isReset(Member method) {
 		method.storage?.type == StorageType::RESET
 	}
 	
@@ -529,7 +529,7 @@ public class Members {
 	}
 	
 	def storageOf(Member member) {
-		if (member.isROM) {
+		if (member.isROM || member.isNmi || member.isIrq) {
 			member.storage.location?.valueOf as Integer
 		} else if (member instanceof Variable) {
 			if (member.storage?.type == StorageType::ZP) {
