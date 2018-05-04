@@ -2053,7 +2053,7 @@ PPU {
     /*
      * <p>Transfer 256 bytes from memory address 0x0200 to PPU OAM.</p>
      */
-    $doSpriteDMA() @Inline {
+    $flushSprites() @Inline {
 	    !	LDA #<$0200    !
 		!	STA ?$OAMADDR? !
 		!	LDA #>$0200    !

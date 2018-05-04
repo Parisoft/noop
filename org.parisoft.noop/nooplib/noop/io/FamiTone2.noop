@@ -120,7 +120,7 @@
  * 
  * <h2>How to play DPCM/DCM/DMC samples</h2>
  * <ol>
- * <li>Invoke <b>$playDcmSample()</b> to play your sample with high priority</li>
+ * <li>Invoke <b>$playDmcSample()</b> to play your sample with high priority</li>
  * <li>Invoke <b>$update()</b> every TV frame, usually in the end of the NMI handler</li>
  * </ol>
  * 
@@ -1132,9 +1132,8 @@ FamiTone2 {
 
 	/*
 	 * <p>Play a DPCM/DMC/DCM sample with higher priority, for sound effects</p>
-	 * <p><b>Warning</b>: don't forget that active DPCM sound conflicts with $2002 and
-	 * controllers polling. You should poll controllers three times in a row, 
-	 * then use matching result. </p>
+	 * <p><b>Warning</b>: call <i>Controllers.$updateSafe()</i> to avoid active DPCM sound conflicts with $2002 and
+	 * controllers polling. </p>
 	 * 
 	 * <h2>Example:</h2>
 	 * <code>
@@ -1151,7 +1150,7 @@ FamiTone2 {
 	 * <ul>
 	 * <li><b>sample</b>: the number of sample to play</li>
 	 * </ul>	 */
-	$playDcmSample(Byte sample) {
+	$playDmcSample(Byte sample) {
 		!	LDA ?sample?       !
 		!	ldx #1             !
 		!	stx ?_$FT_DPCM_EFFECT? !

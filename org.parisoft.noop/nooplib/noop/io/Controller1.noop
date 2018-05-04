@@ -1,6 +1,6 @@
 Controller1 extends Controllers {
-	
-	$update() {
+
+	_$poll() {
 		mask : 1
 		!	LDA #$01   !
 		!	STA $4016  !
@@ -17,10 +17,47 @@ Controller1 extends Controllers {
 		!+next1:       !
 		!	ASL ?mask? !
 		!	BNE -loop1 !
+	}
+	
+	$update() {
+		_$poll
 		
 		!	LDA ?_$status1?    !
 		!	STA ?_$preStatus1? !
 		!	STX ?_$status1?    !
+	}
+	
+	$updateSafe() {
+		buffer0 : 0
+		buffer1 : 0
+		buffer2 : 0
+		buffer3 : 0
+		
+		_$poll
+		
+		!	STX ?buffer0? + 0 !
+		
+		_$poll
+		
+		!	STX ?buffer1? + 0 !
+		
+		_$poll
+		
+		!	STX ?buffer2? + 0 !
+		
+		_$poll
+		
+		!	STX ?buffer3? + 0 !
+		
+		!	LDA ?buffer1? + 0  !
+		!	CMP ?buffer3? + 0  !
+		!	BEQ +              !
+		!	CMP ?buffer0? + 0  !
+		!	BEQ +              !
+		!	LDA ?buffer2? + 0  !
+		!+	LDX ?_$status1?    !
+		!	STX ?_$preStatus1? !
+		!	STA ?_$status1?    !
 	}
 	
 	$isPressedA() {
