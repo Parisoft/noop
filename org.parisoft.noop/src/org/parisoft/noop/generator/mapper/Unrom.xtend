@@ -29,6 +29,14 @@ class Unrom extends Mapper {
 			;----------------------------------------------------------------
 				.base «IF bank == fixedBank»$C000«ELSE»$8000«ENDIF» 
 			
+			«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: fixedBank) == bank].toList»
+			«IF dmcList.isNotEmpty»
+				;-- DMC sound data-----------------------------------------------
+				«FOR dmcRom : dmcList»
+					«dmcRom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+			
 			«FOR rom : ctx.prgRoms.values.filter[nonDMC].filter[(storageOf ?: fixedBank) == bank]»
 				«rom.compile(new CompileContext)»
 			«ENDFOR»
@@ -55,13 +63,6 @@ class Unrom extends Mapper {
 						
 					«ENDFOR»
 				«ENDIF»
-			«ENDIF»
-			«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: fixedBank) == bank].toList»
-			«IF dmcList.isNotEmpty»
-				;-- DMC sound data-----------------------------------------------
-				«FOR dmcRom : dmcList»
-					«dmcRom.compile(new CompileContext)»
-				«ENDFOR»
 			«ENDIF»
 			«IF bank != fixedBank»
 				«noop»

@@ -48,6 +48,13 @@ class Mmc3 extends Mapper {
 			;----------------------------------------------------------------
 				.base «base» 
 			
+			«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: fixedBank1) == bank].toList»
+			«IF dmcList.isNotEmpty»
+				;-- DMC sound data-----------------------------------------------
+				«FOR dmcRom : dmcList»
+					«dmcRom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
 			«FOR rom : ctx.prgRoms.values.filter[nonDMC].filter[(storageOf ?: fixedBank1) == bank]»
 				«rom.compile(new CompileContext)»
 			«ENDFOR»
@@ -62,13 +69,6 @@ class Mmc3 extends Mapper {
 				«FOR method : methods»
 					«method.compile(new CompileContext => [allocation = ctx])»
 					
-				«ENDFOR»
-			«ENDIF»
-			«val dmcList = ctx.prgRoms.values.filter[DMC].filter[(storageOf ?: fixedBank1) == bank].toList»
-			«IF dmcList.isNotEmpty»
-				;-- DMC sound data-----------------------------------------------
-				«FOR dmcRom : dmcList»
-					«dmcRom.compile(new CompileContext)»
 				«ENDFOR»
 			«ENDIF»
 			«IF bank == fixedBank1»
