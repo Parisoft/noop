@@ -3,7 +3,9 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.ArrayList
 import java.util.Collection
+import java.util.List
 import java.util.NoSuchElementException
+import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.AllocContext
@@ -14,7 +16,6 @@ import org.parisoft.noop.noop.Variable
 import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import java.util.List
 
 class Classes {
 
@@ -25,6 +26,8 @@ class Classes {
 	@Inject extension TypeSystem
 	@Inject extension Collections
 	@Inject extension IQualifiedNameProvider
+
+	static val allocating = ConcurrentHashMap::<NoopClass>newKeySet
 
 	def getSuperClasses(NoopClass c) {
 		val visited = <NoopClass>newArrayList()
@@ -283,31 +286,37 @@ class Classes {
 	}
 
 	def void alloc(NoopClass noopClass, AllocContext ctx) {
-		allocated.get(noopClass, [
-			if (noopClass.isMain) {
-				ctx.statics.values.forEach[alloc(ctx)]
+		if (allocating.add(noopClass)) {
+			try {
+				allocated.get(noopClass, [
+					if (noopClass.isMain) {
+						ctx.statics.values.forEach[alloc(ctx)]
+					}
+
+					val chunks = noopClass.allMethodsBottomUp.findFirst[nmi]?.alloc(ctx) ?: newArrayList
+
+					ctx.counters.forEach [ counter, page |
+						try {
+							counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
+						} catch (NoSuchElementException e) {
+						}
+					]
+
+					chunks += noopClass.allMethodsBottomUp.findFirst[irq]?.alloc(ctx) ?: emptyList
+
+					ctx.counters.forEach [ counter, page |
+						try {
+							counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
+						} catch (NoSuchElementException e) {
+						}
+					]
+
+					noopClass.allMethodsBottomUp.findFirst[reset]?.alloc(ctx)
+				])
+			} finally {
+				allocating.remove(noopClass)
 			}
-
-			val chunks = noopClass.allMethodsBottomUp.findFirst[nmi]?.alloc(ctx) ?: newArrayList
-
-			ctx.counters.forEach [ counter, page |
-				try {
-					counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
-				} catch (NoSuchElementException e) {
-				}
-			]
-
-			chunks += noopClass.allMethodsBottomUp.findFirst[irq]?.alloc(ctx) ?: emptyList
-
-			ctx.counters.forEach [ counter, page |
-				try {
-					counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
-				} catch (NoSuchElementException e) {
-				}
-			]
-
-			noopClass.allMethodsBottomUp.findFirst[reset]?.alloc(ctx)
-		])
+		}
 	}
 
 }
