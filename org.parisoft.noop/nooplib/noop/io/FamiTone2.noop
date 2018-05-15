@@ -607,7 +607,7 @@ FamiTone2 {
 	 * &nbsp; &nbsp; FamiTone2.$update()<br>
 	 * }
 	 * </code>	 */
-	$update() {
+	$update() @Inline {
 		!	.ifdef ?_$FT_THREAD?                                                                                  !
 		!	lda ?_$ftTempPtr? + 0                                                                                 !
 		!	pha                                                                                               !
