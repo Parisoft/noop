@@ -42,7 +42,7 @@ Controllers {
 		!	BNE -ctrlr1 !
 	}	
 		
-	$update() {
+	$update() @Inline {
 		_$poll
 		
 		!	LDA ?_$status1?    !
@@ -53,7 +53,7 @@ Controllers {
 		!	STY ?_$status2?    !
 	}
 	
-	$updateSafe() {
+	$updateSafe() @Inline {
 		buffer0 : UInt
 		buffer1 : UInt
 		buffer2 : UInt

@@ -19,7 +19,7 @@ Controller2 extends Controllers {
 		!	BNE -loop1 !
 	}
 
-	$update() {
+	$update() @Inline {
 		_$poll
 		
 		!	LDA ?_$status2?    !
@@ -27,7 +27,7 @@ Controller2 extends Controllers {
 		!	STX ?_$status2?    !
 	}
 	
-	$updateSafe() {
+	$updateSafe() @Inline {
 		buffer0 : 0
 		buffer1 : 0
 		buffer2 : 0

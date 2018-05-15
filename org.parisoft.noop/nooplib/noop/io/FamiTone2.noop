@@ -446,7 +446,7 @@ FamiTone2 {
 		!                                                                           !
 		!	bne @set_envelopes                                                      !
 		!                                                                           !
-		$stopDcmSample()
+		$stopDmcSample()
 	}
 	
 	/*
@@ -555,7 +555,7 @@ FamiTone2 {
 	 * FamiTone2.$pauseMusic() // pause the playing music 
 	 * </code> */
 	$pauseMusic() {
-		$stopDcmSample()
+		$stopDmcSample()
 		!	lda #0				;mute sound           !
 		!	sta ?_$FT_CH1_VOLUME?                         !
 		!	sta ?_$FT_CH2_VOLUME?                         !
@@ -683,7 +683,7 @@ FamiTone2 {
 		!	bcc @no_new_note5                                                                                 !
 		!	lda ?_$FT_CH5_NOTE?                                                                                   !
 		!	bne @play_sample                                                                                  !
-		$stopDcmSample()
+		$stopDmcSample()
 		!	bne @no_new_note5		;A is non-zero after FamiToneSampleStop                                   !
 		!@play_sample:                                                                                        !
 		_$FamiToneSamplePlayM()
@@ -1101,7 +1101,7 @@ FamiTone2 {
 	/*
 	 * <p>Stop DPCM/DMC/DCM sample if it plays</p>
 	 */
-	$stopDcmSample() {
+	$stopDmcSample() {
 		!	lda #%00001111  !
 		!	sta ?_$APU_SND_CHN? !
 	}
@@ -1138,7 +1138,7 @@ FamiTone2 {
 	 * <h2>Example:</h2>
 	 * <code>
 	 * $someSamplesFile @PRG-ROM : "file://some-samples.asm"<br>
-	 * $someSamplesData @PRG-ROM : "file://some-samples.dcm"<br>
+	 * $someSamplesData @PRG-ROM : "file://some-samples.dmc"<br>
 	 * <br>
 	 * // somewhere in the code<br>
 	 * FamiTone2.$openMusic(FamiTone2.$NTSC, $someSamplesFile)<br>
@@ -1239,7 +1239,7 @@ FamiTone2 {
 		!	tax                                                                 !
 		!	cpx #?_$FT_SFX_STRUCT_SIZE?*?_$FT_SFX_STREAMS?                              !
 		!	bne @set_channels                                                   !
-		$stopDcmSample()
+		$stopDmcSample()
 	}
 	
 	/*

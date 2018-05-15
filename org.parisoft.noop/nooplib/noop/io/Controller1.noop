@@ -1,6 +1,6 @@
 Controller1 extends Controllers {
 
-	_$poll() {
+	_$poll() @Inline {
 		mask : 1
 		!	LDA #$01   !
 		!	STA $4016  !
@@ -19,7 +19,7 @@ Controller1 extends Controllers {
 		!	BNE -loop1 !
 	}
 	
-	$update() {
+	$update() @Inline {
 		_$poll
 		
 		!	LDA ?_$status1?    !
@@ -27,7 +27,7 @@ Controller1 extends Controllers {
 		!	STX ?_$status1?    !
 	}
 	
-	$updateSafe() {
+	$updateSafe() @Inline {
 		buffer0 : 0
 		buffer1 : 0
 		buffer2 : 0
