@@ -22,6 +22,7 @@ import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.noop.NoopClass
 
 import static org.parisoft.noop.generator.Asm8.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Generates code from your model files on save.
@@ -52,7 +53,7 @@ class NoopGenerator extends AbstractGenerator {
 				inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
 				outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
 				listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
-	
+
 				val ini = System::currentTimeMillis
 
 				try {
@@ -89,7 +90,7 @@ class NoopGenerator extends AbstractGenerator {
 		ini = System::currentTimeMillis
 		val code = ctx.compile
 		println('''Compile = «System::currentTimeMillis - ini»ms''')
-		
+
 		ini = System::currentTimeMillis
 		val content = code.optimize
 		println('''Optimize = «System::currentTimeMillis - ini»ms''')
@@ -97,17 +98,19 @@ class NoopGenerator extends AbstractGenerator {
 		new ASM(mainClass.name, content)
 	}
 
-	private def optimize(CharSequence code) {
+	private def String optimize(CharSequence code) {
 		val lines = code.toString.split(System::lineSeparator)
 		val builder = new StringBuilder
 		val AtomicInteger skip = new AtomicInteger
+		val AtomicBoolean skipped = new AtomicBoolean(false)
 
 		lines.forEach [ line, i |
 			var next = if(i + 1 < lines.length) lines.get(i + 1) else ''
 
 			if (skip.get > 0) {
 				skip.decrementAndGet
-			} else if (line == '\tPLA' && next == '\tPHA') {
+				skipped.set(true)
+			} else if (line == '\tPHA' && next == '\tPLA') {
 				skip.set(1)
 			} else if ((line.startsWith('\tJMP') || line.startsWith('\tRTS')) &&
 				(next.startsWith('\tJMP') || next.startsWith('\tRTS'))) {
@@ -149,7 +152,11 @@ class NoopGenerator extends AbstractGenerator {
 			}
 		]
 
-		builder.toString
+		if (skipped.get) {
+			builder.toString.optimize
+		} else {
+			builder.toString
+		}
 	}
 
 	private def compile(AllocContext ctx) '''

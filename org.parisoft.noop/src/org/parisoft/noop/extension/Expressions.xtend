@@ -1782,7 +1782,7 @@ class Expressions {
 				«ENDFOR»
 			«val tmp = new CompileContext => [
 				container = ctx.container
-				type = accType
+				type = ctx.type
 				opType = ctx.type
 				absolute = Members::TEMP_VAR_NAME2
 			]»
