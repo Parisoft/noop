@@ -4,33 +4,67 @@
 package org.parisoft.noop.validation
 
 import com.google.inject.Inject
+import java.io.File
+import java.util.List
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.validation.Check
+import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.TypeSystem
+import org.parisoft.noop.noop.AddExpression
+import org.parisoft.noop.noop.AndExpression
+import org.parisoft.noop.noop.ArrayLiteral
 import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.AssignmentExpression
+import org.parisoft.noop.noop.BAndExpression
+import org.parisoft.noop.noop.BOrExpression
 import org.parisoft.noop.noop.Block
 import org.parisoft.noop.noop.BreakStatement
+import org.parisoft.noop.noop.ByteLiteral
+import org.parisoft.noop.noop.CastExpression
+import org.parisoft.noop.noop.ComplementExpression
+import org.parisoft.noop.noop.ConstructorField
 import org.parisoft.noop.noop.ContinueStatement
 import org.parisoft.noop.noop.DecExpression
+import org.parisoft.noop.noop.DifferExpression
+import org.parisoft.noop.noop.DivExpression
 import org.parisoft.noop.noop.ElseStatement
+import org.parisoft.noop.noop.EqualsExpression
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.ForStatement
 import org.parisoft.noop.noop.ForeverStatement
+import org.parisoft.noop.noop.GeExpression
+import org.parisoft.noop.noop.GtExpression
 import org.parisoft.noop.noop.IfStatement
 import org.parisoft.noop.noop.IncExpression
+import org.parisoft.noop.noop.InstanceOfExpression
+import org.parisoft.noop.noop.LShiftExpression
+import org.parisoft.noop.noop.LeExpression
+import org.parisoft.noop.noop.LtExpression
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
+import org.parisoft.noop.noop.ModExpression
+import org.parisoft.noop.noop.MulExpression
+import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.NotExpression
+import org.parisoft.noop.noop.OrExpression
+import org.parisoft.noop.noop.RShiftExpression
 import org.parisoft.noop.noop.ReturnStatement
+import org.parisoft.noop.noop.SigNegExpression
+import org.parisoft.noop.noop.SigPosExpression
 import org.parisoft.noop.noop.Statement
+import org.parisoft.noop.noop.Storage
 import org.parisoft.noop.noop.StorageType
+import org.parisoft.noop.noop.StringLiteral
+import org.parisoft.noop.noop.SubExpression
+import org.parisoft.noop.noop.Super
+import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
 
 import static org.parisoft.noop.noop.AssignmentType.*
@@ -38,39 +72,7 @@ import static org.parisoft.noop.noop.NoopPackage.Literals.*
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.OrExpression
-import org.parisoft.noop.noop.AndExpression
-import org.parisoft.noop.noop.BOrExpression
-import org.parisoft.noop.noop.BAndExpression
-import org.parisoft.noop.noop.EqualsExpression
-import org.parisoft.noop.noop.DifferExpression
-import org.parisoft.noop.noop.LtExpression
-import org.parisoft.noop.noop.LeExpression
-import org.parisoft.noop.noop.GtExpression
-import org.parisoft.noop.noop.GeExpression
-import org.parisoft.noop.noop.LShiftExpression
-import org.parisoft.noop.noop.RShiftExpression
-import org.parisoft.noop.noop.AddExpression
-import org.parisoft.noop.noop.SubExpression
-import org.parisoft.noop.noop.MulExpression
-import org.parisoft.noop.noop.DivExpression
-import org.parisoft.noop.noop.ModExpression
-import org.parisoft.noop.noop.InstanceOfExpression
-import org.parisoft.noop.noop.CastExpression
-import org.parisoft.noop.exception.NonConstantExpressionException
-import org.parisoft.noop.noop.ComplementExpression
-import org.parisoft.noop.noop.NotExpression
-import org.parisoft.noop.noop.SigNegExpression
-import org.parisoft.noop.noop.SigPosExpression
-import org.parisoft.noop.noop.ByteLiteral
-import org.parisoft.noop.noop.StringLiteral
-import org.parisoft.noop.noop.ArrayLiteral
-import java.util.List
-import org.parisoft.noop.noop.This
-import org.parisoft.noop.noop.Super
-import org.parisoft.noop.noop.NewInstance
-import org.parisoft.noop.noop.ConstructorField
-import org.parisoft.noop.noop.Storage
+import org.parisoft.noop.^extension.Tags
 
 /**
  * This class contains custom validation rules. 
@@ -79,6 +81,7 @@ import org.parisoft.noop.noop.Storage
  */
 class NoopValidator extends AbstractNoopValidator {
 
+	@Inject extension Tags
 	@Inject extension Files
 	@Inject extension Classes
 	@Inject extension Members
@@ -91,28 +94,26 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val CLASS_SIZE_OVERFLOW = 'org.parisoft.noop.CLASS_SIZE_OVERFLOW'
 	public static val CLASS_FILE_NAME = 'org.parisoft.noop.CLASS_FILE_NAME'
 	public static val FIELD_TYPE_SAME_HIERARCHY = 'org.parisoft.noop.FIELD_TYPE_SAME_HIERARCHY'
+	public static val FIELD_CROSS_REFERENCE = 'org.parisoft.noop.FIELD_CROSS_REFERENCE'
 	public static val FIELD_STORAGE = 'org.parisoft.noop.FIELD_STORAGE'
 	public static val FIELD_DUPLICITY = 'org.parisoft.noop.FIELD_DUPLICITY'
-	public static val FIELD_UNDECLARED_VALUE = 'org.parisoft.noop.FIELD_UNDECLARED_VALUE'
 	public static val FIELD_OVERRIDDEN_TYPE = 'org.parisoft.noop.FIELD_OVERRIDDEN_TYPE'
 	public static val FIELD_OVERRIDDEN_DIMENSION = 'org.parisoft.noop.FIELD_OVERRIDDEN_DIMENSION'
 	public static val STATIC_FIELD_CONTAINER = 'org.parisoft.noop.STATIC_FIELD_CONTAINER'
 	public static val STATIC_FIELD_STORAGE_TYPE = 'org.parisoft.noop.STATIC_FIELD_STORAGE_TYPE'
-	public static val STATIC_FIELD_ROM_TYPE = 'org.parisoft.noop.STATIC_FIELD_ROM_TYPE'
-	public static val STATIC_FIELD_ROM_VALUE = 'org.parisoft.noop.STATIC_FIELD_ROM_VALUE'
-	public static val STATIC_FIELD_NON_STATIC_VALUE = 'org.parisoft.noop.STATIC_FIELD_NON_STATIC_VALUE'
 	public static val STATIC_FIELD_UNDECLARED_VALUE = 'org.parisoft.noop.STATIC_FIELD_UNDECLARED_VALUE'
+	public static val ROM_FIELD_NON_CONSTANT = 'org.parisoft.noop.ROM_FIELD_NON_CONSTANT'
+	public static val INES_FIELD_NON_CONSTANT = 'org.parisoft.noop.INES_FIELD_NON_CONSTANT'
+	public static val INES_FIELD_DIMENSION = 'org.parisoft.noop.INES_FIELD_DIMENSION'
 	public static val CONSTANT_FIELD_TYPE = 'org.parisoft.noop.CONSTANT_FIELD_TYPE'
 	public static val CONSTANT_FIELD_DIMENSION = 'org.parisoft.noop.CONSTANT_FIELD_DIMENSION'
 	public static val CONSTANT_FIELD_STORAGE = 'org.parisoft.noop.CONSTANT_FIELD_STORAGE'
 	public static val CONSTANT_FIELD_VALUE = 'org.parisoft.noop.CONSTANT_FIELD_VALUE'
 	public static val VARIABLE_VOID_TYPE = 'org.parisoft.noop.VARIABLE_VOID_TYPE'
-	public static val VARIABLE_INES_HEADER_TYPE = 'org.parisoft.noop.VARIABLE_INES_HEADER_TYPE'
 	public static val VARIABLE_DUPLICITY = 'org.parisoft.noop.VARIABLE_DUPLICITY'
 	public static val VARIABLE_NEVER_USED = 'org.parisoft.noop.VARIABLE_NEVER_USED'
 	public static val VARIABLE_DIMENSION = 'org.parisoft.noop.VARIABLE_DIMENSION'
 	public static val PARAMETER_VOID_TYPE = 'org.parisoft.noop.PARAMETER VOID_TYPE'
-	public static val PARAMETER_INES_HEADER_TYPE = 'org.parisoft.noop.PARAMETER INES_HEADER_TYPE'
 	public static val PARAMETER_STORAGE_TYPE = 'org.parisoft.noop.PARAMETER_STORAGE_TYPE'
 	public static val PARAMETER_DUPLICITY = 'org.parisoft.noop.PARAMETER_DUPLICITY'
 	public static val PARAMETER_DIMENSION_VALUE = 'org.parisoft.noop.PARAMETER_DIMENSION_VALUE'
@@ -123,6 +124,8 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val METHOD_STORAGE_TYPE = 'org.parisoft.noop.METHOD_STORAGE_TYPE'
 	public static val METHOD_OVERRIDDEN_TYPE = 'org.parisoft.noop.METHOD_OVERRIDDEN_TYPE'
 	public static val METHOD_OVERRIDDEN_DIMENSION = 'org.parisoft.noop.METHOD_OVERRIDDEN_DIMENSION'
+	public static val METHOD_IRQ_NON_STATIC = 'org.parisoft.noop.METHOD_IRQ_NON_STATIC'
+	public static val METHOD_IRQ_PARAMS = 'org.parisoft.noop.METHOD_IRQ_PARAMS'
 	public static val RETURN_UNBOUNDED_DIMENSION = 'org.parisoft.noop.RETURN_UNBOUNDED_DIMENSION'
 	public static val RETURN_INCONSISTENT_DIMENSION = 'org.parisoft.noop.RETURN_INCONSISTENT_DIMENSION'
 	public static val STATEMENT_UNREACHABLE = 'org.parisoft.noop.STATEMENT_UNREACHABLE'
@@ -203,17 +206,22 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val NEW_INSTANCE_DIMENSION = 'org.parisoft.noop.NEW_INSTANCE_DIMENSION'
 	public static val CONSTRUCTOR_FIELD_TYPE = 'org.parisoft.noop.CONSTRUCTOR_FIELD_TYPE'
 	public static val CONSTRUCTOR_FIELD_DIMENSION = 'org.parisoft.noop.CONSTRUCTOR_FIELD_DIMENSION'
-	public static val INES_HEADER_FIELD_VALUE = 'org.parisoft.noop.INES_HEADER_FIELD_VALUE'
 	public static val MEMBER_SELECT_VISIBILITY = 'org.parisoft.noop.MEMBER_SELECT_VISIBILITY'
 	public static val MEMBER_SELECT_DIMENSION = 'org.parisoft.noop.MEMBER_SELECT_DIMENSION'
 	public static val MEMBER_REF_DIMENSION = 'org.parisoft.noop.MEMBER_REF_DIMENSION'
 	public static val STORAGE_LOCATION = 'org.parisoft.noop.STORAGE_LOCATION'
+	public static val STORAGE_MAPPER_CONFIG = 'org.parisoft.noop.STORAGE_MAPPER_CONFIG'
 
 	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
-		if (c.isGame) {
+		if (c.isMain) {
+			val ini = System::currentTimeMillis
+
+			val ctx = c.prepare
 			val project = c.URI.project.name
-			val classes = c.prepare.classes.values.filter[URI.project?.name == project]
+			val classes = ctx.classes.values.filter[URI.project?.name == project]
+
+			println('''Prepare = «System::currentTimeMillis - ini»ms''')
 
 			classes.filter[sizeOf > 0x100].forEach [
 				error('''Class «name» size is «sizeOf» bytes which overflows the maximum of 256 bytes''', it,
@@ -225,8 +233,7 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def classRecursiveHierarchy(NoopClass c) {
 		if (c.superClass == c || c.superClasses.drop(1).exists[isInstanceOf(c)]) {
-			error('Recursive hierarchy is not allowed', NOOP_CLASS__SUPER_CLASS, CLASS_RECURSIVE_HIERARCHY,
-				c.superClass.name)
+			error('Recursive hierarchy is not allowed', NOOP_CLASS__SUPER_CLASS, CLASS_RECURSIVE_HIERARCHY, c.name)
 		}
 	}
 
@@ -249,10 +256,24 @@ class NoopValidator extends AbstractNoopValidator {
 		if (v.isField && v.isNonStatic) {
 			val varClass = v.containerClass
 			val varType = v.typeOf
+			val sameHierarchy = varClass.isInstanceOf(varType) || varType.isInstanceOf(varClass) ||
+				varType.allFieldsBottomUp.exists[varClass.isInstanceOf(typeOf)]
 
-			if (varClass.isInstanceOf(varType) || varType.isInstanceOf(varClass)) {
-				error('Type of non-static fields cannot be on the same hierarchy of the field\'s class',
+			if (sameHierarchy) {
+				error(
+					'Type of non-static fields cannot be nor contains fields on the same hierarchy of the field\'s class',
 					VARIABLE__VALUE, FIELD_TYPE_SAME_HIERARCHY)
+			}
+		}
+	}
+
+	@Check
+	def fieldCrossReference(Variable v) {
+		if (v.isField && v.isNonStatic) {
+			val varClass = v.containerClass
+
+			if (v.typeOf.allFieldsBottomUp.exists[typeOf.isSubclassOf(varClass)]) {
+				error('Cross-reference field is not allowed', VARIABLE__VALUE, FIELD_CROSS_REFERENCE)
 			}
 		}
 	}
@@ -274,28 +295,6 @@ class NoopValidator extends AbstractNoopValidator {
 				duplicates.forEach [
 					error('''Field «v.name» is duplicated''', it, MEMBER__NAME, FIELD_DUPLICITY)
 				]
-			}
-		}
-	}
-
-	@Check
-	def fieldUndeclaredValue(Variable v) {
-		if (v.isField && v.isNonStatic) {
-			val value = v.value
-			val member = if (value instanceof MemberSelect) {
-					value.member
-				} else if (value instanceof MemberRef) {
-					value.member
-				} else {
-					value.getAllContentsOfType(MemberSelect).map[member].findFirst[isNonStatic] ?:
-						value.getAllContentsOfType(MemberRef).map[member].findFirst[isNonStatic]
-				}
-
-			if (member !== null && member.isField && member.isNonStatic) {
-				if (!v.containerClass.allFieldsTopDown.takeWhile[it != v].exists[it == member]) {
-					error('''Field «v.name» cannot reference the field «member.name» before it is declared''',
-						VARIABLE__VALUE, FIELD_UNDECLARED_VALUE)
-				}
 			}
 		}
 	}
@@ -354,60 +353,26 @@ class NoopValidator extends AbstractNoopValidator {
 	}
 
 	@Check
-	def staticFieldRomType(Variable v) {
-		if (v.isStatic && v.isROM && v.typeOf.isNonPrimitive) {
-			error('''Type of static fields tagged as «v.storage.type.literal.substring(1)» must be «TypeSystem::LIB_PRIMITIVES.join(', ')»''',
-				VARIABLE__VALUE, STATIC_FIELD_ROM_TYPE)
+	def romFieldNonConstant(Variable v) {
+		if (v.isROM && v.isNonConstant) {
+			error('''Fields tagged as «v.storage.type.literal.substring(0)» must be constant''', v, null,
+				ROM_FIELD_NON_CONSTANT, v.name, v.storage.type.literal)
 		}
 	}
 
 	@Check
-	def staticFieldRomValue(Variable v) {
-		if (v.isStatic && v.isROM && v.dimensionOf.isEmpty && v.value.isNonConstant) {
-			error('''Fields tagged as «v.storage.type.literal.substring(0)» must be declared with a constant value''',
-				VARIABLE__VALUE, STATIC_FIELD_ROM_VALUE)
+	def inesFieldNonConstant(Variable v) {
+		if (v.isINesHeader && v.isNonConstant) {
+			error('''Fields tagged as «v.storage.type.literal.substring(0)» must be constant''', v, null,
+				INES_FIELD_NON_CONSTANT, v.name, v.storage.type.literal)
 		}
 	}
 
 	@Check
-	def staticFieldNonStaticValue(Variable v) {
-		if (v.isStatic) {
-			val value = v.value
-			val member = if (value instanceof MemberSelect) {
-					value.member
-				} else if (value instanceof MemberRef) {
-					value.member
-				} else {
-					value.getAllContentsOfType(MemberSelect).map[member].findFirst[isNonStatic] ?:
-						value.getAllContentsOfType(MemberRef).map[member].findFirst[isNonStatic]
-				}
-
-			if (member?.isNonStatic) {
-				error('''Static field «v.name» cannot reference the non-static «IF member.isField»field«ELSE»method«ENDIF» «member.name»''',
-					VARIABLE__VALUE, STATIC_FIELD_NON_STATIC_VALUE)
-			}
-		}
-	}
-
-	@Check
-	def staticUndeclaredValue(Variable v) {
-		if (v.isStatic) {
-			val value = v.value
-			val member = if (value instanceof MemberSelect) {
-					value.member
-				} else if (value instanceof MemberRef) {
-					value.member
-				} else {
-					value.getAllContentsOfType(MemberSelect).map[member].findFirst[isStatic] ?:
-						value.getAllContentsOfType(MemberRef).map[member].findFirst[isStatic]
-				}
-
-			if (member !== null && member.isStatic && member.containerClass.isEquals(v.containerClass)) {
-				if (!v.containerClass.allFieldsTopDown.takeWhile[it != v].exists[it == member]) {
-					error('''Field «v.name» cannot reference the field «member.name» before it is declared''',
-						VARIABLE__VALUE, FIELD_UNDECLARED_VALUE)
-				}
-			}
+	def inesFieldDimension(Variable v) {
+		if (v.isINesHeader && v.dimensionOf.isNotEmpty) {
+			error('''Fields tagged as «v.storage.type.literal.substring(0)» cannot be an array''', v, null,
+				INES_FIELD_DIMENSION)
 		}
 	}
 
@@ -421,15 +386,17 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def constantFieldDimension(Variable v) {
-		if (v.isConstant && v.dimensionOf.isNotEmpty) {
-			error('Constant fields must be non-array', VARIABLE__DIMENSION, CONSTANT_FIELD_DIMENSION)
+		if (v.isConstant && v.dimensionOf.isNotEmpty && v.storage === null) {
+			error('''Missing «StorageType::PRGROM.literal» or «StorageType::CHRROM.literal» tag''', VARIABLE__DIMENSION,
+				CONSTANT_FIELD_DIMENSION, v.name)
 		}
 	}
 
 	@Check
 	def constantFieldStorage(Variable v) {
-		if (v.isConstant && v.storage !== null) {
-			error('Constant fields cannot be tagged', MEMBER__STORAGE, CONSTANT_FIELD_STORAGE)
+		if (v.isConstant && v.storage !== null && v.isNonROM && v.isNonINesHeader && v.isNonMapperConfig) {
+			error('''Constant fields cannot be tagged as «v.storage.type.literal.substring(1)»''', MEMBER__STORAGE,
+				CONSTANT_FIELD_STORAGE, v.name, v.storage.type.literal.substring(0))
 		}
 	}
 
@@ -445,14 +412,6 @@ class NoopValidator extends AbstractNoopValidator {
 		if (v.isNonParameter && v.typeOf.isVoid) {
 			error('''«TypeSystem::LIB_VOID» is not a valid type for «IF v.isField»fields«ELSE»variables«ENDIF»''',
 				VARIABLE__VALUE, VARIABLE_VOID_TYPE)
-		}
-	}
-
-	@Check
-	def variableINesHeaderType(Variable v) {
-		if (v.isNonParameter && v.isNonStatic && v.typeOf.isINESHeader) {
-			error('''«TypeSystem::LIB_NES_HEADER» is not a valid type for «IF v.isField»non-static fields«ELSE»variables«ENDIF»''',
-				VARIABLE__VALUE, VARIABLE_INES_HEADER_TYPE)
 		}
 	}
 
@@ -492,14 +451,6 @@ class NoopValidator extends AbstractNoopValidator {
 	def parameterVoidType(Variable v) {
 		if (v.isParameter && v.type.isVoid) {
 			error('''«TypeSystem::LIB_VOID» is not a valid type for parameters''', VARIABLE__TYPE, PARAMETER_VOID_TYPE)
-		}
-	}
-
-	@Check
-	def parameterINesHeaderType(Variable v) {
-		if (v.isParameter && v.type.isINESHeader) {
-			error('''«TypeSystem::LIB_NES_HEADER» is not a valid type for parameters''', VARIABLE__TYPE,
-				PARAMETER_INES_HEADER_TYPE)
 		}
 	}
 
@@ -626,9 +577,9 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def methodStorageType(Method m) {
-		if (m.storage?.type != StorageType::PRGROM && m.storage?.type != StorageType::INLINE) {
+		if (m.storage !== null && m.isNonROM && m.isNonInline && m.isNonIrqImpl) {
 			error('''Methods cannot be tagged as «m.storage.type.literal.substring(0)»''', MEMBER__STORAGE,
-				METHOD_STORAGE_TYPE)
+				METHOD_STORAGE_TYPE, m.name, m.storage.type.literal)
 		}
 	}
 
@@ -659,6 +610,22 @@ class NoopValidator extends AbstractNoopValidator {
 						MEMBER__NAME, METHOD_OVERRIDDEN_DIMENSION)
 				}
 			}
+		}
+	}
+
+	@Check
+	def methodIrqNonStatic(Method m) {
+		if (m.isIrqImpl && m.isNonStatic) {
+			error('''Methods tagged as «m.storage.type.literal.substring(0)» must be static''', m, null,
+				METHOD_IRQ_NON_STATIC, m.name, m.storage.type.literal)
+		}
+	}
+
+	@Check
+	def methodIrqParams(Method m) {
+		if (m.isIrqImpl && m.params.isNotEmpty) {
+			error('''Methods tagged as «m.storage.type.literal.substring(0)» must be non-args''', m, null,
+				METHOD_IRQ_PARAMS, m.name, m.storage.type.literal)
 		}
 	}
 
@@ -825,17 +792,16 @@ class NoopValidator extends AbstractNoopValidator {
 			if (member.isConstant) {
 				error('Cannot assign a value to a constant field', ASSIGNMENT_EXPRESSION__LEFT,
 					ASSIGN_TO_CONSTANT_OR_ROM)
-			} else if (member.isStatic && member.isROM) {
-				error('''Cannot assign a value to a field tagged as «member.storage.type.literal.substring(1)»''',
-					ASSIGNMENT_EXPRESSION__LEFT, ASSIGN_TO_CONSTANT_OR_ROM)
 			}
 		}
 	}
 
 	@Check
 	def assignValueDimension(AssignmentExpression assignment) {
-		val leftDim = assignment.left.dimensionOf
-		val rightDim = assignment.right.dimensionOf
+		val left = assignment.left
+		val right = assignment.right
+		val leftDim = left.dimensionOf
+		val rightDim = right.dimensionOf
 
 		if (leftDim.isEmpty && rightDim.isNotEmpty) {
 			error('''Cannot assign an array value to a non-array variable''', ASSIGNMENT_EXPRESSION__RIGHT,
@@ -844,7 +810,9 @@ class NoopValidator extends AbstractNoopValidator {
 			error('''Cannot assign a non-array value to an array variable''', ASSIGNMENT_EXPRESSION__RIGHT,
 				ASSIGN_VALUE_DIMENSION)
 		} else if (leftDim.size != rightDim.size) {
-			error('''Cannot assign an array value to an array variable with incompatible dimensions''',
+			val leftStr = left.dimensionOf.map['''[«it ?: '?'»]'''].join
+			val rightStr = right.dimensionOf.map['''[«it ?: '?'»]'''].join
+			error('''Cannot assign a value of type «right.typeOf.name»«rightStr» to a variable of type «left.typeOf.name»«leftStr»''',
 				ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_DIMENSION)
 		}
 	}
@@ -852,29 +820,45 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def assignType(AssignmentExpression assignment) {
 		val type = assignment.assignment
-		val leftType = assignment.left.typeOf
-		val rightType = assignment.right.typeOf
+		val left = assignment.left
+		val right = assignment.right
+		val leftType = left.typeOf
+		val rightType = right.typeOf
 
 		if (type == ADD_ASSIGN || type == SUB_ASSIGN || type == MUL_ASSIGN || type == DIV_ASSIGN ||
 			type == MOD_ASSIGN || type == BLS_ASSIGN || type == BRS_ASSIGN) {
 			if (leftType.isNonNumeric) {
 				error('''Invalid assignment to a non-numeric variable of type «leftType.name»''',
 					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
+			} else if (left.dimensionOf.isNotEmpty) {
+				error('''Invalid assignment to an array variable''', ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
 			} else if (rightType.isNonNumeric) {
-				error('''Right-hand side of assignment must be a numberic value''', ASSIGNMENT_EXPRESSION__RIGHT,
+				error('''Right-hand side of assignment must be a numeric value''', ASSIGNMENT_EXPRESSION__RIGHT,
+					ASSIGN_VALUE_TYPE)
+			} else if (right.dimensionOf.isNotEmpty) {
+				error('''Right-hand side of assignment must be a non-array value''', ASSIGNMENT_EXPRESSION__RIGHT,
 					ASSIGN_VALUE_TYPE)
 			}
 		} else if (type == BAN_ASSIGN || type == BOR_ASSIGN) {
 			if (leftType.isNonPrimitive) {
 				error('''Invalid assignment to a non-«TypeSystem::LIB_PRIMITIVE.toLowerCase» variable of type «assignment.left.typeOf.name»''',
 					ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
+			} else if (left.dimensionOf.isNotEmpty) {
+				error('''Invalid assignment to an array variable''', ASSIGNMENT_EXPRESSION__ASSIGNMENT, ASSIGN_TYPE)
 			} else if (rightType.isNonPrimitive) {
 				error('''Right-hand side of assignment must be a «TypeSystem::LIB_PRIMITIVE» value''',
 					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
-
+			} else if (right.dimensionOf.isNotEmpty) {
+				error('''Right-hand side of assignment must be a non-array value''', ASSIGNMENT_EXPRESSION__RIGHT,
+					ASSIGN_VALUE_TYPE)
 			}
 		} else if (type == ASSIGN) {
-			if (rightType.isNonInstanceOf(leftType)) {
+			if (left.dimensionOf.isNotEmpty && right.dimensionOf.isNotEmpty && leftType.isNotEquals(rightType)) {
+				val leftDim = left.dimensionOf.map['''[«it ?: '?'»]'''].join
+				val rightDim = right.dimensionOf.map['''[«it ?: '?'»]'''].join
+				error('''Cannot assign a value of type «rightType.name»«rightDim» to a variable of type «leftType.name»«leftDim»''',
+					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
+			} else if (rightType.isNonInstanceOf(leftType)) {
 				error('''Cannot assign a value of type «rightType.name» to a variable of type «leftType.name»''',
 					ASSIGNMENT_EXPRESSION__RIGHT, ASSIGN_VALUE_TYPE)
 			}
@@ -1442,10 +1426,19 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def castDimension(CastExpression cast) {
-		val leftDim = cast.left.dimensionOf
+		val left = cast.left
+		val leftType = left.typeOf
+		val leftDim = left.dimensionOf
+		val leftMember = switch (left) {
+			MemberRef: left.member
+			MemberSelect: left.member
+		}
 
-		if (leftDim.size > 0 || cast.dimension.size > 0) {
-			val leftType = cast.left.typeOf
+		if (leftMember?.isUnbounded) {
+			val leftString = '''«leftType.name»«leftDim.map['[?]'].join»'''
+			val castString = '''«cast.type.name»«cast.dimension.map['''[«value?.valueOf»]'''].join»'''
+			error('''«leftString» cannot be cast to «castString»''', cast, null, CAST_DIMENSION)
+		} else if (leftDim.size > 0 || cast.dimension.size > 0) {
 			val leftLength = leftDim.reduce[a, b|a * b] ?: 1
 			val castLength = cast.dimension.map [
 				try {
@@ -1498,9 +1491,9 @@ class NoopValidator extends AbstractNoopValidator {
 			if (v === null) {
 				error('Files can only be referenced on variables declaration', STRING_LITERAL__VALUE,
 					STRING_FILE_NON_VARIABLE)
-			} else if (v.isNonROM) {
+			} else if (v.isNonROM && v.isNonConstant) {
 				error('''Variable «v.name» must be tagged with «StorageType::PRGROM.literal» or «StorageType::CHRROM.literal»''',
-					v, null, STRING_FILE_NON_ROM)
+					v, null, STRING_FILE_NON_ROM, v.name)
 			}
 		}
 	}
@@ -1597,14 +1590,6 @@ class NoopValidator extends AbstractNoopValidator {
 	}
 
 	@Check
-	def iNesHeaderFieldValue(ConstructorField field) {
-		if (field.getContainerOfType(NewInstance).type.isINESHeader && field.value?.isNonConstant) {
-			error('''Field «field.variable.name» value must be a constant expression''', CONSTRUCTOR_FIELD__VALUE,
-				INES_HEADER_FIELD_VALUE)
-		}
-	}
-
-	@Check
 	def memberSelectVisibility(MemberSelect select) {
 		if (select.member.isNonAccessibleFrom(select)) {
 			error('''Field «select.member.name» is not visible''', MEMBER_SELECT__MEMBER, MEMBER_SELECT_VISIBILITY)
@@ -1644,9 +1629,23 @@ class NoopValidator extends AbstractNoopValidator {
 		}
 	}
 
+	@Check
+	def storageMapperConfig(Storage s) {
+		if (s.isMapperConfig) {
+			val c = s.eContainer
+
+			if (!(c instanceof Variable) || (c as Variable).isNonConstant) {
+				error('''Tag «s.type.literal.substring(1)» can only be applied to constant fields''', s, null,
+					STORAGE_MAPPER_CONFIG)
+			}
+		}
+	}
+
 	private def int depth(Object o) {
 		if (o instanceof List<?>) {
 			1 + if(o.isNotEmpty) o.map[depth].max else 0
+		} else if (o instanceof File) {
+			1
 		} else {
 			0
 		}
@@ -1655,6 +1654,8 @@ class NoopValidator extends AbstractNoopValidator {
 	private def int length(Object o) {
 		if (o instanceof List<?>) {
 			o.size
+		} else if (o instanceof File) {
+			o.length as int
 		} else {
 			0
 		}

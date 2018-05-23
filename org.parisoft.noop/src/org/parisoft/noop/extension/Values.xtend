@@ -5,6 +5,7 @@ import org.parisoft.noop.noop.ArrayLiteral
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.StringLiteral
+import java.io.File
 
 class Values {
 
@@ -37,7 +38,7 @@ class Values {
 
 		return value;
 	}
-	
+
 	private def hexToInt(String hex) {
 		if (hex.length > 4) {
 			Integer::parseInt(hex.substring(hex.length - 4), 16)
@@ -45,7 +46,7 @@ class Values {
 			Integer::parseInt(hex, 16)
 		}
 	}
-	
+
 	private def binToInt(String bin) {
 		if (bin.length > 16) {
 			Integer::parseInt(bin.substring(bin.length - 16), 2)
@@ -54,13 +55,9 @@ class Values {
 		}
 	}
 
-	def <T> subListFrom(List<T> list, int index) {
-		list?.subList(index, list?.size)
-	}
-
 	def List<Integer> dimensionOf(List<?> list) {
 		if (list.isEmpty) {
-			java.util.Collections.emptyList
+			emptyList
 		} else {
 			val dimension = newArrayList(list.size)
 			dimension.addAll(list.head.dimensionOf)
@@ -71,6 +68,8 @@ class Values {
 	def dimensionOf(Object object) {
 		if (object instanceof List<?>) {
 			object.dimensionOf
+		} else if (object instanceof File) {
+			newArrayList(object.length as int)
 		} else {
 			emptyList
 		}
@@ -111,6 +110,18 @@ class Values {
 		].flatten.toList
 	}
 
-	def toHex(Integer i) '''$«IF i < 0x10 || (i > 0xFF && i < 0x1000)»0«ENDIF»«Integer::toHexString(i).toUpperCase»'''
+	def toHex(Integer i) {
+		val x = if (i < 0) {
+				if (i >= Byte.MIN_VALUE) {
+					Byte::toUnsignedInt(i.byteValue)
+				} else {
+					Short::toUnsignedInt(i.shortValue)
+				}
+			} else {
+				i
+			}
+			
+		'''$«IF x < 0x10 || (x > 0xFF && x < 0x1000)»0«ENDIF»«Integer::toHexString(x).toUpperCase»'''
+	}
 
 }

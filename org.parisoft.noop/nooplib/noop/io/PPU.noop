@@ -488,7 +488,7 @@ PPU {
 	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
 	 * <p>It's ignored if sprite size is set to 8x16</p>
 	 */
-	$setFirstPatternTableFor8x8Sprites() @Inline {
+	$setLeftPatternTableFor8x8Sprites() @Inline {
 		!	LDA ?$ctrl?    !
 		!	AND #%11110111 !
 		!	STA ?$ctrl?    !
@@ -517,7 +517,7 @@ PPU {
 	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
 	 * <p>It's ignored if sprite size is set to 8x16</p>
 	 */
-	$setLastPatternTableFor8x8Sprites() @Inline {
+	$setRightPatternTableFor8x8Sprites() @Inline {
 		!	LDA ?$ctrl?    !
 		!	ORA #%00001000 !
 		!	STA ?$ctrl?    !
@@ -545,7 +545,7 @@ PPU {
      * <h2>Note:</h2>
 	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
 	 */
-	$setFirstPatternTableForBackground() @Inline {
+	$setLeftPatternTableForBackground() @Inline {
 		!	LDA ?$ctrl?    !
 		!	AND #%11101111 !
 		!	STA ?$ctrl?    !
@@ -573,7 +573,7 @@ PPU {
      * <h2>Note:</h2>
 	 * <p>For this change to take effect (to be written to PPUCTRL register) call <i>$update()</i> or <i>$updateCtrl()</i></p>
 	 */
-	$setLastPatternTableForBackground() @Inline {
+	$setRightPatternTableForBackground() @Inline {
 		!	LDA ?$ctrl?    !
 		!	ORA #%00010000 !
 		!	STA ?$ctrl?    !
@@ -1282,7 +1282,6 @@ PPU {
 	* <p>These colors vary depending on TV/Console/Emulator in which the game plays
 	* */
     $setBackgroundPalettes(Byte[4][4] palettes) {
-    	!	LDA ?$PPUSTATUS?    !
     	!	LDA #>$3F00         !
     	!	STA ?$PPUADDR?      !
     	!	LDA #<$3F00         !
@@ -1295,6 +1294,25 @@ PPU {
     	!	INY                 !
     	!	CPY #$10            !
     	!	BNE -loop           !
+    }
+    
+    /*
+    * <p>Load one background palette color.</p>
+    * <h2>Parameters:</h2>
+    * <ul>
+    * <li><b>idx</b>: the index of the palette from 0 to 15</li>
+    * <li><b>color</b>: a color from the NES palette</li>
+    * </ul>
+    */
+    $setBackgroundPaletteColor(Byte idx, Byte color) {
+    	!	LDA #>$3F00    !
+    	!	STA ?$PPUADDR? !
+    	!	CLC            !
+    	!	LDA ?idx?      !
+    	!	ADC #<$3F00    !
+    	!	STA ?$PPUADDR? !
+    	!	LDA ?color?    !
+    	!	STA ?$PPUDATA? !
     }
     
     /*
@@ -1441,7 +1459,6 @@ PPU {
 	* <p>These colors vary depending on TV/Console/Emulator in which the game plays
 	* */
     $setSpritesPalettes(Byte[4][4] palettes) {
-    	!	LDA ?$PPUSTATUS?    !
     	!	LDA #>$3F10         !
     	!	STA ?$PPUADDR?      !
     	!	LDA #<$3F10         !
@@ -1454,6 +1471,25 @@ PPU {
     	!	INY                 !
     	!	CPY #$10            !
     	!	BNE -loop           !
+    }
+    
+    /*
+    * <p>Load one sprite palette color.</p>
+    * <h2>Parameters:</h2>
+    * <ul>
+    * <li><b>idx</b>: the index of the palette from 0 to 15</li>
+    * <li><b>color</b>: a color from the NES palette</li>
+    * </ul>
+    */
+    $setSpritesPaletteColor(Byte idx, Byte color) {
+    	!	LDA #>$3F10    !
+    	!	STA ?$PPUADDR? !
+    	!	CLC            !
+    	!	LDA ?idx?      !
+    	!	ADC #<$3F10    !
+    	!	STA ?$PPUADDR? !
+    	!	LDA ?color?    !
+    	!	STA ?$PPUDATA? !
     }
     
     /*
@@ -2048,6 +2084,16 @@ PPU {
 		!-waitSprite0Hit:         !
 		!	BIT ?$PPUSTATUS?      !
 		!	BVC -waitSprite0Hit   !
+    }
+    
+    /*
+     * <p>Transfer 256 bytes from memory address 0x0200 to PPU OAM.</p>
+     */
+    $flushSprites() @Inline {
+	    !	LDA #<$0200    !
+		!	STA ?$OAMADDR? !
+		!	LDA #>$0200    !
+		!	STA ?$OAMDMA?  !
     }
     
     /*

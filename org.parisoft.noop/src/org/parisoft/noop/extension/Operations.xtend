@@ -48,6 +48,7 @@ class Operations {
 			case DIVISION: acc.divide(operand)
 			case MODULO: acc.modulo(operand)
 			case BIT_OR: acc.bitOr(operand)
+			case BIT_XOR: acc.bitXor(operand)
 			case BIT_AND: acc.bitAnd(operand)
 			case BIT_SHIFT_LEFT: acc.bitShiftLeft(operand)
 			case BIT_SHIFT_RIGHT: acc.bitShiftRight(operand)
@@ -171,6 +172,16 @@ class Operations {
 			acc.operateAbsolute('ORA', null, operand)
 		} else if (operand.indirect !== null) {
 			acc.operateIndirect('ORA', null, operand)
+		}
+	}
+	
+	def bitXor(CompileContext acc, CompileContext operand) {
+		if (operand.immediate !== null) {
+			acc.operateImmediate('EOR', null, operand)
+		} else if (operand.absolute !== null) {
+			acc.operateAbsolute('EOR', null, operand)
+		} else if (operand.indirect !== null) {
+			acc.operateIndirect('EOR', null, operand)
 		}
 	}
 
@@ -930,13 +941,13 @@ class Operations {
 		«ELSEIF acc.type.isUnsigned»
 			«FOR i : 0..< shift»
 				«noop»
-					CMP #$80
-					ROR A
+					LSR A
 			«ENDFOR»
 		«ELSE»
 			«FOR i : 0..< shift»
 				«noop»
-					LSR A
+					CMP #$80
+					ROR A
 			«ENDFOR»
 		«ENDIF»
 	'''
@@ -1088,16 +1099,19 @@ class Operations {
 	'''
 
 	private def incIndirect(CompileContext operand) '''
-		«noop»
-			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
-			INC («operand.indirect»), Y
-		«IF operand.sizeOf > 1»
-			«val labelDone = labelForIncDone»
-				BNE +«labelDone»
+		«operand.pushAccIfOperating»
+			LDY «IF operand.isIndexed»«operand.index»«ELSE»#0«ENDIF»
+			LDA («operand.indirect»), Y
+			CLC
+			ADC #1
+			STA («operand.indirect»), Y
+			«IF operand.sizeOf > 1»
 				INY
-				INC («operand.indirect»), Y
-			+«labelDone»:
-		«ENDIF»
+				LDA («operand.indirect»), Y
+				ADC #0
+				STA («operand.indirect»), Y
+			«ENDIF»
+		«operand.pullAccIfOperating»
 	'''
 
 	private def decAbsolute(CompileContext ctx) '''

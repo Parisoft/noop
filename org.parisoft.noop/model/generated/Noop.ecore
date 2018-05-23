@@ -113,14 +113,23 @@
     <eLiterals name="MOD_ASSIGN" value="5" literal="%="/>
     <eLiterals name="BOR_ASSIGN" value="6" literal="|="/>
     <eLiterals name="BAN_ASSIGN" value="7" literal="&amp;="/>
-    <eLiterals name="BLS_ASSIGN" value="8" literal="&lt;&lt;="/>
-    <eLiterals name="BRS_ASSIGN" value="9" literal=">>="/>
+    <eLiterals name="XOR_ASSIGN" value="8" literal="^="/>
+    <eLiterals name="BLS_ASSIGN" value="9" literal="&lt;&lt;="/>
+    <eLiterals name="BRS_ASSIGN" value="10" literal=">>="/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EEnum" name="StorageType">
     <eLiterals name="PRGROM" literal="@PRG-ROM"/>
     <eLiterals name="CHRROM" value="1" literal="@CHR-ROM"/>
-    <eLiterals name="ZP" value="2" literal="@ZP-RAM"/>
-    <eLiterals name="INLINE" value="3" literal="@Inline"/>
+    <eLiterals name="INESPRG" value="2" literal="@iNES-PRG"/>
+    <eLiterals name="INESCHR" value="3" literal="@iNES-CHR"/>
+    <eLiterals name="INESMAPPER" value="4" literal="@iNES-Mapper"/>
+    <eLiterals name="INESMIR" value="5" literal="@iNES-Mirror"/>
+    <eLiterals name="ZP" value="6" literal="@ZP-RAM"/>
+    <eLiterals name="INLINE" value="7" literal="@Inline"/>
+    <eLiterals name="RESET" value="8" literal="@Reset"/>
+    <eLiterals name="NMI" value="9" literal="@NMI"/>
+    <eLiterals name="IRQ" value="10" literal="@IRQ"/>
+    <eLiterals name="MMC3CFG" value="11" literal="@MMC3-Config"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="AssignmentExpression" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"
@@ -142,6 +151,12 @@
         containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="BOrExpression" eSuperTypes="#//Expression">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"
+        containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="right" eType="#//Expression"
+        containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="BXorExpression" eSuperTypes="#//Expression">
     <eStructuralFeatures xsi:type="ecore:EReference" name="left" eType="#//Expression"
         containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="right" eType="#//Expression"

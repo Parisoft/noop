@@ -25,14 +25,15 @@ import org.parisoft.noop.noop.BOrExpression
 import org.parisoft.noop.noop.BoolLiteral
 import org.parisoft.noop.noop.ByteLiteral
 import org.parisoft.noop.noop.CastExpression
+import org.parisoft.noop.noop.ComplementExpression
 import org.parisoft.noop.noop.DecExpression
 import org.parisoft.noop.noop.DifferExpression
 import org.parisoft.noop.noop.DivExpression
-import org.parisoft.noop.noop.ComplementExpression
 import org.parisoft.noop.noop.EqualsExpression
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.GeExpression
 import org.parisoft.noop.noop.GtExpression
+import org.parisoft.noop.noop.IfStatement
 import org.parisoft.noop.noop.IncExpression
 import org.parisoft.noop.noop.Index
 import org.parisoft.noop.noop.InstanceOfExpression
@@ -60,10 +61,12 @@ import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
 
+import static org.parisoft.noop.^extension.Cache.*
+
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.IfStatement
+import org.parisoft.noop.noop.BXorExpression
 
 class Expressions {
 
@@ -83,8 +86,8 @@ class Expressions {
 		instance.type.allFieldsTopDown.filter[nonStatic]
 	}
 
-	private def getMultiplyMethod(Expression left, Expression right, NoopClass type) {
-		try {
+	def getMultiplyMethod(Expression left, Expression right) {
+		mulMethods.get(left, right, [
 			try {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
 				new MethodReference => [args = newArrayList(left, const)]
@@ -92,64 +95,131 @@ class Expressions {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
 				new MethodReference => [args = newArrayList(right, const)]
 			}
+		])
+	}
+
+	def getMultiplyMethod(Expression left, Expression right, NoopClass type) {
+		try {
+			left.getMultiplyMethod(right)
 		} catch (NonConstantExpressionException exception) {
-			if (type.sizeOf > 1) {
-				val lhsType = if (left.sizeOf < right.sizeOf) {
-						if (left.typeOf.isSigned) {
-							left.typeOf.toIntClass
+			val mul = if (type.sizeOf > 1) {
+					val lhsType = if (left.sizeOf < right.sizeOf) {
+							if (left.typeOf.isSigned) {
+								left.typeOf.toIntClass
+							} else {
+								left.typeOf.toUIntClass
+							}
 						} else {
-							left.typeOf.toUIntClass
+							left.typeOf
 						}
-					} else {
-						left.typeOf
-					}
 
-				val rhsType = if (left.sizeOf > right.sizeOf) {
-						if (right.typeOf.isSigned) {
-							right.typeOf.toIntClass
+					val rhsType = if (left.sizeOf > right.sizeOf) {
+							if (right.typeOf.isSigned) {
+								right.typeOf.toIntClass
+							} else {
+								right.typeOf.toUIntClass
+							}
 						} else {
-							right.typeOf.toUIntClass
+							right.typeOf
 						}
-					} else {
-						right.typeOf
-					}
 
-				if (lhsType.isSigned && rhsType.isUnsigned) {
+					if (lhsType.isSigned && rhsType.isUnsigned) {
+						new MethodReference => [
+							method = type.toMathClass().declaredMethods.findFirst [
+								name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
+									params.head.type.isEquals(rhsType) && params.last.type.isEquals(lhsType)
+							]
+							args = newArrayList(right, left)
+						]
+					} else {
+						new MethodReference => [
+							method = type.toMathClass().declaredMethods.findFirst [
+								name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
+									params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+							]
+							args = newArrayList(left, right)
+						]
+					}
+				} else {
 					new MethodReference => [
 						method = type.toMathClass().declaredMethods.findFirst [
-							name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
-								params.head.type.isEquals(rhsType) && params.last.type.isEquals(lhsType)
+							name == '''«Members::STATIC_PREFIX»multiply8Bit'''.toString
 						]
-						args = newArrayList(right, left)
+						args = newArrayList(left, right)
+					]
+				}
+
+			mulMethods.put(left, right, mul)
+
+			mul
+		}
+	}
+
+	def getDivideMethod(Expression left, Expression right) {
+		divMethods.get(left, right, [
+			if (left.sizeOf == 1) {
+				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+				new MethodReference => [args = newArrayList(left, const)]
+			} else {
+				throw new NonConstantExpressionException(left)
+			}
+		])
+	}
+
+	def getDivideMethod(Expression left, Expression right, NoopClass type) {
+		try {
+			left.getDivideMethod(right)
+		} catch (NonConstantExpressionException exception) {
+			val lhsType = if (left.sizeOf < right.sizeOf) {
+					if (left.typeOf.isSigned) {
+						left.typeOf.toIntClass
+					} else {
+						left.typeOf.toUIntClass
+					}
+				} else {
+					left.typeOf
+				}
+
+			val rhsType = right.typeOf
+
+			val div = if (lhsType.sizeOf > 1 || (lhsType.isUnsigned && rhsType.isSigned)) {
+					new MethodReference => [
+						method = type.toMathClass().declaredMethods.findFirst [
+							name == '''«Members::STATIC_PREFIX»divide'''.toString && params.isNotEmpty &&
+								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
+						]
+						args = newArrayList(left, right)
 					]
 				} else {
 					new MethodReference => [
 						method = type.toMathClass().declaredMethods.findFirst [
-							name == '''«Members::STATIC_PREFIX»multiply'''.toString && params.isNotEmpty &&
+							name == '''«Members::STATIC_PREFIX»divide8Bit'''.toString && params.isNotEmpty &&
 								params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
 						]
 						args = newArrayList(left, right)
 					]
 				}
-			} else {
-				new MethodReference => [
-					method = type.toMathClass().declaredMethods.findFirst [
-						name == '''«Members::STATIC_PREFIX»multiply8Bit'''.toString
-					]
-					args = newArrayList(left, right)
-				]
-			}
+
+			divMethods.put(left, right, div)
+
+			div
 		}
 	}
 
-	private def getDivideMethod(Expression left, Expression right, NoopClass type) {
-		try {
+	def getModuloMethod(Expression left, Expression right) {
+		modMethods.get(left, right, [
 			if (left.sizeOf == 1) {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
 				new MethodReference => [args = newArrayList(left, const)]
 			} else {
 				throw new NonConstantExpressionException(left)
 			}
+		])
+	}
+
+	def getModuloMethod(Expression left, Expression right, NoopClass type) {
+		try {
+			left.getModuloMethod(right)
 		} catch (NonConstantExpressionException exception) {
 			val lhsType = if (left.sizeOf < right.sizeOf) {
 					if (left.typeOf.isSigned) {
@@ -163,59 +233,106 @@ class Expressions {
 
 			val rhsType = right.typeOf
 
-			if (lhsType.sizeOf > 1 || (lhsType.isUnsigned && rhsType.isSigned)) {
-				new MethodReference => [
-					method = type.toMathClass().declaredMethods.findFirst [
-						name == '''«Members::STATIC_PREFIX»divide'''.toString && params.isNotEmpty &&
-							params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
-					]
-					args = newArrayList(left, right)
-				]
-			} else {
-				new MethodReference => [
-					method = type.toMathClass().declaredMethods.findFirst [
-						name == '''«Members::STATIC_PREFIX»divide8Bit'''.toString && params.isNotEmpty &&
-							params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
-					]
-					args = newArrayList(left, right)
-				]
-			}
-		}
-	}
-
-	private def getModuloMethod(Expression left, Expression right, NoopClass type) {
-		try {
-			if (left.sizeOf == 1) {
-				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
-				new MethodReference => [args = newArrayList(left, const)]
-			} else {
-				throw new NonConstantExpressionException(left)
-			}
-		} catch (NonConstantExpressionException exception) {
-			val lhsType = if (left.sizeOf < right.sizeOf) {
-					if (left.typeOf.isSigned) {
-						left.typeOf.toIntClass
-					} else {
-						left.typeOf.toUIntClass
-					}
-				} else {
-					left.typeOf
-				}
-
-			val rhsType = right.typeOf
-
-			new MethodReference => [
+			val mod = new MethodReference => [
 				method = type.toMathClass().declaredMethods.findFirst [
 					name == '''«Members::STATIC_PREFIX»modulo'''.toString && params.isNotEmpty &&
 						params.head.type.isEquals(lhsType) && params.last.type.isEquals(rhsType)
 				]
 				args = newArrayList(left, right)
 			]
+
+			modMethods.put(left, right, mod)
+
+			mod
 		}
 	}
 
 	def getModuloVariable(Expression expression) {
 		expression.toMathClass.declaredFields.findFirst[name == '''«Members::STATIC_PREFIX»mod'''.toString]
+	}
+
+	def getLengthExpression(Expression expression) {
+		switch (expression) {
+			CastExpression:
+				NoopFactory::eINSTANCE.createByteLiteral => [
+					value = expression.type.sizeOf * expression.dimensionOf.reduce[d1, d2|d1 * d2]
+				]
+			MemberSelect:
+				expression.member.getLengthExpression(expression.indexes)
+			MemberRef:
+				expression.member.getLengthExpression(expression.indexes)
+		}
+	}
+
+	def isMethodInvocation(Expression expression) {
+		switch (expression) {
+			MulExpression:
+				try {
+					expression.left.getMultiplyMethod(expression.right).method !== null
+				} catch (NonConstantExpressionException e) {
+					true
+				}
+			DivExpression:
+				try {
+					expression.left.getDivideMethod(expression.right).method !== null
+				} catch (NonConstantExpressionException e) {
+					true
+				}
+			ModExpression:
+				try {
+					expression.left.getModuloMethod(expression.right).method !== null
+				} catch (NonConstantExpressionException e) {
+					true
+				}
+			MemberSelect:
+				expression.member instanceof Method && (expression.member as Method).isNonNativeArray
+			MemberRef:
+				expression.member instanceof Method && (expression.member as Method).isNonNativeArray
+		}
+	}
+
+	def boolean isComplexMemberArrayReference(Expression expression) {
+		switch (expression) {
+			AssignmentExpression:
+				expression.left.isComplexMemberArrayReference
+			MemberSelect:
+				if (expression.member.isIndexMulDivModExpression(expression.indexes)) {
+					val container = expression.eContainer
+					val member = if (container instanceof MemberSelect) {
+							container.member
+						} else if (container instanceof MemberRef) {
+							container.member
+						}
+
+					if (member instanceof Method) {
+						return member.isNonNativeArray
+					}
+
+					true
+				}
+			MemberRef:
+				if (expression.member.isIndexMulDivModExpression(expression.indexes)) {
+					val container = expression.eContainer
+					val member = if (container instanceof MemberSelect) {
+							container.member
+						} else if (container instanceof MemberRef) {
+							container.member
+						}
+
+					if (member instanceof Method) {
+						return member.isNonNativeArray
+					}
+
+					true
+				}
+		}
+	}
+
+	def containsMethodInvocation(Expression expression) {
+		expression.isMethodInvocation || expression.isComplexMemberArrayReference ||
+			expression.eAllContents.filter(Expression).exists [
+				methodInvocation || complexMemberArrayReference
+			]
 	}
 
 	def isConstant(Expression expression) {
@@ -234,12 +351,22 @@ class Expressions {
 		expression instanceof This || expression instanceof Super
 	}
 
+	def isSuper(Expression expression) {
+		expression instanceof Super
+	}
+
 	def isNonThisNorSuper(Expression expression) {
 		!expression.isThisOrSuper
 	}
 
-	def isUnbounded(Expression expression) {
-		switch (expression) {
+	def isNonSuper(Expression expression) {
+		!expression.isSuper
+	}
+
+	def boolean isUnbounded(Expression expression) {
+		expression.dimensionOf.isNotEmpty && switch (expression) {
+			AssignmentExpression:
+				expression.left.isUnbounded
 			MemberSelect:
 				expression.member.isUnbounded
 			MemberRef:
@@ -360,6 +487,8 @@ class Expressions {
 				true
 			BOrExpression:
 				expression.left.containsMulDivMod || expression.right.containsMulDivMod
+			BXorExpression:
+				expression.left.containsMulDivMod || expression.right.containsMulDivMod
 			BAndExpression:
 				expression.left.containsMulDivMod || expression.right.containsMulDivMod
 			LShiftExpression:
@@ -458,6 +587,8 @@ class Expressions {
 			ModExpression:
 				expression.left.typeOf
 			BOrExpression:
+				expression.typeOfValueOrMerge(expression.left, expression.right)
+			BXorExpression:
 				expression.typeOfValueOrMerge(expression.left, expression.right)
 			BAndExpression:
 				expression.typeOfValueOrMerge(expression.left, expression.right)
@@ -633,6 +764,8 @@ class Expressions {
 					(expression.left.valueOf as Integer) % (expression.right.valueOf as Integer)
 				BOrExpression:
 					(expression.left.valueOf as Integer).bitwiseOr(expression.right.valueOf as Integer)
+				BXorExpression:
+					(expression.left.valueOf as Integer).bitwiseXor(expression.right.valueOf as Integer)
 				BAndExpression:
 					(expression.left.valueOf as Integer).bitwiseAnd(expression.right.valueOf as Integer)
 				LShiftExpression:
@@ -656,7 +789,11 @@ class Expressions {
 				ArrayLiteral:
 					expression.values.map[valueOf]
 				StringLiteral:
-					expression.value.chars.boxed.collect(Collectors::toList)
+					if (expression.isFileInclude) {
+						expression.toFile
+					} else {
+						expression.value.chars.boxed.collect(Collectors::toList)
+					}
 				NewInstance:
 					if (expression.type.isPrimitive && expression.dimension.isEmpty) {
 						expression.type.defaultValueOf
@@ -686,8 +823,10 @@ class Expressions {
 		}
 	}
 
-	def dimensionOf(Expression expression) {
+	def List<Integer> dimensionOf(Expression expression) {
 		switch (expression) {
+			AssignmentExpression:
+				expression.left.dimensionOf
 			StringLiteral:
 				if (expression.isFileInclude) {
 					newArrayList(expression.toFile.length as int)
@@ -699,9 +838,9 @@ class Expressions {
 			CastExpression:
 				expression.dimension.map[value.valueOf as Integer]
 			MemberSelect:
-				expression.member.dimensionOf.subListFrom(expression.indexes.size)
+				expression.member.dimensionOf.drop(expression.indexes.size).toList
 			MemberRef:
-				expression.member.dimensionOf.subListFrom(expression.indexes.size)
+				expression.member.dimensionOf.drop(expression.indexes.size).toList
 			NewInstance:
 				expression.dimension.map[value.valueOf as Integer]
 			default:
@@ -713,167 +852,176 @@ class Expressions {
 		expression.typeOf.sizeOf
 	}
 
-	def fullSizeOf(ArrayLiteral array) {
-		array.sizeOf * (array.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1)
-	}
-
-	def fullSizeOf(NewInstance instance) {
-		instance.sizeOf * (instance.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1)
+	def fullSizeOf(Expression expression) {
+		expression.sizeOf * (expression.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1)
 	}
 
 	def void prepare(Expression expression, AllocContext ctx) {
-		switch (expression) {
-			AssignmentExpression: {
-				val method = if (expression.assignment === AssignmentType::MUL_ASSIGN) {
-						getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method
-					} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
-						getDivideMethod(expression.left, expression.right, expression.left.typeOf).method
-					} else if (expression.assignment === AssignmentType::MOD_ASSIGN) {
-						getModuloMethod(expression.left, expression.right, expression.left.typeOf).method
+		if (prepared.add(expression)) {
+			switch (expression) {
+				AssignmentExpression: {
+					val method = if (expression.assignment === AssignmentType::MUL_ASSIGN) {
+							getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method
+						} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
+							getDivideMethod(expression.left, expression.right, expression.left.typeOf).method
+						} else if (expression.assignment === AssignmentType::MOD_ASSIGN) {
+							getModuloMethod(expression.left, expression.right, expression.left.typeOf).method
+						}
+
+					if (method !== null) {
+						method.prepare(ctx)
+					} else if (expression.assignment === AssignmentType::DIV_ASSIGN ||
+						expression.assignment === AssignmentType::MOD_ASSIGN) {
+						expression.moduloVariable.prepare(ctx)
 					}
 
-				if (method !== null) {
-					method.prepare(ctx)
-				} else if (expression.assignment === AssignmentType::DIV_ASSIGN ||
-					expression.assignment === AssignmentType::MOD_ASSIGN) {
-					expression.moduloVariable.prepare(ctx)
+					if (expression.assignment === AssignmentType::ASSIGN && expression.left.dimensionOf.isNotEmpty) {
+						expression.left.lengthExpression?.prepare(ctx)
+						expression.right.lengthExpression?.prepare(ctx)
+					}
+
+					expression.left.prepare(ctx)
+
+					if (expression.right.containsMulDivMod) {
+						try {
+							expression.right.prepare(ctx => [types.put(expression.left.typeOf)])
+						} finally {
+							ctx.types.pop
+						}
+					} else {
+						expression.right.prepare(ctx)
+					}
 				}
-
-				expression.left.prepare(ctx)
-
-				if (expression.right.containsMulDivMod) {
-					try {
-						expression.right.prepare(ctx => [types.put(expression.left.typeOf)])
-					} finally {
-						ctx.types.pop
-					}
-				} else {
+				OrExpression: {
+					expression.left.prepare(ctx)
 					expression.right.prepare(ctx)
 				}
-			}
-			OrExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			AndExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			EqualsExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			DifferExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			GtExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			GeExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			LtExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			LeExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			InstanceOfExpression: {
-				expression.left.prepare(ctx)
-				expression.type.prepare(ctx)
-			}
-			AddExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			SubExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			MulExpression: {
-				getMultiplyMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).method?.
-					prepare(ctx)
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			DivExpression: {
-				val div = getDivideMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).method
-
-				if (div !== null) {
-					div.prepare(ctx)
-				} else {
-					expression.moduloVariable.prepare(ctx)
-				}
-
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			ModExpression: {
-				val mod = getModuloMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).method
-
-				if (mod !== null) {
-					mod.prepare(ctx)
-				} else {
-					expression.moduloVariable.prepare(ctx)
-				}
-
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			BOrExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			BAndExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			LShiftExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			RShiftExpression: {
-				expression.left.prepare(ctx)
-				expression.right.prepare(ctx)
-			}
-			ComplementExpression:
-				expression.right.prepare(ctx)
-			NotExpression:
-				expression.right.prepare(ctx)
-			SigNegExpression:
-				expression.right.prepare(ctx)
-			SigPosExpression:
-				expression.right.prepare(ctx)
-			DecExpression:
-				expression.right.prepare(ctx)
-			IncExpression:
-				expression.right.prepare(ctx)
-			CastExpression: {
-				expression.type.prepare(ctx)
-
-				if (expression.left.containsMulDivMod) {
-					try {
-						expression.left.prepare(ctx => [types.put(expression.type)])
-					} finally {
-						ctx.types.pop
-					}
-				} else {
+				AndExpression: {
 					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
 				}
-			}
-			ArrayLiteral: {
-				expression.typeOf.prepare(ctx)
-				expression.values.forEach[prepare(ctx)]
-			}
-			NewInstance:
-				if (expression.type.isINESHeader) {
-					ctx.header = expression
-				} else {
+				EqualsExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				DifferExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				GtExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				GeExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				LtExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				LeExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				InstanceOfExpression: {
+					expression.left.prepare(ctx)
+					expression.type.prepare(ctx)
+				}
+				AddExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				SubExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				MulExpression: {
+					getMultiplyMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).method?.
+						prepare(ctx)
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				DivExpression: {
+					val div = getDivideMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).
+						method
+
+					if (div !== null) {
+						div.prepare(ctx)
+					} else {
+						expression.moduloVariable.prepare(ctx)
+					}
+
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				ModExpression: {
+					val mod = getModuloMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).
+						method
+
+					if (mod !== null) {
+						mod.prepare(ctx)
+					} else {
+						expression.moduloVariable.prepare(ctx)
+					}
+
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				BOrExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				BXorExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				BAndExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				LShiftExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				RShiftExpression: {
+					expression.left.prepare(ctx)
+					expression.right.prepare(ctx)
+				}
+				ComplementExpression:
+					expression.right.prepare(ctx)
+				NotExpression:
+					expression.right.prepare(ctx)
+				SigNegExpression:
+					expression.right.prepare(ctx)
+				SigPosExpression:
+					expression.right.prepare(ctx)
+				DecExpression:
+					expression.right.prepare(ctx)
+				IncExpression:
+					expression.right.prepare(ctx)
+				CastExpression: {
+					expression.type.prepare(ctx)
+
+					if (expression.left.containsMulDivMod) {
+						try {
+							expression.left.prepare(ctx => [types.put(expression.type)])
+						} finally {
+							ctx.types.pop
+						}
+					} else {
+						expression.left.prepare(ctx)
+					}
+				}
+				ArrayLiteral: {
+					expression.typeOf.prepare(ctx)
+					expression.eAllContentsAsList.filter [
+						it instanceof MemberSelect || it instanceof MemberRef || it instanceof NewInstance
+					].forEach [
+						(it as Expression).prepare(ctx)
+					]
+				}
+				NewInstance: {
 					expression.type.prepare(ctx)
 
 					if (expression.type.isNonPrimitive) {
@@ -884,234 +1032,256 @@ class Expressions {
 						}
 					}
 				}
-			MemberSelect: {
-				val member = expression.member
+				MemberSelect: {
+					val member = expression.member
 
-				if (member instanceof Variable) {
-					member.prepareReference(expression.receiver, expression.indexes, ctx)
-				} else if (member instanceof Method) {
-					member.prepareInvocation(expression.receiver, expression.args, expression.indexes, ctx)
+					if (member instanceof Variable) {
+						member.prepareReference(expression.receiver, expression.indexes, ctx)
+					} else if (member instanceof Method) {
+						member.prepareInvocation(expression.receiver, expression.args, expression.indexes, ctx)
+					}
 				}
-			}
-			MemberRef: {
-				val member = expression.member
+				MemberRef: {
+					val member = expression.member
 
-				if (member instanceof Variable) {
-					member.prepareReference(expression.indexes, ctx)
-				} else if (member instanceof Method) {
-					member.prepareInvocation(expression.args, expression.indexes, ctx)
+					if (member instanceof Variable) {
+						member.prepareReference(expression.indexes, ctx)
+					} else if (member instanceof Method) {
+						member.prepareInvocation(expression.args, expression.indexes, ctx)
+					}
 				}
 			}
 		}
 	}
 
 	def List<MemChunk> alloc(Expression expression, AllocContext ctx) {
-		switch (expression) {
-			AssignmentExpression: {
-				if (expression.assignment === AssignmentType::MUL_ASSIGN) {
-					getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
-				} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
-					getDivideMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
-				} else if (expression.assignment === AssignmentType::MOD_ASSIGN) {
-					getModuloMethod(expression.left, expression.right, expression.left.typeOf).method?.alloc(ctx)
-				}
+		allocated.get(expression, [
+			switch (expression) {
+				AssignmentExpression: {
+					val chunks = newArrayList
+					val left = if (expression.assignment === AssignmentType::ASSIGN) {
+							expression.left
+						} else {
+							copies.computeIfAbsent(expression.left, [expression.left.copy]) as Expression
+						}
+					val right = if (expression.assignment === AssignmentType::ASSIGN) {
+							expression.right
+						} else {
+							copies.computeIfAbsent(expression.right, [expression.right.copy]) as Expression
+						}
 
-				expression.left.alloc(ctx)
-
-				if (expression.right.containsMulDivMod) {
-					try {
-						expression.right.alloc(ctx => [types.put(expression.left.typeOf)])
-					} finally {
-						ctx.types.pop
+					if (expression.assignment === AssignmentType::MUL_ASSIGN) {
+						chunks += getMultiplyMethod(left, right, left.typeOf).method?.alloc(ctx) ?: emptyList
+					} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
+						chunks += getDivideMethod(left, right, left.typeOf).method?.alloc(ctx) ?: emptyList
+					} else if (expression.assignment === AssignmentType::MOD_ASSIGN) {
+						chunks += getModuloMethod(left, right, left.typeOf).method?.alloc(ctx) ?: emptyList
+					} else if (expression.assignment === AssignmentType::ASSIGN && left.dimensionOf.isNotEmpty) {
+						chunks += left.lengthExpression?.alloc(ctx) ?: emptyList
+						chunks += right.lengthExpression?.alloc(ctx) ?: emptyList
 					}
-				} else {
-					expression.right.alloc(ctx)
-				}
-			}
-			OrExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			AndExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			EqualsExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			DifferExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			GtExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			GeExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			LtExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			LeExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			InstanceOfExpression:
-				expression.left.alloc(ctx)
-			AddExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			SubExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			MulExpression: {
-				val method = getMultiplyMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).
-					method
 
-				if (method !== null) {
-					(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
-				} else {
-					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-				}
-			}
-			DivExpression: {
-				val method = getDivideMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).
-					method
+					chunks += left.alloc(ctx)
 
-				if (method !== null) {
-					(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
-				} else {
-					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-				}
-			}
-			ModExpression: {
-				val method = getModuloMethod(expression.left, expression.right, ctx.types.head ?: expression.typeOf).
-					method
-
-				if (method !== null) {
-					(expression.left.alloc(ctx) + expression.right.alloc(ctx) + method.alloc(ctx)).toList
-				} else {
-					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-				}
-			}
-			BOrExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			BAndExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			LShiftExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			RShiftExpression:
-				(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
-			ComplementExpression:
-				expression.right.alloc(ctx)
-			NotExpression:
-				expression.right.alloc(ctx)
-			SigNegExpression:
-				expression.right.alloc(ctx)
-			SigPosExpression:
-				expression.right.alloc(ctx)
-			DecExpression:
-				expression.right.alloc(ctx)
-			IncExpression:
-				expression.right.alloc(ctx)
-			CastExpression:
-				if (expression.left.containsMulDivMod) {
-					try {
-						expression.left.alloc(ctx => [types.put(expression.type)])
-					} finally {
-						ctx.types.pop
+					if (right.containsMulDivMod) {
+						try {
+							chunks += right.alloc(ctx => [types.put(left.typeOf)])
+						} finally {
+							ctx.types.pop
+						}
+					} else {
+						chunks += right.alloc(ctx)
 					}
-				} else {
-					expression.left.alloc(ctx)
-				}
-			ArrayLiteral: {
-				val chunks = expression.values.map[alloc(ctx)].flatten.toList
 
-				if (expression.isOnMemberSelectionOrReference) {
-					chunks += ctx.computeTmp(expression.nameOfTmp(ctx.container), expression.fullSizeOf)
-				}
-
-				return chunks
-			}
-			NewInstance: {
-				val chunks = newArrayList
-
-				if (expression.type.isINESHeader) {
 					return chunks
 				}
+				OrExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				AndExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				EqualsExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				DifferExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				GtExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				GeExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				LtExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				LeExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				InstanceOfExpression:
+					expression.left.alloc(ctx)
+				AddExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				SubExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				MulExpression: {
+					val method = getMultiplyMethod(expression.left, expression.right,
+						ctx.types.head ?: expression.typeOf).method
 
-				if (expression.isOnMemberSelectionOrReference) {
-					if (expression.dimension.isEmpty && expression.type.isNonPrimitive) {
-						chunks += ctx.computeTmp(expression.nameOfTmpVar(ctx.container), expression.sizeOf)
-					} else if (expression.dimension.isNotEmpty) {
-						chunks += ctx.computeTmp(expression.nameOfTmpArray(ctx.container), expression.fullSizeOf)
-					}
-				}
-
-				if (expression.type.isNonPrimitive) {
-					val snapshot = ctx.snapshot
-					val constructorName = expression.nameOfConstructor
-
-					ctx.container = constructorName
-
-					chunks += ctx.computePtr(expression.nameOfReceiver)
-					chunks += expression.fieldsInitializedOnContructor.map[value.alloc(ctx)].flatten.toList
-					chunks.disoverlap(constructorName)
-
-					ctx.restoreTo(snapshot)
-					ctx.constructors.put(expression.type.nameOf, expression)
-
-					if (expression.constructor !== null) {
-						chunks += expression.constructor.fields.map[variable.value.alloc(ctx)].flatten.toList
-					}
-				}
-
-				return chunks
-			}
-			MemberSelect: {
-				val snapshot = ctx.snapshot
-				val chunks = newArrayList
-				val member = expression.member
-				val receiver = expression.receiver
-
-				if (member instanceof Variable) {
-					if (member.isConstant) {
-						chunks += member.allocConstantReference(ctx)
-					} else if (member.isStatic) {
-						chunks += member.allocStaticReference(expression.indexes, ctx)
+					if (method !== null) {
+						method.allocInvocation(newArrayList(expression.left, expression.right), emptyList, ctx)
 					} else {
-						chunks += member.allocReference(receiver, expression.indexes, ctx)
+						(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
 					}
-				} else if (member instanceof Method) {
-					if (member.isStatic) {
+				}
+				DivExpression: {
+					val method = getDivideMethod(expression.left, expression.right,
+						ctx.types.head ?: expression.typeOf).method
+
+					if (method !== null) {
+						method.allocInvocation(newArrayList(expression.left, expression.right), emptyList, ctx)
+					} else {
+						(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+					}
+				}
+				ModExpression: {
+					val method = getModuloMethod(expression.left, expression.right,
+						ctx.types.head ?: expression.typeOf).method
+
+					if (method !== null) {
+						method.allocInvocation(newArrayList(expression.left, expression.right), emptyList, ctx)
+					} else {
+						(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+					}
+				}
+				BOrExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				BXorExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				BAndExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				LShiftExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				RShiftExpression:
+					(expression.left.alloc(ctx) + expression.right.alloc(ctx)).toList
+				ComplementExpression:
+					expression.right.alloc(ctx)
+				NotExpression:
+					expression.right.alloc(ctx)
+				SigNegExpression:
+					expression.right.alloc(ctx)
+				SigPosExpression:
+					expression.right.alloc(ctx)
+				DecExpression:
+					expression.right.alloc(ctx)
+				IncExpression:
+					expression.right.alloc(ctx)
+				CastExpression: {
+					expression.type.alloc(ctx)
+
+					if (expression.left.containsMulDivMod) {
+						try {
+							expression.left.alloc(ctx => [types.put(expression.type)])
+						} finally {
+							ctx.types.pop
+						}
+					} else {
+						expression.left.alloc(ctx)
+					}
+				}
+				ArrayLiteral: {
+					val chunks = expression.values.map[alloc(ctx)].flatten.toList
+
+					if (expression.isOnMemberSelectionOrReference) {
+						chunks += ctx.computeTmp(expression.nameOfTmp(ctx.container), expression.fullSizeOf)
+					}
+
+					return chunks
+				}
+				NewInstance: {
+					val chunks = newArrayList
+
+					if (expression.isOnMemberSelectionOrReference) {
+						if (expression.dimension.isEmpty && expression.type.isNonPrimitive) {
+							chunks += ctx.computeTmp(expression.nameOfTmpVar(ctx.container), expression.sizeOf)
+						} else if (expression.dimension.isNotEmpty) {
+							chunks += ctx.computeTmp(expression.nameOfTmpArray(ctx.container), expression.fullSizeOf)
+						}
+					}
+
+					if (expression.type.isNonPrimitive) {
+						expression.type.alloc(ctx)
+
+						val snapshot = ctx.snapshot
+						val constructorName = expression.nameOfConstructor
+
+						ctx.container = constructorName
+
+						chunks += ctx.computePtr(expression.nameOfReceiver)
+						chunks += expression.fieldsInitializedOnContructor.map[value.alloc(ctx)].flatten.toList
+						chunks.disoverlap(constructorName)
+
+						ctx.restoreTo(snapshot)
+						ctx.constructors.put(expression.type.nameOf, expression)
+
+						if (expression.constructor !== null) {
+							chunks += expression.constructor.fields.map[variable.value.alloc(ctx)].flatten.toList
+						}
+					}
+
+					return chunks
+				}
+				MemberSelect: {
+					val chunks = newArrayList
+					val member = expression.member
+					val receiver = expression.receiver
+
+					if (member.isStatic && receiver instanceof NewInstance) {
+						(receiver as NewInstance).type.alloc(ctx)
+					}
+
+					if (member instanceof Variable) {
+						if (member.isROM) {
+							chunks += member.allocRomReference(expression.indexes, ctx)
+						} else if (member.isConstant) {
+							chunks += member.allocConstantReference(ctx)
+						} else if (member.isStatic) {
+							chunks += member.allocStaticReference(expression.indexes, ctx)
+						} else {
+							chunks += member.allocReference(receiver, expression.indexes, ctx)
+						}
+					} else if (member instanceof Method) {
+						if (member.isStatic) {
+							chunks += member.allocInvocation(expression.args, expression.indexes, ctx)
+						} else {
+							chunks += member.allocInvocation(receiver, expression.args, expression.indexes, ctx)
+						}
+					}
+
+					return chunks
+				}
+				MemberRef: {
+					val chunks = newArrayList
+					val member = expression.member
+
+					if (member instanceof Variable) {
+						if (member.isField && member.isNonStatic) {
+							chunks += member.allocPointerReference('''«ctx.container».rcv''', expression.indexes, ctx)
+						} else if (member.isParameter &&
+							(member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)) {
+							chunks += member.allocPointerReference(member.nameOf, expression.indexes, ctx)
+						} else if (member.isROM) {
+							chunks += member.allocRomReference(expression.indexes, ctx)
+						} else if (member.isConstant) {
+							chunks += member.allocConstantReference(ctx)
+						} else if (member.isStatic) {
+							chunks += member.allocStaticReference(expression.indexes, ctx)
+						} else {
+							chunks += member.allocLocalReference(expression.indexes, ctx)
+						}
+					} else if (member instanceof Method) {
 						chunks += member.allocInvocation(expression.args, expression.indexes, ctx)
-					} else {
-						chunks += member.allocInvocation(receiver, expression.args, expression.indexes, ctx)
 					}
+
+					return chunks
 				}
-
-				chunks.disoverlap(ctx.container)
-
-				ctx.restoreTo(snapshot)
-
-				return chunks
+				default:
+					newArrayList
 			}
-			MemberRef: {
-				val snapshot = ctx.snapshot
-				val chunks = newArrayList
-				val member = expression.member
-
-				if (member instanceof Variable) {
-					if (member.isField && member.isNonStatic) {
-						chunks += member.allocPointerReference('''«ctx.container».rcv''', expression.indexes, ctx)
-					} else if (member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)) {
-						chunks += member.allocPointerReference(member.nameOf, expression.indexes, ctx)
-					} else if (member.isConstant) {
-						chunks += member.allocConstantReference(ctx)
-					} else if (member.isStatic) {
-						chunks += member.allocStaticReference(expression.indexes, ctx)
-					} else {
-						chunks += member.allocLocalReference(expression.indexes, ctx)
-					}
-				} else if (member instanceof Method) {
-					chunks += member.allocInvocation(expression.args, expression.indexes, ctx)
-				}
-
-				chunks.disoverlap(ctx.container)
-
-				ctx.restoreTo(snapshot)
-
-				return chunks
-			}
-			default:
-				newArrayList
-		}
+		])
 	}
 
 	def String compile(Expression expression, CompileContext ctx) {
@@ -1126,71 +1296,93 @@ class Expressions {
 		} catch (NonConstantExpressionException e) {
 			switch (expression) {
 				AssignmentExpression: '''
+					«val left = if (expression.assignment === AssignmentType::ASSIGN) {
+							expression.left
+						} else {
+							copies.get(expression.left) as Expression
+						}»
+					«val right = if (expression.assignment === AssignmentType::ASSIGN) {
+							expression.right
+						} else {
+							copies.get(expression.right) as Expression
+						}»
 					«val ref = new CompileContext => [
 						container = ctx.container
 						operation = ctx.operation
-						type = expression.left.typeOf
+						type = left.typeOf
 						mode = Mode::REFERENCE
 					]»
-					«expression.left.compile(ref)»
+					«val refCompiled = left.compile(ref)»
 					«IF expression.assignment === AssignmentType::ASSIGN»
-						«expression.right.compile(ref => [mode = Mode::COPY])»
+						«refCompiled»
+						«right.compile(ref => [
+							mode = Mode::COPY
+							lengthExpression = left.lengthExpression
+						])»
 					«ELSEIF expression.assignment === AssignmentType::ADD_ASSIGN»
 						«val add = NoopFactory::eINSTANCE.createAddExpression => [
-							left = expression.left
-							right = expression.right
+							it.left = left
+							it.right = right
 						]»
 						«add.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::SUB_ASSIGN»
 						«val sub = NoopFactory::eINSTANCE.createSubExpression => [
-							left = expression.left
-							right = expression.right
+							it.left = left
+							it.right = right
 						]»
 						«sub.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::MUL_ASSIGN»
 						«val mul = NoopFactory::eINSTANCE.createMulExpression => [
-							left = expression.left
-							right = expression.right
+							it.left = left
+							it.right = right
 						]»
 						«mul.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::DIV_ASSIGN»
 						«val div = NoopFactory::eINSTANCE.createDivExpression => [
-							left = expression.left
-							right = expression.right
+							it.left = left
+							it.right = right
 						]»
 						«div.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::MOD_ASSIGN»
 						«val mod = NoopFactory::eINSTANCE.createModExpression => [
-							left = expression.left
-							right = expression.right
+							it.left = left
+							it.right = right
 						]»
 						«mod.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BOR_ASSIGN»
 						«val bor = NoopFactory::eINSTANCE.createBOrExpression => [
-							left = expression.left
-							right = expression.right
+							it.left = left
+							it.right = right
 						]»
 						«bor.compile(ref => [mode = Mode::COPY])»
+					«ELSEIF expression.assignment === AssignmentType::XOR_ASSIGN»
+						«val xor = NoopFactory::eINSTANCE.createBXorExpression => [
+							it.left = left
+							it.right = right
+						]»
+						«xor.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BAN_ASSIGN»
 						«val ban = NoopFactory::eINSTANCE.createBAndExpression => [
-							left = expression.left
-							right = expression.right
+							it.left = left
+							it.right = right
 						]»
 						«ban.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BLS_ASSIGN»
 						«val bls = NoopFactory::eINSTANCE.createLShiftExpression => [
-							left = expression.left
-							right = expression.right
+							it.left = left
+							it.right = right
 						]»
 						«bls.compile(ref => [mode = Mode::COPY])»
 					«ELSEIF expression.assignment === AssignmentType::BRS_ASSIGN»
 						«val brs = NoopFactory::eINSTANCE.createRShiftExpression => [
-							left = expression.left
-							right = expression.right
+							it.left = left
+							it.right = right
 						]»
 						«brs.compile(ref => [mode = Mode::COPY])»
 					«ENDIF»
-					«ref.resolveTo(ctx)»
+					«IF ctx.mode != Mode::COPY || ctx.absolute !== null || ctx.indirect !== null || ctx.register !== null || ctx.relative !== null»
+						«left.compile(ctx)»
+					«ENDIF»
 				'''
 				OrExpression: '''«expression.left.compileOr(expression.right, ctx)»'''
 				AndExpression: '''«expression.left.compileAnd(expression.right, ctx)»'''
@@ -1206,6 +1398,7 @@ class Expressions {
 				DivExpression: '''«Operation::DIVISION.compileMultiplication(expression.left, expression.right, ctx)»'''
 				ModExpression: '''«Operation::MODULO.compileMultiplication(expression.left, expression.right, ctx)»'''
 				BOrExpression: '''«Operation::BIT_OR.compileBinary(expression.left, expression.right, ctx)»'''
+				BXorExpression: '''«Operation::BIT_XOR.compileBinary(expression.left, expression.right, ctx)»'''
 				BAndExpression: '''«Operation::BIT_AND.compileBinary(expression.left, expression.right, ctx)»'''
 				LShiftExpression: '''«Operation::BIT_SHIFT_LEFT.compileMultiplication(expression.left, expression.right, ctx)»'''
 				RShiftExpression: '''«Operation::BIT_SHIFT_RIGHT.compileMultiplication(expression.left, expression.right, ctx)»'''
@@ -1257,7 +1450,9 @@ class Expressions {
 				'''
 				StringLiteral: '''
 					«IF ctx.db !== null»
-						«ctx.db»:
+						«IF ctx.db != '+'»
+							«ctx.db»:
+						«ENDIF»
 						«IF expression.isFileInclude»
 							«val filepath = expression.toFile.absolutePath»
 								«IF expression.isAsmFile || expression.isIncFile»
@@ -1266,8 +1461,10 @@ class Expressions {
 									.incbin "«filepath»"
 								«ENDIF»
 						«ELSE»
-							«noop»
-								.db «expression.value.toBytes.join(', ', [toHex])»
+							«FOR chunk : expression.value.toBytes.chunked»
+								«noop»
+									.db «(chunk as List<?>).map[it as Integer].join(', ', [toHex])»
+							«ENDFOR»
 						«ENDIF»
 					«ELSEIF ctx.absolute !== null»
 						«ctx.pushAccIfOperating»
@@ -1301,13 +1498,16 @@ class Expressions {
 				ArrayLiteral: '''
 					«IF ctx.db !== null»
 						«ctx.db»:
-						«val bytes = expression.valueOf.toBytes»
-						«val chunks = (bytes.size / 32).max(1) + if (bytes.size > 32 && bytes.size % 32 != 0) 1 else 0»
-							«FOR i : 0..< chunks»
-								«val from = i * 32»
-								«val to = (from + 32).min(bytes.size)»
-								.db «bytes.subList(from, to).join(', ', [toHex])»
-							«ENDFOR»
+						«val chunks = expression.values.flat.chunked»
+						«val db = if (expression.sizeOf > 1) '.dw' else '.db'»
+						«FOR chunk : chunks»
+							«IF chunk instanceof List<?>»
+								«noop»
+									«db» «chunk.map[it as Integer].join(', ', [toHex])»
+							«ELSE»
+								«(chunk as StringLiteral).compile(new CompileContext => [it.db = '+'])»
+							«ENDIF»
+						«ENDFOR»
 					«ELSE»
 						«val tmp = if (expression.isOnMemberSelectionOrReference) {	
 								new CompileContext => [	
@@ -1422,7 +1622,9 @@ class Expressions {
 					«val member = expression.member»
 					«val receiver = expression.receiver»
 					«IF member instanceof Variable»
-						«IF member.isConstant»
+						«IF member.isROM»
+							«member.compileRomReference(expression.indexes, ctx)»
+						«ELSEIF member.isConstant»
 							«member.compileConstantReference(ctx)»
 						«ELSEIF member.isStatic»
 							«member.compileStaticReference(expression.indexes, ctx)»
@@ -1446,6 +1648,8 @@ class Expressions {
 							«member.compilePointerReference('''«ctx.container».rcv''', expression.indexes, ctx)»
 						«ELSEIF member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)»
 							«member.compilePointerReference(member.nameOf, expression.indexes, ctx)»
+						«ELSEIF member.isROM»
+							«member.compileRomReference(expression.indexes, ctx)»
 						«ELSEIF member.isConstant»
 							«member.compileConstantReference(ctx)»
 						«ELSEIF member.isStatic»
@@ -1467,7 +1671,11 @@ class Expressions {
 							«innerReceiver.pointTo(outerReceiver)»
 						«ENDIF»
 						«expression.checkRecursion(ctx)»
-						«method.compileInvocation(expression.args, expression.indexes, ctx)»
+						«IF method.isStatic»
+							«method.compileInvocation(expression.args, expression.indexes, ctx)»
+						«ELSE»
+							«method.compileInvocation(null, expression.args, expression.indexes, ctx)»
+						«ENDIF»
 					«ENDIF»					
 				'''
 				default:
@@ -1496,6 +1704,7 @@ class Expressions {
 				DivExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» / «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				ModExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» % «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				BOrExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» | «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
+				BXorExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» ^ «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				BAndExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» & «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				LShiftExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» << «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
 				RShiftExpression: '''«IF wrapped»(«ENDIF»«expression.left.compileConstant» >> «expression.right.compileConstant»«IF wrapped»)«ENDIF»'''
@@ -1532,6 +1741,7 @@ class Expressions {
 	private def compileInc(Operation incOperation, Expression expression, CompileContext ctx) '''
 		«val inc = new CompileContext => [
 				container = ctx.container
+				accLoaded = ctx.accLoaded
 				type = expression.typeOf
 				operation = incOperation
 				mode = Mode::OPERATE
@@ -1566,13 +1776,13 @@ class Expressions {
 		«right.compile(opr)»
 		«IF ctx.mode === Mode::OPERATE»
 			«ctx.accLoaded = true»
-				«FOR i : 0..< accType.sizeOf»
+				«FOR i : 0..< ctx.type.sizeOf»
 					STA «Members::TEMP_VAR_NAME2»«IF i > 0» + «i»«ENDIF»
 					PLA
 				«ENDFOR»
 			«val tmp = new CompileContext => [
 				container = ctx.container
-				type = accType
+				type = ctx.type
 				opType = ctx.type
 				absolute = Members::TEMP_VAR_NAME2
 			]»
@@ -1767,7 +1977,7 @@ class Expressions {
 			GeExpression:
 				Operation::COMPARE_LT.compileBinary(expr.left, expr.right, ctx)
 			NotExpression:
-				expr.compile(ctx)
+				expr.right.compile(ctx)
 			default:
 				Operation::NEGATION.compileUnary(expr, ctx)
 		}
@@ -1789,6 +1999,43 @@ class Expressions {
 			«instance.referenceInto(ctx)»
 		«ENDIF»
 	'''
+
+	private def List<?> flat(List<Expression> list) {
+		val flatten = <Object>newArrayList
+
+		for (expr : list) {
+			switch (expr) {
+				ByteLiteral: flatten += expr.value
+				BoolLiteral: flatten += if(expr.value) 1 else 0
+				ArrayLiteral: flatten += expr.values.flat
+				StringLiteral: flatten += expr
+				default: flatten += expr.valueOf
+			}
+		}
+
+		flatten
+	}
+
+	private def List<?> chunked(List<?> list) {
+		val chunks = <Object>newArrayList
+		var List<Integer> last
+
+		for (value : list) {
+			if (value instanceof Integer) {
+				if (last === null || last.size == 32) {
+					last = <Integer>newArrayList
+					chunks.add(last)
+				}
+
+				last += value
+			} else {
+				last = null
+				chunks += value
+			}
+		}
+
+		chunks
+	}
 
 	private def void noop() {
 	}

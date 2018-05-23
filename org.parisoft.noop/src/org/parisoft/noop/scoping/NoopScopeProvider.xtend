@@ -8,25 +8,26 @@ import java.util.List
 import org.eclipse.emf.common.util.EList
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.emf.ecore.EReference
+import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.eclipse.xtext.scoping.IScope
 import org.eclipse.xtext.scoping.Scopes
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.Block
+import org.parisoft.noop.noop.Constructor
+import org.parisoft.noop.noop.ConstructorField
 import org.parisoft.noop.noop.Expression
+import org.parisoft.noop.noop.ForStatement
 import org.parisoft.noop.noop.MemberRef
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
-import org.parisoft.noop.noop.NoopClass
-import org.parisoft.noop.noop.Variable
-import org.parisoft.noop.noop.NoopPackage
-import org.parisoft.noop.noop.Constructor
 import org.parisoft.noop.noop.NewInstance
-import org.parisoft.noop.noop.ConstructorField
-import org.parisoft.noop.noop.ForStatement
-import org.parisoft.noop.noop.AsmStatement
-import org.eclipse.xtext.naming.IQualifiedNameProvider
+import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.NoopPackage
+import org.parisoft.noop.noop.Variable
+import org.eclipse.xtext.scoping.impl.SimpleScope
 
 /**
  * This class contains custom scoping description.
@@ -46,27 +47,33 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			switch (context) {
 				Block:
 					if (eRef == NoopPackage::eINSTANCE.memberRef_Member) {
-						return scopeForVariableRef(context)
+						return scopeForVariableRef(context, eRef)
 					}
 				AsmStatement:
 					if (eRef == NoopPackage::eINSTANCE.asmStatement_Vars) {
-						return scopeForVariableRef(context)
+						return scopeForVariableRef(context, eRef)
 					}
 				Constructor:
 					if (eRef == NoopPackage::eINSTANCE.constructorField_Variable) {
-						return scopeForNewInstance(context.eContainer as NewInstance)
+						return scopeForNewInstance(context.eContainer as NewInstance, eRef)
 					}
 				ConstructorField:
 					if (eRef == NoopPackage::eINSTANCE.constructorField_Variable) {
-						return scopeForNewInstance(context.eContainer.eContainer as NewInstance)
+						return scopeForNewInstance(context.eContainer.eContainer as NewInstance, eRef)
+					} else {
+						return scopeForVariableRef(context, eRef)
 					}
 				MemberRef:
 					if (eRef == NoopPackage::eINSTANCE.memberRef_Member) {
-						return scopeForMemberRef(context)
+						return scopeForMemberRef(context, eRef)
 					}
 				MemberSelect:
 					if (eRef == NoopPackage::eINSTANCE.memberSelect_Member) {
 						return scopeForMemberSelect(context)
+					}
+				Variable:
+					if (eRef == NoopPackage::eINSTANCE.newInstance_Type) {
+						return scopeForVariableRef(context, eRef)
 					}
 			}
 
@@ -79,15 +86,15 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		}
 	}
 
-	protected def scopeForMemberRef(MemberRef memberRef) {
+	protected def scopeForMemberRef(MemberRef memberRef, EReference eRef) {
 		if (memberRef.hasArgs) {
 			scopeForMethodInvocation(memberRef, memberRef.args)
 		} else {
-			scopeForVariableRef(memberRef)
+			scopeForVariableRef(memberRef, eRef)
 		}
 	}
 
-	protected def IScope scopeForVariableRef(EObject context) {
+	protected def IScope scopeForVariableRef(EObject context, EReference ref) {
 		val container = context.eContainer
 
 		if (container === null) {
@@ -96,23 +103,32 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 		return switch (container) {
 			NoopClass: {
-				val thisMembers = container.members.takeWhile[it != context].filter(Variable) +
-					container.declaredMethods
-				val superMembers = container.allFieldsBottomUp + container.allMethodsBottomUp
-				Scopes.scopeFor(thisMembers, Scopes.scopeFor(superMembers))
+				val thisMembers = container.declaredFields.takeWhile[it != context] +
+					container.declaredMethods.filterOverload(emptyList)
+				val superMembers = container.allFieldsTopDown.takeWhile[it != context].toList.reverse +
+					container.allMethodsBottomUp.filterOverload(emptyList)
+				val classes = super.getScope(container, ref).allElements.filter [
+					EClass.name == NoopClass.simpleName
+				].toList
+				Scopes.scopeFor(thisMembers, Scopes.scopeFor(superMembers, new SimpleScope(classes)))
+			}
+			NewInstance: {
+				val members = container.type.allFieldsBottomUp +
+					container.type.allMethodsBottomUp.filterOverload(emptyList)
+				Scopes.scopeFor(members, scopeForVariableRef(container, ref))
 			}
 			Method:
-				Scopes.scopeFor(container.params, scopeForVariableRef(container))
+				Scopes.scopeFor(container.params, scopeForVariableRef(container, ref))
 			Block: {
 				val localVars = container.statements.takeWhile[it != context].filter(Variable)
-				Scopes.scopeFor(localVars, scopeForVariableRef(container))
+				Scopes.scopeFor(localVars, scopeForVariableRef(container, ref))
 			}
 			ForStatement: {
 				val localVars = container.variables.takeWhile[it != context]
-				Scopes.scopeFor(localVars, scopeForVariableRef(container))
+				Scopes.scopeFor(localVars, scopeForVariableRef(container, ref))
 			}
 			default:
-				scopeForVariableRef(container)
+				scopeForVariableRef(container, ref)
 		}
 	}
 
@@ -151,39 +167,29 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		} else if (isArrayReceiver) {
 			Scopes.scopeFor(type.allMethodsBottomUp.filter[nativeArray])
 		} else if (receiver instanceof NewInstance && (receiver as NewInstance).constructor === null) {
-			if (selection.hasArgs) {
-				val args = selection.args
-				val declaredMembers = type.declaredMethods.filter[static].filterOverload(args) +
-					type.declaredFields.filter[static]
-				val allMembers = type.allMethodsBottomUp.filter[static].filterOverload(args) +
-					type.allFieldsBottomUp.filter[static]
-				Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
-			} else {
-				val declaredMembers = type.declaredFields.filter[static] + type.declaredMethods.filter[static]
-				val allMembers = type.allFieldsBottomUp.filter[static] + type.allMethodsBottomUp.filter[static]
-				Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
-			}
-		} else if (selection.hasArgs) {
+			val args = selection.args
+			val declaredMembers = type.declaredMethods.filter[static].filterOverload(args) + type.declaredFields.filter [
+				static
+			]
+			val allMembers = type.allMethodsBottomUp.filter[static].filterOverload(args) + type.allFieldsBottomUp.filter [
+				static
+			]
+			Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
+		} else {
 			val args = selection.args
 			val declaredMembers = type.declaredMethods.filter[nonStatic].filterOverload(args) +
 				type.declaredFields.filter[nonStatic]
 			val allMembers = type.allMethodsBottomUp.filter[nonStatic].filterOverload(args).filter[nonNativeArray] +
 				type.allFieldsBottomUp.filter[nonStatic]
 			Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
-		} else {
-			val declaredMembers = type.declaredMethods.filter[nonStatic] + type.declaredFields.filter[nonStatic]
-			val allMembers = type.allMethodsBottomUp.filter[nonStatic].filter[nonNativeArray] +
-				type.allFieldsBottomUp.filter[nonStatic]
-			Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))
 		}
 	}
 
-	protected def scopeForNewInstance(NewInstance newInstance) {
+	protected def scopeForNewInstance(NewInstance newInstance, EReference ref) {
 		val container = newInstance.type
-		val thisFields = container.members.filter(Variable).filter[nonStatic]
-		val superFields = container.allFieldsBottomUp.filter[nonStatic]
+		val fields = container.allFieldsBottomUp.filter[nonStatic]
 
-		return Scopes.scopeFor(thisFields, Scopes.scopeFor(superFields))
+		return Scopes.scopeFor(fields, scopeForVariableRef(container, ref))
 	}
 
 	private def filterOverload(Iterable<Method> methods, List<Expression> args) {

@@ -75,7 +75,10 @@ LogicalExpression returns Expression:
 	LF* right=BitwiseOrExpression)*;
 
 BitwiseOrExpression returns Expression:
-	BitwiseAndExpression ({BOrExpression.left=current} LF* '|' LF* right=BitwiseAndExpression)*;
+	BitwiseXorExpression ({BOrExpression.left=current} LF* '|' LF* right=BitwiseXorExpression)*;
+
+BitwiseXorExpression returns Expression:
+	BitwiseAndExpression ({BXorExpression.left=current} LF* '^' LF* right=BitwiseAndExpression)*;
 
 BitwiseAndExpression returns Expression:
 	EqualityExpression ({BAndExpression.left=current} LF* '&' LF* right=EqualityExpression)*;
@@ -151,10 +154,11 @@ Length:
 
 enum AssignmentType:
 	ASSIGN=':=' | ADD_ASSIGN='+=' | SUB_ASSIGN='-=' | MUL_ASSIGN='*=' | DIV_ASSIGN='/=' | MOD_ASSIGN='%=' |
-	BOR_ASSIGN='|=' | BAN_ASSIGN='&=' | BLS_ASSIGN='<<=' | BRS_ASSIGN='>>=';
+	BOR_ASSIGN='|=' | BAN_ASSIGN='&=' | XOR_ASSIGN='^=' | BLS_ASSIGN='<<=' | BRS_ASSIGN='>>=';
 
 enum StorageType:
-	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM' | ZP='@ZP-RAM' | INLINE='@Inline';
+	PRGROM='@PRG-ROM' | CHRROM='@CHR-ROM' | INESPRG='@iNES-PRG' | INESCHR='@iNES-CHR' | INESMAPPER='@iNES-Mapper' |
+	INESMIR='@iNES-Mirror' | ZP='@ZP-RAM' | INLINE='@Inline' | RESET='@Reset' | NMI='@NMI' | IRQ='@IRQ' | MMC3CFG='@MMC3-Config';
 
 terminal ASM_TO_VAR:
 	'!' !('!' | '?')* '?';

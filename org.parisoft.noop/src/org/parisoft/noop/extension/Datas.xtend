@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.MemChunk
+import org.parisoft.noop.noop.ByteLiteral
 
 class Datas {
 
@@ -16,6 +17,7 @@ class Datas {
 	@Inject extension Members
 	@Inject extension Classes
 	@Inject extension Operations
+	@Inject extension Expressions
 
 	def sizeOf(CompileContext ctx) {
 		ctx.type.sizeOf
@@ -249,13 +251,24 @@ class Datas {
 					STA («dst.indirect»), Y
 					CPX «src.index»
 					BNE -«copyLoop»
-			«ELSEIF src.isIndexed || dst.isIndexed»
+			«ELSEIF src.isIndexed»
 				«noop»
-					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
+					LDX «src.index»
 					LDY #$00
 				-«copyLoop»:
-					LDA «src.absolute»«IF src.isIndexed», X«ELSE», Y«ENDIF»
-					STA («dst.indirect»«IF dst.isIndexed», X)«ELSE»), Y«ENDIF»
+					LDA «src.absolute», X
+					STA («dst.indirect»), Y
+					INX
+					INY
+					CPY «minSize»
+					BNE -«copyLoop»
+			«ELSEIF dst.isIndexed»
+				«noop»
+					LDX #$00
+					LDY «dst.index»
+				-«copyLoop»:
+					LDA «src.absolute», X
+					STA («dst.indirect»), Y
 					INX
 					INY
 					CPX «minSize»
@@ -343,13 +356,24 @@ class Datas {
 					STA «dst.absolute», X
 					CPY «src.index»
 					BNE -«copyLoop»
-			«ELSEIF src.isIndexed || dst.isIndexed»
+			«ELSEIF src.isIndexed»
 				«noop»
-					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
+					LDX #$00
+					LDY «src.index»
+				-«copyLoop»:
+					LDA («src.indirect»), Y
+					STA «dst.absolute», X
+					INX
+					INY
+					CPX «minSize»
+					BNE -«copyLoop»
+			«ELSEIF dst.isIndexed»
+				«noop»
+					LDX «dst.index»
 					LDY #$00
 				-«copyLoop»:
-					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
-					STA «dst.absolute»«IF dst.isIndexed», X«ELSE», Y«ENDIF»
+					LDA («src.indirect»), Y
+					STA «dst.absolute», X
 					INX
 					INY
 					CPY «minSize»
@@ -372,20 +396,25 @@ class Datas {
 		«dst.pushAccIfOperating»
 		«IF dst.sizeOf < loopThreshold»
 			«val minSize = Math::min(src.sizeOf, dst.sizeOf)»
-				LDX «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
-				LDY «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
+				LDA «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
+				STA «Members::TEMP_VAR_NAME1»
+				LDA «IF dst.isIndexed»«dst.index»«ELSE»#$00«ENDIF»
+				STA «Members::TEMP_VAR_NAME3»
 			«FOR i : 0 ..< minSize»
 				«noop»
-					LDA («src.indirect», X)
+					LDY «Members::TEMP_VAR_NAME1»
+					LDA («src.indirect»), Y
+					LDY «Members::TEMP_VAR_NAME3»
 					STA («dst.indirect»), Y
 					«IF i < minSize - 1»
-						INX
-						INY
+						INC «Members::TEMP_VAR_NAME1»
+						INC «Members::TEMP_VAR_NAME3»
 					«ENDIF»
 			«ENDFOR»
 			«IF src.type.isNumeric»
 				«IF src.sizeOf < dst.sizeOf»
 					«src.loadMSBFromAcc»
+						LDY «Members::TEMP_VAR_NAME3»
 						INY
 				«ENDIF»
 				«FOR i : src.sizeOf ..< dst.sizeOf»
@@ -404,27 +433,53 @@ class Datas {
 					CLC
 					LDA «src.index»
 					ADC «minSize»
-					TAX
+					STA «Members::TEMP_VAR_NAME1»
 					CLC
 					LDA «dst.index»
 					ADC «minSize»
-					TAY
+					STA «Members::TEMP_VAR_NAME3»
 				-«copyLoop»:
-					DEY
-					DEX
-					LDA («src.indirect», X)
+					DEC «Members::TEMP_VAR_NAME1»
+					DEC «Members::TEMP_VAR_NAME3»
+					LDY «Members::TEMP_VAR_NAME1»
+					LDA («src.indirect»), Y
+					LDY «Members::TEMP_VAR_NAME3»
 					STA («dst.indirect»), Y
-					CPX «src.index»
+					CPY «dst.index»
 					BNE -«copyLoop»
-			«ELSEIF src.isIndexed || dst.isIndexed»
+			«ELSEIF src.isIndexed»
 				«noop»
-					LDX «IF src.isIndexed»«src.index»«ELSE»«dst.index»«ENDIF»
-					LDY #$00
+					LDA «src.index»
+					STA «Members::TEMP_VAR_NAME1»
+					LDA #$00
+					STA «Members::TEMP_VAR_NAME3»
 				-«copyLoop»:
-					LDA («src.indirect»«IF src.isIndexed», X)«ELSE»), Y«ENDIF»
-					STA («dst.indirect»«IF dst.isIndexed», X)«ELSE»), Y«ENDIF»
-					INX
+					LDY «Members::TEMP_VAR_NAME1»
+					LDA («src.indirect»), Y
 					INY
+					STY «Members::TEMP_VAR_NAME1»
+					LDY «Members::TEMP_VAR_NAME3»
+					STA («dst.indirect»), Y
+					INY
+					STY «Members::TEMP_VAR_NAME3»
+					CPY «minSize»
+					BNE -«copyLoop»
+			«ELSEIF dst.isIndexed»
+				«noop»
+					LDA #$00
+					STA «Members::TEMP_VAR_NAME1»
+					LDA «dst.index»
+					STA «Members::TEMP_VAR_NAME3»
+				-«copyLoop»:
+					LDY «Members::TEMP_VAR_NAME1»
+					LDA («src.indirect»), Y
+					LDY «Members::TEMP_VAR_NAME3»
+					STA («dst.indirect»), Y
+					INY
+					STY «Members::TEMP_VAR_NAME3»
+					LDY «Members::TEMP_VAR_NAME1»
+					INY
+					STY «Members::TEMP_VAR_NAME1»
 					CPY «minSize»
 					BNE -«copyLoop»
 			«ELSE»
@@ -540,21 +595,22 @@ class Datas {
 			BNE +«dst.relative»
 	'''
 
-	def copyArrayTo(CompileContext src, CompileContext dst, int len) '''
+	def copyArrayTo(CompileContext src, CompileContext dst) '''
 		«IF src.absolute !== null && dst.absolute !== null»
-			«src.copyArrayAbsoluteToAbsoulte(dst, len)»
+			«src.copyArrayAbsoluteToAbsoulte(dst)»
 		«ELSEIF src.absolute !== null && dst.indirect !== null»
-			«src.copyArrayAbsoluteToIndirect(dst, len)»
+			«src.copyArrayAbsoluteToIndirect(dst)»
 		«ELSEIF src.indirect !== null && dst.absolute !== null»
-			«src.copyArrayIndirectToAbsolute(dst, len)»
+			«src.copyArrayIndirectToAbsolute(dst)»
 		«ELSEIF src.indirect !== null && dst.indirect !== null»
-			«src.copyArrayIndirectToIndirect(dst, len)»
+			«src.copyArrayIndirectToIndirect(dst)»
 		«ENDIF»
 	'''
 
-	private def copyArrayAbsoluteToAbsoulte(CompileContext src, CompileContext dst, int len) '''
+	private def copyArrayAbsoluteToAbsoulte(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
-		«val bytes = len * dst.sizeOf»
+		«val length = src.minLength(dst)»
+		«val bytes = length * dst.sizeOf»
 		«IF bytes < loopThreshold»
 			«noop»
 				«IF src.isIndexed»
@@ -576,30 +632,141 @@ class Datas {
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyArrayAbsoluteToIndirect(CompileContext src, CompileContext dst, int len) '''
+	private def copyArrayAbsoluteToIndirect(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToAbsolute(src)»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToIndirect(dst)»
-		«val bytes = len * dst.sizeOf»
-		«bytes.copyArrayIndirectToIndirect»
+		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
+		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
+		«IF src.lengthExpression instanceof ByteLiteral && (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral)»
+			«tmp1.pointIndirectToAbsolute(src)»
+			«tmp3.pointIndirectToIndirect(dst)»
+			«val length = src.minLength(dst)»
+			«val bytes = length * dst.sizeOf»
+			«bytes.copyArrayIndirectToIndirect»
+		«ELSE»
+			«src.lengthExpression.compile(tmp1 => [
+				absolute = indirect
+				indirect = null
+				type = src.lengthExpression.typeOf
+			])»
+			«IF dst.lengthExpression !== null»
+				«dst.lengthExpression.compile(tmp3 => [
+					absolute = indirect
+					indirect = null
+					type = dst.lengthExpression.typeOf
+				])»
+				«val reg = new CompileContext => [
+					register = 'A'
+					type = tmp1.type
+				]»
+				«tmp1.copyTo(reg)»
+				«reg.relative = 'set'»
+				«reg.lessThan(tmp3)»
+					LDA «tmp3.absolute» + 0
+					PHA
+					LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+					JMP +point
+			«ENDIF»
+			+set:
+				LDA «tmp1.absolute» + 0
+				PHA
+				LDX «IF tmp1.sizeOf > 1»«tmp1.absolute» + 1«ELSE»#0«ENDIF»
+			+point:
+			«(tmp1 => [indirect = absolute]).pointIndirectToAbsolute(src)»
+			«(tmp3 => [indirect = absolute]).pointIndirectToIndirect(dst)»
+			«copyArrayIndirectToIndirectByXY»
+		«ENDIF»
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyArrayIndirectToAbsolute(CompileContext src, CompileContext dst, int len) '''
+	private def copyArrayIndirectToAbsolute(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToIndirect(src)»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToAbsolute(dst)»
-		«val bytes = len * dst.sizeOf»
-		«bytes.copyArrayIndirectToIndirect»
+		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
+		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
+		«IF src.lengthExpression instanceof ByteLiteral && (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral)»
+			«tmp1.pointIndirectToIndirect(src)»
+			«tmp3.pointIndirectToAbsolute(dst)»
+			«val length = src.minLength(dst)»
+			«val bytes = length * dst.sizeOf»
+			«bytes.copyArrayIndirectToIndirect»
+		«ELSE»
+			«src.lengthExpression.compile(tmp1 => [
+				absolute = indirect
+				indirect = null
+				type = src.lengthExpression.typeOf
+			])»
+			«IF dst.lengthExpression !== null»
+				«dst.lengthExpression.compile(tmp3 => [
+					absolute = indirect
+					indirect = null
+					type = dst.lengthExpression.typeOf
+				])»
+				«val reg = new CompileContext => [
+					register = 'A'
+					type = tmp1.type
+				]»
+				«tmp1.copyTo(reg)»
+				«reg.relative = 'set'»
+				«reg.lessThan(tmp3)»
+					LDA «tmp3.absolute» + 0
+					PHA
+					LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+					JMP +point
+			«ENDIF»
+			+set:
+				LDA «tmp1.absolute» + 0
+				PHA
+				LDX «IF tmp1.sizeOf > 1»«tmp1.absolute» + 1«ELSE»#0«ENDIF»
+			+point:
+			«(tmp1 => [indirect = absolute]).pointIndirectToIndirect(src)»
+			«(tmp3 => [indirect = absolute]).pointIndirectToAbsolute(dst)»
+			«copyArrayIndirectToIndirectByXY»
+		«ENDIF»
 		«dst.pullAccIfOperating»
 	'''
 
-	private def copyArrayIndirectToIndirect(CompileContext src, CompileContext dst, int len) '''
+	private def copyArrayIndirectToIndirect(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToIndirect(src)»
-		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToIndirect(dst)»
-		«val bytes = len * dst.sizeOf»
-		«bytes.copyArrayIndirectToIndirect»
+		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
+		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
+		«IF src.lengthExpression instanceof ByteLiteral && (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral)»
+			«tmp1.pointIndirectToIndirect(src)»
+			«tmp3.pointIndirectToIndirect(dst)»
+			«val length = src.minLength(dst)»
+			«val bytes = length * dst.sizeOf»
+			«bytes.copyArrayIndirectToIndirect»
+		«ELSE»
+			«src.lengthExpression.compile(tmp1 => [
+				absolute = indirect
+				indirect = null
+				type = src.lengthExpression.typeOf
+			])»
+			«IF dst.lengthExpression !== null»
+				«dst.lengthExpression.compile(tmp3 => [
+					absolute = indirect
+					indirect = null
+					type = dst.lengthExpression.typeOf
+				])»
+				«val reg = new CompileContext => [
+					register = 'A'
+					type = tmp1.type
+				]»
+				«tmp1.copyTo(reg)»
+				«reg.relative = 'set'»
+				«reg.lessThan(tmp3)»
+					LDA «tmp3.absolute» + 0
+					PHA
+					LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+					JMP +point
+			«ENDIF»
+			+set:
+				LDA «tmp1.absolute» + 0
+				PHA
+				LDX «IF tmp1.sizeOf > 1»«tmp1.absolute» + 1«ELSE»#0«ENDIF»
+			+point:
+			«(tmp1 => [indirect = absolute]).pointIndirectToIndirect(src)»
+			«(tmp3 => [indirect = absolute]).pointIndirectToIndirect(dst)»
+			«copyArrayIndirectToIndirectByXY»
+		«ENDIF»
 		«dst.pullAccIfOperating»
 	'''
 
@@ -629,6 +796,33 @@ class Datas {
 				CPY #«frags»
 				BNE -«copyLoop»
 		«ENDIF»
+	'''
+
+	private def copyArrayIndirectToIndirectByXY() '''
+		«val copyLoop = labelForCopyLoop»
+			CPX #0
+			BEQ +«copyLoop»
+			LDY #0
+		--«copyLoop»:
+			LDA («Members::TEMP_VAR_NAME1»), Y
+			STA («Members::TEMP_VAR_NAME3»), Y
+			INY
+			BNE --«copyLoop»
+			INC «Members::TEMP_VAR_NAME1» + 1
+			INC «Members::TEMP_VAR_NAME3» + 1
+			DEX
+			BNE --«copyLoop»
+		+«copyLoop»:
+			PLA
+			TAY
+			BEQ +done
+		-«copyLoop»:
+			DEY
+			LDA («Members::TEMP_VAR_NAME1»), Y
+			STA («Members::TEMP_VAR_NAME3»), Y
+			CPY #0
+			BNE -«copyLoop»
+		+done:
 	'''
 
 	def fillArray(CompileContext array, int len) '''
@@ -756,11 +950,7 @@ class Datas {
 	}
 
 	def computeTmp(AllocContext ctx, String varName, int size) {
-		if (size > 2) {
-			ctx.computeVar(varName, VAR_PAGE, size).map[it => [tmp = true]]
-		} else {
-			ctx.computeVar(varName, PTR_PAGE, size).map[it => [tmp = true]]
-		}
+		ctx.computeVar(varName, VAR_PAGE, size).map[it => [tmp = true]]
 	}
 
 	def void disoverlap(Iterable<MemChunk> chunks, String methodName) {
@@ -810,5 +1000,11 @@ class Datas {
 		if (enabled && methodName?.contains('$reset')) {
 			println(message)
 		}
+	}
+
+	private def minLength(CompileContext c1, CompileContext c2) {
+		val len1 = (c1.lengthExpression as ByteLiteral)?.value ?: Integer::MAX_VALUE
+		val len2 = (c2.lengthExpression as ByteLiteral)?.value ?: Integer::MAX_VALUE
+		Math::min(len1, len2)
 	}
 }

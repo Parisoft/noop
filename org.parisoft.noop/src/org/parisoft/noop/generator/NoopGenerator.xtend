@@ -11,19 +11,18 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
-import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.consoles.Console
+import org.parisoft.noop.^extension.Cache
 import org.parisoft.noop.^extension.Classes
-import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Datas
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
-import org.parisoft.noop.^extension.Statements
-import org.parisoft.noop.noop.NewInstance
+import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.noop.NoopClass
 
 import static org.parisoft.noop.generator.Asm8.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Generates code from your model files on save.
@@ -35,12 +34,10 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject extension Files
 	@Inject extension Classes
 	@Inject extension Members
-	@Inject extension Statements
-	@Inject extension Collections
 	@Inject extension Expressions
-	@Inject extension IQualifiedNameProvider
 
 	@Inject Provider<Console> console
+	@Inject MapperFactory mapperFactory
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 		val asm = resource.compile
@@ -57,46 +54,63 @@ class NoopGenerator extends AbstractGenerator {
 				outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
 				listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
 
+				val ini = System::currentTimeMillis
+
 				try {
 					compile
 				} catch (Exception exception) {
 					Asm8.errStream.println(exception.message)
 					throw exception
+				} finally {
+					println('''Assembly = «System::currentTimeMillis - ini»ms''')
+					Cache::clear
 				}
 			]
 		}
 	}
 
 	private def compile(Resource resource) {
-		val gameImpl = resource.contents.filter(NoopClass).findFirst[game]
+		val mainClass = resource.contents.filter(NoopClass).findFirst[main]
 
-		if (gameImpl === null) {
+		if (mainClass === null) {
 			return null
 		}
 
-		val ctx = gameImpl.prepare
+		var ini = System::currentTimeMillis
+		val ctx = mainClass.prepare
+		println('''RePrepare = «System::currentTimeMillis - ini»ms''')
 
-		gameImpl.alloc(ctx)
+		ini = System::currentTimeMillis
+		mainClass.alloc(ctx)
+		println('''Alloc = «System::currentTimeMillis - ini»ms''')
 
 		ctx.prgRoms.entrySet.removeIf[ctx.prgRoms.values.exists[rom|rom.isOverrideOf(value)]]
 		ctx.chrRoms.entrySet.removeIf[ctx.chrRoms.values.exists[rom|rom.isOverrideOf(value)]]
 
-		val content = ctx.compile.optimize
+		ini = System::currentTimeMillis
+		val code = ctx.compile
+		println('''Compile = «System::currentTimeMillis - ini»ms''')
 
-		new ASM(gameImpl.name, content)
+		ini = System::currentTimeMillis
+		val content = code.optimize
+		println('''Optimize = «System::currentTimeMillis - ini»ms''')
+
+		new ASM(mainClass.name, content)
 	}
 
-	private def optimize(CharSequence code) {
+	private def String optimize(CharSequence code) {
 		val lines = code.toString.split(System::lineSeparator)
 		val builder = new StringBuilder
 		val AtomicInteger skip = new AtomicInteger
+		val AtomicBoolean skipped = new AtomicBoolean(false)
 
 		lines.forEach [ line, i |
 			var next = if(i + 1 < lines.length) lines.get(i + 1) else ''
 
 			if (skip.get > 0) {
 				skip.decrementAndGet
-			} else if (line == '\tPLA' && next == '\tPHA') {
+				skipped.set(true)
+			} else if (line == '\tPHA' && next == '\tPLA') {
 				skip.set(1)
 			} else if ((line.startsWith('\tJMP') || line.startsWith('\tRTS')) &&
 				(next.startsWith('\tJMP') || next.startsWith('\tRTS'))) {
@@ -138,7 +152,11 @@ class NoopGenerator extends AbstractGenerator {
 			}
 		]
 
-		builder.toString
+		if (skipped.get) {
+			builder.toString.optimize
+		} else {
+			builder.toString
+		}
 	}
 
 	private def compile(AllocContext ctx) '''
@@ -187,7 +205,7 @@ class NoopGenerator extends AbstractGenerator {
 			«IF ctx.resetCounter(page) == 0»«noop»«ENDIF»
 		«ENDFOR»
 		«FOR page : 0..< ctx.counters.size»
-			«val staticVars = ctx.statics.values.filter[storageOf == page]»
+			«val staticVars = ctx.statics.values.filter[(storageOf ?: 0) == page]»
 			«FOR staticVar : staticVars»
 				«staticVar.nameOfStatic» = «ctx.counters.get(page).getAndAdd(staticVar.sizeOf).toHexString(4)»
 			«ENDFOR»
@@ -211,64 +229,20 @@ class NoopGenerator extends AbstractGenerator {
 			«chunk.variable» = «chunk.lo.toHexString(4)»
 		«ENDFOR»
 		
+		«val inesPrg = ctx.constants.values.findFirst[INesPrg]?.valueOf as Integer ?: 32»
+		«val inesChr = ctx.constants.values.findFirst[INesChr]?.valueOf as Integer ?: 8»
+		«val inesMap = ctx.constants.values.findFirst[INesMapper]?.valueOf as Integer ?: 0»
+		«val inesMir = ctx.constants.values.findFirst[INesMir]?.valueOf as Integer ?: 1»
 		;----------------------------------------------------------------
 		; iNES Header
 		;----------------------------------------------------------------
 			.db 'NES', $1A ;identification of the iNES header
-			.db «(ctx.header.fieldValue('prgRomPages') as Integer).toHexString» ;number of 16KB PRG-ROM pages
-			.db «(ctx.header.fieldValue('chrRomPages') as Integer).toHexString» ;number of 8KB CHR-ROM pages
-			.db «(ctx.header.fieldValue('mapper') as Integer).toHexString» | «(ctx.header.fieldValue('mirroring') as Integer).toHexString»
+			.db «(inesPrg / 16).toHexString» ;number of 16KB PRG-ROM pages
+			.db «(inesChr / 8).toHexString» ;number of 8KB CHR-ROM pages
+			.db «inesMap.toHexString(1)»0 | «inesMir.toHexString»
 			.dsb 9, $00 ;clear the remaining bytes to 16
 			
-		;----------------------------------------------------------------
-		; PRG-ROM Bank(s)
-		;----------------------------------------------------------------
-			.base $10000 - («(ctx.header.fieldValue('prgRomPages') as Integer).toHexString» * $4000) 
-		
-		«FOR rom : ctx.prgRoms.values.filter[nonDMC]»
-			«rom.compile(new CompileContext)»
-		«ENDFOR»
-		«IF ctx.methods.values.exists[objectSize] && ctx.constructors.size > 0»
-			Object.$sizes:
-				.db «ctx.constructors.values.sortBy[type.name].map[type.rawSizeOf].join(', ', [toHexString])»
-		«ENDIF»
-		
-		;-- Methods -----------------------------------------------------
-		«FOR method : ctx.methods.values.sortBy[fullyQualifiedName]»
-			«method.compile(new CompileContext => [allocation = ctx])»
-			
-		«ENDFOR»
-		;-- Constructors ------------------------------------------------
-		«FOR constructor : ctx.constructors.values.sortBy[type.name]»
-			«constructor.compile(null)»
-			
-		«ENDFOR»
-		«val dmcList = ctx.prgRoms.values.filter[DMC].toList»
-		«IF dmcList.isNotEmpty»
-			;-- DMC sound data-----------------------------------------------
-				.org «Members::FT_DPCM_OFF»
-			«FOR dmcRom : dmcList»
-				«dmcRom.compile(new CompileContext)»
-			«ENDFOR»
-		«ENDIF»
-		
-		;----------------------------------------------------------------
-		; Interrupt vectors
-		;----------------------------------------------------------------
-			.org $FFFA     
-		
-		 	.dw «ctx.methods.values.findFirst[nmi].nameOf»
-		 	.dw «ctx.methods.values.findFirst[reset].nameOf»
-		 	.dw «ctx.methods.values.findFirst[irq].nameOf»
-		
-		;----------------------------------------------------------------
-		; CHR-ROM bank(s)
-		;----------------------------------------------------------------
-		   .base $0000
-		
-		«FOR rom : ctx.chrRoms.values»
-			«rom.compile(new CompileContext)»
-		«ENDFOR»
+		«mapperFactory.get(inesMap)?.compile(ctx)»
 	'''
 
 	private def toHexString(int value) {
@@ -283,15 +257,6 @@ class NoopGenerator extends AbstractGenerator {
 		}
 
 		return '$' + string
-	}
-
-	private def fieldValue(NewInstance instance, String fieldname) {
-		instance?.constructor?.fields?.findFirst [
-			variable.name == fieldname
-		]?.value?.valueOf ?: instance.type.allFieldsBottomUp.findFirst [
-			name == fieldname
-		].valueOf
-
 	}
 
 	private def void noop() {

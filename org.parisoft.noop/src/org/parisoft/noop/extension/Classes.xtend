@@ -1,17 +1,19 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
+import java.util.ArrayList
 import java.util.Collection
-import java.util.HashMap
-import java.util.HashSet
+import java.util.List
 import java.util.NoSuchElementException
-import java.util.WeakHashMap
+import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
+
+import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
 
@@ -22,11 +24,10 @@ class Classes {
 	@Inject extension Members
 	@Inject extension Statements
 	@Inject extension TypeSystem
+	@Inject extension Collections
 	@Inject extension IQualifiedNameProvider
 
-	static val classeSizeCache = new HashMap<NoopClass, Integer>
-	static val classesCache = new HashSet<NoopClass>
-	static val contextCache = new WeakHashMap<NoopClass, AllocContext>
+	static val allocating = ConcurrentHashMap::<NoopClass>newKeySet
 
 	def getSuperClasses(NoopClass c) {
 		val visited = <NoopClass>newArrayList()
@@ -49,7 +50,7 @@ class Classes {
 	}
 
 	def getSubClasses(NoopClass c) {
-		classesCache.filter[isNotEquals(c)].filter[isInstanceOf(c)]
+		classes.filter[isNotEquals(c)].filter[isInstanceOf(c)]
 	}
 
 	def getContainerClass(EObject e) {
@@ -100,28 +101,31 @@ class Classes {
 		}
 	}
 
-	def getDeclaredFields(NoopClass c) {
-		c.members.filter(Variable)
+	def List<Variable> getDeclaredFields(NoopClass c) {
+		val fields = c.members.filter(Variable)
+		(fields.filter[static] + fields.filter[nonStatic]).toList
 	}
 
 	def getDeclaredMethods(NoopClass c) {
-		c.members.filter(Method)
+		c.members.filter(Method).toList
 	}
 
 	def getAllFieldsBottomUp(NoopClass c) {
-		c.superClasses.map[members].flatten.filter(Variable)
+		val fields = c.superClasses.map[new ArrayList(members).reverse].flatten.filter(Variable)
+		(fields.filter[nonStatic] + fields.filter[static]).toList
 	}
 
 	def getAllMethodsBottomUp(NoopClass c) {
-		c.superClasses.map[members].flatten.filter(Method)
+		c.superClasses.map[new ArrayList(members).reverse].flatten.filter(Method).toList
 	}
 
 	def getAllFieldsTopDown(NoopClass c) {
-		c.superClasses.reverse.map[members].flatten.filter(Variable)
+		val fields = c.superClasses.reverse.map[members].flatten.filter(Variable)
+		(fields.filter[static] + fields.filter[nonStatic]).toList
 	}
 
 	def getAllMethodsTopDown(NoopClass c) {
-		c.superClasses.reverse.map[members].flatten.filter(Method)
+		c.superClasses.reverse.map[members].flatten.filter(Method).toList
 	}
 
 	def isEquals(NoopClass c1, NoopClass c2) {
@@ -180,20 +184,8 @@ class Classes {
 		!c.isPrimitive
 	}
 
-	def isGame(NoopClass c) {
-		c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_GAME]
-	}
-
-	def isNonGame(NoopClass c) {
-		!c.isGame
-	}
-
-	def isINESHeader(NoopClass c) {
-		c.superClasses.exists[it.fullyQualifiedName.toString == TypeSystem::LIB_NES_HEADER]
-	}
-
-	def isNonINESHeader(NoopClass c) {
-		!c.isINESHeader
+	def isMain(NoopClass c) {
+		c.allMethodsBottomUp.exists[reset]
 	}
 
 	def isSigned(NoopClass c) {
@@ -221,11 +213,7 @@ class Classes {
 	}
 
 	def int sizeOf(NoopClass c) {
-		classeSizeCache.get(c) ?: {
-			val size = c.fullSizeOf
-			classeSizeCache.put(c, size)
-			size
-		}
+		classeSize.get(c, [c.fullSizeOf])
 	}
 
 	private def int fullSizeOf(NoopClass c) {
@@ -256,62 +244,78 @@ class Classes {
 	}
 
 	def prepare(NoopClass gameImplClass) {
-		contextCache.get(gameImplClass) ?: {
+		contexts.get(gameImplClass, [
 			val ctx = new AllocContext
 
 			TypeSystem::context.set(gameImplClass)
 
 			gameImplClass.prepare(ctx)
 
-			ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
+			val overriders = new ArrayList<Method>
 
-			classesCache.clear
-			classesCache.addAll(ctx.classes.values)
+			do {
+				ctx.classes.putAll(ctx.classes.values.map[superClasses].flatten.toMap[nameOf])
 
-			classeSizeCache.clear
+				classes.clear
+				classes.addAll(ctx.classes.values)
+
+				overriders.clear
+				overriders += prepared.filter(Method).filter[nonStatic].map[it.overriders].flatten.filter [
+					!prepared.contains(it)
+				].toList
+
+				overriders.forEach[it.prepare(ctx)]
+			} while (overriders.isNotEmpty)
+
+			classeSize.clear
 			ctx.classes.values.forEach[sizeOf]
 
-			contextCache.put(gameImplClass, ctx)
 			ctx
-		}
+		])
 	}
 
 	def void prepare(NoopClass noopClass, AllocContext ctx) {
 		if (ctx.classes.put(noopClass.nameOf, noopClass) === null) {
 			noopClass.allFieldsTopDown.filter[ROM].forEach[prepare(ctx)]
-
-			if (noopClass.isGame) {
-				noopClass.allFieldsBottomUp.findFirst[typeOf.INESHeader].prepare(ctx)
-				noopClass.allMethodsBottomUp.findFirst[reset].prepare(ctx)
-				noopClass.allMethodsBottomUp.findFirst[nmi].prepare(ctx)
-				noopClass.allMethodsBottomUp.findFirst[irq].prepare(ctx)
-			}
+			noopClass.allFieldsTopDown.filter[INesHeader].forEach[prepare(ctx)]
+			noopClass.allFieldsTopDown.filter[mapperConfig].forEach[prepare(ctx)]
+			noopClass.allMethodsBottomUp.findFirst[reset]?.prepare(ctx)
+			noopClass.allMethodsBottomUp.findFirst[nmi]?.prepare(ctx)
+			noopClass.allMethodsBottomUp.findFirst[irq]?.prepare(ctx)
 		}
 	}
 
 	def void alloc(NoopClass noopClass, AllocContext ctx) {
-		if (noopClass.isGame) {
-			ctx.statics.values.forEach[alloc(ctx)]
+		if (allocating.add(noopClass)) {
+			try {
+				allocated.get(noopClass, [
+					if (noopClass.isMain) {
+						ctx.statics.values.forEach[alloc(ctx)]
+					}
 
-			val chunks = noopClass.allMethodsBottomUp.findFirst[nmi].alloc(ctx)
+					val chunks = noopClass.allMethodsBottomUp.findFirst[nmi]?.alloc(ctx) ?: newArrayList
 
-			ctx.counters.forEach [ counter, page |
-				try {
-					counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
-				} catch (NoSuchElementException e) {
-				}
-			]
+					ctx.counters.forEach [ counter, page |
+						try {
+							counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
+						} catch (NoSuchElementException e) {
+						}
+					]
 
-			chunks += noopClass.allMethodsBottomUp.findFirst[irq].alloc(ctx)
+					chunks += noopClass.allMethodsBottomUp.findFirst[irq]?.alloc(ctx) ?: emptyList
 
-			ctx.counters.forEach [ counter, page |
-				try {
-					counter.set(chunks.filter[hi < (page + 1) * 256].maxBy[hi].hi + 1)
-				} catch (NoSuchElementException e) {
-				}
-			]
+					ctx.counters.forEach [ counter, page |
+						try {
+							counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
+						} catch (NoSuchElementException e) {
+						}
+					]
 
-			noopClass.allMethodsBottomUp.findFirst[reset].alloc(ctx)
+					noopClass.allMethodsBottomUp.findFirst[reset]?.alloc(ctx)
+				])
+			} finally {
+				allocating.remove(noopClass)
+			}
 		}
 	}
 

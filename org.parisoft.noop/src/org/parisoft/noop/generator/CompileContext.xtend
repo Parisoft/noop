@@ -4,6 +4,7 @@ import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
 import java.util.Set
+import org.parisoft.noop.noop.Expression
 
 class CompileContext {
 
@@ -20,6 +21,7 @@ class CompileContext {
 		DIVISION,
 		MODULO,
 		BIT_OR,
+		BIT_XOR,
 		BIT_AND,
 		BIT_SHIFT_LEFT,
 		BIT_SHIFT_RIGHT,
@@ -52,6 +54,7 @@ class CompileContext {
 	@Accessors var AllocContext allocation
 	@Accessors var boolean accLoaded = false
 	@Accessors var Set<Variable> recursiveVars = newHashSet
+	@Accessors var Expression lengthExpression
 
 	override toString() '''
 		StorageData{

@@ -1,6 +1,7 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
+import java.util.ArrayList
 import java.util.List
 import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.emf.ecore.EObject
@@ -18,10 +19,11 @@ import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.ReturnStatement
-import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.Variable
+
+import static org.parisoft.noop.^extension.Cache.*
 
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
@@ -46,6 +48,7 @@ public class Members {
 	public static val MATH_MOD = '''«TypeSystem::LIB_MATH».«STATIC_PREFIX»mod'''
 	public static val METHOD_ARRAY_LENGTH = 'length'
 	
+	@Inject extension Tags
 	@Inject extension Datas
 	@Inject extension Values
 	@Inject extension Classes
@@ -58,7 +61,6 @@ public class Members {
 
 	static val running = ConcurrentHashMap::<Member>newKeySet
 	static val allocating = ConcurrentHashMap::<Member>newKeySet
-	static val preparing = ConcurrentHashMap::<Member>newKeySet
 
 	def getOverriders(Method method) {
 		method.containerClass.subClasses.map[declaredMethods.filter[it.isOverrideOf(method)]].filterNull.flatten
@@ -66,6 +68,14 @@ public class Members {
 	
 	def getOverriders(Variable variable) {
 		variable.containerClass.subClasses.map[declaredFields.filter[it.isOverrideOf(variable)]].filterNull.flatten
+	}
+	
+	def getOverriderClasses(Method method) {
+		newArrayList(method.containerClass) + method.containerClass.subClasses.filter[declaredMethods.forall[!it.isOverrideOf(method)]]
+	}
+	
+	def getOverriderClasses(Variable variable) {
+		newArrayList(variable.containerClass) + variable.containerClass.subClasses.filter[declaredFields.forall[!it.isOverrideOf(variable)]]
 	}
 	
 	def getOverriddenVariablesOnRecursion(Method method, Expression expression) {
@@ -82,6 +92,50 @@ public class Members {
 		].flatten.filter(MemberRef).map[member].filter(Variable).filter[variable|
 			localVars.exists[it == variable]
 		].toSet
+	}
+	
+	def getLengthExpression(Member member, List<Index> indices) {
+		if (member.isBounded) {
+			NoopFactory::eINSTANCE.createByteLiteral => [
+				value = member.typeOf.sizeOf * (member.dimensionOf.drop(indices.size).reduce[d1, d2| d1 * d2] ?: 1)
+			]
+		} else if (member instanceof Variable) {
+			val allIndices = new ArrayList<List<Expression>>
+			
+			for (i : indices.size ..< member.dimensionOf.size) {
+				val list = new ArrayList<Expression>
+				
+				for (j : 0 ..< i) {
+					list += NoopFactory::eINSTANCE.createByteLiteral => [value = 0]
+				}
+				
+				allIndices.add(list)
+			}
+			
+			val arrayLengthMethod = member.typeOf.allMethodsTopDown.findFirst[arrayLength]
+			val size = NoopFactory::eINSTANCE.createByteLiteral => [value = member.typeOf.sizeOf]
+			val length = allIndices.map[list|
+				NoopFactory::eINSTANCE.createMemberSelect => [
+					it.member = arrayLengthMethod
+					it.receiver = NoopFactory::eINSTANCE.createMemberRef => [
+						it.member = member
+						it.indexes += list.map[aByte| NoopFactory::eINSTANCE.createIndex => [value = aByte]]
+					]
+				]
+			].reduce[Expression len1, len2|
+				val mul = NoopFactory.eINSTANCE.createMulExpression => [
+					left = len1
+					right = len2
+				]
+				
+				mul
+			]
+			
+			NoopFactory::eINSTANCE.createMulExpression => [
+				left = size
+				right = length
+			]
+		}
 	}
 	
 	def isField(Member member) {
@@ -159,8 +213,8 @@ public class Members {
 		}
 	}
 
-	def isNonROM(Variable variable) {
-		!variable.isROM
+	def isNonROM(Member member) {
+		!member.isROM
 	}
 	
 	def isDMC(Variable variable) {
@@ -183,7 +237,12 @@ public class Members {
 	
 	def isBounded(Member member) {
 		switch (member) {
-			Variable: member.dimension?.forall[value !== null]
+			Variable: 
+				if (member.dimension.isEmpty) {
+					true
+				} else {
+					member.dimension.forall[value !== null]
+				} 
 			Method: true 
 		}
 	}
@@ -239,17 +298,57 @@ public class Members {
 	def isOverrideOf(Variable v1, Variable v2) {
 		return v1 != v2 && v1.name == v2.name && v1.containerClass.isSubclassOf(v2.containerClass)
 	}
-
-	def isIrq(Method method) {
-		method.containerClass.isGame && method.name == '''«STATIC_PREFIX»irq'''.toString && method.params.isEmpty
-	}
-
-	def isNmi(Method method) {
-		method.containerClass.isGame && method.name == '''«STATIC_PREFIX»nmi'''.toString && method.params.isEmpty
+	
+	def isINesHeader(Variable variable) {
+		variable.isINesPrg || variable.isINesChr || variable.isINesMapper || variable.isINesMir
 	}
 	
-	def isReset(Method method) {
-		method.containerClass.isGame && method.name == '''«STATIC_PREFIX»reset'''.toString && method.params.isEmpty
+	def isNonINesHeader(Variable variable) {
+		!variable.isINesHeader
+	}
+	
+	def isINesPrg(Variable variable) {
+		variable.storage?.type == StorageType::INESPRG
+	}
+	
+	def isINesChr(Variable variable) {
+		variable.storage?.type == StorageType::INESCHR
+	}
+	
+	def isINesMapper(Variable variable) {
+		variable.storage?.type == StorageType::INESMAPPER
+	}
+	
+	def isINesMir(Variable variable) {
+		variable.storage?.type == StorageType::INESMIR
+	}
+	
+	def isMapperConfig(Variable variable) {
+		variable.storage?.isMapperConfig
+	}
+	
+	def isNonMapperConfig(Variable variable) {
+		!variable.isMapperConfig
+	}
+	
+	def isIrqImpl(Method m) {
+		m.isIrq || m.isNmi || m.isReset
+	}
+	
+	def isNonIrqImpl(Method m) {
+		!m.isIrqImpl
+	}
+
+	def isIrq(Member method) {
+		method.storage?.type == StorageType::IRQ
+	}
+
+	def isNmi(Member method) {
+		method.storage?.type == StorageType::NMI
+	}
+	
+	def isReset(Member method) {
+		method.storage?.type == StorageType::RESET
 	}
 	
 	def isObjectSize(Method method) {
@@ -286,14 +385,8 @@ public class Members {
 		method.isNativeArray && method.name == METHOD_ARRAY_LENGTH
 	}
 	
-	def boolean isInvokedOn(Method method, Statement statement) {
-		statement !== null &&
-		statement.eAllContents.filter(MemberRef).map[member].filter(Method).exists[
-			it == method || body.statements.filter[it != statement].exists[method.isInvokedOn(it)]
-		] ||
-		statement.eAllContents.filter(MemberSelect).map[member].filter(Method).exists[
-			it == method || body.statements.filter[it != statement].exists[method.isInvokedOn(it)]
-		]
+	def isIndexMulDivModExpression(Member member, List<Index> indexes) {
+		!member.isIndexImmediate(indexes) && member.dimensionOf.size > 1
 	}
 	
 	def isArrayReference(Member member, List<Index> indexes) {
@@ -341,7 +434,7 @@ public class Members {
 	}
 
 	def valueOf(Variable variable) {
-		if (variable.isNonConstant && variable.containerClass.isNonINESHeader) {
+		if (variable.isNonConstant || (variable.isROM && variable.dimensionOf.isNotEmpty)) {
 			throw new NonConstantMemberException
 		}
 		
@@ -352,10 +445,6 @@ public class Members {
 				running.remove(variable)
 			}
 		}
-	}
-
-	def lenOfArrayReference(Member member, List<Index> indexes) {
-		member.dimensionOf.drop(indexes.size).reduce[d1, d2| d1 * d2]
 	}
 
 	def List<Integer> dimensionOf(Member member) {
@@ -427,6 +516,10 @@ public class Members {
 	def nameOfLen(Variable variable, int i) {
 		variable.nameOfLen(variable.getContainerOfType(Method).nameOf, i)
 	}
+	
+	def nameOfTmpParam(Variable param, Expression arg, String container) {
+		'''«container».tmp«param.name.toFirstUpper»@«arg.hashCode.toHexString»'''.toString
+	}
 
 	def nameOf(Method method) {
 		'''«method.fullyQualifiedName.toString»@«method.hashCode.toHexString»'''.toString
@@ -441,8 +534,8 @@ public class Members {
 	}
 	
 	def storageOf(Member member) {
-		if (member.isROM) {
-			member.storage.location?.valueOf as Integer ?: 0 // FIXME change to the current mapper's default bank
+		if (member.isROM || member.isNmi || member.isIrq) {
+			member.storage.location?.valueOf as Integer
 		} else if (member instanceof Variable) {
 			if (member.storage?.type == StorageType::ZP) {
 				Datas::PTR_PAGE
@@ -450,7 +543,7 @@ public class Members {
 				Datas::VAR_PAGE
 			}
 		} else {
-			0
+			null
 		}
 	}
 
@@ -525,13 +618,11 @@ public class Members {
 		«ENDIF»
 	'''
 
-	def prepare(Method method, AllocContext ctx) {
-		if (preparing.add(method)) {
-			try {
-				method.body.statements.forEach[prepare(ctx)]
-			} finally {
-				preparing.remove(method)		
-			}
+	def void prepare(Method method, AllocContext ctx) {
+		if (prepared.add(method)) {
+			val ini = System::currentTimeMillis
+			method.body.statements.forEach[prepare(ctx)]
+			println('''prepared «method.containerClass.name».«method.name» = «System::currentTimeMillis - ini»ms''')
 		}
 	}
 	
@@ -546,12 +637,14 @@ public class Members {
 		variable.prepareIndexes(indexes, ctx)
 	}
 	
-	def prepareInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
+	def void prepareInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
 		if (method.isNative) {
 			return
 		}
-		
-		receiver.prepare(ctx)
+
+		if (receiver !== null) {
+			receiver.prepare(ctx)
+		}
 		
 		args.forEach [ arg, i |
 			if (arg.containsMulDivMod) {
@@ -566,29 +659,16 @@ public class Members {
 		]
 		
 		method.prepare(ctx)
-		method.overriders.forEach[prepare(ctx)]
+		
+		if (receiver !== null && receiver.isNonSuper) {
+			method.overriders.forEach[prepare(ctx)]
+		}
+
 		method.prepareIndexes(indexes, ctx)
 	}
 	
 	def prepareInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
-		if (method.isNative) {
-			return
-		}
-		
-		args.forEach [ arg, i |
-			if (arg.containsMulDivMod) {
-				try {
-					arg.prepare(ctx => [types.put(method.params.get(i).type)])
-				} finally {
-					ctx.types.pop
-				}
-			} else {
-				arg.prepare(ctx)
-			}
-		]
-		
-		method.prepare(ctx)
-		method.prepareIndexes(indexes, ctx)
+		method.prepareInvocation(null, args, indexes, ctx)
 	}
 	
 	private def prepareIndexes(Member member, List<Index> indexes, AllocContext ctx) {
@@ -610,25 +690,27 @@ public class Members {
 	def alloc(Method method, AllocContext ctx) {
 		if (allocating.add(method)) {
 			try {
-				val snapshot = ctx.snapshot
-				val methodName = method.nameOf
-
-				ctx.container = methodName
-
-				val receiver = if (method.isNonStatic) {
-						ctx.computePtr(method.nameOfReceiver)
-					} else {
-						emptyList
-					}
-
-				val chunks = (receiver + method.params.map[alloc(ctx)].flatten).toList
-				chunks += method.body.statements.map[alloc(ctx)].flatten.toList
-				chunks.disoverlap(methodName)
-
-				ctx.restoreTo(snapshot)
-				ctx.methods.put(method.nameOf, method)
-
-				return chunks
+				allocated.get(method, [
+					val snapshot = ctx.snapshot
+					val methodName = method.nameOf
+	
+					ctx.container = methodName
+	
+					val receiver = if (method.isNonStatic) {
+							ctx.computePtr(method.nameOfReceiver)
+						} else {
+							emptyList
+						}
+	
+					val chunks = (receiver + method.params.map[alloc(ctx)].flatten).toList
+					chunks += method.body.statements.map[alloc(ctx)].flatten.toList
+					chunks.disoverlap(methodName)
+	
+					ctx.restoreTo(snapshot)
+					ctx.methods.put(method.nameOf, method)
+	
+					return chunks
+				])
 			} finally {
 				allocating.remove(method)
 			}
@@ -640,8 +722,9 @@ public class Members {
 	def allocReference(Variable variable, Expression receiver, List<Index> indexes, AllocContext ctx) {
 		val chunks = receiver.alloc(ctx)
 		
-		if (variable.overriders.isNotEmpty && receiver.isNonThisNorSuper) {
-			chunks += ctx.computeTmp(receiver.nameOfTmpVar(ctx.container), 2)
+		if (variable.overriders.isNotEmpty && receiver.isNonThisNorSuper
+			&& !(receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable)) {
+			chunks += ctx.computePtr(receiver.nameOfTmpVar(ctx.container))
 		}
 		
 		val rcv = new CompileContext => [
@@ -663,6 +746,11 @@ public class Members {
 		chunks += variable.allocIndexes(indexes, ref, ctx)
 		
 		return chunks
+	}
+	
+	def allocRomReference(Variable variable, List<Index> indexes, AllocContext ctx) {
+		val ref = new CompileContext => [absolute = variable.nameOfConstant]
+		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
 	}
 	
 	def allocConstantReference(Variable variable, AllocContext ctx) {
@@ -696,11 +784,13 @@ public class Members {
 		
 		val methodChunks = method.alloc(ctx)
 		
-		if (method.overriders.isNotEmpty && receiver.isNonThisNorSuper) {
+		if (method.overriders.isNotEmpty && receiver.isNonSuper) {
 			methodChunks += method.overriders.map[alloc(ctx)].flatten.toList
 		}
 		
-		chunks += receiver.alloc(ctx)
+		if (receiver !== null) {
+			chunks += receiver.alloc(ctx)
+		}
 
 		args.forEach [ arg, i |
 			if (arg.containsMulDivMod) {
@@ -711,6 +801,10 @@ public class Members {
 				}
 			} else {
 				chunks += arg.alloc(ctx)
+			}
+			
+			if (arg.containsMethodInvocation && !arg.isComplexMemberArrayReference) {
+				chunks += ctx.computeTmp(method.params.get(i).nameOfTmpParam(arg, ctx.container), arg.fullSizeOf)
 			}
 		]
 
@@ -721,30 +815,7 @@ public class Members {
 	}
 	
 	def allocInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
-		val chunks = newArrayList
-		
-		if (method.isNative) {
-			return chunks
-		}
-		
-		val methodChunks = method.alloc(ctx)
-		
-		args.forEach [ arg, i |
-			if (arg.containsMulDivMod) {
-				try {
-					chunks += arg.alloc(ctx => [types.put(method.params.get(i).type)])
-				} finally {
-					ctx.types.pop
-				}
-			} else {
-				chunks += arg.alloc(ctx)
-			}
-		]
-
-		chunks += method.allocIndexes(indexes, new CompileContext => [indirect = method.nameOfReturn], ctx)
-		chunks += methodChunks
-
-		return chunks
+		method.allocInvocation(null, args, indexes, ctx)
 	}
 	
 	private def allocIndexes(Member member, List<Index> indexes, CompileContext ref, AllocContext ctx) {
@@ -768,7 +839,7 @@ public class Members {
 			}
 			
 			if (isIndexNonImmediate || ref.indirect !== null) {
-				chunks += ctx.computeTmp(indexes.nameOfElement(ctx.container), 2)
+				chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
 			}
 		}
 		
@@ -780,7 +851,11 @@ public class Members {
 			«method.nameOf»:
 			«IF method.isReset»
 				;;;;;;;;;; Initial setup begin
-				SEI          ; disable IRQs
+				«IF ctx.allocation.constants.values.findFirst[INesMapper]?.valueOf ?: 0 as Integer == 4»
+					CLI          ; enable IRQs
+				«ELSE»
+					SEI          ; disable IRQs
+				«ENDIF»
 				CLD          ; disable decimal mode
 				LDX #$40
 				STX $4017    ; disable APU frame IRQ
@@ -823,37 +898,21 @@ public class Members {
 				«statement.compile(new CompileContext => [container = method.nameOf])»
 			«ENDFOR»
 				RTS
-			«ELSEIF method.isNmi»
-				;;;;;;;;;; NMI initialization begin
+			«ELSEIF method.isNmi || method.isIrq»
 				PHA
 				TXA
 				PHA
 				TYA
 				PHA
-			
-				LDA #<$0200
-				STA $2003  
-				LDA #>$0200
-				STA $4014  
-				;;;;;;;;;; NMI initialization end
-				;;;;;;;;;; Effective code begin
 			«FOR statement : method.body.statements»
 				«statement.compile(new CompileContext => [container = method.nameOf])»
 			«ENDFOR»
-				;;;;;;;;;; Effective code end
-				;;;;;;;;;; NMI finalization begin
 				PLA
 				TAY
 				PLA
 				TAX
 				PLA
-				;;;;;;;;;; NMI finalization end
 				RTI
-			«ELSEIF method.isIrq»
-				«FOR statement : method.body.statements»
-					«statement.compile(new CompileContext => [container = method.nameOf])»
-				«ENDFOR»
-					RTI
 			«ELSE»
 				«FOR statement : method.body.statements»
 					«statement.compile(new CompileContext => [container = method.nameOf])»
@@ -871,7 +930,7 @@ public class Members {
 	}
 
 	def compileConstant(Variable variable) {
-		if (variable.isNonConstant) {
+		if (variable.isNonConstant || variable.isROM) {
 			throw new NonConstantMemberException
 		}
 		
@@ -885,13 +944,14 @@ public class Members {
 	}
 		
 	def compileReference(Variable variable, Expression receiver, List<Index> indexes, CompileContext ctx) '''
-		«val overriders = if (receiver.isNonThisNorSuper) variable.overriders else emptyList»
 		«val rcv = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
 			accLoaded = ctx.isAccLoaded
 			type = receiver.typeOf
+			mode = null
 		]»
+		«val overriders = if (receiver.isNonThisNorSuper) variable.overriders else emptyList»
 		«IF overriders.isEmpty»
 			«receiver.compile(rcv => [mode = Mode::REFERENCE])»
 			«IF rcv.absolute !== null»
@@ -901,27 +961,68 @@ public class Members {
 			«ENDIF»
 		«ELSE»
 			«receiver.compile(rcv => [
-				indirect = receiver.nameOfTmpVar(ctx.container)
-				mode = Mode::POINT
+				if (receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable) {
+					mode = Mode::REFERENCE
+				} else {
+					indirect = receiver.nameOfTmpVar(ctx.container)
+					mode = Mode::POINT
+				}
 			])»
-			«ctx.pushAccIfOperating»
-				LDY #$00
-				LDA («rcv.indirect»), Y
+			«IF rcv.absolute !== null»
+				«ctx.pushAccIfOperating»
+					LDA «rcv.absolute»
+			«ELSE»
+				«ctx.pushAccIfOperating»
+					LDY #$00
+					LDA («rcv.indirect»), Y
+			«ENDIF»
 			«val finish = '''reference.end'''»
 			«val pullAcc = ctx.pullAccIfOperating»
+			«val relative = ctx.relative»
+			«val bypass = if (relative !== null) '''«relative».bypass'''»
 			«FOR overrider : overriders»
+				«FOR container : overrider.overriderClasses»
+					«noop»
+					+	CMP #«container.nameOf»
+						BEQ ++
+				«ENDFOR»
 				«noop»
-				+	CMP #«overrider.containerClass.nameOf»
-					BNE +
-				«pullAcc»
-				«overrider.compileIndirectReference(rcv, indexes, ctx)»
+					JMP +
+				«IF pullAcc.length > 0»
+					++«pullAcc»
+					«IF rcv.absolute !== null»
+						«overrider.compileAbsoluteReference(rcv, indexes, ctx => [it.relative = bypass])»
+					«ELSE»
+						«overrider.compileIndirectReference(rcv, indexes, ctx => [it.relative = bypass])»
+					«ENDIF»
+				«ELSE»
+					«IF rcv.absolute !== null»
+						++«overrider.compileAbsoluteReference(rcv, indexes, ctx => [it.relative = bypass])»
+					«ELSE»
+						++«overrider.compileIndirectReference(rcv, indexes, ctx => [it.relative = bypass])»
+					«ENDIF»
+				«ENDIF»
+				«noop»
 					JMP +«finish»
+				«IF relative !== null»
+					+«bypass»:
+						JMP +«relative»
+					«ctx.relative = relative»
+				«ENDIF»
 			«ENDFOR»
 			«IF pullAcc.length > 0»
 				+«pullAcc»
-				«variable.compileIndirectReference(rcv, indexes, ctx)»
+				«IF rcv.absolute !== null»
+					«variable.compileAbsoluteReference(rcv, indexes, ctx)»
+				«ELSE»
+					«variable.compileIndirectReference(rcv, indexes, ctx)»
+				«ENDIF»
 			«ELSE»
-				+«variable.compileIndirectReference(rcv, indexes, ctx)»
+				«IF rcv.absolute !== null»
+					+«variable.compileAbsoluteReference(rcv, indexes, ctx)»
+				«ELSE»
+					+«variable.compileIndirectReference(rcv, indexes, ctx)»
+				«ENDIF»
 			«ENDIF»
 			+«finish»:
 		«ENDIF»
@@ -938,7 +1039,8 @@ public class Members {
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -967,7 +1069,8 @@ public class Members {
 		«ENDIF»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -984,39 +1087,25 @@ public class Members {
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
 	'''
 
-	def compileStaticReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
+	def compileRomReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
 		«val ref = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
 			accLoaded = ctx.accLoaded
 			type = variable.typeOf
-			absolute = variable.nameOfStatic
+			absolute = variable.nameOfConstant
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
-		«ELSE»
-			«ref.resolveTo(ctx)»
-		«ENDIF»
-	'''
-	
-	def compileLocalReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
-		«val ref = new CompileContext => [
-			container = ctx.container
-			operation = ctx.operation
-			accLoaded = ctx.accLoaded
-			type = variable.typeOf
-			absolute = variable.nameOf
-		]»
-		«variable.compileIndexes(indexes, ref)»
-		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.copyArrayTo(ctx, variable.lenOfArrayReference(indexes))»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
@@ -1035,19 +1124,55 @@ public class Members {
 		«ENDIF»
 	'''
 
+	def compileStaticReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
+		«val ref = new CompileContext => [
+			container = ctx.container
+			operation = ctx.operation
+			accLoaded = ctx.accLoaded
+			type = variable.typeOf
+			absolute = variable.nameOfStatic
+		]»
+		«variable.compileIndexes(indexes, ref)»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
+		«ELSE»
+			«ref.resolveTo(ctx)»
+		«ENDIF»
+	'''
+	
+	def compileLocalReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
+		«val ref = new CompileContext => [
+			container = ctx.container
+			operation = ctx.operation
+			accLoaded = ctx.accLoaded
+			type = variable.typeOf
+			absolute = variable.nameOf
+		]»
+		«variable.compileIndexes(indexes, ref)»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
+			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+			«ref.copyArrayTo(ctx)»
+		«ELSE»
+			«ref.resolveTo(ctx)»
+		«ENDIF»
+	'''
+	
 	def compileInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, CompileContext ctx) '''
+		«val rcv = new CompileContext => [
+			container = ctx.container
+			operation = ctx.operation
+			accLoaded = ctx.accLoaded
+			type = receiver?.typeOf
+		]»
 		«IF method.isNative»
 			«method.compileNativeInvocation(receiver, args, ctx)»
 		«ELSE»
-			«val overriders = if (receiver.isNonThisNorSuper) method.overriders else emptyList»
-			«receiver.compile(new CompileContext => [
-				container = ctx.container
-				operation = ctx.operation
-				accLoaded = ctx.accLoaded
+			«receiver?.compile(rcv => [
 				indirect = method.nameOfReceiver
-				type = receiver.typeOf
 				mode = Mode::POINT
 			])»
+			«val overriders = if (receiver.isNonSuper) method.overriders else emptyList»
 			«IF overriders.isEmpty»
 				«method.compileInvocation(args, indexes, ctx)»
 			«ELSE»
@@ -1055,22 +1180,36 @@ public class Members {
 					LDY #$00
 					LDA («method.nameOfReceiver»), Y
 				«val invocationEnd = '''invocation.end'''»
+				«val relative = ctx.relative»
+				«val bypass = if (relative !== null) '''«relative».bypass'''»
 				«FOR overrider : overriders»
+					«FOR container : overrider.overriderClasses»
+						«noop»
+						+	CMP #«container.nameOf»
+							BEQ ++
+					«ENDFOR»
 					«noop»
-					+	CMP #«overrider.containerClass.nameOf»
-						BEQ ++
 						JMP +
-					«val falseReceiver = new CompileContext => [
-						operation = ctx.operation
-						indirect = method.nameOfReceiver
-					]»
-					«val realReceiver = new CompileContext => [
-						operation = ctx.operation
-						indirect = overrider.nameOfReceiver
-					]»
-					++«realReceiver.pointTo(falseReceiver)»
-					«overrider.compileInvocation(args, indexes, ctx)»
+					«IF receiver !== null»
+						«val falseReceiver = new CompileContext => [
+							operation = ctx.operation
+							indirect = method.nameOfReceiver
+						]»
+						«val realReceiver = new CompileContext => [
+							operation = ctx.operation
+							indirect = overrider.nameOfReceiver
+						]»
+						++«realReceiver.pointTo(falseReceiver)»
+						«overrider.compileInvocation(args, indexes, ctx => [it.relative = bypass])»
+					«ELSE»
+						++«overrider.compileInvocation(args, indexes, ctx => [it.relative = bypass])»
+					«ENDIF»
 						JMP +«invocationEnd»
+					«IF relative !== null»
+						+«bypass»:
+							JMP +«relative»
+						«ctx.relative = relative»
+					«ENDIF»
 				«ENDFOR»
 				+«method.compileInvocation(args, indexes, ctx)»
 				+«invocationEnd»:
@@ -1083,10 +1222,34 @@ public class Members {
 			«ctx.pushAccIfOperating»
 			«ctx.pushRecusiveVars»
 			«val methodName = method.nameOf»
-			«FOR i : 0..< args.size»
+			«val tmps = newArrayList»
+			«tmps.add(0, null)»
+			«FOR i : 0 ..< args.size»
 				«val param = method.params.get(i)»
 				«val arg = args.get(i)»
-				«arg.compile(new CompileContext => [
+				«IF arg.containsMethodInvocation»
+					«val tmp = new CompileContext => [
+						container = ctx.container
+						type = param.type
+						
+						if (arg.isComplexMemberArrayReference) {
+							mode = Mode::REFERENCE							
+						} else {
+							absolute = param.nameOfTmpParam(arg, ctx.container)
+							mode = Mode::COPY
+						}
+					]»
+					«tmps.add(i, tmp)»
+					«arg.compile(tmp)»
+				«ELSE»
+					«tmps.add(i, null)»
+				«ENDIF»
+			«ENDFOR»
+			«FOR i : 0 ..< args.size»
+				«val param = method.params.get(i)»
+				«val arg = args.get(i)»
+				«val tmpCtx = tmps.get(i)»
+				«val paramCtx = new CompileContext => [
 					container = ctx.container
 					type = param.type
 					
@@ -1097,16 +1260,35 @@ public class Members {
 						indirect = param.nameOf
 						mode = Mode::POINT
 					}
-				])»
+				]»
+				«IF tmpCtx !== null»
+					«tmpCtx.resolveTo(paramCtx)»
+				«ELSE»
+					«arg.compile(paramCtx)»
+				«ENDIF»
 				«IF param.isUnbounded»
-					«val dimension = arg.dimensionOf»
-					«FOR dim : 0..< dimension.size»
-						«val len = dimension.get(dim).toHex»
-							LDA #<«len»
-							STA «param.nameOfLen(methodName, dim)»
-							LDA #>«len»
-							STA «param.nameOfLen(methodName, dim)» + 1
-					«ENDFOR»
+					«IF arg.isUnbounded»
+«««						;TODO make this for MemberSelect and AssignmentExpression too
+						«IF arg instanceof MemberRef»
+							«val member = arg.member as Variable»
+							«FOR src : arg.indexes.size ..< arg.member.dimensionOf.size»
+								«val dst = src - arg.indexes.size»
+									LDA «member.nameOfLen(src)» + 0
+									STA «param.nameOfLen(methodName, dst)» + 0
+									LDA «member.nameOfLen(src)» + 1
+									STA «param.nameOfLen(methodName, dst)» + 1
+							«ENDFOR»
+						«ENDIF»
+					«ELSE»
+						«val dimension = arg.dimensionOf»
+						«FOR dim : 0..< dimension.size»
+							«val len = dimension.get(dim).toHex»
+								LDA #<«len»
+								STA «param.nameOfLen(methodName, dim)» + 0
+								LDA #>«len»
+								STA «param.nameOfLen(methodName, dim)» + 1
+						«ENDFOR»
+					«ENDIF»
 				«ENDIF»
 			«ENDFOR»
 			«IF method.isInline»
@@ -1131,8 +1313,10 @@ public class Members {
 					}
 				]»
 				«method.compileIndexes(indexes, ret)»
+«««				;TODO if ctx is indirect (mode POINT) then copy ret to a aux var then point to ctx
 				«IF ctx.mode === Mode::COPY && method.isArrayReference(indexes)»
-					«ret.copyArrayTo(ctx, method.lenOfArrayReference(indexes))»
+					«ret.lengthExpression = method.getLengthExpression(indexes)»
+					«ret.copyArrayTo(ctx)»
 				«ELSE»
 					«ret.resolveTo(ctx)»
 				«ENDIF»
@@ -1141,19 +1325,21 @@ public class Members {
 	'''
 	
 	private def compileNativeInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
+«««		;TODO compile receiver by copying it, removing indexes, and call receiver.compile with a new context moded as null
 		«IF method.name == METHOD_ARRAY_LENGTH»
+«««			;TODO make this for MemberSelect and AssignmentExpression too
 			«IF receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable && ((receiver as MemberRef).member as Variable).isUnbounded»
 				«val dim = (receiver as MemberRef).indexes.size»
 				«val len = new CompileContext => [
 					container = ctx.container
-					type = ctx.type.toIntClass
+					type = ctx.type.toUIntClass
 					absolute = ((receiver as MemberRef).member as Variable).nameOfLen(dim)
 				]»
 				«len.resolveTo(ctx)»
 			«ELSE»
 				«val len = new CompileContext => [
 					container = ctx.container
-					type = ctx.type.toIntClass
+					type = ctx.type.toUIntClass
 					immediate = receiver.dimensionOf.head.toString
 				]»
 				«len.resolveTo(ctx)»
@@ -1177,21 +1363,24 @@ public class Members {
 					
 					immediate += indexes.get(i).value.valueOf.toString
 					
-					for (j : i + 1 ..< indexes.size) {
+					for (j : i + 1 ..< dimension.size) {
 						immediate += '''*«dimension.get(j)»'''
 					}
 				}
 
 				'''(«immediate») * «member.typeOf.sizeOf»'''				
 			}»
+			«var mustReloadAcc = false»
 			«IF isIndexNonImmediate»
-				«member.getIndexExpression(indexes).compile(new CompileContext => [
+				«val idx = new CompileContext => [
 					container = ref.container
 					operation = ref.operation
 					accLoaded = ref.accLoaded
 					type = if (indexSize > 1) ref.type.toUIntClass else ref.type.toByteClass
 					register = 'A'
-				])»
+				]»
+				«member.getIndexExpression(indexes).compile(idx)»
+				«IF mustReloadAcc = ref.isAccLoaded && !idx.isAccLoaded»«ENDIF»
 			«ENDIF»
 			«IF isIndexImmediate»
 				«IF ref.absolute !== null»
@@ -1212,7 +1401,6 @@ public class Members {
 			«ELSE»
 				«IF ref.absolute !== null»
 					«val ptr = indexes.nameOfElement(ref.container)»
-					«ref.pushAccIfOperating»
 						CLC
 						ADC #<«ref.absolute»
 						STA «ptr»
@@ -1223,12 +1411,10 @@ public class Members {
 						«ENDIF»
 						ADC #>«ref.absolute»
 						STA «ptr» + 1
-					«ref.pullAccIfOperating»
 					«ref.absolute = null»
 					«ref.indirect = ptr»
 				«ELSEIF ref.indirect !== null»
 					«val ptr = indexes.nameOfElement(ref.container)»
-					«ref.pushAccIfOperating»
 						CLC
 						ADC «ref.indirect»
 						STA «ptr»
@@ -1239,30 +1425,37 @@ public class Members {
 						«ENDIF»
 						ADC «ref.indirect» + 1
 						STA «ptr» + 1
-					«ref.pullAccIfOperating»
 					«ref.indirect = ptr»
+				«ENDIF»
+				«IF mustReloadAcc»
+					«noop»
+						PLA
 				«ENDIF»
 			«ENDIF»
 		«ENDIF»
 	'''
 	
 	private def getIndexExpression(Member member, List<Index> indexes) {
-		val memberTypeSize = member.typeOf.sizeOf
-		
-		if (memberTypeSize > 1) {
-			NoopFactory::eINSTANCE.createMulExpression => [
-				left = if (member.isBounded) indexes.sum(member.dimensionOf, 0) else indexes.sum(member as Variable, 0)
-				right = NoopFactory::eINSTANCE.createByteLiteral => [value = memberTypeSize]
-			]
-		} else if (member.isBounded) {
-			indexes.sum(member.dimensionOf, 0)
-		} else {
-			indexes.sum(member as Variable, 0)
-		}
+		indexExpressions.get(member, indexes, [
+			val typeSize = member.typeOf.sizeOf
+			val dimension = member.dimensionOf
+			
+			if (typeSize > 1) {
+				val mul = NoopFactory::eINSTANCE.createMulExpression => [
+					left = if (member.isBounded) indexes.sum(dimension, 0) else indexes.sum(dimension, member as Variable, 0)
+					right = NoopFactory::eINSTANCE.createByteLiteral => [value = typeSize]
+				]
+				mul
+			} else if (member.isBounded) {
+				indexes.sum(dimension, 0)
+			} else {
+				indexes.sum(dimension, member as Variable, 0)
+			}
+		])
 	}
 	
-	private def Expression mult(List<Index> indexes, Variable parameter, int i, int j) {
-		if (j < indexes.size) {
+	private def Expression mult(List<Index> indexes, List<Integer> dimension, Variable parameter, int i, int j) {
+		if (j < dimension.size) {
 			NoopFactory::eINSTANCE.createMulExpression => [
 				left = NoopFactory::eINSTANCE.createMemberSelect => [
 					receiver = NoopFactory::eINSTANCE.createMemberRef => [
@@ -1276,26 +1469,26 @@ public class Members {
 					]
 					member = parameter.type.allMethodsTopDown.findFirst[arrayLength]
 				]
-				right = indexes.mult(parameter, i, j + 1)
+				right = indexes.mult(dimension, parameter, i, j + 1)
 			]
 		} else {
 			indexes.get(i).value.copy
 		}
 	}
 	
-	private def Expression sum(List<Index> indexes, Variable parameter, int i) {
+	private def Expression sum(List<Index> indexes, List<Integer> dimension, Variable parameter, int i) {
 		if (i + 1 < indexes.size) {
 			NoopFactory::eINSTANCE.createAddExpression => [
-				left = indexes.mult(parameter, i, i + 1)
-				right = indexes.sum(parameter, i + 1)
+				left = indexes.mult(dimension, parameter, i, i + 1)
+				right = indexes.sum(dimension, parameter, i + 1)
 			]
 		} else {
-			indexes.mult(parameter, i, i + 1)
+			indexes.mult(dimension, parameter, i, i + 1)
 		}
 	}
 	
 	private def Expression mult(List<Index> indexes, List<Integer> dimension, int i, int j) {
-		if (j < indexes.size) {
+		if (j < dimension.size) {
 			NoopFactory::eINSTANCE.createMulExpression => [
 				left = NoopFactory::eINSTANCE.createByteLiteral => [value = dimension.get(j)]
 				right = indexes.mult(dimension, i, j + 1)
@@ -1317,7 +1510,7 @@ public class Members {
 	}
 	
 	private def isIndexImmediate(Member member, List<Index> indexes) {
-		(member.isBounded || indexes.size == 1) && indexes.forall[value.isConstant]
+		(member.isBounded || member.dimensionOf.size == 1) && indexes.forall[value?.isConstant]
 	}
 	
 	private def isAbsolute(String index) {
