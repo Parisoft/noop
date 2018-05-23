@@ -1340,13 +1340,25 @@ public class Members {
 	private def compileNativeInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
 «««		;TODO compile receiver by copying it, removing indexes, and call receiver.compile with a new context moded as null
 		«IF method.name == METHOD_ARRAY_LENGTH»
-«««			;TODO make this for MemberSelect and AssignmentExpression too
-			«IF receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable && ((receiver as MemberRef).member as Variable).isUnbounded»
-				«val dim = (receiver as MemberRef).indexes.size»
+			«val member = if (receiver instanceof MemberRef) {
+				receiver.member
+			} else if (receiver instanceof MemberSelect) {
+				receiver.member
+			} else if (receiver instanceof AssignmentExpression) {
+				receiver.member
+			}»
+			«IF member !== null && member instanceof Variable && (member as Variable).isUnbounded»
+				«val idx = if (receiver instanceof MemberRef) {
+					receiver.indexes.size
+				 } else if (receiver instanceof MemberSelect) {
+				 	receiver.indexes.size
+				 } else {
+				 	0
+				 }»
 				«val len = new CompileContext => [
 					container = ctx.container
 					type = ctx.type.toUIntClass
-					absolute = ((receiver as MemberRef).member as Variable).nameOfLen(dim)
+					absolute = (member as Variable).nameOfLen(idx)
 				]»
 				«len.resolveTo(ctx)»
 			«ELSE»
