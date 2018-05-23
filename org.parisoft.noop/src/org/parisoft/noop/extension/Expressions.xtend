@@ -82,6 +82,16 @@ class Expressions {
 
 	static val recursions = ConcurrentHashMap::<Statement>newKeySet
 
+	def getMember(AssignmentExpression assignment) {
+		val left = assignment.left
+		
+		if (left instanceof MemberRef) {
+			left.member
+		} else if (left instanceof MemberSelect) {
+			left.member
+		}
+	}
+
 	def getFieldsInitializedOnContructor(NewInstance instance) {
 		instance.type.allFieldsTopDown.filter[nonStatic]
 	}

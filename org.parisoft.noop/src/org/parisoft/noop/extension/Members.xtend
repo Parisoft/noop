@@ -29,6 +29,7 @@ import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.noop.AssignmentExpression
 
 public class Members {
 
@@ -1268,11 +1269,23 @@ public class Members {
 				«ENDIF»
 				«IF param.isUnbounded»
 					«IF arg.isUnbounded»
-«««						;TODO make this for MemberSelect and AssignmentExpression too
-						«IF arg instanceof MemberRef»
-							«val member = arg.member as Variable»
-							«FOR src : arg.indexes.size ..< arg.member.dimensionOf.size»
-								«val dst = src - arg.indexes.size»
+						«val member = if (arg instanceof MemberRef) {
+							arg.member as Variable
+						} else if (arg instanceof MemberSelect) {
+							arg.member as Variable
+						} else if (arg instanceof AssignmentExpression) {
+							arg.member as Variable
+						}»
+						«val initIndex = if (arg instanceof MemberRef) {
+							arg.indexes.size
+						} else if (arg instanceof MemberSelect) {
+							arg.indexes.size
+						} else {
+							0
+						}»
+						«IF member !== null»
+							«FOR src : initIndex ..< member.dimensionOf.size»
+								«val dst = src - initIndex»
 									LDA «member.nameOfLen(src)» + 0
 									STA «param.nameOfLen(methodName, dst)» + 0
 									LDA «member.nameOfLen(src)» + 1
