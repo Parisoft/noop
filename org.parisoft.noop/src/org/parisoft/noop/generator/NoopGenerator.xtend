@@ -141,11 +141,8 @@ class NoopGenerator extends AbstractGenerator {
 				}
 
 				builder.append(line).append(System::lineSeparator)
-			} else if (line == System::lineSeparator) {
-				while (next == System::lineSeparator) {
-					next = lines.get(i + 1 + skip.incrementAndGet)
-				}
-
+			} else if (line == System::lineSeparator && next == System::lineSeparator) {
+				skip.incrementAndGet
 				builder.append(line)
 			} else {
 				builder.append(line).append(System::lineSeparator)

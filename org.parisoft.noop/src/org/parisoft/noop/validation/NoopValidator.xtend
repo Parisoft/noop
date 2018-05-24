@@ -209,6 +209,7 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val MEMBER_SELECT_VISIBILITY = 'org.parisoft.noop.MEMBER_SELECT_VISIBILITY'
 	public static val MEMBER_SELECT_DIMENSION = 'org.parisoft.noop.MEMBER_SELECT_DIMENSION'
 	public static val MEMBER_REF_DIMENSION = 'org.parisoft.noop.MEMBER_REF_DIMENSION'
+	public static val MEMBER_REF_STATIC_CONTEXT = 'org.parisoft.noop.MEMBER_REF_STATIC_CONTEXT'
 	public static val STORAGE_LOCATION = 'org.parisoft.noop.STORAGE_LOCATION'
 	public static val STORAGE_MAPPER_CONFIG = 'org.parisoft.noop.STORAGE_MAPPER_CONFIG'
 
@@ -1608,6 +1609,23 @@ class NoopValidator extends AbstractNoopValidator {
 		ref.indexes.drop(ref.member.dimensionOf.size).forEach [
 			error('Invalid index', it, null, MEMBER_REF_DIMENSION)
 		]
+	}
+
+	@Check
+	def memberRefStaticContext(MemberRef ref) {
+		if (ref.member.isNonStatic) {
+			val method = ref.getContainerOfType(Method)
+
+			if (method === null || method.isStatic) {
+				if (ref.member instanceof Variable) {
+					error('''Field «ref.member.name» cannot be accessed within a static context''', MEMBER_REF__MEMBER,
+						MEMBER_REF_STATIC_CONTEXT)
+				} else {
+					error('''Method «ref.member.name» cannot be invoked within a static context''', MEMBER_REF__MEMBER,
+						MEMBER_REF_STATIC_CONTEXT)
+				}
+			}
+		}
 	}
 
 	@Check

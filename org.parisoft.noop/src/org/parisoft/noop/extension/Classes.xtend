@@ -290,7 +290,8 @@ class Classes {
 			try {
 				allocated.get(noopClass, [
 					if (noopClass.isMain) {
-						ctx.statics.values.forEach[alloc(ctx)]
+						val reset = noopClass.allMethodsBottomUp.findFirst[reset].nameOf
+						ctx.statics.values.forEach[alloc(ctx => [container = reset])]
 					}
 
 					val chunks = noopClass.allMethodsBottomUp.findFirst[nmi]?.alloc(ctx) ?: newArrayList
