@@ -1617,10 +1617,10 @@ class NoopValidator extends AbstractNoopValidator {
 			val method = ref.getContainerOfType(Method)
 
 			if (method === null || method.isStatic) {
-				if (ref.member instanceof Variable) {
+				if (ref.member.isField) {
 					error('''Field «ref.member.name» cannot be accessed within a static context''', MEMBER_REF__MEMBER,
 						MEMBER_REF_STATIC_CONTEXT)
-				} else {
+				} else if (ref.member instanceof Method) {
 					error('''Method «ref.member.name» cannot be invoked within a static context''', MEMBER_REF__MEMBER,
 						MEMBER_REF_STATIC_CONTEXT)
 				}
