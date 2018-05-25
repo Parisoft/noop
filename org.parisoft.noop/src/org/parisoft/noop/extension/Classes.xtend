@@ -213,7 +213,7 @@ class Classes {
 	}
 
 	def int sizeOf(NoopClass c) {
-		classeSize.get(c, [c.fullSizeOf])
+		classeSize.get(c.fullyQualifiedName.toString, [c.fullSizeOf])
 	}
 
 	private def int fullSizeOf(NoopClass c) {

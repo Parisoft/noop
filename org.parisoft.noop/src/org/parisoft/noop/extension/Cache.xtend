@@ -17,7 +17,7 @@ class Cache {
 	
 	public static val prepared = new HashSet<EObject>
 	public static val allocated = new HashMap<EObject, List<MemChunk>>
-	public static val classeSize = new HashMap<NoopClass, Integer>
+	public static val classeSize = new HashMap<String, Integer>
 	public static val classes = new HashSet<NoopClass>
 	public static val contexts = new HashMap<NoopClass, AllocContext>
 	public static val mulMethods = HashBasedTable::<Expression, Expression, MethodReference>create

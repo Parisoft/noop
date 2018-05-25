@@ -680,14 +680,6 @@ public class Members {
 		if (indexes.isNotEmpty) {
 			if (member.isIndexImmediate(indexes)) {
 				indexes.forEach[value.prepare(ctx)]
-			} else {
-				val indexType = if (member.isBounded && member.sizeOf <= 0xFF) member.toByteClass else member.toUIntClass
-				
-				try {
-					member.getIndexExpression(indexes).prepare(ctx => [types.put(indexType)])				
-				} finally {
-					ctx.types.pop
-				}
 			}
 		}
 	}
@@ -1468,7 +1460,7 @@ public class Members {
 		indexExpressions.get(member, indexes, [
 			val typeSize = member.typeOf.sizeOf
 			val dimension = member.dimensionOf
-			
+
 			if (typeSize > 1) {
 				val mul = NoopFactory::eINSTANCE.createMulExpression => [
 					left = if (member.isBounded) indexes.sum(dimension, 0) else indexes.sum(dimension, member as Variable, 0)
