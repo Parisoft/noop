@@ -458,6 +458,8 @@ public class Members {
 				}
 			Method:
 				member.dimensionOf
+			default:
+				emptyList
 		}
 	}
 	
@@ -468,6 +470,8 @@ public class Members {
 			} finally {
 				running.remove(method)
 			}
+		} else {
+			emptyList
 		}
 	}
 
