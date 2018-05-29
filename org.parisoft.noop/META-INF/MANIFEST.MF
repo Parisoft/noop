@@ -39,3 +39,4 @@ Import-Package: noop.io,
  noop.lang,
  org.apache.log4j
 Bundle-ClassPath: .
+Automatic-Module-Name: org.parisoft.noop
