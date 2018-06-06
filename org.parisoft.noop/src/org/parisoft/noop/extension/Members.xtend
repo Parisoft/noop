@@ -179,6 +179,10 @@ public class Members {
 	def isPublic(Member member) {
 		!member.isPrivate
 	}
+	
+	def isPointer(Variable v) {
+		 v.typeOf.isNonNumeric || v.dimensionOf.isNotEmpty
+	}
 
 	def isParameter(Variable variable) {
 		variable.eContainer instanceof Method
@@ -482,52 +486,19 @@ public class Members {
 	}
 
 	def nameOf(Member member) {
-		switch (member) {
-			Variable: member.nameOf
-			Method: member.nameOf
-		}
-	}
-
-	def nameOf(Variable variable) {
-		variable.nameOf(variable.getContainerOfType(Method)?.nameOf)
-	}
-
-	def String nameOf(Variable variable, String containerName) {
-		if (variable.isStatic) {
-			variable.nameOfStatic
-		} else if (variable.getContainerOfType(Method) !== null) {
-			'''«containerName»«variable.fullyQualifiedName.toString.substring(containerName.indexOf('@'))»@«variable.hashCode.toHexString»'''
-		} else {
-			'''«containerName».«variable.name»@«variable.hashCode.toHexString»'''
-		}
-	}
-
-	def nameOfStatic(Variable variable) {
-		'''«variable.containerClass.name».«variable.name»'''.toString
-	}
-
-	def nameOfConstant(Variable variable) {
-		variable.fullyQualifiedName.toString
+		member.fullyQualifiedName.toString
 	}
 
 	def nameOfOffset(Variable variable) {
-		variable.fullyQualifiedName.toString
-	}
-	
-	def nameOfLen(Variable variable, String container, int i) {
-		'''«variable.nameOf(container)».len«i»'''.toString
+		variable.nameOf
 	}
 	
 	def nameOfLen(Variable variable, int i) {
-		variable.nameOfLen(variable.getContainerOfType(Method).nameOf, i)
+		'''«variable.nameOf».len«i»'''.toString
 	}
 	
 	def nameOfTmpParam(Variable param, Expression arg, String container) {
 		'''«container».tmp«param.name.toFirstUpper»@«arg.hashCode.toHexString»'''.toString
-	}
-
-	def nameOf(Method method) {
-		'''«method.fullyQualifiedName.toString»@«method.hashCode.toHexString»'''.toString
 	}
 
 	def nameOfReceiver(Method method) {
@@ -746,7 +717,7 @@ public class Members {
 	}
 	
 	def allocRomReference(Variable variable, List<Index> indexes, AllocContext ctx) {
-		val ref = new CompileContext => [absolute = variable.nameOfConstant]
+		val ref = new CompileContext => [absolute = variable.nameOf]
 		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
 	}
 	
@@ -755,7 +726,7 @@ public class Members {
 	}
 	
 	def allocStaticReference(Variable variable, List<Index> indexes, AllocContext ctx) {
-		val ref = new CompileContext => [absolute = variable.nameOfStatic]
+		val ref = new CompileContext => [absolute = variable.nameOf]
 		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
 	}
 	
@@ -933,7 +904,7 @@ public class Members {
 		
 		if (running.add(variable)) {
 			try {
-				return variable.nameOfConstant
+				return variable.nameOf
 			} finally {
 				running.remove(variable)
 			}
@@ -1097,7 +1068,7 @@ public class Members {
 			operation = ctx.operation
 			accLoaded = ctx.accLoaded
 			type = variable.typeOf
-			absolute = variable.nameOfConstant
+			absolute = variable.nameOf
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
@@ -1112,7 +1083,7 @@ public class Members {
 		«val const = new CompileContext => [
 			container = ctx.container
 			type = variable.typeOf
-			immediate = variable.nameOfConstant
+			immediate = variable.nameOf
 		]»
 		«IF ctx.mode === Mode::OPERATE»
 			«ctx.operateOn(const)»
@@ -1127,7 +1098,7 @@ public class Members {
 			operation = ctx.operation
 			accLoaded = ctx.accLoaded
 			type = variable.typeOf
-			absolute = variable.nameOfStatic
+			absolute = variable.nameOf
 		]»
 		«variable.compileIndexes(indexes, ref)»
 		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
@@ -1218,7 +1189,6 @@ public class Members {
 		«IF method.isNonNative»
 			«ctx.pushAccIfOperating»
 			«ctx.pushRecusiveVars»
-			«val methodName = method.nameOf»
 			«val tmps = newArrayList»
 			«tmps.add(0, null)»
 			«FOR i : 0 ..< args.size»
@@ -1283,9 +1253,9 @@ public class Members {
 							«FOR src : initIndex ..< member.dimensionOf.size»
 								«val dst = src - initIndex»
 									LDA «member.nameOfLen(src)» + 0
-									STA «param.nameOfLen(methodName, dst)» + 0
+									STA «param.nameOfLen(dst)» + 0
 									LDA «member.nameOfLen(src)» + 1
-									STA «param.nameOfLen(methodName, dst)» + 1
+									STA «param.nameOfLen(dst)» + 1
 							«ENDFOR»
 						«ENDIF»
 					«ELSE»
@@ -1293,9 +1263,9 @@ public class Members {
 						«FOR dim : 0..< dimension.size»
 							«val len = dimension.get(dim).toHex»
 								LDA #<«len»
-								STA «param.nameOfLen(methodName, dim)» + 0
+								STA «param.nameOfLen(dim)» + 0
 								LDA #>«len»
-								STA «param.nameOfLen(methodName, dim)» + 1
+								STA «param.nameOfLen(dim)» + 1
 						«ENDFOR»
 					«ENDIF»
 				«ENDIF»

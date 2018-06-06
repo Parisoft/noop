@@ -192,7 +192,7 @@ class NoopGenerator extends AbstractGenerator {
 		«Members::FT_DPCM_OFF» = $C000
 		«Members::FT_DPCM_PTR» = («Members::FT_DPCM_OFF»&$3fff)>>6
 		«FOR cons : ctx.constants.values»
-			«cons.nameOfConstant» = «cons.value.compileConstant»
+			«cons.nameOf» = «cons.value.compileConstant»
 		«ENDFOR»
 		
 		;----------------------------------------------------------------
@@ -204,7 +204,7 @@ class NoopGenerator extends AbstractGenerator {
 		«FOR page : 0..< ctx.counters.size»
 			«val staticVars = ctx.statics.values.filter[(storageOf ?: 0) == page]»
 			«FOR staticVar : staticVars»
-				«staticVar.nameOfStatic» = «ctx.counters.get(page).getAndAdd(staticVar.sizeOf).toHexString(4)»
+				«staticVar.nameOf» = «ctx.counters.get(page).getAndAdd(staticVar.sizeOf).toHexString(4)»
 			«ENDFOR»
 		«ENDFOR»
 		

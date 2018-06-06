@@ -213,7 +213,7 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val STORAGE_LOCATION = 'org.parisoft.noop.STORAGE_LOCATION'
 	public static val STORAGE_MAPPER_CONFIG = 'org.parisoft.noop.STORAGE_MAPPER_CONFIG'
 
-	@Check(NORMAL)
+//	@Check(NORMAL)
 	def classSizeOverflow(NoopClass c) {
 		if (c.isMain) {
 			val ini = System::currentTimeMillis

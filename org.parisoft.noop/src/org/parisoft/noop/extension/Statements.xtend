@@ -144,14 +144,14 @@ class Statements {
 
 					if (statement.isROM) {
 						if (statement.storage.type == StorageType.PRGROM) {
-							ctx.prgRoms.put(statement.nameOfConstant, statement)
+							ctx.prgRoms.put(statement.nameOf, statement)
 						} else if (statement.storage.type == StorageType.CHRROM) {
-							ctx.chrRoms.put(statement.nameOfConstant, statement)
+							ctx.chrRoms.put(statement.nameOf, statement)
 						}
 					} else if (statement.isConstant) {
-						ctx.constants.put(statement.nameOfConstant, statement)
+						ctx.constants.put(statement.nameOf, statement)
 					} else if (statement.isStatic) {
-						ctx.statics.put(statement.nameOfStatic, statement)
+						ctx.statics.put(statement.nameOf, statement)
 					}
 				}
 				IfStatement: {
@@ -197,7 +197,7 @@ class Statements {
 		allocated.get(statement, [
 			switch (statement) {
 				Variable: {
-					val name = statement.nameOf(ctx.container)
+					val name = statement.nameOf
 					val chunks = newArrayList
 
 					if (statement.isParameter && (statement.type.isNonPrimitive || statement.dimensionOf.isNotEmpty)) {
@@ -205,7 +205,7 @@ class Statements {
 
 						if (statement.isUnbounded) {
 							for (i : 0 ..< statement.dimensionOf.size) {
-								chunks += ctx.computeVar(statement.nameOfLen(ctx.container, i), 2)
+								chunks += ctx.computeVar(statement.nameOfLen(i), 2)
 							}
 						}
 					} else if (statement.isNonStatic) {
@@ -291,7 +291,7 @@ class Statements {
 			Variable: '''
 				«IF statement.isROM»
 					«statement.value.compile(ctx => [
-						db = statement.nameOfStatic
+						db = statement.nameOf
 						type = statement.typeOf
 					])»
 				«ELSEIF ctx.absolute !== null»
@@ -306,7 +306,7 @@ class Statements {
 					])»
 				«ELSE»
 					«statement.value.compile(ctx => [
-						absolute = statement.nameOf(ctx.container)
+						absolute = statement.nameOf
 						type = statement.typeOf
 					])»
 				«ENDIF»
