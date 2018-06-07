@@ -213,7 +213,7 @@ class Statements {
 						}
 					} else if (statement.isNonStatic) {
 						val page = statement?.storage?.location?.valueOf as Integer ?: Datas::VAR_PAGE
-						chunks += ctx.computeVar(name, page, statement.sizeOf)
+						chunks += ctx.computeVar(name, page, statement.sizeOf as Integer)
 					}
 
 					return (chunks + statement?.value.alloc(ctx)).filterNull.toList

@@ -79,9 +79,9 @@ class Classes {
 			TypeSystem::TYPE_VOID
 		} else if (classes.forall[isNumeric]) {
 			classes.reduce [ c1, c2 |
-				if (c1.sizeOf > c2.sizeOf) {
+				if ((c1.sizeOf as Integer) > (c2.sizeOf as Integer)) {
 					c1
-				} else if (c1.sizeOf < c2.sizeOf) {
+				} else if ((c1.sizeOf as Integer) < (c2.sizeOf as Integer)) {
 					c2
 				} else if (c1.isSigned) {
 					c1
@@ -212,7 +212,7 @@ class Classes {
 		'''«c.name»#class'''.toString
 	}
 
-	def int sizeOf(NoopClass c) {
+	def Object sizeOf(NoopClass c) {
 		classeSize.get(c.fullyQualifiedName.toString, [c.fullSizeOf])
 	}
 
@@ -238,7 +238,7 @@ class Classes {
 	}
 
 	def int rawSizeOf(NoopClass c) {
-		SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonStatic].map[sizeOf].reduce [ s1, s2 |
+		SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonStatic].map[sizeOf as Integer].reduce [ s1, s2 |
 			s1 + s2
 		] ?: 0)
 	}

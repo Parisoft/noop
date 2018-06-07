@@ -84,7 +84,7 @@ class Expressions {
 
 	def getMember(AssignmentExpression assignment) {
 		val left = assignment.left
-		
+
 		if (left instanceof MemberRef) {
 			left.member
 		} else if (left instanceof MemberSelect) {
@@ -99,10 +99,20 @@ class Expressions {
 	def getMultiplyMethod(Expression left, Expression right) {
 		mulMethods.get(left, right, [
 			try {
-				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
+				val value = right.valueOf
+				val const = if (value instanceof Integer) {
+						NoopFactory::eINSTANCE.createByteLiteral => [it.value = value]
+					} else {
+						NoopFactory::eINSTANCE.createStringLiteral => [it.value = value.toString]
+					}
 				new MethodReference => [args = newArrayList(left, const)]
 			} catch (NonConstantExpressionException exception) {
-				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = left.valueOf as Integer]
+				val value = left.valueOf
+				val const = if (value instanceof Integer) {
+						NoopFactory::eINSTANCE.createByteLiteral => [it.value = value]
+					} else {
+						NoopFactory::eINSTANCE.createStringLiteral => [it.value = value.toString]
+					}
 				new MethodReference => [args = newArrayList(right, const)]
 			}
 		])
@@ -112,8 +122,13 @@ class Expressions {
 		try {
 			left.getMultiplyMethod(right)
 		} catch (NonConstantExpressionException exception) {
-			val mul = if (type.sizeOf > 1) {
-					val lhsType = if (left.sizeOf < right.sizeOf) {
+			val typeSize = type.sizeOf
+			val mul = if (!(typeSize instanceof Integer) || typeSize as Integer > 1) {
+					val lhsSize = left.sizeOf
+					val rhsSize = right.sizeOf
+					val anySizeNonInt = !(lhsSize instanceof Integer) || !(rhsSize instanceof Integer)
+
+					val lhsType = if (anySizeNonInt || (left.sizeOf as Integer) < (right.sizeOf as Integer)) {
 							if (left.typeOf.isSigned) {
 								left.typeOf.toIntClass
 							} else {
@@ -123,7 +138,7 @@ class Expressions {
 							left.typeOf
 						}
 
-					val rhsType = if (left.sizeOf > right.sizeOf) {
+					val rhsType = if (anySizeNonInt || (left.sizeOf as Integer) > (right.sizeOf as Integer)) {
 							if (right.typeOf.isSigned) {
 								right.typeOf.toIntClass
 							} else {
@@ -180,7 +195,7 @@ class Expressions {
 		try {
 			left.getDivideMethod(right)
 		} catch (NonConstantExpressionException exception) {
-			val lhsType = if (left.sizeOf < right.sizeOf) {
+			val lhsType = if ((left.sizeOf as Integer) < (right.sizeOf as Integer)) {
 					if (left.typeOf.isSigned) {
 						left.typeOf.toIntClass
 					} else {
@@ -192,7 +207,7 @@ class Expressions {
 
 			val rhsType = right.typeOf
 
-			val div = if (lhsType.sizeOf > 1 || (lhsType.isUnsigned && rhsType.isSigned)) {
+			val div = if ((lhsType.sizeOf as Integer) > 1 || (lhsType.isUnsigned && rhsType.isSigned)) {
 					new MethodReference => [
 						method = type.toMathClass().declaredMethods.findFirst [
 							name == '''«Members::STATIC_PREFIX»divide'''.toString && params.isNotEmpty &&
@@ -231,7 +246,7 @@ class Expressions {
 		try {
 			left.getModuloMethod(right)
 		} catch (NonConstantExpressionException exception) {
-			val lhsType = if (left.sizeOf < right.sizeOf) {
+			val lhsType = if ((left.sizeOf as Integer) < (right.sizeOf as Integer)) {
 					if (left.typeOf.isSigned) {
 						left.typeOf.toIntClass
 					} else {
@@ -263,10 +278,18 @@ class Expressions {
 
 	def getLengthExpression(Expression expression) {
 		switch (expression) {
-			CastExpression:
-				NoopFactory::eINSTANCE.createByteLiteral => [
-					value = expression.type.sizeOf * expression.dimensionOf.reduce[d1, d2|d1 * d2]
-				]
+			CastExpression: {
+				val size = expression.type.sizeOf
+				val dim = expression.dimensionOf.reduce[d1, d2|d1 * d2]
+
+				if (size instanceof Integer) {
+					NoopFactory::eINSTANCE.createByteLiteral => [value = size * dim]
+				} else if (dim > 1) {
+					NoopFactory::eINSTANCE.createStringLiteral => [value = '''(«size» * «dim»)''']
+				} else {
+					NoopFactory::eINSTANCE.createStringLiteral => [value = size.toString]
+				}
+			}
 			MemberSelect:
 				expression.member.getLengthExpression(expression.indexes)
 			MemberRef:
@@ -681,10 +704,12 @@ class Expressions {
 		} catch (Exception e) {
 			val leftType = left.typeOf
 			val rightType = right.typeOf
+			val leftSize = leftType.sizeOf as Integer
+			val rightSize = rightType.sizeOf as Integer
 
-			if (leftType.sizeOf > rightType.sizeOf) {
+			if (leftSize > rightSize) {
 				leftType
-			} else if (leftType.sizeOf < rightType.sizeOf) {
+			} else if (leftSize < rightSize) {
 				rightType
 			} else if (leftType.isSigned) {
 				leftType
@@ -723,7 +748,7 @@ class Expressions {
 
 			if (rhsType.isUnsigned) {
 				lhsType
-			} else if (lhsType.isSigned && lhsType.sizeOf <= rhsType.sizeOf) {
+			} else if (lhsType.isSigned && (lhsType.sizeOf as Integer) <= (rhsType.sizeOf as Integer)) {
 				rhsType
 			} else {
 				lhsType.toIntClass
@@ -767,7 +792,15 @@ class Expressions {
 				SubExpression:
 					(expression.left.valueOf as Integer) - (expression.right.valueOf as Integer)
 				MulExpression:
-					(expression.left.valueOf as Integer) * (expression.right.valueOf as Integer)
+					if (expression.left.typeOf.isNumeric && expression.right.typeOf.isNumeric) {
+						(expression.left.valueOf as Integer) * (expression.right.valueOf as Integer)
+					} else {
+						val left = expression.left
+						val right = expression.right
+						val leftValue = if(left instanceof StringLiteral) left.value else left.valueOf
+						val rightValue = if(right instanceof StringLiteral) right.value else right.valueOf
+						'''(«leftValue» * «rightValue»)'''
+					}
 				DivExpression:
 					(expression.left.valueOf as Integer) / (expression.right.valueOf as Integer)
 				ModExpression:
@@ -863,7 +896,16 @@ class Expressions {
 	}
 
 	def fullSizeOf(Expression expression) {
-		expression.sizeOf * (expression.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1)
+		val size = expression.sizeOf
+		val dim = expression.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1
+
+		if (size instanceof Integer) {
+			size * dim
+		} else if (dim > 1) {
+			'''(«size» * «dim»)'''
+		} else {
+			size
+		}
 	}
 
 	def void prepare(Expression expression, AllocContext ctx) {
@@ -1196,7 +1238,7 @@ class Expressions {
 					val chunks = expression.values.map[alloc(ctx)].flatten.toList
 
 					if (expression.isOnMemberSelectionOrReference) {
-						chunks += ctx.computeTmp(expression.nameOfTmp(ctx.container), expression.fullSizeOf)
+						chunks += ctx.computeTmp(expression.nameOfTmp(ctx.container), expression.fullSizeOf as Integer)
 					}
 
 					return chunks
@@ -1206,9 +1248,12 @@ class Expressions {
 
 					if (expression.isOnMemberSelectionOrReference) {
 						if (expression.dimension.isEmpty && expression.type.isNonPrimitive) {
-							chunks += ctx.computeTmp(expression.nameOfTmpVar(ctx.container), expression.sizeOf)
+							chunks +=
+								ctx.computeTmp(expression.nameOfTmpVar(ctx.container), expression.sizeOf as Integer)
 						} else if (expression.dimension.isNotEmpty) {
-							chunks += ctx.computeTmp(expression.nameOfTmpArray(ctx.container), expression.fullSizeOf)
+							chunks +=
+								ctx.computeTmp(expression.nameOfTmpArray(ctx.container),
+									expression.fullSizeOf as Integer)
 						}
 					}
 
@@ -1509,7 +1554,7 @@ class Expressions {
 					«IF ctx.db !== null»
 						«ctx.db»:
 						«val chunks = expression.values.flat.chunked»
-						«val db = if (expression.sizeOf > 1) '.dw' else '.db'»
+						«val db = if (expression.sizeOf as Integer > 1) '.dw' else '.db'»
 						«FOR chunk : chunks»
 							«IF chunk instanceof List<?>»
 								«noop»
@@ -1534,18 +1579,18 @@ class Expressions {
 							«val dst = tmp.clone»
 							«IF i > 0»
 								«IF dst.absolute !== null»
-									«dst.absolute = '''«dst.absolute» + «i * expression.sizeOf»'''»
+									«dst.absolute = '''«dst.absolute» + («i» * «expression.sizeOf»)'''»
 								«ELSEIF dst.indirect !== null && dst.index.startsWith('#')»
-									«dst.index = '''«dst.index» + «i * expression.sizeOf»'''»
+									«dst.index = '''«dst.index» + («i» * «expression.sizeOf»)'''»
 								«ELSEIF dst.indirect !== null && dst.isIndexed»
 									«ctx.pushAccIfOperating»
 										CLC
 										LDA «dst.index»
-										ADC #«expression.sizeOf.toHex»
+										ADC #«expression.sizeOf»
 										STA «dst.index»
 									«ctx.pullAccIfOperating»
 								«ELSEIF dst.indirect !== null»
-									«dst.index = '''#«(i * expression.sizeOf).toHex»'''»
+									«dst.index = '''#(«i» * «expression.sizeOf»)'''»
 								«ENDIF»
 							«ENDIF»
 							«elements.get(i).compile(dst)»
@@ -1581,7 +1626,7 @@ class Expressions {
 						«val length = expression.dimensionOf.reduce[d1, d2| d1 * d2]»
 						«IF ctx.db !== null»
 							«ctx.db»:
-								.dsb «length * ctx.sizeOf»
+								.dsb («length» * «ctx.sizeOf»)
 						«ELSE»
 							«IF expression.type.isPrimitive»
 								«(new CompileContext => [immediate = '0']).copyTo(ctx)»
@@ -1761,7 +1806,9 @@ class Expressions {
 	'''
 
 	private def compileBinary(Operation binaryOperation, Expression left, Expression right, CompileContext ctx) '''
-		«val accType = if (ctx.sizeOf > left.sizeOf || binaryOperation.isComparison || binaryOperation.isDivision) left.typeOf else ctx.type»
+		«val ctxSize = try { ctx.sizeOf as Integer } catch(Exception e) {2}»
+		«val leftSize = try { left.sizeOf as Integer } catch(Exception e) {2}»
+		«val accType = if (ctxSize > leftSize || binaryOperation.isComparison || binaryOperation.isDivision) left.typeOf else ctx.type»
 		«val lda = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
@@ -1786,10 +1833,12 @@ class Expressions {
 		«right.compile(opr)»
 		«IF ctx.mode === Mode::OPERATE»
 			«ctx.accLoaded = true»
-				«FOR i : 0..< ctx.type.sizeOf»
-					STA «Members::TEMP_VAR_NAME2»«IF i > 0» + «i»«ENDIF»
-					PLA
-				«ENDFOR»
+			i = 0
+			.rept «ctx.type.sizeOf»
+				STA «Members::TEMP_VAR_NAME2» + i
+				PLA
+				i = i + 1
+			.endr
 			«val tmp = new CompileContext => [
 				container = ctx.container
 				type = ctx.type
@@ -1938,7 +1987,7 @@ class Expressions {
 		«expr.compile(lda)»
 		«acc.operate»
 		«IF ctx.mode === Mode::OPERATE»
-			«FOR i : 0 ..< ctx.sizeOf»
+			«FOR i : 0 ..< ctx.sizeOf as Integer»
 				«ctx.accLoaded = true»
 					STA «Members::TEMP_VAR_NAME2»«IF i > 0» + «i»«ENDIF»
 					PLA

@@ -97,9 +97,16 @@ public class Members {
 	
 	def getLengthExpression(Member member, List<Index> indices) {
 		if (member.isBounded) {
-			NoopFactory::eINSTANCE.createByteLiteral => [
-				value = member.typeOf.sizeOf * (member.dimensionOf.drop(indices.size).reduce[d1, d2| d1 * d2] ?: 1)
-			]
+			val size = member.typeOf.sizeOf
+			val dim = member.dimensionOf.drop(indices.size).reduce[d1, d2| d1 * d2] ?: 1
+			
+			if (size instanceof Integer) {
+				NoopFactory::eINSTANCE.createByteLiteral => [value = size * dim]
+			} else if (dim > 1) {
+				NoopFactory::eINSTANCE.createStringLiteral => [value = '''(«size» * «dim»)''']
+			} else {
+				NoopFactory::eINSTANCE.createStringLiteral => [value = size.toString]
+			}
 		} else if (member instanceof Variable) {
 			val allIndices = new ArrayList<List<Expression>>
 			
@@ -113,8 +120,13 @@ public class Members {
 				allIndices.add(list)
 			}
 			
+			val tSize = member.typeOf.sizeOf
+			val size = if (tSize instanceof Integer) {
+				 	NoopFactory::eINSTANCE.createByteLiteral => [value = tSize]
+				 } else {
+				 	NoopFactory::eINSTANCE.createStringLiteral => [value = tSize.toString]
+				 }
 			val arrayLengthMethod = member.typeOf.allMethodsTopDown.findFirst[arrayLength]
-			val size = NoopFactory::eINSTANCE.createByteLiteral => [value = member.typeOf.sizeOf]
 			val length = allIndices.map[list|
 				NoopFactory::eINSTANCE.createMemberSelect => [
 					it.member = arrayLengthMethod
@@ -480,9 +492,16 @@ public class Members {
 	}
 
 	def sizeOf(Member member) {
-		member.typeOf.sizeOf * (member.dimensionOf.reduce [ d1, d2 |
-			d1 * d2
-		] ?: 1)
+		val size = member.typeOf.sizeOf
+		val dim = member.dimensionOf.reduce[d1, d2 |d1 * d2] ?: 1
+		
+		if (size instanceof Integer) {
+			size * dim 
+		} else if (dim > 1) {
+			'''(«size» * «dim»)'''
+		} else {
+			size
+		}
 	}
 
 	def nameOf(Member member) {
@@ -540,15 +559,15 @@ public class Members {
 		«ELSE»
 			«val local = variable.nameOf»
 			«val size = variable.sizeOf»
-			«IF size < Datas::loopThreshold»
-				«FOR i : size >.. 0»
+			«IF size instanceof Integer && (size as Integer) < Datas::loopThreshold»
+				«FOR i : size as Integer >.. 0»
 					«noop»
 						LDA «local»«IF i > 0» + «i»«ENDIF»
 						PHA
 				«ENDFOR»
 			«ELSE»
 				«val loop = 'pushLoop'»
-					LDX #«size - 1»
+					LDX #(«size» - 1)
 				-«loop»:
 					LDA «local», X
 					PHA
@@ -575,8 +594,8 @@ public class Members {
 		«ELSE»
 			«val local = variable.nameOf»
 			«val size = variable.sizeOf»
-			«IF size < Datas::loopThreshold»
-				«FOR i : 0 ..< size»
+			«IF size instanceof Integer && (size as Integer) < Datas::loopThreshold»
+				«FOR i : 0 ..< size as Integer»
 					«noop»
 						PLA
 						STA «local»«IF i > 0» + «i»«ENDIF»
@@ -772,7 +791,7 @@ public class Members {
 			}
 			
 			if (arg.containsMethodInvocation && !arg.isComplexMemberArrayReference) {
-				chunks += ctx.computeTmp(method.params.get(i).nameOfTmpParam(arg, ctx.container), arg.fullSizeOf)
+				chunks += ctx.computeTmp(method.params.get(i).nameOfTmpParam(arg, ctx.container), arg.fullSizeOf as Integer)
 			}
 		]
 
@@ -790,7 +809,7 @@ public class Members {
 		val chunks = newArrayList
 		
 		if (indexes.isNotEmpty) {
-			val indexSize = if (member.isBounded && member.sizeOf <= 0xFF) 1 else 2
+			val indexSize = if (member.isBounded && (member.sizeOf as Integer) <= 0xFF) 1 else 2
 			val isIndexImmediate = member.isIndexImmediate(indexes)
 			val isIndexNonImmediate = !isIndexImmediate 
 			
@@ -1340,7 +1359,12 @@ public class Members {
 	
 	private def compileIndexes(Member member, List<Index> indexes, CompileContext ref)'''
 		«IF indexes.isNotEmpty»
-			«val indexSize = if (member.isBounded && member.sizeOf <= 0xFF) 1 else 2»
+			«val memberSize = member.sizeOf»
+			«val indexSize = if (memberSize instanceof Integer) {
+				if (member.isBounded && memberSize <= 0xFF) 1 else 2
+			} else {
+				null
+			}»
 			«val isIndexImmediate = member.isIndexImmediate(indexes)»
 			«val isIndexNonImmediate = !isIndexImmediate»
 			«val index = if (isIndexImmediate) {
@@ -1355,23 +1379,49 @@ public class Members {
 					immediate += indexes.get(i).value.valueOf.toString
 					
 					for (j : i + 1 ..< dimension.size) {
-						immediate += '''*«dimension.get(j)»'''
+						immediate += ''' * «dimension.get(j)»'''
 					}
 				}
 
-				'''(«immediate») * «member.typeOf.sizeOf»'''				
+				'''((«immediate») * «member.typeOf.sizeOf»)'''				
 			}»
-			«var mustReloadAcc = false»
+			mustReloadAcc = 0
 			«IF isIndexNonImmediate»
-				«val idx = new CompileContext => [
-					container = ref.container
-					operation = ref.operation
-					accLoaded = ref.accLoaded
-					type = if (indexSize > 1) ref.type.toUIntClass else ref.type.toByteClass
-					register = 'A'
-				]»
-				«member.getIndexExpression(indexes).compile(idx)»
-				«IF mustReloadAcc = ref.isAccLoaded && !idx.isAccLoaded»«ENDIF»
+				«IF indexSize !== null || member.isUnbounded»
+					«val idx = new CompileContext => [
+						container = ref.container
+						operation = ref.operation
+						accLoaded = ref.accLoaded
+						type = if (indexSize === null || indexSize > 1) ref.type.toUIntClass else ref.type.toByteClass
+						register = 'A'
+					]»
+					«member.getIndexExpression(indexes).compile(idx)»
+					«IF ref.isAccLoaded && !idx.isAccLoaded»
+						mustReloadAcc = 1
+					«ENDIF»
+				«ELSE»
+					«val idx1 = new CompileContext => [
+						container = ref.container
+						operation = ref.operation
+						accLoaded = ref.accLoaded
+						type = ref.type.toByteClass
+						register = 'A'
+					]»
+					«val idx2 = idx1.clone => [
+						type = ref.type.toUIntClass
+					]»
+						.if «memberSize» <= $FF
+					«member.getIndexExpression(indexes).compile(idx1)»
+					«IF ref.isAccLoaded && !idx1.isAccLoaded»
+						mustReloadAcc = 1
+					«ENDIF»
+						.else
+					«member.getIndexExpression(indexes).compile(idx2)»
+					«IF ref.isAccLoaded && !idx2.isAccLoaded»
+						mustReloadAcc = 1
+					«ENDIF»
+						.endif
+				«ENDIF»
 			«ENDIF»
 			«IF isIndexImmediate»
 				«IF ref.absolute !== null»
@@ -1395,10 +1445,14 @@ public class Members {
 						CLC
 						ADC #<«ref.absolute»
 						STA «ptr»
-						«IF indexSize > 1»
+						«IF (indexSize !== null && indexSize > 1) || member.isUnbounded»
 							PLA
 						«ELSE»
+							.if «memberSize» <= $FF
 							LDA #0
+							.else
+							PLA
+							.endif
 						«ENDIF»
 						ADC #>«ref.absolute»
 						STA «ptr» + 1
@@ -1409,19 +1463,23 @@ public class Members {
 						CLC
 						ADC «ref.indirect»
 						STA «ptr»
-						«IF indexSize > 1»
+						«IF (indexSize !== null && indexSize > 1) || member.isUnbounded»
 							PLA
 						«ELSE»
+							.if «memberSize» <= $FF
 							LDA #0
+							.else
+							PLA
+							.endif
 						«ENDIF»
 						ADC «ref.indirect» + 1
 						STA «ptr» + 1
 					«ref.indirect = ptr»
 				«ENDIF»
-				«IF mustReloadAcc»
-					«noop»
-						PLA
-				«ENDIF»
+				«noop»
+					.if mustReloadAcc = 1
+					PLA
+					.endif
 			«ENDIF»
 		«ENDIF»
 	'''
@@ -1430,17 +1488,25 @@ public class Members {
 		indexExpressions.get(member, indexes, [
 			val typeSize = member.typeOf.sizeOf
 			val dimension = member.dimensionOf
-
-			if (typeSize > 1) {
+			
+			if (typeSize instanceof Integer) {
+				if (typeSize > 1) {
+					val mul = NoopFactory::eINSTANCE.createMulExpression => [
+						left = if (member.isBounded) indexes.sum(dimension, 0) else indexes.sum(dimension, member as Variable, 0)
+						right = NoopFactory::eINSTANCE.createByteLiteral => [value = typeSize]
+					]
+					mul
+				} else if (member.isBounded) {
+					indexes.sum(dimension, 0)
+				} else {
+					indexes.sum(dimension, member as Variable, 0)
+				}
+			} else {
 				val mul = NoopFactory::eINSTANCE.createMulExpression => [
 					left = if (member.isBounded) indexes.sum(dimension, 0) else indexes.sum(dimension, member as Variable, 0)
-					right = NoopFactory::eINSTANCE.createByteLiteral => [value = typeSize]
+					right = NoopFactory::eINSTANCE.createStringLiteral => [value = typeSize.toString]
 				]
 				mul
-			} else if (member.isBounded) {
-				indexes.sum(dimension, 0)
-			} else {
-				indexes.sum(dimension, member as Variable, 0)
 			}
 		])
 	}
