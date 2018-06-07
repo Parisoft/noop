@@ -3,6 +3,7 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.List
 import java.util.concurrent.atomic.AtomicInteger
+import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.CompileContext.Mode
@@ -24,8 +25,9 @@ import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Super
 import org.parisoft.noop.noop.This
 import org.parisoft.noop.noop.Variable
-import static org.parisoft.noop.^extension.Cache.*;
-import static extension java.lang.Integer.*
+
+import static org.parisoft.noop.^extension.Cache.*
+
 import static extension org.eclipse.xtext.EcoreUtil2.*
 
 class Statements {
@@ -35,6 +37,7 @@ class Statements {
 	@Inject extension Classes
 	@Inject extension Collections
 	@Inject extension Expressions
+	@Inject extension IQualifiedNameProvider
 
 	def getForContainer(Statement statement) {
 		var container = statement.eContainer
@@ -69,7 +72,7 @@ class Statements {
 	}
 
 	def nameOf(IfStatement ifStatement) {
-		'''«IF ifStatement.eContainer instanceof ElseStatement»elseif«ELSE»if«ENDIF»@«ifStatement.hashCode.toHexString»'''
+		ifStatement.fullyQualifiedName.toString
 	}
 
 	def nameOfCondition(IfStatement ifStatement) {
@@ -84,7 +87,7 @@ class Statements {
 		if (elseStatement.^if !== null) {
 			elseStatement.^if.nameOf
 		} else {
-			'''else@«elseStatement.hashCode.toHexString»'''
+			elseStatement.fullyQualifiedName.toString
 		}
 	}
 
@@ -101,11 +104,11 @@ class Statements {
 	}
 
 	def nameOfLen(ReturnStatement ^return) {
-		'''«^return.getContainerOfType(Method).nameOf».ret.len'''.toString
+		'''«^return.nameOf».len'''.toString
 	}
 
 	def nameOf(ForeverStatement forever) {
-		'''forever@«forever.hashCode.toHexString»'''
+		forever.fullyQualifiedName.toString
 	}
 
 	def nameOfEnd(ForeverStatement forever) {
@@ -113,7 +116,7 @@ class Statements {
 	}
 
 	def nameOf(ForStatement forStatement) {
-		'''for@«forStatement.hashCode.toHexString»'''
+		forStatement.fullyQualifiedName.toString
 	}
 
 	def nameOfCondition(ForStatement forStatement) {
