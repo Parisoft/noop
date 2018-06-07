@@ -174,7 +174,7 @@ class Operations {
 			acc.operateIndirect('ORA', null, operand)
 		}
 	}
-	
+
 	def bitXor(CompileContext acc, CompileContext operand) {
 		if (operand.immediate !== null) {
 			acc.operateImmediate('EOR', null, operand)
@@ -234,7 +234,7 @@ class Operations {
 	def bitExclusiveOr(CompileContext acc) '''
 		«noop»
 			EOR #$FF
-			«IF acc.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1»
 				TAX
 				PLA
 				EOR #$FF
@@ -253,7 +253,7 @@ class Operations {
 	'''
 
 	def signum(CompileContext acc) '''
-		«IF acc.sizeOf > 1»
+		«IF acc.sizeOfAsInt > 1»
 			«noop»
 				CLC
 				EOR #$FF
@@ -276,21 +276,21 @@ class Operations {
 		«val comparisonIsTrue = if (acc.relative !== null) acc.relative else labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«val comparisonEnd = labelForComparisonEnd»
-		«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+		«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 			«noop»
 				TAX
 				PLA
 				CPX #<(«operand.immediate»)
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 				CMP #>(«operand.immediate»)
-		«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+		«ELSEIF acc.sizeOfAsInt > 1 && operand.type.isUnsigned»
 			«noop»
 				TAX
 				PLA
 				CPX #(«operand.immediate»)
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 				CMP #$00
-		«ELSEIF acc.sizeOf > 1»
+		«ELSEIF acc.sizeOfAsInt > 1»
 			«noop»
 				TAX
 				PLA
@@ -299,7 +299,7 @@ class Operations {
 				STA «Members::TEMP_VAR_NAME1»
 			«operand.loadMSB»
 				CMP «Members::TEMP_VAR_NAME1»
-		«ELSEIF operand.sizeOf > 1»
+		«ELSEIF operand.sizeOfAsInt > 1»
 			«noop»
 				CMP #<(«operand.immediate»)
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
@@ -334,7 +334,7 @@ class Operations {
 			«IF operand.isIndexed»
 				LDX «operand.index»
 			«ENDIF»
-		«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+		«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 			«noop»
 				TAY
 				PLA
@@ -342,7 +342,7 @@ class Operations {
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 				TYA
 				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-		«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+		«ELSEIF acc.sizeOfAsInt > 1 && operand.type.isUnsigned»
 			«noop»
 				TAY
 				PLA
@@ -350,7 +350,7 @@ class Operations {
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 				TYA
 				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-		«ELSEIF acc.sizeOf > 1»
+		«ELSEIF acc.sizeOfAsInt > 1»
 			«noop»
 				STA «Members::TEMP_VAR_NAME1»
 				PLA
@@ -360,7 +360,7 @@ class Operations {
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 			«operand.loadMSB»
 				CMP «Members::TEMP_VAR_NAME1» + 1
-		«ELSEIF operand.sizeOf > 1»
+		«ELSEIF operand.sizeOfAsInt > 1»
 			«noop»
 				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
@@ -393,7 +393,7 @@ class Operations {
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«val comparisonEnd = labelForComparisonEnd»
 			LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
-		«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+		«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 			«noop»
 				STA «Members::TEMP_VAR_NAME1»
 				PLA
@@ -404,7 +404,7 @@ class Operations {
 				INY
 				LDA («operand.indirect»), Y
 				CMP «Members::TEMP_VAR_NAME1» + 1
-		«ELSEIF acc.sizeOf > 1»
+		«ELSEIF acc.sizeOfAsInt > 1»
 			«noop»
 				STA «Members::TEMP_VAR_NAME1»
 				PLA
@@ -414,7 +414,7 @@ class Operations {
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
 			«operand.loadMSB»
 				CMP «Members::TEMP_VAR_NAME1» + 1
-		«ELSEIF operand.sizeOf > 1»
+		«ELSEIF operand.sizeOfAsInt > 1»
 			«noop»
 				CMP («operand.indirect»), Y
 				BNE +«IF diff»«comparisonIsTrue»«ELSE»«comparisonIsFalse»«ENDIF»
@@ -450,24 +450,24 @@ class Operations {
 		«val comparisonIsTrue = if (acc.relative !== null) acc.relative else labelForComparisonIsTrue»
 		«val comparisonIsFalse = labelForComparisonIsFalse»
 		«IF acc.type.isSigned && operand.type.isSigned»
-			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 				«noop»
 					CMP #<(«operand.immediate»)
 					PLA
 					SBC #>(«operand.immediate»)
-			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«ELSEIF acc.sizeOfAsInt > 1 && operand.type.isUnsigned»
 				«noop»
 					CMP #(«operand.immediate»)
 					PLA
 					SBC #$00
-			«ELSEIF acc.sizeOf > 1»
+			«ELSEIF acc.sizeOfAsInt > 1»
 				«noop»
 					CMP #(«operand.immediate»)
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					SBC «Members::TEMP_VAR_NAME1»
-			«ELSEIF operand.sizeOf > 1»
+			«ELSEIF operand.sizeOfAsInt > 1»
 				«noop»
 					CMP #<(«operand.immediate»)
 				«acc.loadMSB»
@@ -483,7 +483,7 @@ class Operations {
 			+«comparison»:
 		«ELSE»
 			«IF acc.type.isUnsigned && operand.type.isSigned»
-				«IF operand.sizeOf > 1»
+				«IF operand.sizeOfAsInt > 1»
 					«noop»
 						LDY #>(«operand.immediate»)
 						BMI  +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
@@ -493,7 +493,7 @@ class Operations {
 						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
 			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
-				«IF acc.sizeOf > 1»
+				«IF acc.sizeOfAsInt > 1»
 					«noop»
 						TAY
 						PLA
@@ -506,24 +506,24 @@ class Operations {
 						BMI +«IF ubranch === 'BCS'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
 			«ENDIF»
-			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 				«noop»
 					CMP #<(«operand.immediate»)
 					PLA
 					SBC #>«operand.immediate»
-			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«ELSEIF acc.sizeOfAsInt > 1 && operand.type.isUnsigned»
 				«noop»
 					CMP #(«operand.immediate»)
 					PLA
 					SBC #$00
-			«ELSEIF acc.sizeOf > 1»
+			«ELSEIF acc.sizeOfAsInt > 1»
 				«noop»
 					CMP #(«operand.immediate»)
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					SBC «Members::TEMP_VAR_NAME1»
-			«ELSEIF operand.sizeOf > 1»
+			«ELSEIF operand.sizeOfAsInt > 1»
 				«noop»
 					CMP #<(«operand.immediate»)
 				«acc.loadMSB»
@@ -560,24 +560,24 @@ class Operations {
 				«IF operand.isIndexed»
 					LDX «operand.index»
 				«ENDIF»
-			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 				«noop»
 					CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 					PLA
 					SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
-			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«ELSEIF acc.sizeOfAsInt > 1 && operand.type.isUnsigned»
 				«noop»
 					CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 					PLA
 					SBC #$00
-			«ELSEIF acc.sizeOf > 1»
+			«ELSEIF acc.sizeOfAsInt > 1»
 				«noop»
 					CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					SBC «Members::TEMP_VAR_NAME1»
-			«ELSEIF operand.sizeOf > 1»
+			«ELSEIF operand.sizeOfAsInt > 1»
 				«noop»
 					CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
 				«acc.loadMSB»
@@ -597,7 +597,7 @@ class Operations {
 					LDX «operand.index»
 				«ENDIF»
 			«IF acc.type.isUnsigned && operand.type.isSigned»
-				«IF operand.sizeOf > 1»
+				«IF operand.sizeOfAsInt > 1»
 					«noop»
 						LDY «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
 						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
@@ -607,7 +607,7 @@ class Operations {
 						BMI +«IF ubranch === 'BCC'»«comparisonIsFalse»«ELSE»«comparisonIsTrue»«ENDIF»
 				«ENDIF»
 			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
-				«IF acc.sizeOf > 1»
+				«IF acc.sizeOfAsInt > 1»
 					«noop»
 						TAY
 						PLA
@@ -622,20 +622,20 @@ class Operations {
 			«ENDIF»
 			«noop»
 				CMP «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 				«noop»
 					PLA
 					SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
-			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«ELSEIF acc.sizeOfAsInt > 1 && operand.type.isUnsigned»
 				«noop»
 					PLA
 					SBC #$00
-			«ELSEIF acc.sizeOf > 1»
+			«ELSEIF acc.sizeOfAsInt > 1»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					SBC «Members::TEMP_VAR_NAME1»
-			«ELSEIF operand.sizeOf > 1»
+			«ELSEIF operand.sizeOfAsInt > 1»
 				«acc.loadMSB»
 					SBC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
 			«ENDIF»
@@ -665,25 +665,25 @@ class Operations {
 		«IF acc.type.isSigned && operand.type.isSigned»
 			«noop»
 				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
-			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 				«noop»
 					CMP («operand.indirect»), Y
 					PLA
 					INY
 					SBC («operand.indirect»), Y
-			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«ELSEIF acc.sizeOfAsInt > 1 && operand.type.isUnsigned»
 				«noop»
 					CMP («operand.indirect»), Y
 					PLA
 					SBC #$00
-			«ELSEIF acc.sizeOf > 1»
+			«ELSEIF acc.sizeOfAsInt > 1»
 				«noop»
 					CMP («operand.indirect»), Y
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					SBC «Members::TEMP_VAR_NAME1»
-			«ELSEIF operand.sizeOf > 1»
+			«ELSEIF operand.sizeOfAsInt > 1»
 				«noop»
 					CMP («operand.indirect»), Y
 				«acc.loadMSB»
@@ -700,7 +700,7 @@ class Operations {
 			+«comparison»:
 		«ELSE»
 			«IF acc.type.isUnsigned && operand.type.isSigned»
-				«IF operand.sizeOf > 1»
+				«IF operand.sizeOfAsInt > 1»
 					«noop»
 						«IF operand.isIndexed»
 							LDY «operand.index»
@@ -722,7 +722,7 @@ class Operations {
 						TXA
 				«ENDIF»
 			«ELSEIF acc.type.isSigned && operand.type.isUnsigned»
-				«IF acc.sizeOf > 1»
+				«IF acc.sizeOfAsInt > 1»
 					«noop»
 						TAX
 						PLA
@@ -742,21 +742,21 @@ class Operations {
 			«ENDIF»
 			«noop»
 				CMP («operand.indirect»), Y
-			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 				«noop»
 					PLA
 					INY
 					SBC («operand.indirect»), Y
-			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«ELSEIF acc.sizeOfAsInt > 1 && operand.type.isUnsigned»
 				«noop»
 					PLA
 					SBC #$00
-			«ELSEIF acc.sizeOf > 1»
+			«ELSEIF acc.sizeOfAsInt > 1»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					SBC «Members::TEMP_VAR_NAME1»
-			«ELSEIF operand.sizeOf > 1»
+			«ELSEIF operand.sizeOfAsInt > 1»
 				«acc.loadMSB»
 					INY
 					SBC («operand.indirect»), Y
@@ -779,11 +779,11 @@ class Operations {
 	'''
 
 	private def bitShiftLeftImmediate(CompileContext acc, CompileContext operand) '''
-		«val shift = operand.immediate.parseInt.bitwiseAnd((operand.sizeOf * 8) - 1)»
+		«val shift = operand.immediate.parseInt.bitwiseAnd((operand.sizeOfAsInt * 8) - 1)»
 		«IF acc.sizeOfOp > 1 && shift != 0»
 			«noop»
 				STA «Members::TEMP_VAR_NAME1»
-			«IF acc.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1»
 				«noop»
 					PLA
 			«ELSE»
@@ -814,10 +814,10 @@ class Operations {
 					LDX «operand.index»
 				«ENDIF»
 				LDA «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-				AND #«(operand.sizeOf * 8) - 1»
+				AND #«(operand.sizeOfAsInt * 8) - 1»
 				BEQ +«shiftEnd»
 				TAY
-			«IF acc.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1»
 				«noop»
 					PLA
 			«ELSE»
@@ -841,7 +841,7 @@ class Operations {
 					TAX
 				«ENDIF»
 				LDA «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-				AND #«(operand.sizeOf * 8) - 1»
+				AND #«(operand.sizeOfAsInt * 8) - 1»
 				TAY
 				«IF operand.isIndexed»
 					LDA «Members::TEMP_VAR_NAME1»
@@ -865,10 +865,10 @@ class Operations {
 				STA «Members::TEMP_VAR_NAME1»
 				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 				LDA («operand.indirect»), Y
-				AND #«(operand.sizeOf * 8) - 1»
+				AND #«(operand.sizeOfAsInt * 8) - 1»
 				BEQ +«shiftEnd»
 				TAX
-			«IF acc.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1»
 				«noop»
 					PLA
 			«ELSE»
@@ -888,7 +888,7 @@ class Operations {
 				STA «Members::TEMP_VAR_NAME1»
 				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 				LDA («operand.indirect»), Y
-				AND #«(operand.sizeOf * 8) - 1»
+				AND #«(operand.sizeOfAsInt * 8) - 1»
 				TAX
 				LDA «Members::TEMP_VAR_NAME1»
 				CPX #$00
@@ -902,11 +902,11 @@ class Operations {
 	'''
 
 	private def bitShiftRightImmediate(CompileContext acc, CompileContext operand) '''
-		«val shift = operand.immediate.parseInt.bitwiseAnd((operand.sizeOf * 8) - 1)»
-		«IF (acc.sizeOfOp > 1 || acc.sizeOf > 1) && shift != 0»
+		«val shift = operand.immediate.parseInt.bitwiseAnd((operand.sizeOfAsInt * 8) - 1)»
+		«IF (acc.sizeOfOp > 1 || acc.sizeOfAsInt > 1) && shift != 0»
 			«noop»
 				STA «Members::TEMP_VAR_NAME1»
-			«IF acc.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1»
 				«noop»
 					PLA
 			«ELSE»
@@ -953,7 +953,7 @@ class Operations {
 	'''
 
 	private def bitShiftRightAbsolute(CompileContext acc, CompileContext operand) '''
-		«IF acc.sizeOfOp > 1 || acc.sizeOf > 1»
+		«IF acc.sizeOfOp > 1 || acc.sizeOfAsInt > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
 				STA «Members::TEMP_VAR_NAME1»
@@ -961,10 +961,10 @@ class Operations {
 					LDX «operand.index»
 				«ENDIF»
 				LDA «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-				AND #«(operand.sizeOf * 8) - 1»
+				AND #«(operand.sizeOfAsInt * 8) - 1»
 				BEQ +«shiftEnd»
 				TAY
-			«IF acc.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1»
 				«noop»
 					PLA
 			«ELSE»
@@ -1001,7 +1001,7 @@ class Operations {
 					TAX
 				«ENDIF»
 				LDA «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-				AND #«(operand.sizeOf * 8) - 1»
+				AND #«(operand.sizeOfAsInt * 8) - 1»
 				TAY
 				«IF operand.isIndexed»
 					LDA «Members::TEMP_VAR_NAME1»
@@ -1024,16 +1024,16 @@ class Operations {
 	'''
 
 	private def bitShiftRightIndirect(CompileContext acc, CompileContext operand) '''
-		«IF acc.sizeOfOp > 1 || acc.sizeOf > 1»
+		«IF acc.sizeOfOp > 1 || acc.sizeOfAsInt > 1»
 			«val shiftLoop = labelForShiftLoop»
 			«val shiftEnd = labelForShiftEnd»
 				STA «Members::TEMP_VAR_NAME1»
 				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 				LDA («operand.indirect»), Y
-				AND #«(operand.sizeOf * 8) - 1»
+				AND #«(operand.sizeOfAsInt * 8) - 1»
 				BEQ +«shiftEnd»
 				TAX
-			«IF acc.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1»
 				«noop»
 					PLA
 			«ELSE»
@@ -1066,7 +1066,7 @@ class Operations {
 				STA «Members::TEMP_VAR_NAME1»
 				LDY «IF operand.isIndexed»«operand.index»«ELSE»#$00«ENDIF»
 				LDA («operand.indirect»), Y
-				AND #«(operand.sizeOf * 8) - 1»
+				AND #«(operand.sizeOfAsInt * 8) - 1»
 				TAX
 				LDA «Members::TEMP_VAR_NAME1»
 				CPX #$00
@@ -1090,7 +1090,7 @@ class Operations {
 				LDX «operand.index»
 			«ENDIF»
 			INC «operand.absolute»«IF operand.isIndexed», X«ENDIF»
-		«IF operand.sizeOf > 1»
+		«IF operand.sizeOfAsInt > 1»
 			«val labelDone = labelForIncDone»
 				BNE +«labelDone»
 				INC «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
@@ -1105,7 +1105,7 @@ class Operations {
 			CLC
 			ADC #1
 			STA («operand.indirect»), Y
-			«IF operand.sizeOf > 1»
+			«IF operand.sizeOfAsInt > 1»
 				INY
 				LDA («operand.indirect»), Y
 				ADC #0
@@ -1119,7 +1119,7 @@ class Operations {
 			«noop»
 				LDX «ctx.index»
 		«ENDIF»
-		«IF ctx.sizeOf > 1»
+		«IF ctx.sizeOfAsInt > 1»
 			«val labelSkip = labelForDecMSBSkip»
 				LDA «ctx.absolute»«IF ctx.isIndexed», X«ENDIF»
 				BNE +«labelSkip»
@@ -1135,7 +1135,7 @@ class Operations {
 	private def decIndirect(CompileContext ctx) '''
 		«noop»
 			LDY «IF ctx.isIndexed»«ctx.index»«ELSE»#$00«ENDIF»
-		«IF ctx.sizeOf > 1»
+		«IF ctx.sizeOfAsInt > 1»
 			«val labelSkip = labelForDecMSBSkip»
 				LDA («ctx.indirect»), Y
 				BNE +«labelSkip»
@@ -1151,13 +1151,17 @@ class Operations {
 	'''
 
 	private def multiplyImmediate(CompileContext multiplicand, CompileContext multiplier) '''
-		«val const = multiplier.immediate.parseInt»
+		«val const = try {
+			multiplier.immediate.parseInt
+		} catch(Exception e){
+			return multiplicand.multiplyImmediateNaN(multiplier)
+		}»
 		«val one = '1'.charAt(0)»
 		«val bits = const.abs.toBinaryString.toCharArray.reverse»
 		«IF multiplicand.sizeOfOp > 1»
 			«IF const === 0»
 				«noop»
-					«IF multiplicand.sizeOf > 1»
+					«IF multiplicand.sizeOfAsInt > 1»
 						PLA
 					«ENDIF»
 					LDA #$00
@@ -1165,7 +1169,7 @@ class Operations {
 			«ELSEIF const.abs > 1 && bits.filter[it == one].size == 1»
 				«noop»
 					STA «Members::TEMP_VAR_NAME1»
-				«IF multiplicand.sizeOf > 1»
+				«IF multiplicand.sizeOfAsInt > 1»
 					«noop»
 						PLA
 				«ELSE»
@@ -1181,7 +1185,7 @@ class Operations {
 			«ELSEIF const.abs > 1»
 				«var lastPower = new AtomicInteger»
 					STA «Members::TEMP_VAR_NAME1»
-				«IF multiplicand.sizeOf > 1»
+				«IF multiplicand.sizeOfAsInt > 1»
 					«noop»
 						PLA
 				«ELSE»
@@ -1260,6 +1264,102 @@ class Operations {
 		«IF const < 0»
 			«multiplicand.signum»
 		«ENDIF»
+	'''
+
+	private def multiplyImmediateNaN(CompileContext multiplicand, CompileContext multiplier) '''
+		const = «multiplier.immediate»
+		abs = const
+			.if const < 0
+		abs = -1 * const
+			.endif
+		«IF multiplicand.sizeOfOp > 1»
+			«noop»
+				.if const == 0
+				«IF multiplicand.sizeOfAsInt > 1»
+					PLA
+				«ENDIF»
+				LDA #$00
+				PHA
+				.elseif abs > 1
+				STA «Members::TEMP_VAR_NAME1»
+				«IF multiplicand.sizeOfAsInt > 1»
+					PLA
+				«ELSE»
+					«multiplicand.loadMSB»
+				«ENDIF»
+				STA «Members::TEMP_VAR_NAME1» + 1
+				LDA «Members::TEMP_VAR_NAME1»
+			bit0 = abs & 1 
+			pow = 0
+			i = 0
+				.rept 16
+				.if abs & 1 == 1
+				.rept i - pow
+				ASL A
+				ROL «Members::TEMP_VAR_NAME1» + 1
+				.endr
+				.if i == 0 || pow == 0 && bit0 != 1
+				STA «Members::TEMP_VAR_NAME3»
+				LDX «Members::TEMP_VAR_NAME1» + 1
+				STX «Members::TEMP_VAR_NAME3» + 1
+				.elseif i < 15
+				CLC
+				TAX
+				ADC «Members::TEMP_VAR_NAME3»
+				STA «Members::TEMP_VAR_NAME3»
+				LDA «Members::TEMP_VAR_NAME1» + 1
+				ADC «Members::TEMP_VAR_NAME3» + 1
+				STA «Members::TEMP_VAR_NAME3» + 1
+				TXA
+				.else
+				CLC
+				ADC «Members::TEMP_VAR_NAME3»
+				TAX
+				LDA «Members::TEMP_VAR_NAME1» + 1
+				ADC «Members::TEMP_VAR_NAME3» + 1
+				PHA
+				TXA
+				.endif
+			pow = i
+				.endif
+			i = i + 1
+			abs = abs >> 1
+				.endr
+		«ELSE»
+			«noop»
+				.if const == 0
+				LDA #$00
+				.elseif abs > 1
+				bit0 = abs & 1
+				pow = 0
+				i = 0
+				.rept 8
+				.if abs & 1 == 1
+				.rept i - pow
+				ASL A
+				.endr
+				.if i == 0 || pow == 0 && bit0 != 1
+				STA «Members::TEMP_VAR_NAME1»
+				.elseif i < 7
+				TAX
+				CLC
+				ADC «Members::TEMP_VAR_NAME1»
+				STA «Members::TEMP_VAR_NAME1»
+				TXA
+				.else
+				CLC
+				ADC «Members::TEMP_VAR_NAME1»
+				.endif
+			pow = i
+				.endif
+			i = i + 1
+			abs = abs >> 1
+				.endr
+		«ENDIF»
+		«noop»
+			.if const < 0
+			«multiplicand.signum»
+			.endif
 	'''
 
 	private def divideImmediate(CompileContext dividend, CompileContext divisor) '''
@@ -1378,20 +1478,20 @@ class Operations {
 				«ENDIF»
 				«instruction» #<(«operand.immediate»)
 				TAX
-			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 				«noop»
 					PLA
 					«instruction» #>(«operand.immediate»)
-			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«ELSEIF acc.sizeOfAsInt > 1 && operand.type.isUnsigned»
 				«noop»
 					PLA
 					«instruction» #$00
-			«ELSEIF acc.sizeOf > 1»
+			«ELSEIF acc.sizeOfAsInt > 1»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					«instruction» «Members::TEMP_VAR_NAME1»
-			«ELSEIF operand.sizeOf > 1»
+			«ELSEIF operand.sizeOfAsInt > 1»
 				«acc.loadMSB»
 					«instruction» #>(«operand.immediate»)
 			«ELSEIF operand.type.isUnsigned»
@@ -1435,20 +1535,20 @@ class Operations {
 		«IF acc.sizeOfOp > 1»
 			«noop»
 				TAY
-			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 				«noop»
 					PLA
 					«instruction» «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
-			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«ELSEIF acc.sizeOfAsInt > 1 && operand.type.isUnsigned»
 				«noop»
 					PLA
 					«instruction» #$00
-			«ELSEIF acc.sizeOf > 1»
+			«ELSEIF acc.sizeOfAsInt > 1»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					«instruction» «Members::TEMP_VAR_NAME1»
-			«ELSEIF operand.sizeOf > 1»
+			«ELSEIF operand.sizeOfAsInt > 1»
 				«acc.loadMSB»
 					«instruction» «operand.absolute» + 1«IF operand.isIndexed», X«ENDIF»
 			«ELSEIF operand.type.isUnsigned»
@@ -1482,21 +1582,21 @@ class Operations {
 		«IF acc.sizeOfOp > 1»
 			«noop»
 				TAX
-			«IF acc.sizeOf > 1 && operand.sizeOf > 1»
+			«IF acc.sizeOfAsInt > 1 && operand.sizeOfAsInt > 1»
 				«noop»
 					INY
 					PLA
 					«instruction» («operand.indirect»), Y
-			«ELSEIF acc.sizeOf > 1 && operand.type.isUnsigned»
+			«ELSEIF acc.sizeOfAsInt > 1 && operand.type.isUnsigned»
 				«noop»
 					PLA
 					«instruction» #$00
-			«ELSEIF acc.sizeOf > 1»
+			«ELSEIF acc.sizeOfAsInt > 1»
 				«operand.loadMSB»
 					STA «Members::TEMP_VAR_NAME1»
 					PLA
 					«instruction» «Members::TEMP_VAR_NAME1»
-			«ELSEIF operand.sizeOf > 1»
+			«ELSEIF operand.sizeOfAsInt > 1»
 				«acc.loadMSB»
 					INY
 					«instruction» («operand.indirect»), Y

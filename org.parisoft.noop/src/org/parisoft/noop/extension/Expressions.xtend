@@ -1834,11 +1834,11 @@ class Expressions {
 		«IF ctx.mode === Mode::OPERATE»
 			«ctx.accLoaded = true»
 			i = 0
-			.rept «ctx.type.sizeOf»
+				.rept «ctx.type.sizeOf»
 				STA «Members::TEMP_VAR_NAME2» + i
 				PLA
 				i = i + 1
-			.endr
+				.endr
 			«val tmp = new CompileContext => [
 				container = ctx.container
 				type = ctx.type

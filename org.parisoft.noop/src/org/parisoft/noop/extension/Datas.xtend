@@ -22,9 +22,13 @@ class Datas {
 	def sizeOf(CompileContext ctx) {
 		ctx.type.sizeOf
 	}
+	
+	def sizeOfAsInt(CompileContext ctx) {
+		ctx.type.sizeOf as Integer
+	}
 
 	def sizeOfOp(CompileContext ctx) {
-		ctx.opType.sizeOf
+		ctx.opType.sizeOf as Integer
 	}
 
 	def resolveTo(CompileContext src, CompileContext dst) {
