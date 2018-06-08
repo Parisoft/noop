@@ -1151,8 +1151,6 @@ class Operations {
 	'''
 
 	private def multiplyImmediate(CompileContext multiplicand, CompileContext multiplier) '''
-	«val n = multiplicand.multiplyImmediateNaN(multiplier)»
-	«if (n !== null) return n»
 		«val const = try {
 			multiplier.immediate.parseInt
 		} catch(Exception e){
