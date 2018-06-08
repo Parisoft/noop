@@ -6,6 +6,7 @@ import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.noop.ByteLiteral
 import org.parisoft.noop.noop.StringLiteral
+import org.parisoft.noop.noop.Expression
 
 class Datas {
 
@@ -14,7 +15,6 @@ class Datas {
 	public static val int VAR_PAGE = 4
 	public static val loopThreshold = 9
 
-	@Inject extension Values
 	@Inject extension Members
 	@Inject extension Classes
 	@Inject extension Operations
@@ -23,7 +23,7 @@ class Datas {
 	def sizeOf(CompileContext ctx) {
 		ctx.type.sizeOf
 	}
-	
+
 	def sizeOfAsInt(CompileContext ctx) {
 		ctx.type.sizeOf as Integer
 	}
@@ -150,6 +150,7 @@ class Datas {
 		i = i + 1	
 			.endr
 		«IF src.type.isNumeric»
+			«noop»
 				.if «src.sizeOf» < «dst.sizeOf»
 			«src.loadMSBFromAcc»
 				.endif
@@ -229,6 +230,7 @@ class Datas {
 		i = i + 1
 			.endr
 		«IF src.type.isNumeric»
+			«noop»
 				.if «src.sizeOf» < «dst.sizeOf»
 			«src.loadMSBFromAcc»
 				INY
@@ -340,6 +342,7 @@ class Datas {
 		i = i + 1
 			.endr
 		«IF src.type.isNumeric»
+			«noop»
 				.if «src.sizeOf» < «dst.sizeOf»
 			«src.loadMSBFromAcc»
 				.endif
@@ -429,6 +432,7 @@ class Datas {
 		i = i + 1
 			.endr
 		«IF src.type.isNumeric»
+			«noop»
 				.if «src.sizeOf» < «dst.sizeOf»
 			«src.loadMSBFromAcc»
 				LDY «Members::TEMP_VAR_NAME3»
@@ -518,26 +522,26 @@ class Datas {
 
 	private def copyIndirectToRegister(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
-		.if «dst.sizeOf» > 1
-		.if «src.sizeOf» > 1
-		«IF src.isIndexed»
-			LDY «src.index»
-			INY
-		«ELSE»
-			LDY #$01
-		«ENDIF»
-		LDA («src.indirect»), Y
-		PHA
-		DEY
-		.else
-		LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
-		«src.loadMSB»
-		PHA
-		.endif
-		.else
-		LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
-		.endif
-		LDA («src.indirect»), Y
+			.if «dst.sizeOf» > 1
+			.if «src.sizeOf» > 1
+			«IF src.isIndexed»
+				LDY «src.index»
+				INY
+			«ELSE»
+				LDY #$01
+			«ENDIF»
+			LDA («src.indirect»), Y
+			PHA
+			DEY
+			.else
+			LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
+			«src.loadMSB»
+			PHA
+			.endif
+			.else
+			LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
+			.endif
+			LDA («src.indirect»), Y
 	'''
 
 	private def copyRegisterToAbsolute(CompileContext src, CompileContext dst) '''
@@ -619,26 +623,26 @@ class Datas {
 
 	private def copyArrayAbsoluteToAbsoulte(CompileContext src, CompileContext dst) '''
 		«dst.pushAccIfOperating»
-		«val length = src.minLength(dst)»
-		«val bytes = '''«length» * «dst.sizeOf»'''»
-		«IF bytes < loopThreshold»
-			«noop»
-				«IF src.isIndexed»
-					LDY «src.index»
-				«ENDIF»
-				«IF dst.isIndexed»
-					LDX «dst.index»
-				«ENDIF»
-			«FOR i : 0 ..< bytes»
-				«noop»
-					LDA «src.absolute»«IF i > 0» + «i»«ENDIF»«IF src.isIndexed», Y«ENDIF»
-					STA «dst.absolute»«IF i > 0» + «i»«ENDIF»«IF dst.isIndexed», X«ENDIF»
-			«ENDFOR»
-		«ELSE»
-			«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToAbsolute(src)»
-			«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToAbsolute(dst)»
-			«bytes.copyArrayIndirectToIndirect»
-		«ENDIF»
+		«assignToAandB(src.lengthExpression, dst.lengthExpression)»
+		«val bytes = '''((min) * «dst.sizeOf»)'''»
+			.if «bytes» < «loopThreshold»
+			«IF src.isIndexed»
+				LDY «src.index»
+			«ENDIF»
+			«IF dst.isIndexed»
+				LDX «dst.index»
+			«ENDIF»
+		i = 0
+			.rept «bytes»
+			LDA «src.absolute» + i«IF src.isIndexed», Y«ENDIF»
+			STA «dst.absolute» + i«IF dst.isIndexed», X«ENDIF»
+		i = i + 1
+			.endr
+			.else
+		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToAbsolute(src)»
+		«(new CompileContext => [indirect = Members::TEMP_VAR_NAME3]).pointIndirectToAbsolute(dst)»
+		«bytes.copyArrayIndirectToIndirect»
+			.endif
 		«dst.pullAccIfOperating»
 	'''
 
@@ -646,11 +650,12 @@ class Datas {
 		«dst.pushAccIfOperating»
 		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
 		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
-		«IF src.lengthExpression instanceof ByteLiteral && (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral)»
+		«IF (src.lengthExpression instanceof ByteLiteral || src.lengthExpression instanceof StringLiteral) 
+		&& (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral || dst.lengthExpression instanceof StringLiteral)»
 			«tmp1.pointIndirectToAbsolute(src)»
 			«tmp3.pointIndirectToIndirect(dst)»
-			«val length = src.minLength(dst)»
-			«val bytes = length * dst.sizeOf»
+			«assignToAandB(src.lengthExpression, dst.lengthExpression)»
+			«val bytes = '''((min) * «dst.sizeOf»)'''»
 			«bytes.copyArrayIndirectToIndirect»
 		«ELSE»
 			«src.lengthExpression.compile(tmp1 => [
@@ -673,13 +678,21 @@ class Datas {
 				«reg.lessThan(tmp3)»
 					LDA «tmp3.absolute» + 0
 					PHA
-					LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+					.if «tmp3.sizeOf» > 1
+					LDX «tmp3.absolute» + 1
+					.else
+					LDX #0
+					.endif
 					JMP +point
 			«ENDIF»
 			+set:
 				LDA «tmp1.absolute» + 0
 				PHA
-				LDX «IF tmp1.sizeOf > 1»«tmp1.absolute» + 1«ELSE»#0«ENDIF»
+				.if «tmp1.sizeOf» > 1
+				LDX «tmp1.absolute» + 1
+				.else
+				LDX #0
+				.endif
 			+point:
 			«(tmp1 => [indirect = absolute]).pointIndirectToAbsolute(src)»
 			«(tmp3 => [indirect = absolute]).pointIndirectToIndirect(dst)»
@@ -692,11 +705,12 @@ class Datas {
 		«dst.pushAccIfOperating»
 		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
 		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
-		«IF src.lengthExpression instanceof ByteLiteral && (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral)»
+		«IF (src.lengthExpression instanceof ByteLiteral || src.lengthExpression instanceof StringLiteral) 
+		&& (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral || dst.lengthExpression instanceof StringLiteral)»
 			«tmp1.pointIndirectToIndirect(src)»
 			«tmp3.pointIndirectToAbsolute(dst)»
-			«val length = src.minLength(dst)»
-			«val bytes = length * dst.sizeOf»
+			«assignToAandB(src.lengthExpression, dst.lengthExpression)»
+			«val bytes = '''((min) * «dst.sizeOf»)'''»
 			«bytes.copyArrayIndirectToIndirect»
 		«ELSE»
 			«src.lengthExpression.compile(tmp1 => [
@@ -719,13 +733,21 @@ class Datas {
 				«reg.lessThan(tmp3)»
 					LDA «tmp3.absolute» + 0
 					PHA
-					LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+					.if «tmp3.sizeOf» > 1
+					LDX «tmp3.absolute» + 1
+					.else
+					LDX #0
+					.endif
 					JMP +point
 			«ENDIF»
 			+set:
 				LDA «tmp1.absolute» + 0
 				PHA
-				LDX «IF tmp1.sizeOf > 1»«tmp1.absolute» + 1«ELSE»#0«ENDIF»
+				.if «tmp1.sizeOf» > 1
+				LDX «tmp1.absolute» + 1
+				.else
+				LDX #0
+				.endif
 			+point:
 			«(tmp1 => [indirect = absolute]).pointIndirectToIndirect(src)»
 			«(tmp3 => [indirect = absolute]).pointIndirectToAbsolute(dst)»
@@ -738,11 +760,12 @@ class Datas {
 		«dst.pushAccIfOperating»
 		«val tmp1 = new CompileContext => [indirect = Members::TEMP_VAR_NAME1]»
 		«val tmp3 = new CompileContext => [indirect = Members::TEMP_VAR_NAME3]»
-		«IF src.lengthExpression instanceof ByteLiteral && (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral)»
+		«IF (src.lengthExpression instanceof ByteLiteral || src.lengthExpression instanceof StringLiteral) 
+		&& (dst.lengthExpression === null || dst.lengthExpression instanceof ByteLiteral || dst.lengthExpression instanceof StringLiteral)»
 			«tmp1.pointIndirectToIndirect(src)»
 			«tmp3.pointIndirectToIndirect(dst)»
-			«val length = src.minLength(dst)»
-			«val bytes = length * dst.sizeOf»
+			«assignToAandB(src.lengthExpression, dst.lengthExpression)»
+			«val bytes = '''((min) * «dst.sizeOf»)'''»
 			«bytes.copyArrayIndirectToIndirect»
 		«ELSE»
 			«src.lengthExpression.compile(tmp1 => [
@@ -765,13 +788,21 @@ class Datas {
 				«reg.lessThan(tmp3)»
 					LDA «tmp3.absolute» + 0
 					PHA
-					LDX «IF tmp3.sizeOf > 1»«tmp3.absolute» + 1«ELSE»#0«ENDIF»
+					.if «tmp3.sizeOf» > 1
+					LDX «tmp3.absolute» + 1
+					.else
+					LDX #0
+					.endif
 					JMP +point
 			«ENDIF»
 			+set:
 				LDA «tmp1.absolute» + 0
 				PHA
-				LDX «IF tmp1.sizeOf > 1»«tmp1.absolute» + 1«ELSE»#0«ENDIF»
+				.if «tmp1.sizeOf» > 1
+				LDX «tmp1.absolute» + 1
+				.else
+				LDX #0
+				.endif
 			+point:
 			«(tmp1 => [indirect = absolute]).pointIndirectToIndirect(src)»
 			«(tmp3 => [indirect = absolute]).pointIndirectToIndirect(dst)»
@@ -842,14 +873,14 @@ class Datas {
 			«(new CompileContext => [indirect = Members::TEMP_VAR_NAME1]).pointIndirectToIndirect(array)»
 		«ENDIF»
 		«val elementSize = array.type.sizeOf»
-			CLC		
+			CLC	
 			LDA «Members::TEMP_VAR_NAME1» + 0
 			ADC #«elementSize»
 			STA «Members::TEMP_VAR_NAME3» + 0
 			LDA «Members::TEMP_VAR_NAME1» + 1
 			ADC #0
 			STA «Members::TEMP_VAR_NAME3» + 1
-		«copyArrayIndirectToIndirect(elementSize * (len - 1))»
+		«copyArrayIndirectToIndirect('''(«elementSize» * «len - 1»)''')»
 		«array.pullAccIfOperating»
 	'''
 
@@ -1011,18 +1042,17 @@ class Datas {
 		}
 	}
 
-	private def minLength(CompileContext c1, CompileContext c2) {
+	private def assignToAandB(Expression e1, Expression e2) {
 		try {
-			val len1 = (c1.lengthExpression as ByteLiteral)?.value ?: Integer::MAX_VALUE
-			val len2 = (c2.lengthExpression as ByteLiteral)?.value ?: Integer::MAX_VALUE
-			Math::min(len1, len2)
-		} catch (ClassCastException e) {
-			val len1 = (c1.lengthExpression as StringLiteral).value
-			val len2 = (c2.lengthExpression as StringLiteral).value
 			'''
-			a = «len1»
-			b = «len2»
-			min'''
+				a = «(e1 as ByteLiteral)?.value ?: Integer::MAX_VALUE»
+				b = «(e2 as ByteLiteral)?.value ?: Integer::MAX_VALUE»
+			'''
+		} catch (ClassCastException e) {
+			'''
+				a = «(e1 as StringLiteral)?.value ?: Integer::MAX_VALUE»
+				b = «(e2 as StringLiteral)?.value ?: Integer::MAX_VALUE»
+			'''
 		}
 	}
 }
