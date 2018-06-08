@@ -535,7 +535,7 @@ class Datas {
 			DEY
 			.else
 			LDY «IF src.isIndexed»«src.index»«ELSE»#$00«ENDIF»
-			«src.loadMSB»
+		«src.loadMSB»
 			PHA
 			.endif
 			.else

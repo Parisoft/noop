@@ -178,7 +178,7 @@ class NoopGenerator extends AbstractGenerator {
 		«FOR noopClass : classes»
 			«noopClass.nameOf» = «classCount++»
 			«val offset = new AtomicInteger(1)»
-			«val offsets = noopClass.allFieldsTopDown.filter[nonStatic].toMap([it], [offset.getAndAdd(sizeOf)])»
+			«val offsets = noopClass.allFieldsTopDown.filter[nonStatic].toMap([it], [offset.getAndAdd(sizeOf as Integer)])»
 			«FOR field : noopClass.declaredFields.filter[nonStatic]»
 				«field.nameOfOffset» = «offsets.get(field)»
 			«ENDFOR»
@@ -194,6 +194,7 @@ class NoopGenerator extends AbstractGenerator {
 		«FOR cons : ctx.constants.values»
 			«cons.nameOf» = «cons.value.compileConstant»
 		«ENDFOR»
+		min EQU (b + ((a - b) & ((a - b) >> «Integer.BYTES» * 8 - 1)))
 		
 		;----------------------------------------------------------------
 		; Static variables
@@ -204,7 +205,7 @@ class NoopGenerator extends AbstractGenerator {
 		«FOR page : 0..< ctx.counters.size»
 			«val staticVars = ctx.statics.values.filter[(storageOf ?: 0) == page]»
 			«FOR staticVar : staticVars»
-				«staticVar.nameOf» = «ctx.counters.get(page).getAndAdd(staticVar.sizeOf).toHexString(4)»
+				«staticVar.nameOf» = «ctx.counters.get(page).getAndAdd(staticVar.sizeOf as Integer).toHexString(4)»
 			«ENDFOR»
 		«ENDFOR»
 		

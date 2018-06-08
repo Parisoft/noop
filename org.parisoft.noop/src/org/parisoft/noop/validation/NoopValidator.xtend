@@ -224,7 +224,7 @@ class NoopValidator extends AbstractNoopValidator {
 
 			println('''Prepare = «System::currentTimeMillis - ini»ms''')
 
-			classes.filter[sizeOf > 0x100].forEach [
+			classes.filter[sizeOf as Integer > 0x100].forEach [
 				error('''Class «name» size is «sizeOf» bytes which overflows the maximum of 256 bytes''', it,
 					NOOP_CLASS__NAME, CLASS_SIZE_OVERFLOW)
 			]

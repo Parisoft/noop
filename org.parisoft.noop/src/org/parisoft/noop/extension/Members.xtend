@@ -1477,7 +1477,7 @@ public class Members {
 					«ref.indirect = ptr»
 				«ENDIF»
 				«noop»
-					.if mustReloadAcc = 1
+					.if mustReloadAcc == 1
 					PLA
 					.endif
 			«ENDIF»
