@@ -1280,12 +1280,32 @@ class Operations {
 				«ENDIF»
 				LDA #$00
 				PHA
+				.elseif abs > 1 && (abs & (abs - 1)) == 0 ; abs is power of 2
+				STA «Members::TEMP_VAR_NAME1»
+				«IF multiplicand.sizeOfAsInt > 1»
+					PLA
+				«ELSE»
+			«multiplicand.loadMSB»
+				«ENDIF»
+			done = 0
+				.rept 16
+				.if done == 0
+				ASL «Members::TEMP_VAR_NAME1»
+				ROL A
+			abs = abs >> 1
+				.if abs & 1 == 1
+			done = 1
+				.endif
+				.endif
+				.endr
+				PHA
+				LDA «Members::TEMP_VAR_NAME1»
 				.elseif abs > 1
 				STA «Members::TEMP_VAR_NAME1»
 				«IF multiplicand.sizeOfAsInt > 1»
 					PLA
 				«ELSE»
-					«multiplicand.loadMSB»
+			«multiplicand.loadMSB»
 				«ENDIF»
 				STA «Members::TEMP_VAR_NAME1» + 1
 				LDA «Members::TEMP_VAR_NAME1»
@@ -1329,10 +1349,21 @@ class Operations {
 			«noop»
 				.if const == 0
 				LDA #$00
+				.elseif abs > 1 && (abs & (abs - 1)) == 0 ; abs is power of 2
+			done = 0
+				.rept 8
+				.if done == 0
+				ASL A
+			abs = abs >> 1
+				.if abs & 1 == 1
+			done = 1
+				.endif
+				.endif
+				.endr
 				.elseif abs > 1
-				bit0 = abs & 1
-				pow = 0
-				i = 0
+			bit0 = abs & 1
+			pow = 0
+			i = 0
 				.rept 8
 				.if abs & 1 == 1
 				.rept i - pow
@@ -1358,7 +1389,7 @@ class Operations {
 		«ENDIF»
 		«noop»
 			.if const < 0
-			«multiplicand.signum»
+		«multiplicand.signum»
 			.endif
 	'''
 
