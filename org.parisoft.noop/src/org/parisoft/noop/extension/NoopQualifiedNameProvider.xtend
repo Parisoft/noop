@@ -24,6 +24,10 @@ class NoopQualifiedNameProvider extends DefaultDeclarativeQualifiedNameProvider 
 	@Inject extension TypeSystem
 
 	override getFullyQualifiedName(EObject obj) {
+		if (obj === null) {
+			return null
+		}
+		
 		obj.fullyQualifiedNameFor ?: if (obj?.eIsProxy) {
 			obj.resolve?.fullyQualifiedNameFor
 		}

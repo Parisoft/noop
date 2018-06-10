@@ -1272,6 +1272,16 @@ class Operations {
 			.if const < 0
 		abs = -1 * const
 			.endif
+		tmp = abs
+		bits = 0
+		i = 1
+			.rept «multiplicand.sizeOfOp * 8»
+			.if tmp & 1 == 1
+		bits = i
+			.endif
+		i = i + 1
+		tmp = tmp >> 1
+			.endr
 		«IF multiplicand.sizeOfOp > 1»
 			«noop»
 				.if const == 0
@@ -1288,7 +1298,7 @@ class Operations {
 			«multiplicand.loadMSB»
 				«ENDIF»
 			done = 0
-				.rept 16
+				.rept bits
 				.if done == 0
 				ASL «Members::TEMP_VAR_NAME1»
 				ROL A
@@ -1312,7 +1322,7 @@ class Operations {
 			bit0 = abs & 1 
 			pow = 0
 			i = 0
-				.rept 16
+				.rept bits
 				.if abs & 1 == 1
 				.rept i - pow
 				ASL A
@@ -1322,7 +1332,7 @@ class Operations {
 				STA «Members::TEMP_VAR_NAME3»
 				LDX «Members::TEMP_VAR_NAME1» + 1
 				STX «Members::TEMP_VAR_NAME3» + 1
-				.elseif i < 15
+				.elseif i < bits - 1
 				CLC
 				TAX
 				ADC «Members::TEMP_VAR_NAME3»
@@ -1352,7 +1362,7 @@ class Operations {
 				LDA #$00
 				.elseif abs > 1 && (abs & (abs - 1)) == 0 ; abs is power of 2
 			done = 0
-				.rept 8
+				.rept bits
 				.if done == 0
 				ASL A
 			abs = abs >> 1
@@ -1365,14 +1375,14 @@ class Operations {
 			bit0 = abs & 1
 			pow = 0
 			i = 0
-				.rept 8
+				.rept bits
 				.if abs & 1 == 1
 				.rept i - pow
 				ASL A
 				.endr
 				.if i == 0 || pow == 0 && bit0 != 1
 				STA «Members::TEMP_VAR_NAME1»
-				.elseif i < 7
+				.elseif i < bits - 1
 				TAX
 				CLC
 				ADC «Members::TEMP_VAR_NAME1»
