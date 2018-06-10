@@ -42,7 +42,7 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject Provider<Console> console
 	@Inject MapperFactory mapperFactory
 
-	val assembler = new File(
+	val assembler = new File(//TODO open from jar
 		FileLocator::getBundleFile(Platform::getBundle("org.parisoft.noop")), '''/asm/asm6«Platform.OS»''')
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
