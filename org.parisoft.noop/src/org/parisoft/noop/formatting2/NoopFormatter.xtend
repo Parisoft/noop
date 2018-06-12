@@ -7,7 +7,7 @@ import com.google.inject.Inject
 import org.eclipse.xtext.formatting2.AbstractFormatter2
 import org.eclipse.xtext.formatting2.IFormattableDocument
 import org.parisoft.noop.^extension.Collections
-import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.^extension.Variables
 import org.parisoft.noop.noop.AddExpression
 import org.parisoft.noop.noop.AndExpression
 import org.parisoft.noop.noop.ArrayLiteral
@@ -15,6 +15,7 @@ import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.AssignmentExpression
 import org.parisoft.noop.noop.BAndExpression
 import org.parisoft.noop.noop.BOrExpression
+import org.parisoft.noop.noop.BXorExpression
 import org.parisoft.noop.noop.Block
 import org.parisoft.noop.noop.CastExpression
 import org.parisoft.noop.noop.ComplementExpression
@@ -56,11 +57,10 @@ import org.parisoft.noop.noop.Statement
 import org.parisoft.noop.noop.Storage
 import org.parisoft.noop.noop.SubExpression
 import org.parisoft.noop.noop.Variable
-import org.parisoft.noop.noop.BXorExpression
 
 class NoopFormatter extends AbstractFormatter2 {
 
-	@Inject extension Members
+	@Inject extension Variables
 	@Inject extension Collections
 
 	def dispatch void format(NoopClass noopClass, extension IFormattableDocument document) {

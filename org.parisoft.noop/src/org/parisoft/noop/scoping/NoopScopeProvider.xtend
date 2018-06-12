@@ -28,6 +28,8 @@ import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopPackage
 import org.parisoft.noop.noop.Variable
 import org.eclipse.xtext.scoping.impl.SimpleScope
+import org.parisoft.noop.^extension.Methods
+import org.parisoft.noop.^extension.Variables
 
 /**
  * This class contains custom scoping description.
@@ -40,6 +42,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	@Inject extension Expressions
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension Methods
+	@Inject extension Variables
 	@Inject extension IQualifiedNameProvider
 
 	override getScope(EObject context, EReference eRef) {

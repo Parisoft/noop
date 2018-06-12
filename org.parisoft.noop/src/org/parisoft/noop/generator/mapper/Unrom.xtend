@@ -9,11 +9,15 @@ import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.Statements
 import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.CompileContext
+import org.parisoft.noop.^extension.Methods
+import org.parisoft.noop.^extension.Variables
 
 class Unrom extends Mapper {
 
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension Methods
+	@Inject extension Variables
 	@Inject extension Statements
 	@Inject extension Collections
 	@Inject extension Expressions

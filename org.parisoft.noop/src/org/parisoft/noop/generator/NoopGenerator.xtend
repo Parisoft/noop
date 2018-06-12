@@ -24,6 +24,7 @@ import org.parisoft.noop.^extension.Datas
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.^extension.Variables
 import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.noop.NoopClass
 
@@ -37,6 +38,7 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject extension Files
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension Variables
 	@Inject extension Expressions
 
 	@Inject Provider<Console> console

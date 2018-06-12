@@ -12,9 +12,11 @@ import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Expressions
-import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.^extension.Methods
+import org.parisoft.noop.^extension.Tags
 import org.parisoft.noop.^extension.TypeSystem
+import org.parisoft.noop.^extension.Variables
 import org.parisoft.noop.noop.AddExpression
 import org.parisoft.noop.noop.AndExpression
 import org.parisoft.noop.noop.ArrayLiteral
@@ -72,7 +74,6 @@ import static org.parisoft.noop.noop.NoopPackage.Literals.*
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.^extension.Tags
 
 /**
  * This class contains custom validation rules. 
@@ -82,9 +83,10 @@ import org.parisoft.noop.^extension.Tags
 class NoopValidator extends AbstractNoopValidator {
 
 	@Inject extension Tags
-	@Inject extension Files
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension Methods
+	@Inject extension Variables
 	@Inject extension Expressions
 	@Inject extension Collections
 
@@ -212,24 +214,6 @@ class NoopValidator extends AbstractNoopValidator {
 	public static val MEMBER_REF_STATIC_CONTEXT = 'org.parisoft.noop.MEMBER_REF_STATIC_CONTEXT'
 	public static val STORAGE_LOCATION = 'org.parisoft.noop.STORAGE_LOCATION'
 	public static val STORAGE_MAPPER_CONFIG = 'org.parisoft.noop.STORAGE_MAPPER_CONFIG'
-
-//	@Check(NORMAL)
-	def classSizeOverflow(NoopClass c) {
-		if (c.isMain) {
-			val ini = System::currentTimeMillis
-
-			val ctx = c.prepare
-			val project = c.URI.project.name
-			val classes = ctx.classes.values.filter[URI.project?.name == project]
-
-			println('''Prepare = «System::currentTimeMillis - ini»ms''')
-
-			classes.filter[sizeOf as Integer > 0x100].forEach [
-				error('''Class «name» size is «sizeOf» bytes which overflows the maximum of 256 bytes''', it,
-					NOOP_CLASS__NAME, CLASS_SIZE_OVERFLOW)
-			]
-		}
-	}
 
 	@Check
 	def classRecursiveHierarchy(NoopClass c) {

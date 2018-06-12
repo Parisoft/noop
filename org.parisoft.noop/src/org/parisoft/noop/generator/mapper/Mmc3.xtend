@@ -11,11 +11,15 @@ import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
+import org.parisoft.noop.^extension.Variables
+import org.parisoft.noop.^extension.Methods
 
 class Mmc3 extends Mapper {
 
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension Methods
+	@Inject extension Variables
 	@Inject extension Statements
 	@Inject extension Collections
 	@Inject extension Expressions
