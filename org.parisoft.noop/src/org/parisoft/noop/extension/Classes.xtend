@@ -22,6 +22,8 @@ class Classes {
 	static val int SIZE_OF_CLASS_TYPE = 1;
 
 	@Inject extension Members
+	@Inject extension Methods
+	@Inject extension Variables
 	@Inject extension Statements
 	@Inject extension TypeSystem
 	@Inject extension Collections

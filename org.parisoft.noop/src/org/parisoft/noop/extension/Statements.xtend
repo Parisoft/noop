@@ -34,7 +34,9 @@ class Statements {
 
 	@Inject extension Datas
 	@Inject extension Members
+	@Inject extension Methods
 	@Inject extension Classes
+	@Inject extension Variables
 	@Inject extension Collections
 	@Inject extension Expressions
 	@Inject extension IQualifiedNameProvider

@@ -75,6 +75,8 @@ class Expressions {
 	@Inject extension Values
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension Methods
+	@Inject extension Variables
 	@Inject extension Operations
 	@Inject extension Statements
 	@Inject extension TypeSystem

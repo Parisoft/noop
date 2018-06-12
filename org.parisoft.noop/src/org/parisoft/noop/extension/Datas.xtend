@@ -15,8 +15,8 @@ class Datas {
 	public static val int VAR_PAGE = 4
 	public static val loopThreshold = 9
 
-	@Inject extension Members
 	@Inject extension Classes
+	@Inject extension Variables
 	@Inject extension Operations
 	@Inject extension Expressions
 
