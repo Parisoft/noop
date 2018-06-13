@@ -22,6 +22,8 @@ import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.NodeVar
 
 public class Members {
 
@@ -203,7 +205,7 @@ public class Members {
 		method.storage?.type == StorageType::RESET
 	}
 
-	def isIndexMulDivModExpression(Member member, List<Index> indexes) {
+	def boolean isIndexMulDivModExpression(Member member, List<Index> indexes) {
 		!member.isIndexImmediate(indexes) && member.dimensionOf.size > 1
 	}
 
@@ -268,6 +270,35 @@ public class Members {
 			}
 		} else {
 			null
+		}
+	}
+
+	def preProcessIndices(Member member, List<Index> indices, CompileContext ref, AST ast) {
+		if (indices.isNotEmpty) {
+			val isIndexImmediate = member.isIndexImmediate(indices)
+			val isIndexNonImmediate = !isIndexImmediate
+
+			if (isIndexImmediate) {
+				indices.forEach[value.preProcess(ast)]
+			} else {
+				val memberSize = member.sizeOf
+				val indexSize = if(member.isBounded && memberSize instanceof Integer &&
+						(memberSize as Integer) <= 0xFF) 1 else 2
+				val indexType = if(indexSize > 1) member.toUIntClass else member.toByteClass
+
+				try {
+					member.getIndexExpression(indices).preProcess(ast => [types.put(indexType)])
+				} finally {
+					ast.types.pop
+				}
+			}
+
+			if (isIndexNonImmediate || ref.indirect !== null) {
+				ast.append(new NodeVar => [
+					varName = indices.nameOfElement(ast.container)
+					ptr = true
+				])
+			}
 		}
 	}
 

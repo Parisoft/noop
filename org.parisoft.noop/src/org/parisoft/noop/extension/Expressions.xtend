@@ -68,6 +68,8 @@ import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.noop.BXorExpression
 import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.NodeRefClass
+import org.parisoft.noop.generator.process.NodeVar
 
 class Expressions {
 
@@ -912,7 +914,192 @@ class Expressions {
 	}
 
 	def void preProcess(Expression expression, AST ast) {
-		
+		switch (expression) {
+			AssignmentExpression: {
+				val left = if (expression.assignment === AssignmentType::ASSIGN) {
+						expression.left
+					} else {
+						copies.computeIfAbsent(expression.left, [expression.left.copy]) as Expression
+					}
+				val right = if (expression.assignment === AssignmentType::ASSIGN) {
+						expression.right
+					} else {
+						copies.computeIfAbsent(expression.right, [expression.right.copy]) as Expression
+					}
+
+				val method = if (expression.assignment === AssignmentType::MUL_ASSIGN) {
+						getMultiplyMethod(expression.left, expression.right, expression.left.typeOf).method
+					} else if (expression.assignment === AssignmentType::DIV_ASSIGN) {
+						getDivideMethod(expression.left, expression.right, expression.left.typeOf).method
+					} else if (expression.assignment === AssignmentType::MOD_ASSIGN) {
+						getModuloMethod(expression.left, expression.right, expression.left.typeOf).method
+					}
+
+				if (method !== null) {
+					method.preProcess(ast)
+				} else if (expression.assignment === AssignmentType::DIV_ASSIGN ||
+					expression.assignment === AssignmentType::MOD_ASSIGN) {
+					expression.moduloVariable.preProcess(ast)
+				}
+
+				if (expression.assignment === AssignmentType::ASSIGN && left.dimensionOf.isNotEmpty) {
+					left.lengthExpression?.preProcess(ast)
+					right.lengthExpression?.preProcess(ast)
+				}
+
+				left.preProcess(ast)
+
+				if (right.containsMulDivMod) {
+					try {
+						right.preProcess(ast => [types.put(left.typeOf)])
+					} finally {
+						ast.types.pop
+					}
+				} else {
+					right.preProcess(ast)
+				}
+			}
+			OrExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			AndExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			EqualsExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			DifferExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			GtExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			GeExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			LtExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			LeExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			InstanceOfExpression: {
+				expression.left.preProcess(ast)
+				ast.append(new NodeRefClass => [className = expression.type.fullName])
+			}
+			AddExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			SubExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			MulExpression: {
+				val method = getMultiplyMethod(expression.left, expression.right, ast.types.head ?: expression.typeOf).
+					method
+
+				if (method !== null) {
+					method.preProcessInvocation(newArrayList(expression.left, expression.right), emptyList, ast)
+				} else {
+					expression.left.preProcess(ast)
+					expression.right.preProcess(ast)
+				}
+			}
+			DivExpression: {
+				val method = getDivideMethod(expression.left, expression.right, ast.types.head ?: expression.typeOf).
+					method
+
+				if (method !== null) {
+					method.preProcessInvocation(newArrayList(expression.left, expression.right), emptyList, ast)
+				} else {
+					expression.left.preProcess(ast)
+					expression.right.preProcess(ast)
+				}
+			}
+			ModExpression: {
+				val method = getModuloMethod(expression.left, expression.right, ast.types.head ?: expression.typeOf).
+					method
+
+				if (method !== null) {
+					method.preProcessInvocation(newArrayList(expression.left, expression.right), emptyList, ast)
+				} else {
+					expression.left.preProcess(ast)
+					expression.right.preProcess(ast)
+				}
+			}
+			BOrExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			BXorExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			BAndExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			LShiftExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			RShiftExpression: {
+				expression.left.preProcess(ast)
+				expression.right.preProcess(ast)
+			}
+			ComplementExpression:
+				expression.right.preProcess(ast)
+			NotExpression:
+				expression.right.preProcess(ast)
+			SigNegExpression:
+				expression.right.preProcess(ast)
+			SigPosExpression:
+				expression.right.preProcess(ast)
+			DecExpression:
+				expression.right.preProcess(ast)
+			IncExpression:
+				expression.right.preProcess(ast)
+			CastExpression: {
+				ast.append(new NodeRefClass => [className = expression.type.fullName])
+
+				if (expression.left.containsMulDivMod) {
+					try {
+						expression.left.preProcess(ast => [types.put(expression.type)])
+					} finally {
+						ast.types.pop
+					}
+				} else {
+					expression.left.preProcess(ast)
+				}
+			}
+			ArrayLiteral: {
+				ast.append(new NodeRefClass => [className = expression.typeOf.fullName])
+
+				expression.eAllContentsAsList.filter [
+					it instanceof MemberSelect || it instanceof MemberRef || it instanceof NewInstance
+				].forEach [
+					(it as Expression).preProcess(ast)
+				]
+
+				if (expression.isOnMemberSelectionOrReference) {
+					ast.append(new NodeVar => [
+						varName = expression.nameOfTmp(ast.container)
+						type = expression.typeOf.fullName
+						qty = expression.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1
+						tmp = true
+					])
+				}
+			}
+		}
 	}
 
 	def void prepare(Expression expression, AllocContext ctx) {

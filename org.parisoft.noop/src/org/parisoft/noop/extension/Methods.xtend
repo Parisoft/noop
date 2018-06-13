@@ -25,6 +25,7 @@ import org.parisoft.noop.generator.process.NodeVar
 
 class Methods {
 	
+	@Inject extension Files
 	@Inject extension Datas
 	@Inject extension Values
 	@Inject extension Classes
@@ -168,6 +169,10 @@ class Methods {
 	}
 	
 	def void preProcess(Method method, AST ast) {
+		if (ast.contains(method.nameOf)) {
+			return
+		}
+		
 		val container = ast.container
 		ast.container = method.nameOf
 		
@@ -190,6 +195,47 @@ class Methods {
 			method.body.statements.forEach[prepare(ctx)]
 			println('''prepared «method.containerClass.name».«method.name» = «System::currentTimeMillis - ini»ms''')
 		}
+	}
+	
+	def void preProcessInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indices, AST ast) {
+		if (method.isNative) {
+			return
+		}
+		
+		if (method.URI.project.name !== ast.project && !ast.contains(method.nameOf)) {
+			method.preProcess(ast)
+		}
+		
+		if (receiver !== null) {
+			receiver.preProcess(ast)
+		}
+
+		args.forEach [ arg, i |
+			if (arg.containsMulDivMod) {
+				try {
+					arg.preProcess(ast => [types.put(method.params.get(i).type)])
+				} finally {
+					ast.types.pop
+				}
+			} else {
+				arg.preProcess(ast)
+			}
+			
+			if (arg.containsMethodInvocation && !arg.isComplexMemberArrayReference) {
+				ast.append(new NodeVar => [
+					varName = method.params.get(i).nameOfTmpParam(arg, ast.container)
+					type = arg.typeOf.fullName
+					qty = arg.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1
+					tmp = true
+				])
+			}
+		]
+
+		method.preProcessIndices(indices, new CompileContext => [indirect = method.nameOfReturn], ast)
+	}
+	
+	def void preProcessInvocation(Method method, List<Expression> args, List<Index> indices, AST ast) {
+		method.preProcessInvocation(null, args, indices, ast)
 	}
 	
 	def void prepareInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {

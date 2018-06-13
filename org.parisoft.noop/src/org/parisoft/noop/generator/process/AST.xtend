@@ -12,7 +12,9 @@ class AST {
 	
 	@Inject extension QualifiedNameProvider
 	
-	@Accessors var String container
+	@Accessors var String project
+	@Accessors var volatile String container
+	@Accessors var volatile List<NoopClass> types = new ArrayList
 	
 	val tree = new HashMap<String, List<Node>>
 	
@@ -25,7 +27,15 @@ class AST {
 		container.append(node)
 	}
 	
-	def append(String name, Node node) {
-		tree.computeIfAbsent(name, [new ArrayList]).add(node)
+	def append(String container, Node node) {
+		tree.computeIfAbsent(container, [new ArrayList]).add(node)
+	}
+	
+	def get(String container) {
+		tree.get(container)
+	}
+	
+	def contains(String container) {
+		tree.containsKey(container)
 	}
 }
