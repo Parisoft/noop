@@ -245,7 +245,7 @@ class Classes {
 		] ?: 0)
 	}
 
-	def prepare(NoopClass gameImplClass) {
+	def AllocContext prepare(NoopClass gameImplClass) {
 		contexts.get(gameImplClass, [
 			val ctx = new AllocContext
 

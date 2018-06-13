@@ -21,6 +21,7 @@ import org.parisoft.noop.noop.Variable
 import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import org.parisoft.noop.noop.NoopClass
 
 public class Members {
 
@@ -210,7 +211,7 @@ public class Members {
 		member.dimensionOf.size > indexes?.size
 	}
 
-	def typeOf(Member member) {
+	def NoopClass typeOf(Member member) {
 		switch (member) {
 			Variable: member.typeOf
 			Method: member.typeOf
@@ -239,7 +240,7 @@ public class Members {
 		}
 	}
 
-	def sizeOf(Member member) {
+	def Object sizeOf(Member member) {
 		val size = member.typeOf.sizeOf
 		val dim = member.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1
 

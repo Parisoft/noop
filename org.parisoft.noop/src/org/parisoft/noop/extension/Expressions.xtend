@@ -67,6 +67,7 @@ import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.noop.BXorExpression
+import org.parisoft.noop.generator.process.AST
 
 class Expressions {
 
@@ -363,7 +364,7 @@ class Expressions {
 		}
 	}
 
-	def containsMethodInvocation(Expression expression) {
+	def boolean containsMethodInvocation(Expression expression) {
 		expression.isMethodInvocation || expression.isComplexMemberArrayReference ||
 			expression.eAllContents.filter(Expression).exists [
 				methodInvocation || complexMemberArrayReference
@@ -908,6 +909,10 @@ class Expressions {
 		} else {
 			size
 		}
+	}
+
+	def void preProcess(Expression expression, AST ast) {
+		
 	}
 
 	def void prepare(Expression expression, AllocContext ctx) {

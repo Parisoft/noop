@@ -34,7 +34,7 @@ class Operations {
 		}
 	}
 
-	def operateOn(CompileContext acc, CompileContext operand) {
+	def CharSequence operateOn(CompileContext acc, CompileContext operand) {
 		switch (acc.operation) {
 			case OR: acc.or(operand)
 			case AND: acc.and(operand)

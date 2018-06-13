@@ -20,6 +20,8 @@ import org.parisoft.noop.noop.Variable
 import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.NodeVar
 
 class Methods {
 	
@@ -93,12 +95,12 @@ class Methods {
 		return false
 	}
 
-	def isIrqImpl(Method m) {
+	def isVector(Method m) {
 		m.isIrq || m.isNmi || m.isReset
 	}
 	
-	def isNonIrqImpl(Method m) {
-		!m.isIrqImpl
+	def isNonVector(Method m) {
+		!m.isVector
 	}
 		
 	def isObjectSize(Method method) {
@@ -163,6 +165,23 @@ class Methods {
 	
 	def nameOfReturn(Method method) {
 		'''«method.nameOf».ret'''.toString
+	}
+	
+	def void preProcess(Method method, AST ast) {
+		val container = ast.container
+		ast.container = method.nameOf
+		
+		if (method.isNonStatic) {
+			ast.append(new NodeVar => [
+				varName = method.nameOfReceiver
+				ptr = true
+			])
+		}
+		
+		method.params.forEach[preProcess(ast)]
+		method.body.statements.forEach[preProcess(ast)]
+		
+		ast.container = container
 	}
 	
 	def void prepare(Method method, AllocContext ctx) {
@@ -330,6 +349,7 @@ class Methods {
 				BIT $2002
 				BPL -waitVBlank2
 				;;;;;;;;;; Initial setup end
+			
 			«FOR statement : method.body.statements»
 				«statement.compile(new CompileContext => [container = method.nameOf])»
 			«ENDFOR»

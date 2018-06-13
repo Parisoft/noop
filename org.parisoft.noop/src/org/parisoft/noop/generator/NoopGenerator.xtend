@@ -27,6 +27,8 @@ import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.Variables
 import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.noop.NoopClass
+import java.util.HashMap
+import org.parisoft.noop.generator.process.AST
 
 /**
  * Generates code from your model files on save.
@@ -44,7 +46,8 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject Provider<Console> console
 	@Inject MapperFactory mapperFactory
 
-	val assembler = new File(//TODO open from jar
+	static val ast = new HashMap<String, AST>
+	static val assembler = new File(//TODO open from jar
 		FileLocator::getBundleFile(Platform::getBundle("org.parisoft.noop")), '''/asm/asm6«Platform.OS»''')
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {

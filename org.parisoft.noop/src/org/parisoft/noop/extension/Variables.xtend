@@ -43,7 +43,7 @@ class Variables {
 	}
 
 	def isPointer(Variable v) {
-		v.typeOf.isNonNumeric || v.dimensionOf.isNotEmpty
+		v.typeOf.isNonPrimitive || v.dimensionOf.isNotEmpty
 	}
 
 	def isParameter(Variable variable) {
@@ -62,7 +62,7 @@ class Variables {
 		!variable.isParameter
 	}
 
-	def isConstant(Variable variable) {
+	def boolean isConstant(Variable variable) {
 		variable.isStatic && variable.name.chars.skip(1).allMatch [
 			val c = it as char
 			c.isUpperCase || c.isDigit || c === Members::PRIVATE_PREFIX.charAt(0) ||
@@ -127,6 +127,10 @@ class Variables {
 	def isNonMapperConfig(Variable variable) {
 		!variable.isMapperConfig
 	}
+	
+	def isZeroPage(Variable variable) {
+		variable.storage?.type == StorageType::ZP
+	}
 
 	def typeOf(Variable variable) {
 		if (running.add(variable)) {
@@ -170,7 +174,7 @@ class Variables {
 		'''«container».tmp«param.name.toFirstUpper»@«arg.hashCode.toHexString»'''.toString
 	}
 
-	def push(Variable variable) '''
+	def CharSequence push(Variable variable) '''
 		«IF variable.isParameter && (variable.type.isNonPrimitive || variable.dimension.isNotEmpty)»
 			«val pointer = variable.nameOf»
 				LDA «pointer» + 1

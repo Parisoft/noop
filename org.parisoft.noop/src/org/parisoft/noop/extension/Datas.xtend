@@ -32,7 +32,7 @@ class Datas {
 		ctx.opType.sizeOf as Integer
 	}
 
-	def resolveTo(CompileContext src, CompileContext dst) {
+	def CharSequence resolveTo(CompileContext src, CompileContext dst) {
 		switch (dst.mode) {
 			case COPY: src.copyTo(dst)
 			case POINT: dst.pointTo(src)
@@ -931,6 +931,7 @@ class Datas {
 		dst.absolute = src.absolute
 		dst.indirect = src.indirect
 		dst.index = src.index
+		''''''
 	}
 
 	def pushAccIfOperating(CompileContext ctx) '''
