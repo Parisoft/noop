@@ -11,4 +11,16 @@ class NodeVar implements Node {
 	@Accessors var Integer qty = 1
 	@Accessors var boolean ptr = false
 	@Accessors var boolean tmp = false
+	
+	override toString() '''
+		NodeVar{
+			name : «varName»,
+			type : «type»,
+			page : «page»,
+			qty : «qty»,
+			ptr : «ptr»,
+			tmp : «tmp»
+		}
+	'''
+	
 }

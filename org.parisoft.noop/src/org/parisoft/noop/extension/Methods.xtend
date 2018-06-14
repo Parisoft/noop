@@ -22,6 +22,7 @@ import static org.parisoft.noop.^extension.Cache.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.generator.process.AST
 import org.parisoft.noop.generator.process.NodeVar
+import org.parisoft.noop.generator.process.NodeCall
 
 class Methods {
 	
@@ -175,12 +176,19 @@ class Methods {
 		
 		val container = ast.container
 		ast.container = method.nameOf
+		ast.append(null)
 		
 		if (method.isNonStatic) {
 			ast.append(new NodeVar => [
 				varName = method.nameOfReceiver
 				ptr = true
 			])
+		} else if (method.isReset) {
+			ast.reset = method.nameOf
+		} else if (method.isNmi) {
+			ast.nmi = method.nameOf
+		} else if (method.isIrq) {
+			ast.irq = method.nameOf
 		}
 		
 		method.params.forEach[preProcess(ast)]
@@ -201,6 +209,11 @@ class Methods {
 		if (method.isNative) {
 			return
 		}
+		
+		ast.append(new NodeCall => [
+			containerClass = method.containerClass.fullName
+			methodName = method.nameOf
+		])
 		
 		if (method.URI.project.name !== ast.project && !ast.contains(method.nameOf)) {
 			method.preProcess(ast)

@@ -6,4 +6,11 @@ class NodeCall implements Node {
 	
 	@Accessors var String containerClass
 	@Accessors var String methodName
+	
+	override toString()'''
+		NodeCall{
+			method : «methodName»
+		}
+	'''
+	
 }

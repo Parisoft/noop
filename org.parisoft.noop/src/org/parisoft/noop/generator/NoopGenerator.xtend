@@ -29,6 +29,8 @@ import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.noop.NoopClass
 import java.util.HashMap
 import org.parisoft.noop.generator.process.AST
+import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.^extension.Methods
 
 /**
  * Generates code from your model files on save.
@@ -40,17 +42,44 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject extension Files
 	@Inject extension Classes
 	@Inject extension Members
+	@Inject extension Methods
 	@Inject extension Variables
 	@Inject extension Expressions
 
 	@Inject Provider<Console> console
 	@Inject MapperFactory mapperFactory
 
-	static val ast = new HashMap<String, AST>
-	static val assembler = new File(//TODO open from jar
-		FileLocator::getBundleFile(Platform::getBundle("org.parisoft.noop")), '''/asm/asm6«Platform.OS»''')
+	static val astByProject = new HashMap<String, AST>
+	static val assembler = new File( // TODO open from jar
+	FileLocator::getBundleFile(Platform::getBundle("org.parisoft.noop")), '''/asm/asm6«Platform.OS»''')
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
+		if (fsa !== null) {
+			val ini = System::currentTimeMillis
+			val clazz = resource.allContents.filter(NoopClass).head
+			val project = clazz.URI.project.name
+			val ast = astByProject.computeIfAbsent(project, [new AST => [it.project = project]])
+			
+			ast.clear(clazz.fullName)
+			clazz.declaredMethods.forEach[preProcess(ast)]
+			
+			ast.tree.forEach[root, nodes|
+				println('''-> «root»''')
+				nodes.forEach[
+					println('''	«it»''')
+				]
+			]
+			
+			println(ast.vectors)
+			
+			println('''Took:«System::currentTimeMillis - ini»ms''')
+			
+			//if ast.vectors !== null ast.vectors.forEach[preCompile]
+			
+			return
+		}
+
+		// from here, all legacy code 
 		val asm = resource.compile
 
 		if (asm !== null) {
@@ -90,30 +119,7 @@ class NoopGenerator extends AbstractGenerator {
 					println('''Assembly = «System::currentTimeMillis - ini»ms''')
 					Cache::clear
 				}
-			} else {
-				println(assembler)
 			}
-
-//			new Asm8 => [
-//				Asm8.outStream = new PrintStream(console.get.newOutStream, true)
-//				Asm8.errStream = new PrintStream(console.get.newErrStream, true)
-//
-//				inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
-//				outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
-//				listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
-//
-//				val ini = System::currentTimeMillis
-//
-//				try {
-//					compile
-//				} catch (Exception exception) {
-//					Asm8.errStream.println(exception.message)
-//					throw exception
-//				} finally {
-//					println('''Assembly = «System::currentTimeMillis - ini»ms''')
-//					Cache::clear
-//				}
-//			]
 		}
 	}
 

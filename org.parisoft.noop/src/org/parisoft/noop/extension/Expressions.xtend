@@ -994,7 +994,10 @@ class Expressions {
 			}
 			InstanceOfExpression: {
 				expression.left.preProcess(ast)
-				ast.append(new NodeRefClass => [className = expression.type.fullName])
+				
+				if (expression.type.isNonPrimitive) {
+					ast.append(new NodeRefClass => [className = expression.type.fullName])
+				}
 			}
 			AddExpression: {
 				expression.left.preProcess(ast)
@@ -1070,7 +1073,9 @@ class Expressions {
 			IncExpression:
 				expression.right.preProcess(ast)
 			CastExpression: {
-				ast.append(new NodeRefClass => [className = expression.type.fullName])
+				if (expression.type.isNonPrimitive) {
+					ast.append(new NodeRefClass => [className = expression.type.fullName])
+				}
 
 				if (expression.left.containsMulDivMod) {
 					try {
@@ -1083,7 +1088,9 @@ class Expressions {
 				}
 			}
 			ArrayLiteral: {
-				ast.append(new NodeRefClass => [className = expression.typeOf.fullName])
+				if (expression.typeOf.isNonPrimitive) {
+					ast.append(new NodeRefClass => [className = expression.typeOf.fullName])
+				}
 
 				expression.eAllContentsAsList.filter [
 					it instanceof MemberSelect || it instanceof MemberRef || it instanceof NewInstance
@@ -1149,7 +1156,7 @@ class Expressions {
 				val member = expression.member
 				val receiver = expression.receiver
 
-				if (member.isStatic && receiver instanceof NewInstance) {
+				if (member.isStatic && member.typeOf.isNonPrimitive && receiver instanceof NewInstance) {
 					ast.append(new NodeRefClass => [className = (receiver as NewInstance).type.fullName])
 				}
 

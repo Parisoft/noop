@@ -1,25 +1,23 @@
 package org.parisoft.noop.generator.process
 
+import java.util.ArrayList
 import java.util.HashMap
 import java.util.List
-import org.parisoft.noop.noop.NoopClass
-import com.google.inject.Inject
-import org.eclipse.emf.mwe2.language.scoping.QualifiedNameProvider
-import java.util.ArrayList
 import org.eclipse.xtend.lib.annotations.Accessors
+import org.parisoft.noop.noop.NoopClass
+import java.util.LinkedHashMap
 
 class AST {
 	
-	@Inject extension QualifiedNameProvider
-	
-	@Accessors var String project
 	@Accessors var volatile String container
 	@Accessors var volatile List<NoopClass> types = new ArrayList
 	
-	val tree = new HashMap<String, List<Node>>
+	@Accessors var String project
+	@Accessors val vectors = new HashMap<String, String>
+	@Accessors val tree = new LinkedHashMap<String, List<Node>>
 	
-	def clear(NoopClass c) {
-		val prefix = '''«c.fullyQualifiedName.toString».'''
+	def clear(String clazz) {
+		val prefix = '''«clazz».'''
 		tree.keySet.removeIf[startsWith(prefix)]
 	}
 	
@@ -28,7 +26,11 @@ class AST {
 	}
 	
 	def append(String container, Node node) {
-		tree.computeIfAbsent(container, [new ArrayList]).add(node)
+		tree.computeIfAbsent(container, [new ArrayList]) => [
+			if (node !== null) {
+				add(node)
+			}
+		]
 	}
 	
 	def get(String container) {
@@ -37,5 +39,17 @@ class AST {
 	
 	def contains(String container) {
 		tree.containsKey(container)
+	}
+	
+	def setReset(String method) {
+		vectors.put('reset', method)
+	}
+	
+	def setNmi(String method) {
+		vectors.put('nmi', method)
+	}
+	
+	def setIrq(String method) {
+		vectors.put('irq', method)
 	}
 }

@@ -31,7 +31,7 @@ import static org.parisoft.noop.^extension.Cache.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.generator.process.AST
 import org.parisoft.noop.generator.process.NodeVar
-import org.parisoft.noop.generator.process.NodeBeginStatement
+import org.parisoft.noop.generator.process.NodeBeginStmt
 
 class Statements {
 
@@ -176,7 +176,7 @@ class Statements {
 			IfStatement: {
 				val container = ast.container
 				ast.container = statement.nameOf
-				ast.append(container, new NodeBeginStatement => [statementName = statement.nameOf])
+				ast.append(container, new NodeBeginStmt => [statementName = statement.nameOf])
 
 				statement.condition.preProcess(ast)
 				statement.body.statements.forEach[preProcess(ast)]
@@ -187,7 +187,7 @@ class Statements {
 			ForeverStatement: {
 				val container = ast.container
 				ast.container = statement.nameOf
-				ast.append(container, new NodeBeginStatement => [statementName = statement.nameOf])
+				ast.append(container, new NodeBeginStmt => [statementName = statement.nameOf])
 				
 				statement.body.statements.forEach[preProcess(ast)]
 				
@@ -196,7 +196,7 @@ class Statements {
 			ForStatement: {
 				val container = ast.container
 				ast.container = statement.nameOf
-				ast.append(container, new NodeBeginStatement => [statementName = statement.nameOf])
+				ast.append(container, new NodeBeginStmt => [statementName = statement.nameOf])
 				
 				statement.variables.forEach[preProcess(ast)]
 				statement.assignments.forEach[preProcess(ast)]
@@ -231,7 +231,7 @@ class Statements {
 		} else if (elseStatement.body !== null) {
 			val container = ast.container
 			ast.container = elseStatement.nameOf
-			ast.append(container, new NodeBeginStatement => [statementName = elseStatement.nameOf])
+			ast.append(container, new NodeBeginStmt => [statementName = elseStatement.nameOf])
 
 			elseStatement.body.statements.forEach[preProcess(ast)]
 
