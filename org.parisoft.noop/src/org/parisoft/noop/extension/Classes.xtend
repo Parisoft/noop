@@ -215,11 +215,11 @@ class Classes {
 	}
 
 	def nameOf(NoopClass c) {
-		'''«c.fullName»#class'''.toString
+		'''«c.fullName».CLASS'''.toString
 	}
 	
 	def nameOfSize(NoopClass c) {
-		'''«c.fullName»#size'''.toString
+		'''«c.fullName».SIZE'''.toString
 	}
 
 	def Object sizeOf(NoopClass c) {

@@ -99,7 +99,7 @@ class Expressions {
 	}
 
 	def getFieldsInitializedOnContructor(NewInstance instance) {
-		instance.type.allFieldsTopDown.filter[nonStatic]
+		instance.type.members.filter(Variable).filter[nonStatic]
 	}
 
 	def getMultiplyMethod(Expression left, Expression right) {
@@ -1139,7 +1139,7 @@ class Expressions {
 						ptr = true
 					])
 
-					expression.type.members.filter(Variable).filter[nonStatic].forEach[value.preProcess(ast)]
+					expression.fieldsInitializedOnContructor.forEach[value.preProcess(ast)]
 
 					ast.container = container
 
@@ -1901,6 +1901,13 @@ class Expressions {
 						«val constructor = expression.nameOfConstructor»
 						«val receiver = expression.nameOfReceiver»
 						«constructor»:
+						«IF expression.type.superClass !== null»
+							«val supr = NoopFactory::eINSTANCE.createNewInstance => [
+								type = expression.type.superClass
+							]»
+							«supr.compile(new CompileContext => [indirect = receiver])»
+						«ENDIF»
+						«noop»
 							LDY #$00
 							LDA #«expression.type.nameOf»
 							STA («receiver»), Y
