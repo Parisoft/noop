@@ -70,6 +70,7 @@ import org.parisoft.noop.noop.BXorExpression
 import org.parisoft.noop.generator.process.AST
 import org.parisoft.noop.generator.process.NodeRefClass
 import org.parisoft.noop.generator.process.NodeVar
+import org.parisoft.noop.generator.process.NodeNew
 
 class Expressions {
 
@@ -1097,6 +1098,98 @@ class Expressions {
 						qty = expression.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1
 						tmp = true
 					])
+				}
+			}
+			NewInstance: {
+				if (expression.isOnMemberSelectionOrReference) {
+					if (expression.dimension.isEmpty && expression.type.isNonPrimitive) {
+						ast.append(new NodeVar => [
+							varName = expression.nameOfTmpVar(ast.container)
+							type = expression.typeOf.fullName
+							tmp = true
+						])
+					} else if (expression.dimension.isNotEmpty) {
+						ast.append(new NodeVar => [
+							varName = expression.nameOfTmpArray(ast.container)
+							type = expression.typeOf.fullName
+							qty = expression.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1
+							tmp = true
+						])
+					}
+				}
+
+				if (expression.type.isNonPrimitive) {
+					if (expression.type.superClass !== null) {
+						(NoopFactory::eINSTANCE.createNewInstance => [type = expression.type.superClass]).
+							preProcess(ast)
+					}
+
+					ast.append(new NodeRefClass => [className = expression.type.fullName])
+					ast.append(new NodeNew => [type = expression.type.fullName])
+
+					val constructorName = expression.nameOfConstructor
+					val container = ast.container
+					ast.container = constructorName
+
+					ast.append(new NodeVar => [
+						varName = expression.nameOfReceiver
+						ptr = true
+					])
+
+					expression.type.members.filter(Variable).filter[nonStatic].forEach[value.preProcess(ast)]
+
+					ast.container = container
+
+					if (expression.constructor !== null) {
+						expression.constructor.fields.forEach[value.preProcess(ast)]
+					}
+				}
+			}
+			MemberSelect: {
+				val member = expression.member
+				val receiver = expression.receiver
+
+				if (member.isStatic && receiver instanceof NewInstance) {
+					ast.append(new NodeRefClass => [className = (receiver as NewInstance).type.fullName])
+				}
+
+				if (member instanceof Variable) {
+					if (member.isROM) {
+						member.preProcessRomReference(expression.indexes, ast)
+					} else if (member.isConstant) {
+						member.preProcessConstantReference(ast)
+					} else if (member.isStatic) {
+						member.preProcessStaticReference(expression.indexes, ast)
+					} else {
+						member.preProcessReference(receiver, expression.indexes, ast)
+					}
+				} else if (member instanceof Method) {
+					if (member.isStatic) {
+						member.preProcessInvocation(expression.args, expression.indexes, ast)
+					} else {
+						member.preProcessInvocation(receiver, expression.args, expression.indexes, ast)
+					}
+				}
+			}
+			MemberRef: {
+				val member = expression.member
+
+				if (member instanceof Variable) {
+					if (member.isField && member.isNonStatic) {
+						member.preProcessPointerReference('''«ast.container».rcv''', expression.indexes, ast)
+					} else if (member.isParameter && member.isPointer) {
+						member.preProcessPointerReference(member.nameOf, expression.indexes, ast)
+					} else if (member.isROM) {
+						member.preProcessRomReference(expression.indexes, ast)
+					} else if (member.isConstant) {
+						member.preProcessConstantReference(ast)
+					} else if (member.isStatic) {
+						member.preProcessStaticReference(expression.indexes, ast)
+					} else {
+						member.preProcessLocalReference(expression.indexes, ast)
+					}
+				} else if (member instanceof Method) {
+					member.preProcessInvocation(expression.args, expression.indexes, ast)
 				}
 			}
 		}

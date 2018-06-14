@@ -18,6 +18,8 @@ import org.parisoft.noop.noop.Variable
 
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
+import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.NodeRefConst
 
 class Variables {
 
@@ -127,7 +129,7 @@ class Variables {
 	def isNonMapperConfig(Variable variable) {
 		!variable.isMapperConfig
 	}
-	
+
 	def isZeroPage(Variable variable) {
 		variable.storage?.type == StorageType::ZP
 	}
@@ -245,17 +247,68 @@ class Variables {
 		«ENDIF»
 	'''
 
+	def preProcessReference(Variable variable, Expression receiver, List<Index> indices, AST ast) {
+		receiver.preProcess(ast)
+
+		val rcv = new CompileContext => [
+			container = ast.container
+			type = receiver.typeOf
+			mode = Mode::REFERENCE
+		]
+
+		receiver.compile(rcv)
+
+		val ref = rcv => [
+			if (absolute !== null) {
+				absolute = '''«rcv.absolute» + #«variable.nameOfOffset»'''
+			} else if (indirect !== null) {
+				index = '''«IF rcv.index !== null»«rcv.index» + «ENDIF»#«variable.nameOfOffset»'''
+			}
+		]
+
+		variable.preProcessIndices(indices, ref, ast)
+	}
+
+	def preProcessRomReference(Variable variable, List<Index> indices, AST ast) {
+		val ref = new CompileContext => [absolute = variable.nameOf]
+		variable.preProcess(ast)
+		variable.preProcessIndices(indices, ref, ast)
+	}
+
+	def preProcessConstantReference(Variable variable, AST ast) {
+		ast.append(new NodeRefConst => [constName = variable.nameOf])
+		variable.preProcess(ast)
+	}
+
+	def preProcessStaticReference(Variable variable, List<Index> indices, AST ast) {
+		val ref = new CompileContext => [absolute = variable.nameOf]
+		variable.preProcess(ast)
+		variable.preProcessIndices(indices, ref, ast)
+	}
+
+	def preProcessPointerReference(Variable variable, String receiver, List<Index> indices, AST ast) {
+		val ref = new CompileContext => [
+			indirect = receiver
+			index = if (variable.isNonParameter) '''#«variable.nameOfOffset»'''
+		]
+		variable.preProcessIndices(indices, ref, ast)
+	}
+
+	def preProcessLocalReference(Variable variable, List<Index> indices, AST ast) {
+		val ref = new CompileContext => [absolute = variable.nameOf]
+		variable.preProcessIndices(indices, ref, ast)
+	}
+
 	def prepareReference(Variable variable, Expression receiver, List<Index> indexes, AllocContext ctx) {
 		receiver.prepare(ctx)
 		variable.prepare(ctx)
 		variable.prepareIndexes(indexes, ctx)
 	}
-	
+
 	def prepareReference(Variable variable, List<Index> indexes, AllocContext ctx) {
 		variable.prepare(ctx)
 		variable.prepareIndexes(indexes, ctx)
 	}
-	
 
 	def allocReference(Variable variable, Expression receiver, List<Index> indexes, AllocContext ctx) {
 		val chunks = receiver.alloc(ctx)
