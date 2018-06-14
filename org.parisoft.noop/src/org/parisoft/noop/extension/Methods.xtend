@@ -456,9 +456,7 @@ class Methods {
 				mode = Mode::POINT
 			])»
 			«ctx.pushAccIfOperating»
-				.if recursive_«ctx.container»_to_«method.nameOf» == 1
-			«ctx.pushRecusiveVars»
-				.endif
+			«ctx.pushRecusiveVars(method.nameOf)»
 			«val tmps = newArrayList»
 			«tmps.add(0, null)»
 			«FOR i : 0 ..< args.size»
@@ -552,9 +550,7 @@ class Methods {
 					«method.nameOfCall»
 			«ENDIF»
 			«noop»
-				.if recursive_«ctx.container»_to_«method.nameOf» == 1
-			«ctx.pullRecursiveVars»
-				.endif
+			«ctx.pullRecursiveVars(method.nameOf)»
 			«ctx.pullAccIfOperating»
 			«IF method.typeOf.isNonVoid»
 				«val ret = new CompileContext => [

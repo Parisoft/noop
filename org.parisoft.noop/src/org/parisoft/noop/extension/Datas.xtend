@@ -5,8 +5,8 @@ import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.noop.ByteLiteral
-import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.Expression
+import org.parisoft.noop.noop.StringLiteral
 
 class Datas {
 
@@ -19,6 +19,7 @@ class Datas {
 	@Inject extension Variables
 	@Inject extension Operations
 	@Inject extension Expressions
+	@Inject extension Collections
 
 	def sizeOf(CompileContext ctx) {
 		ctx.type.sizeOf
@@ -948,16 +949,28 @@ class Datas {
 		«ENDIF»
 	'''
 
-	def pushRecusiveVars(CompileContext ctx) '''
-		«FOR variable : ctx.recursiveVars»
-			«variable.push»
-		«ENDFOR»
+	def pushRecusiveVars(CompileContext ctx, String method) '''
+		«IF ctx.recursiveVars.isNotEmpty»
+			«noop»
+				.if recursive_«ctx.container»_to_«method» == 1
+			«FOR variable : ctx.recursiveVars»
+				«variable.push»
+			«ENDFOR»
+			«noop»
+				.endif
+		«ENDIF»
 	'''
 
-	def pullRecursiveVars(CompileContext ctx) '''
-		«FOR variable : ctx.recursiveVars»
-			«variable.pull»
-		«ENDFOR»
+	def pullRecursiveVars(CompileContext ctx, String method) '''
+		«IF ctx.recursiveVars.isNotEmpty»
+			«noop»
+				.if recursive_«ctx.container»_to_«method» == 1
+			«FOR variable : ctx.recursiveVars»
+				«variable.pull»
+			«ENDFOR»
+			«noop»
+				.endif
+		«ENDIF»
 		«ctx.recursiveVars.clear»
 	'''
 
