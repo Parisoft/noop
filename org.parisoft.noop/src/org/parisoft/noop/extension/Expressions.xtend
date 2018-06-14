@@ -454,15 +454,11 @@ class Expressions {
 	}
 
 	def checkRecursion(MemberRef ref, CompileContext ctx) {
-		if (ref.isRecursive) {
-			ctx.recursiveVars = ref.getContainerOfType(Method).getOverriddenVariablesOnRecursion(ref)
-		}
+		ctx.recursiveVars = ref.getContainerOfType(Method).getOverriddenVariablesOnRecursion(ref)
 	}
 
 	def checkRecursion(MemberSelect select, CompileContext ctx) {
-		if (select.isRecursive) {
-			ctx.recursiveVars = select.getContainerOfType(Method).getOverriddenVariablesOnRecursion(select)
-		}
+		ctx.recursiveVars = select.getContainerOfType(Method).getOverriddenVariablesOnRecursion(select)
 	}
 
 	def boolean invokes(Statement statement, Method method) {
@@ -994,7 +990,7 @@ class Expressions {
 			}
 			InstanceOfExpression: {
 				expression.left.preProcess(ast)
-				
+
 				if (expression.type.isNonPrimitive) {
 					ast.append(new NodeRefClass => [className = expression.type.fullName])
 				}
@@ -2023,7 +2019,7 @@ class Expressions {
 						«IF method.isStatic»
 							«method.compileInvocation(null, expression.args, expression.indices, ctx)»
 						«ELSE»
-							«method.compileInvocation(??, expression.args, expression.indices, ctx)»
+							«method.compileInvocation(NoopFactory::eINSTANCE.createThis, expression.args, expression.indices, ctx)»
 						«ENDIF»
 					«ENDIF»					
 				'''
@@ -2156,7 +2152,7 @@ class Expressions {
 				val mult = getMultiplyMethod(left, right, ctx.type)
 
 				if (mult.method !== null) {
-					mult.method.compileInvocation(mult.args, null, ctx)
+					mult.method.compileInvocation(null, mult.args, null, ctx)
 				} else {
 					operation.compileBinary(mult.args.head, mult.args.last, ctx)
 				}
@@ -2165,7 +2161,7 @@ class Expressions {
 				val div = getDivideMethod(left, right, ctx.type)
 
 				if (div.method !== null) {
-					div.method.compileInvocation(div.args, null, ctx)
+					div.method.compileInvocation(null, div.args, null, ctx)
 				} else {
 					operation.compileBinary(div.args.head, div.args.last, ctx)
 				}
@@ -2174,7 +2170,7 @@ class Expressions {
 				val mod = getModuloMethod(left, right, ctx.type)
 
 				if (mod.method !== null) {
-					mod.method.compileInvocation(mod.args, null, ctx)
+					mod.method.compileInvocation(null, mod.args, null, ctx)
 				} else {
 					operation.compileBinary(mod.args.head, mod.args.last, ctx)
 				}
@@ -2339,10 +2335,16 @@ class Expressions {
 	private def compileSelfReference(Expression expression, CompileContext ctx) '''
 		«val method = expression.getContainerOfType(Method)»
 		«val instance = new CompileContext => [
-			container = method.nameOf
+			if (method !== null) {
+				container = method.nameOf
+				indirect = method.nameOfReceiver
+			} else {
+				container = ctx.container
+				indirect = '''«ctx.container».rcv'''
+			}
+			
 			operation = ctx.operation
 			type = expression.typeOf
-			indirect = method.nameOfReceiver
 		]»
 		«IF ctx.mode === Mode::COPY»
 			«instance.copyTo(ctx)»
