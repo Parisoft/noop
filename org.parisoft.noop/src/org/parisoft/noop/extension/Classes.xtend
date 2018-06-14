@@ -215,15 +215,15 @@ class Classes {
 	}
 
 	def nameOf(NoopClass c) {
-		'''«c.name»#class'''.toString
+		'''«c.fullName»#class'''.toString
+	}
+	
+	def nameOfSize(NoopClass c) {
+		'''«c.fullName»#size'''.toString
 	}
 
 	def Object sizeOf(NoopClass c) {
-		classeSize.get(c.fullyQualifiedName.toString, [c.fullSizeOf])
-	}
-
-	private def int fullSizeOf(NoopClass c) {
-		switch (c.fullyQualifiedName.toString) {
+		switch (c.fullName) {
 			case TypeSystem::LIB_VOID:
 				0
 			case TypeSystem::LIB_BYTE:
@@ -239,7 +239,7 @@ class Classes {
 			case TypeSystem::LIB_PRIMITIVE:
 				2
 			default:
-				(newArrayList(c.rawSizeOf) + c.subClasses.map[rawSizeOf]).max
+				c.nameOfSize
 		}
 	}
 

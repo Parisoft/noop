@@ -41,7 +41,7 @@ class Datas {
 		}
 	}
 
-	def copyTo(CompileContext src, CompileContext dst) '''
+	def CharSequence copyTo(CompileContext src, CompileContext dst) '''
 		«IF src.immediate !== null»
 			«IF dst.absolute !== null»
 				«src.copyImmediateToAbsolute(dst)»

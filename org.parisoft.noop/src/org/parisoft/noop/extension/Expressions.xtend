@@ -297,9 +297,9 @@ class Expressions {
 				}
 			}
 			MemberSelect:
-				expression.member.getLengthExpression(expression.indexes)
+				expression.member.getLengthExpression(expression.indices)
 			MemberRef:
-				expression.member.getLengthExpression(expression.indexes)
+				expression.member.getLengthExpression(expression.indices)
 		}
 	}
 
@@ -335,7 +335,7 @@ class Expressions {
 			AssignmentExpression:
 				expression.left.isComplexMemberArrayReference
 			MemberSelect:
-				if (expression.member.isIndexMulDivModExpression(expression.indexes)) {
+				if (expression.member.isIndexMulDivModExpression(expression.indices)) {
 					val container = expression.eContainer
 					val member = if (container instanceof MemberSelect) {
 							container.member
@@ -350,7 +350,7 @@ class Expressions {
 					true
 				}
 			MemberRef:
-				if (expression.member.isIndexMulDivModExpression(expression.indexes)) {
+				if (expression.member.isIndexMulDivModExpression(expression.indices)) {
 					val container = expression.eContainer
 					val member = if (container instanceof MemberSelect) {
 							container.member
@@ -887,9 +887,9 @@ class Expressions {
 			CastExpression:
 				expression.dimension.map[value.valueOf as Integer]
 			MemberSelect:
-				expression.member.dimensionOf.drop(expression.indexes.size).toList
+				expression.member.dimensionOf.drop(expression.indices.size).toList
 			MemberRef:
-				expression.member.dimensionOf.drop(expression.indexes.size).toList
+				expression.member.dimensionOf.drop(expression.indices.size).toList
 			NewInstance:
 				expression.dimension.map[value.valueOf as Integer]
 			default:
@@ -1162,19 +1162,19 @@ class Expressions {
 
 				if (member instanceof Variable) {
 					if (member.isROM) {
-						member.preProcessRomReference(expression.indexes, ast)
+						member.preProcessRomReference(expression.indices, ast)
 					} else if (member.isConstant) {
 						member.preProcessConstantReference(ast)
 					} else if (member.isStatic) {
-						member.preProcessStaticReference(expression.indexes, ast)
+						member.preProcessStaticReference(expression.indices, ast)
 					} else {
-						member.preProcessReference(receiver, expression.indexes, ast)
+						member.preProcessReference(receiver, expression.indices, ast)
 					}
 				} else if (member instanceof Method) {
 					if (member.isStatic) {
-						member.preProcessInvocation(expression.args, expression.indexes, ast)
+						member.preProcessInvocation(expression.args, expression.indices, ast)
 					} else {
-						member.preProcessInvocation(receiver, expression.args, expression.indexes, ast)
+						member.preProcessInvocation(receiver, expression.args, expression.indices, ast)
 					}
 				}
 			}
@@ -1183,20 +1183,20 @@ class Expressions {
 
 				if (member instanceof Variable) {
 					if (member.isField && member.isNonStatic) {
-						member.preProcessPointerReference('''«ast.container».rcv''', expression.indexes, ast)
+						member.preProcessPointerReference('''«ast.container».rcv''', expression.indices, ast)
 					} else if (member.isParameter && member.isPointer) {
-						member.preProcessPointerReference(member.nameOf, expression.indexes, ast)
+						member.preProcessPointerReference(member.nameOf, expression.indices, ast)
 					} else if (member.isROM) {
-						member.preProcessRomReference(expression.indexes, ast)
+						member.preProcessRomReference(expression.indices, ast)
 					} else if (member.isConstant) {
 						member.preProcessConstantReference(ast)
 					} else if (member.isStatic) {
-						member.preProcessStaticReference(expression.indexes, ast)
+						member.preProcessStaticReference(expression.indices, ast)
 					} else {
-						member.preProcessLocalReference(expression.indexes, ast)
+						member.preProcessLocalReference(expression.indices, ast)
 					}
 				} else if (member instanceof Method) {
-					member.preProcessInvocation(expression.args, expression.indexes, ast)
+					member.preProcessInvocation(expression.args, expression.indices, ast)
 				}
 			}
 		}
@@ -1382,18 +1382,18 @@ class Expressions {
 					val member = expression.member
 
 					if (member instanceof Variable) {
-						member.prepareReference(expression.receiver, expression.indexes, ctx)
+						member.prepareReference(expression.receiver, expression.indices, ctx)
 					} else if (member instanceof Method) {
-						member.prepareInvocation(expression.receiver, expression.args, expression.indexes, ctx)
+						member.prepareInvocation(expression.receiver, expression.args, expression.indices, ctx)
 					}
 				}
 				MemberRef: {
 					val member = expression.member
 
 					if (member instanceof Variable) {
-						member.prepareReference(expression.indexes, ctx)
+						member.prepareReference(expression.indices, ctx)
 					} else if (member instanceof Method) {
-						member.prepareInvocation(expression.args, expression.indexes, ctx)
+						member.prepareInvocation(expression.args, expression.indices, ctx)
 					}
 				}
 			}
@@ -1584,19 +1584,19 @@ class Expressions {
 
 					if (member instanceof Variable) {
 						if (member.isROM) {
-							chunks += member.allocRomReference(expression.indexes, ctx)
+							chunks += member.allocRomReference(expression.indices, ctx)
 						} else if (member.isConstant) {
 							chunks += member.allocConstantReference(ctx)
 						} else if (member.isStatic) {
-							chunks += member.allocStaticReference(expression.indexes, ctx)
+							chunks += member.allocStaticReference(expression.indices, ctx)
 						} else {
-							chunks += member.allocReference(receiver, expression.indexes, ctx)
+							chunks += member.allocReference(receiver, expression.indices, ctx)
 						}
 					} else if (member instanceof Method) {
 						if (member.isStatic) {
-							chunks += member.allocInvocation(expression.args, expression.indexes, ctx)
+							chunks += member.allocInvocation(expression.args, expression.indices, ctx)
 						} else {
-							chunks += member.allocInvocation(receiver, expression.args, expression.indexes, ctx)
+							chunks += member.allocInvocation(receiver, expression.args, expression.indices, ctx)
 						}
 					}
 
@@ -1608,21 +1608,21 @@ class Expressions {
 
 					if (member instanceof Variable) {
 						if (member.isField && member.isNonStatic) {
-							chunks += member.allocPointerReference('''«ctx.container».rcv''', expression.indexes, ctx)
+							chunks += member.allocPointerReference('''«ctx.container».rcv''', expression.indices, ctx)
 						} else if (member.isParameter &&
 							(member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)) {
-							chunks += member.allocPointerReference(member.nameOf, expression.indexes, ctx)
+							chunks += member.allocPointerReference(member.nameOf, expression.indices, ctx)
 						} else if (member.isROM) {
-							chunks += member.allocRomReference(expression.indexes, ctx)
+							chunks += member.allocRomReference(expression.indices, ctx)
 						} else if (member.isConstant) {
 							chunks += member.allocConstantReference(ctx)
 						} else if (member.isStatic) {
-							chunks += member.allocStaticReference(expression.indexes, ctx)
+							chunks += member.allocStaticReference(expression.indices, ctx)
 						} else {
-							chunks += member.allocLocalReference(expression.indexes, ctx)
+							chunks += member.allocLocalReference(expression.indices, ctx)
 						}
 					} else if (member instanceof Method) {
-						chunks += member.allocInvocation(expression.args, expression.indexes, ctx)
+						chunks += member.allocInvocation(expression.args, expression.indices, ctx)
 					}
 
 					return chunks
@@ -1972,21 +1972,21 @@ class Expressions {
 					«val receiver = expression.receiver»
 					«IF member instanceof Variable»
 						«IF member.isROM»
-							«member.compileRomReference(expression.indexes, ctx)»
+							«member.compileRomReference(expression.indices, ctx)»
 						«ELSEIF member.isConstant»
 							«member.compileConstantReference(ctx)»
 						«ELSEIF member.isStatic»
-							«member.compileStaticReference(expression.indexes, ctx)»
+							«member.compileStaticReference(expression.indices, ctx)»
 						«ELSE»
-							«member.compileReference(receiver, expression.indexes, ctx)»
+							«member.compileReference(receiver, expression.indices, ctx)»
 						«ENDIF»
 					«ELSEIF member instanceof Method»
 						«expression.checkRecursion(ctx)»
 						«val method = member as Method»
 						«IF method.isStatic»
-							«method.compileInvocation(expression.args, expression.indexes, ctx)»
+							«method.compileInvocation(null, expression.args, expression.indices, ctx)»
 						«ELSE»
-							«method.compileInvocation(receiver, expression.args, expression.indexes, ctx)»
+							«method.compileInvocation(receiver, expression.args, expression.indices, ctx)»
 						«ENDIF»
 					«ENDIF»
 				'''
@@ -1994,17 +1994,17 @@ class Expressions {
 					«val member = expression.member»
 					«IF member instanceof Variable»
 						«IF member.isField && member.isNonStatic»
-							«member.compilePointerReference('''«ctx.container».rcv''', expression.indexes, ctx)»
+							«member.compilePointerReference('''«ctx.container».rcv''', expression.indices, ctx)»
 						«ELSEIF member.isParameter && (member.type.isNonPrimitive || member.dimensionOf.isNotEmpty)»
-							«member.compilePointerReference(member.nameOf, expression.indexes, ctx)»
+							«member.compilePointerReference(member.nameOf, expression.indices, ctx)»
 						«ELSEIF member.isROM»
-							«member.compileRomReference(expression.indexes, ctx)»
+							«member.compileRomReference(expression.indices, ctx)»
 						«ELSEIF member.isConstant»
 							«member.compileConstantReference(ctx)»
 						«ELSEIF member.isStatic»
-							«member.compileStaticReference(expression.indexes, ctx)»
+							«member.compileStaticReference(expression.indices, ctx)»
 						«ELSE»
-							«member.compileLocalReference(expression.indexes, ctx)»
+							«member.compileLocalReference(expression.indices, ctx)»
 						«ENDIF»
 					«ELSEIF member instanceof Method»
 						«val method = member as Method»
@@ -2021,9 +2021,9 @@ class Expressions {
 						«ENDIF»
 						«expression.checkRecursion(ctx)»
 						«IF method.isStatic»
-							«method.compileInvocation(expression.args, expression.indexes, ctx)»
+							«method.compileInvocation(null, expression.args, expression.indices, ctx)»
 						«ELSE»
-							«method.compileInvocation(null, expression.args, expression.indexes, ctx)»
+							«method.compileInvocation(??, expression.args, expression.indices, ctx)»
 						«ENDIF»
 					«ENDIF»					
 				'''

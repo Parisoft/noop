@@ -169,6 +169,10 @@ class Methods {
 		'''«method.nameOf».ret'''.toString
 	}
 	
+	def nameOfCall(Method method) {
+		'''call_«method.nameOf»'''.toString
+	}
+	
 	def void preProcess(Method method, AST ast) {
 		if (ast.contains(method.nameOf)) {
 			return
@@ -251,7 +255,7 @@ class Methods {
 		method.preProcessInvocation(null, args, indices, ast)
 	}
 	
-	def void prepareInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
+	def void prepareInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indices, AllocContext ctx) {
 		if (method.isNative) {
 			return
 		}
@@ -278,11 +282,11 @@ class Methods {
 			method.overriders.forEach[prepare(ctx)]
 		}
 
-		method.prepareIndexes(indexes, ctx)
+		method.prepareIndices(indices, ctx)
 	}
 	
-	def prepareInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
-		method.prepareInvocation(null, args, indexes, ctx)
+	def prepareInvocation(Method method, List<Expression> args, List<Index> indices, AllocContext ctx) {
+		method.prepareInvocation(null, args, indices, ctx)
 	}
 	
 	def alloc(Method method, AllocContext ctx) {
@@ -317,7 +321,7 @@ class Methods {
 		}
 	}
 	
-	def allocInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes, AllocContext ctx) {
+	def allocInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indices, AllocContext ctx) {
 		val chunks = newArrayList
 		
 		if (method.isNative) {
@@ -350,14 +354,14 @@ class Methods {
 			}
 		]
 
-		chunks += method.allocIndexes(indexes, new CompileContext => [indirect = method.nameOfReturn], ctx)
+		chunks += method.allocIndices(indices, new CompileContext => [indirect = method.nameOfReturn], ctx)
 		chunks += methodChunks
 
 		return chunks
 	}
 	
-	def allocInvocation(Method method, List<Expression> args, List<Index> indexes, AllocContext ctx) {
-		method.allocInvocation(null, args, indexes, ctx)
+	def allocInvocation(Method method, List<Expression> args, List<Index> indices, AllocContext ctx) {
+		method.allocInvocation(null, args, indices, ctx)
 	}
 	
 	def compile(Method method, CompileContext ctx) '''
@@ -437,8 +441,20 @@ class Methods {
 		«ENDIF»
 	'''
 	
-	def compileInvocation(Method method, List<Expression> args, List<Index> indexes, CompileContext ctx) '''
-		«IF method.isNonNative»
+	def compileInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indices, CompileContext ctx) '''
+		«IF method.isNative»
+			«method.compileNativeInvocation(receiver, args, ctx)»
+		«ELSE»
+			«val rcv = new CompileContext => [
+				container = ctx.container
+				operation = ctx.operation
+				accLoaded = ctx.accLoaded
+				type = receiver?.typeOf
+			]»
+			«receiver?.compile(rcv => [
+				indirect = method.nameOfReceiver
+				mode = Mode::POINT
+			])»
 			«ctx.pushAccIfOperating»
 			«ctx.pushRecusiveVars»
 			«val tmps = newArrayList»
@@ -495,9 +511,9 @@ class Methods {
 							arg.member as Variable
 						}»
 						«val initIndex = if (arg instanceof MemberRef) {
-							arg.indexes.size
+							arg.indices.size
 						} else if (arg instanceof MemberSelect) {
-							arg.indexes.size
+							arg.indices.size
 						} else {
 							0
 						}»
@@ -526,9 +542,12 @@ class Methods {
 				«FOR statement : method.body.statements»
 					«statement.compile(new CompileContext => [container = method.nameOf])»
 				«ENDFOR»
-			«ELSE»
+			«ELSEIF method.isStatic»
 				«noop»
 					JSR «method.nameOf»
+			«ELSE»
+				«noop»
+					«method.nameOfCall»
 			«ENDIF»
 			«ctx.pullRecursiveVars»
 			«ctx.pullAccIfOperating»
@@ -543,10 +562,10 @@ class Methods {
 						indirect = method.nameOfReturn
 					}
 				]»
-				«method.compileIndexes(indexes, ret)»
+				«method.compileIndices(indices, ret)»
 «««				;TODO if ctx is indirect (mode POINT) then copy ret to a aux var then point to ctx
-				«IF ctx.mode === Mode::COPY && method.isArrayReference(indexes)»
-					«ret.lengthExpression = method.getLengthExpression(indexes)»
+				«IF ctx.mode === Mode::COPY && method.isArrayReference(indices)»
+					«ret.lengthExpression = method.getLengthExpression(indices)»
 					«ret.copyArrayTo(ctx)»
 				«ELSE»
 					«ret.resolveTo(ctx)»
@@ -556,7 +575,7 @@ class Methods {
 	'''
 	
 	def compileNativeInvocation(Method method, Expression receiver, List<Expression> args, CompileContext ctx) '''
-«««		;TODO compile receiver by copying it, removing indexes, and call receiver.compile with a new context moded as null
+«««		;TODO compile receiver by copying it, removing indices, and call receiver.compile with a new context moded as null
 		«IF method.name == Members::METHOD_ARRAY_LENGTH»
 			«val member = if (receiver instanceof MemberRef) {
 				receiver.member
@@ -567,9 +586,9 @@ class Methods {
 			}»
 			«IF member !== null && member instanceof Variable && (member as Variable).isUnbounded»
 				«val idx = if (receiver instanceof MemberRef) {
-					receiver.indexes.size
+					receiver.indices.size
 				 } else if (receiver instanceof MemberSelect) {
-				 	receiver.indexes.size
+				 	receiver.indices.size
 				 } else {
 				 	0
 				 }»

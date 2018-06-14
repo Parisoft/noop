@@ -299,18 +299,18 @@ class Variables {
 		variable.preProcessIndices(indices, ref, ast)
 	}
 
-	def prepareReference(Variable variable, Expression receiver, List<Index> indexes, AllocContext ctx) {
+	def prepareReference(Variable variable, Expression receiver, List<Index> indices, AllocContext ctx) {
 		receiver.prepare(ctx)
 		variable.prepare(ctx)
-		variable.prepareIndexes(indexes, ctx)
+		variable.prepareIndices(indices, ctx)
 	}
 
-	def prepareReference(Variable variable, List<Index> indexes, AllocContext ctx) {
+	def prepareReference(Variable variable, List<Index> indices, AllocContext ctx) {
 		variable.prepare(ctx)
-		variable.prepareIndexes(indexes, ctx)
+		variable.prepareIndices(indices, ctx)
 	}
 
-	def allocReference(Variable variable, Expression receiver, List<Index> indexes, AllocContext ctx) {
+	def allocReference(Variable variable, Expression receiver, List<Index> indices, AllocContext ctx) {
 		val chunks = receiver.alloc(ctx)
 
 		if (variable.overriders.isNotEmpty && receiver.isNonThisNorSuper &&
@@ -334,36 +334,36 @@ class Variables {
 			}
 		]
 
-		chunks += variable.allocIndexes(indexes, ref, ctx)
+		chunks += variable.allocIndices(indices, ref, ctx)
 
 		return chunks
 	}
 
-	def allocRomReference(Variable variable, List<Index> indexes, AllocContext ctx) {
+	def allocRomReference(Variable variable, List<Index> indices, AllocContext ctx) {
 		val ref = new CompileContext => [absolute = variable.nameOf]
-		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
+		variable.allocIndices(indices, ref, ctx) + variable.alloc(ctx)
 	}
 
 	def allocConstantReference(Variable variable, AllocContext ctx) {
 		variable.alloc(ctx)
 	}
 
-	def allocStaticReference(Variable variable, List<Index> indexes, AllocContext ctx) {
+	def allocStaticReference(Variable variable, List<Index> indices, AllocContext ctx) {
 		val ref = new CompileContext => [absolute = variable.nameOf]
-		variable.allocIndexes(indexes, ref, ctx) + variable.alloc(ctx)
+		variable.allocIndices(indices, ref, ctx) + variable.alloc(ctx)
 	}
 
-	def allocPointerReference(Variable variable, String receiver, List<Index> indexes, AllocContext ctx) {
+	def allocPointerReference(Variable variable, String receiver, List<Index> indices, AllocContext ctx) {
 		val ref = new CompileContext => [
 			indirect = receiver
 			index = if (variable.isNonParameter) '''#«variable.nameOfOffset»'''
 		]
-		variable.allocIndexes(indexes, ref, ctx)
+		variable.allocIndices(indices, ref, ctx)
 	}
 
-	def allocLocalReference(Variable variable, List<Index> indexes, AllocContext ctx) {
+	def allocLocalReference(Variable variable, List<Index> indices, AllocContext ctx) {
 		val ref = new CompileContext => [absolute = variable.nameOf]
-		variable.allocIndexes(indexes, ref, ctx)
+		variable.allocIndices(indices, ref, ctx)
 	}
 
 	def compileConstant(Variable variable) {
@@ -380,7 +380,7 @@ class Variables {
 		}
 	}
 
-	def compileReference(Variable variable, Expression receiver, List<Index> indexes, CompileContext ctx) '''
+	def compileReference(Variable variable, Expression receiver, List<Index> indices, CompileContext ctx) '''
 		«val rcv = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
@@ -388,84 +388,15 @@ class Variables {
 			type = receiver.typeOf
 			mode = null
 		]»
-		«val overriders = if (receiver.isNonThisNorSuper) variable.overriders else emptyList»
-		«IF overriders.isEmpty»
-			«receiver.compile(rcv => [mode = Mode::REFERENCE])»
-			«IF rcv.absolute !== null»
-				«variable.compileAbsoluteReference(rcv, indexes, ctx)»
-			«ELSEIF rcv.indirect !== null»
-				«variable.compileIndirectReference(rcv, indexes, ctx)»
-			«ENDIF»
-		«ELSE»
-			«receiver.compile(rcv => [
-				if (receiver instanceof MemberRef && (receiver as MemberRef).member instanceof Variable) {
-					mode = Mode::REFERENCE
-				} else {
-					indirect = receiver.nameOfTmpVar(ctx.container)
-					mode = Mode::POINT
-				}
-			])»
-			«IF rcv.absolute !== null»
-				«ctx.pushAccIfOperating»
-					LDA «rcv.absolute»
-			«ELSE»
-				«ctx.pushAccIfOperating»
-					LDY #$00
-					LDA («rcv.indirect»), Y
-			«ENDIF»
-			«val finish = '''reference.end'''»
-			«val pullAcc = ctx.pullAccIfOperating»
-			«val relative = ctx.relative»
-			«val bypass = if (relative !== null) '''«relative».bypass'''»
-			«FOR overrider : overriders»
-				«FOR container : overrider.overriderClasses»
-					«noop»
-					+	CMP #«container.nameOf»
-						BEQ ++
-				«ENDFOR»
-				«noop»
-					JMP +
-				«IF pullAcc.length > 0»
-					++«pullAcc»
-					«IF rcv.absolute !== null»
-						«overrider.compileAbsoluteReference(rcv, indexes, ctx => [it.relative = bypass])»
-					«ELSE»
-						«overrider.compileIndirectReference(rcv, indexes, ctx => [it.relative = bypass])»
-					«ENDIF»
-				«ELSE»
-					«IF rcv.absolute !== null»
-						++«overrider.compileAbsoluteReference(rcv, indexes, ctx => [it.relative = bypass])»
-					«ELSE»
-						++«overrider.compileIndirectReference(rcv, indexes, ctx => [it.relative = bypass])»
-					«ENDIF»
-				«ENDIF»
-				«noop»
-					JMP +«finish»
-				«IF relative !== null»
-					+«bypass»:
-						JMP +«relative»
-					«ctx.relative = relative»
-				«ENDIF»
-			«ENDFOR»
-			«IF pullAcc.length > 0»
-				+«pullAcc»
-				«IF rcv.absolute !== null»
-					«variable.compileAbsoluteReference(rcv, indexes, ctx)»
-				«ELSE»
-					«variable.compileIndirectReference(rcv, indexes, ctx)»
-				«ENDIF»
-			«ELSE»
-				«IF rcv.absolute !== null»
-					+«variable.compileAbsoluteReference(rcv, indexes, ctx)»
-				«ELSE»
-					+«variable.compileIndirectReference(rcv, indexes, ctx)»
-				«ENDIF»
-			«ENDIF»
-			+«finish»:
+		«receiver.compile(rcv => [mode = Mode::REFERENCE])»
+		«IF rcv.absolute !== null»
+			«variable.compileAbsoluteReference(rcv, indices, ctx)»
+		«ELSEIF rcv.indirect !== null»
+			«variable.compileIndirectReference(rcv, indices, ctx)»
 		«ENDIF»
 	'''
 
-	private def compileAbsoluteReference(Variable variable, CompileContext receiver, List<Index> indexes,
+	private def compileAbsoluteReference(Variable variable, CompileContext receiver, List<Index> indices,
 		CompileContext ctx) '''
 		«val ref = new CompileContext => [
 			container = receiver.container
@@ -475,16 +406,16 @@ class Variables {
 			index = receiver.index
 			type = variable.typeOf
 		]»
-		«variable.compileIndexes(indexes, ref)»
-		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+		«variable.compileIndices(indices, ref)»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indices)»
+			«ref.lengthExpression = variable.getLengthExpression(indices)»
 			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
 	'''
 
-	private def compileIndirectReference(Variable variable, CompileContext receiver, List<Index> indexes,
+	private def compileIndirectReference(Variable variable, CompileContext receiver, List<Index> indices,
 		CompileContext ctx) '''
 		«val ref = new CompileContext => [
 			container = receiver.container
@@ -506,16 +437,16 @@ class Variables {
 		«ELSE»
 			«ref.index = '''#«variable.nameOfOffset»'''»
 		«ENDIF»
-		«variable.compileIndexes(indexes, ref)»
-		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+		«variable.compileIndices(indices, ref)»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indices)»
+			«ref.lengthExpression = variable.getLengthExpression(indices)»
 			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
 	'''
 
-	def compilePointerReference(Variable variable, String receiver, List<Index> indexes, CompileContext ctx) '''
+	def compilePointerReference(Variable variable, String receiver, List<Index> indices, CompileContext ctx) '''
 		«val ref = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
@@ -524,16 +455,16 @@ class Variables {
 			indirect = receiver
 			index = if (variable.isNonParameter) '''#«variable.nameOfOffset»'''
 		]»
-		«variable.compileIndexes(indexes, ref)»
-		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+		«variable.compileIndices(indices, ref)»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indices)»
+			«ref.lengthExpression = variable.getLengthExpression(indices)»
 			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
 	'''
 
-	def compileRomReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
+	def compileRomReference(Variable variable, List<Index> indices, CompileContext ctx) '''
 		«val ref = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
@@ -541,9 +472,9 @@ class Variables {
 			type = variable.typeOf
 			absolute = variable.nameOf
 		]»
-		«variable.compileIndexes(indexes, ref)»
-		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+		«variable.compileIndices(indices, ref)»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indices)»
+			«ref.lengthExpression = variable.getLengthExpression(indices)»
 			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
@@ -563,7 +494,7 @@ class Variables {
 		«ENDIF»
 	'''
 
-	def compileStaticReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
+	def compileStaticReference(Variable variable, List<Index> indices, CompileContext ctx) '''
 		«val ref = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
@@ -571,16 +502,16 @@ class Variables {
 			type = variable.typeOf
 			absolute = variable.nameOf
 		]»
-		«variable.compileIndexes(indexes, ref)»
-		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+		«variable.compileIndices(indices, ref)»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indices)»
+			«ref.lengthExpression = variable.getLengthExpression(indices)»
 			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»
 		«ENDIF»
 	'''
 
-	def compileLocalReference(Variable variable, List<Index> indexes, CompileContext ctx) '''
+	def compileLocalReference(Variable variable, List<Index> indices, CompileContext ctx) '''
 		«val ref = new CompileContext => [
 			container = ctx.container
 			operation = ctx.operation
@@ -588,9 +519,9 @@ class Variables {
 			type = variable.typeOf
 			absolute = variable.nameOf
 		]»
-		«variable.compileIndexes(indexes, ref)»
-		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indexes)»
-			«ref.lengthExpression = variable.getLengthExpression(indexes)»
+		«variable.compileIndices(indices, ref)»
+		«IF ctx.mode === Mode::COPY && variable.isArrayReference(indices)»
+			«ref.lengthExpression = variable.getLengthExpression(indices)»
 			«ref.copyArrayTo(ctx)»
 		«ELSE»
 			«ref.resolveTo(ctx)»

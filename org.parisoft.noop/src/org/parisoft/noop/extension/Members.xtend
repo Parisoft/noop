@@ -8,12 +8,14 @@ import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
 import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.CompileContext
-import org.parisoft.noop.generator.CompileContext.Mode
+import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.NodeVar
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.Index
 import org.parisoft.noop.noop.Member
 import org.parisoft.noop.noop.MemberSelect
 import org.parisoft.noop.noop.Method
+import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
@@ -21,9 +23,6 @@ import org.parisoft.noop.noop.Variable
 import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
-import org.parisoft.noop.noop.NoopClass
-import org.parisoft.noop.generator.process.AST
-import org.parisoft.noop.generator.process.NodeVar
 
 public class Members {
 
@@ -89,7 +88,7 @@ public class Members {
 					it.member = arrayLengthMethod
 					it.receiver = NoopFactory::eINSTANCE.createMemberRef => [
 						it.member = member
-						it.indexes += list.map[aByte|NoopFactory::eINSTANCE.createIndex => [value = aByte]]
+						it.indices += list.map[aByte|NoopFactory::eINSTANCE.createIndex => [value = aByte]]
 					]
 				]
 			].reduce [ Expression len1, len2 |
@@ -205,12 +204,12 @@ public class Members {
 		method.storage?.type == StorageType::RESET
 	}
 
-	def boolean isIndexMulDivModExpression(Member member, List<Index> indexes) {
-		!member.isIndexImmediate(indexes) && member.dimensionOf.size > 1
+	def boolean isIndexMulDivModExpression(Member member, List<Index> indices) {
+		!member.isIndexImmediate(indices) && member.dimensionOf.size > 1
 	}
 
-	def isArrayReference(Member member, List<Index> indexes) {
-		member.dimensionOf.size > indexes?.size
+	def isArrayReference(Member member, List<Index> indices) {
+		member.dimensionOf.size > indices?.size
 	}
 
 	def NoopClass typeOf(Member member) {
@@ -302,36 +301,36 @@ public class Members {
 		}
 	}
 
-	def prepareIndexes(Member member, List<Index> indexes, AllocContext ctx) {
-		if (indexes.isNotEmpty) {
-			if (member.isIndexImmediate(indexes)) {
-				indexes.forEach[value.prepare(ctx)]
+	def prepareIndices(Member member, List<Index> indices, AllocContext ctx) {
+		if (indices.isNotEmpty) {
+			if (member.isIndexImmediate(indices)) {
+				indices.forEach[value.prepare(ctx)]
 			}
 		}
 	}
 
-	def allocIndexes(Member member, List<Index> indexes, CompileContext ref, AllocContext ctx) {
+	def allocIndices(Member member, List<Index> indices, CompileContext ref, AllocContext ctx) {
 		val chunks = newArrayList
 
-		if (indexes.isNotEmpty) {
+		if (indices.isNotEmpty) {
 			val indexSize = if(member.isBounded && (member.sizeOf as Integer) <= 0xFF) 1 else 2
-			val isIndexImmediate = member.isIndexImmediate(indexes)
+			val isIndexImmediate = member.isIndexImmediate(indices)
 			val isIndexNonImmediate = !isIndexImmediate
 
 			if (isIndexImmediate) {
-				chunks += indexes.map[value.alloc(ctx)].flatten
+				chunks += indices.map[value.alloc(ctx)].flatten
 			} else {
 				val indexType = if(indexSize > 1) member.toUIntClass else member.toByteClass
 
 				try {
-					chunks += member.getIndexExpression(indexes).alloc(ctx => [types.put(indexType)])
+					chunks += member.getIndexExpression(indices).alloc(ctx => [types.put(indexType)])
 				} finally {
 					ctx.types.pop
 				}
 			}
 
 			if (isIndexNonImmediate || ref.indirect !== null) {
-				chunks += ctx.computePtr(indexes.nameOfElement(ctx.container))
+				chunks += ctx.computePtr(indices.nameOfElement(ctx.container))
 			}
 		}
 
@@ -344,88 +343,27 @@ public class Members {
 			Method: throw new NonConstantMemberException
 		}
 	}
-
-	def compileInvocation(Method method, Expression receiver, List<Expression> args, List<Index> indexes,
-		CompileContext ctx) '''
-		«val rcv = new CompileContext => [
-			container = ctx.container
-			operation = ctx.operation
-			accLoaded = ctx.accLoaded
-			type = receiver?.typeOf
-		]»
-		«IF method.isNative»
-			«method.compileNativeInvocation(receiver, args, ctx)»
-		«ELSE»
-			«receiver?.compile(rcv => [
-				indirect = method.nameOfReceiver
-				mode = Mode::POINT
-			])»
-			«val overriders = if (receiver.isNonSuper) method.overriders else emptyList»
-			«IF overriders.isEmpty»
-				«method.compileInvocation(args, indexes, ctx)»
-			«ELSE»
-				«ctx.pushAccIfOperating»
-					LDY #$00
-					LDA («method.nameOfReceiver»), Y
-				«val invocationEnd = '''invocation.end'''»
-				«val relative = ctx.relative»
-				«val bypass = if (relative !== null) '''«relative».bypass'''»
-				«FOR overrider : overriders»
-					«FOR container : overrider.overriderClasses»
-						«noop»
-						+	CMP #«container.nameOf»
-							BEQ ++
-					«ENDFOR»
-					«noop»
-						JMP +
-					«IF receiver !== null»
-						«val falseReceiver = new CompileContext => [
-							operation = ctx.operation
-							indirect = method.nameOfReceiver
-						]»
-						«val realReceiver = new CompileContext => [
-							operation = ctx.operation
-							indirect = overrider.nameOfReceiver
-						]»
-						++«realReceiver.pointTo(falseReceiver)»
-						«overrider.compileInvocation(args, indexes, ctx => [it.relative = bypass])»
-					«ELSE»
-						++«overrider.compileInvocation(args, indexes, ctx => [it.relative = bypass])»
-					«ENDIF»
-					«noop»
-						JMP +«invocationEnd»
-					«IF relative !== null»
-						+«bypass»:
-							JMP +«relative»
-						«ctx.relative = relative»
-					«ENDIF»
-				«ENDFOR»
-				+«method.compileInvocation(args, indexes, ctx)»
-				+«invocationEnd»:
-			«ENDIF»
-		«ENDIF»
-	'''
-
-	def compileIndexes(Member member, List<Index> indexes, CompileContext ref) '''
-		«IF indexes.isNotEmpty»
+	
+	def compileIndices(Member member, List<Index> indices, CompileContext ref) '''
+		«IF indices.isNotEmpty»
 			«val memberSize = member.sizeOf»
 			«val indexSize = if (memberSize instanceof Integer) {
 				if (member.isBounded && memberSize <= 0xFF) 1 else 2
 			} else {
 				null
 			}»
-			«val isIndexImmediate = member.isIndexImmediate(indexes)»
+			«val isIndexImmediate = member.isIndexImmediate(indices)»
 			«val isIndexNonImmediate = !isIndexImmediate»
 			«val index = if (isIndexImmediate) {
 				var immediate = ''
 				val dimension = member.dimensionOf
 				
-				for (i : 0 ..< indexes.size) {
+				for (i : 0 ..< indices.size) {
 					if (!immediate.isNullOrEmpty) {
 						immediate += ' + '
 					}
 					
-					immediate += indexes.get(i).value.valueOf.toString
+					immediate += indices.get(i).value.valueOf.toString
 					
 					for (j : i + 1 ..< dimension.size) {
 						immediate += ''' * «dimension.get(j)»'''
@@ -444,7 +382,7 @@ public class Members {
 						type = if (indexSize === null || indexSize > 1) ref.type.toUIntClass else ref.type.toByteClass
 						register = 'A'
 					]»
-					«member.getIndexExpression(indexes).compile(idx)»
+					«member.getIndexExpression(indices).compile(idx)»
 					«IF ref.isAccLoaded && !idx.isAccLoaded»
 						mustReloadAcc = 1
 					«ENDIF»
@@ -460,13 +398,13 @@ public class Members {
 						type = ref.type.toUIntClass
 					]»
 						.if «memberSize» <= $FF
-					«member.getIndexExpression(indexes).compile(idx1)»
+					«member.getIndexExpression(indices).compile(idx1)»
 					«IF ref.isAccLoaded && !idx1.isAccLoaded»
 						mustReloadAcc = 1
 					«ENDIF»
 					«noop»
 						.else
-					«member.getIndexExpression(indexes).compile(idx2)»
+					«member.getIndexExpression(indices).compile(idx2)»
 					«IF ref.isAccLoaded && !idx2.isAccLoaded»
 						mustReloadAcc = 1
 					«ENDIF»
@@ -478,7 +416,7 @@ public class Members {
 				«IF ref.absolute !== null»
 					«ref.absolute = '''«ref.absolute» + #(«index»)'''»
 				«ELSEIF ref.indirect !== null»
-					«val ptr = indexes.nameOfElement(ref.container)»
+					«val ptr = indices.nameOfElement(ref.container)»
 					«ref.pushAccIfOperating»
 						CLC
 						LDA «ref.indirect»
@@ -492,7 +430,7 @@ public class Members {
 				«ENDIF»
 			«ELSE»
 				«IF ref.absolute !== null»
-					«val ptr = indexes.nameOfElement(ref.container)»
+					«val ptr = indices.nameOfElement(ref.container)»
 						CLC
 						ADC #<«ref.absolute»
 						STA «ptr»
@@ -510,7 +448,7 @@ public class Members {
 					«ref.absolute = null»
 					«ref.indirect = ptr»
 				«ELSEIF ref.indirect !== null»
-					«val ptr = indexes.nameOfElement(ref.container)»
+					«val ptr = indices.nameOfElement(ref.container)»
 						CLC
 						ADC «ref.indirect»
 						STA «ptr»
@@ -535,8 +473,8 @@ public class Members {
 		«ENDIF»
 	'''
 
-	private def getIndexExpression(Member member, List<Index> indexes) {
-		indexExpressions.get(member, indexes, [
+	private def getIndexExpression(Member member, List<Index> indices) {
+		indexExpressions.get(member, indices, [
 			val typeSize = member.typeOf.sizeOf
 			val dimension = member.dimensionOf
 
@@ -544,23 +482,23 @@ public class Members {
 				if (typeSize > 1) {
 					val mul = NoopFactory::eINSTANCE.createMulExpression => [
 						left = if (member.isBounded)
-							indexes.sum(dimension, 0)
+							indices.sum(dimension, 0)
 						else
-							indexes.sum(dimension, member as Variable, 0)
+							indices.sum(dimension, member as Variable, 0)
 						right = NoopFactory::eINSTANCE.createByteLiteral => [value = typeSize]
 					]
 					mul
 				} else if (member.isBounded) {
-					indexes.sum(dimension, 0)
+					indices.sum(dimension, 0)
 				} else {
-					indexes.sum(dimension, member as Variable, 0)
+					indices.sum(dimension, member as Variable, 0)
 				}
 			} else {
 				val mul = NoopFactory::eINSTANCE.createMulExpression => [
 					left = if (member.isBounded)
-						indexes.sum(dimension, 0)
+						indices.sum(dimension, 0)
 					else
-						indexes.sum(dimension, member as Variable, 0)
+						indices.sum(dimension, member as Variable, 0)
 					right = NoopFactory::eINSTANCE.createStringLiteral => [value = typeSize.toString]
 				]
 				mul
@@ -568,7 +506,7 @@ public class Members {
 		])
 	}
 
-	private def Expression mult(List<Index> indexes, List<Integer> dimension, Variable parameter, int i, int j) {
+	private def Expression mult(List<Index> indices, List<Integer> dimension, Variable parameter, int i, int j) {
 		if (j < dimension.size) {
 			NoopFactory::eINSTANCE.createMulExpression => [
 				left = NoopFactory::eINSTANCE.createMemberSelect => [
@@ -576,55 +514,55 @@ public class Members {
 						member = parameter
 
 						for (x : 0 ..< j) {
-							it.indexes.add(NoopFactory::eINSTANCE.createIndex => [
+							it.indices.add(NoopFactory::eINSTANCE.createIndex => [
 								value = NoopFactory::eINSTANCE.createByteLiteral => [value = 0]
 							])
 						}
 					]
 					member = parameter.type.allMethodsTopDown.findFirst[arrayLength]
 				]
-				right = indexes.mult(dimension, parameter, i, j + 1)
+				right = indices.mult(dimension, parameter, i, j + 1)
 			]
 		} else {
-			indexes.get(i).value.copy
+			indices.get(i).value.copy
 		}
 	}
 
-	private def Expression sum(List<Index> indexes, List<Integer> dimension, Variable parameter, int i) {
-		if (i + 1 < indexes.size) {
+	private def Expression sum(List<Index> indices, List<Integer> dimension, Variable parameter, int i) {
+		if (i + 1 < indices.size) {
 			NoopFactory::eINSTANCE.createAddExpression => [
-				left = indexes.mult(dimension, parameter, i, i + 1)
-				right = indexes.sum(dimension, parameter, i + 1)
+				left = indices.mult(dimension, parameter, i, i + 1)
+				right = indices.sum(dimension, parameter, i + 1)
 			]
 		} else {
-			indexes.mult(dimension, parameter, i, i + 1)
+			indices.mult(dimension, parameter, i, i + 1)
 		}
 	}
 
-	private def Expression mult(List<Index> indexes, List<Integer> dimension, int i, int j) {
+	private def Expression mult(List<Index> indices, List<Integer> dimension, int i, int j) {
 		if (j < dimension.size) {
 			NoopFactory::eINSTANCE.createMulExpression => [
 				left = NoopFactory::eINSTANCE.createByteLiteral => [value = dimension.get(j)]
-				right = indexes.mult(dimension, i, j + 1)
+				right = indices.mult(dimension, i, j + 1)
 			]
 		} else {
-			indexes.get(i).value.copy
+			indices.get(i).value.copy
 		}
 	}
 
-	private def Expression sum(List<Index> indexes, List<Integer> dimension, int i) {
-		if (i + 1 < indexes.size) {
+	private def Expression sum(List<Index> indices, List<Integer> dimension, int i) {
+		if (i + 1 < indices.size) {
 			NoopFactory::eINSTANCE.createAddExpression => [
-				left = indexes.mult(dimension, i, i + 1)
-				right = indexes.sum(dimension, i + 1)
+				left = indices.mult(dimension, i, i + 1)
+				right = indices.sum(dimension, i + 1)
 			]
 		} else {
-			indexes.mult(dimension, i, i + 1)
+			indices.mult(dimension, i, i + 1)
 		}
 	}
 
-	private def isIndexImmediate(Member member, List<Index> indexes) {
-		(member.isBounded || member.dimensionOf.size == 1) && indexes.forall[value?.isConstant]
+	private def isIndexImmediate(Member member, List<Index> indices) {
+		(member.isBounded || member.dimensionOf.size == 1) && indices.forall[value?.isConstant]
 	}
 
 	private def void noop() {

@@ -180,9 +180,10 @@ class Statements {
 
 				statement.condition.preProcess(ast)
 				statement.body.statements.forEach[preProcess(ast)]
-				statement.^else?.preProcess(ast)
 
 				ast.container = container
+
+				statement.^else?.preProcess(ast)
 			}
 			ForeverStatement: {
 				val container = ast.container

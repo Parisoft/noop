@@ -1583,14 +1583,14 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def memberSelectDimension(MemberSelect select) {
-		select.indexes.drop(select.member.dimensionOf.size).forEach [
+		select.indices.drop(select.member.dimensionOf.size).forEach [
 			error('Invalid index', it, null, MEMBER_SELECT_DIMENSION)
 		]
 	}
 
 	@Check
 	def memberRefDimension(MemberRef ref) {
-		ref.indexes.drop(ref.member.dimensionOf.size).forEach [
+		ref.indices.drop(ref.member.dimensionOf.size).forEach [
 			error('Invalid index', it, null, MEMBER_REF_DIMENSION)
 		]
 	}
