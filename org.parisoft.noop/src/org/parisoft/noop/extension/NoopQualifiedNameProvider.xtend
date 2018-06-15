@@ -19,7 +19,7 @@ import com.google.common.base.CharMatcher
 
 class NoopQualifiedNameProvider extends DefaultDeclarativeQualifiedNameProvider {
 
-	@Inject private IResourceScopeCache cache = IResourceScopeCache.NullImpl::INSTANCE;
+	@Inject IResourceScopeCache cache = IResourceScopeCache.NullImpl::INSTANCE;
 
 	@Inject extension TypeSystem
 

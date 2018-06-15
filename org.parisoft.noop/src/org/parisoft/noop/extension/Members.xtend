@@ -24,7 +24,7 @@ import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 
-public class Members {
+class Members {
 
 	public static val STATIC_PREFIX = '$'
 	public static val PRIVATE_PREFIX = '_'

@@ -40,6 +40,7 @@ class Methods {
 
 	static val running = ConcurrentHashMap::<Method>newKeySet
 	static val allocating = ConcurrentHashMap::<Method>newKeySet
+	static val processing = ConcurrentHashMap::<Method>newKeySet
 	
 	def getOverriders(Method method) {
 		method.containerClass.subClasses.map[declaredMethods.filter[it.isOverrideOf(method)]].filterNull.flatten
@@ -177,28 +178,34 @@ class Methods {
 		if (ast.contains(method.nameOf)) {
 			return
 		}
-		
-		val container = ast.container
-		ast.container = method.nameOf
-		ast.append(null)
-		
-		if (method.isNonStatic) {
-			ast.append(new NodeVar => [
-				varName = method.nameOfReceiver
-				ptr = true
-			])
-		} else if (method.isReset) {
-			ast.reset = method.nameOf
-		} else if (method.isNmi) {
-			ast.nmi = method.nameOf
-		} else if (method.isIrq) {
-			ast.irq = method.nameOf
+
+		if (processing.add(method)) {
+			try {
+				val container = ast.container
+				ast.container = method.nameOf
+				ast.append(null)
+				
+				if (method.isNonStatic) {
+					ast.append(new NodeVar => [
+						varName = method.nameOfReceiver
+						ptr = true
+					])
+				} else if (method.isReset) {
+					ast.reset = method.nameOf
+				} else if (method.isNmi) {
+					ast.nmi = method.nameOf
+				} else if (method.isIrq) {
+					ast.irq = method.nameOf
+				}
+				
+				method.params.forEach[preProcess(ast)]
+				method.body.statements.forEach[preProcess(ast)]
+				
+				ast.container = container
+			} finally {
+				processing.remove(method)
+			}
 		}
-		
-		method.params.forEach[preProcess(ast)]
-		method.body.statements.forEach[preProcess(ast)]
-		
-		ast.container = container
 	}
 	
 	def void prepare(Method method, AllocContext ctx) {

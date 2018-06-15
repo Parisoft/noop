@@ -23,7 +23,7 @@ class NoopRuntimeModule extends AbstractNoopRuntimeModule {
 	override configureIScopeProviderDelegate(Binder binder) {
 		binder.bind(IScopeProvider).annotatedWith(Names.named(AbstractDeclarativeScopeProvider.NAMED_DELEGATE)).to(
 			NoopImportedNamespaceAwareLocalScopeProvider)
-		binder.bind(IDefaultResourceDescriptionStrategy).to(NoopResourceDescriptionStrategy)
+//		binder.bind(IDefaultResourceDescriptionStrategy).to(NoopResourceDescriptionStrategy)
 		binder.bind(IOutputConfigurationProvider).to(NoopOutputConfigurationProvider)
 	}
 

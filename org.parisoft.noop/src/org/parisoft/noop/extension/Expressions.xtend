@@ -192,7 +192,7 @@ class Expressions {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
 				new MethodReference => [args = newArrayList(left, const)]
 			} else {
-				throw new NonConstantExpressionException(left)
+				throw new NonConstantExpressionException
 			}
 		])
 	}
@@ -243,7 +243,7 @@ class Expressions {
 				val const = NoopFactory::eINSTANCE.createByteLiteral => [value = right.valueOf as Integer]
 				new MethodReference => [args = newArrayList(left, const)]
 			} else {
-				throw new NonConstantExpressionException(left)
+				throw new NonConstantExpressionException
 			}
 		])
 	}
@@ -771,7 +771,7 @@ class Expressions {
 					} else if (expression.left.typeOf.isBoolean) {
 						expression.right.typeOf.isBoolean && expression.left.valueOf === expression.right.valueOf
 					} else {
-						throw new NonConstantExpressionException(expression)
+						throw new NonConstantExpressionException
 					}
 				DifferExpression:
 					if (expression.left.typeOf.isNumeric) {
@@ -779,7 +779,7 @@ class Expressions {
 					} else if (expression.left.typeOf.isBoolean) {
 						!expression.right.typeOf.isBoolean || expression.left.valueOf !== expression.right.valueOf
 					} else {
-						throw new NonConstantExpressionException(expression)
+						throw new NonConstantExpressionException
 					}
 				GtExpression:
 					(expression.left.valueOf as Integer) > (expression.right.valueOf as Integer)
@@ -859,12 +859,12 @@ class Expressions {
 				MemberRef:
 					expression.member.valueOf
 				default:
-					throw new NonConstantExpressionException(expression)
+					throw new NonConstantExpressionException
 			}
 		} catch (NonConstantMemberException e) {
-			throw new NonConstantExpressionException(expression)
+			throw new NonConstantExpressionException
 		} catch (ClassCastException e) {
-			throw new InvalidExpressionException(expression)
+			throw new InvalidExpressionException
 		}
 	}
 
@@ -2074,19 +2074,19 @@ class Expressions {
 					if (expression.type.isPrimitive && expression.dimension.isEmpty) {
 						expression.type.defaultValueOf.toString.toUpperCase
 					} else {
-						throw new NonConstantExpressionException(expression)
+						throw new NonConstantExpressionException
 					}
 				MemberSelect:
 					expression.member.compileConstant
 				MemberRef:
 					expression.member.compileConstant
 				default:
-					throw new NonConstantExpressionException(expression)
+					throw new NonConstantExpressionException
 			}
 		} catch (NonConstantMemberException e) {
-			throw new NonConstantExpressionException(expression)
+			throw new NonConstantExpressionException
 		} catch (ClassCastException e) {
-			throw new InvalidExpressionException(expression)
+			throw new InvalidExpressionException
 		}
 	}
 

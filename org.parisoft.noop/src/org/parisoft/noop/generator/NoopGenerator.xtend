@@ -8,6 +8,7 @@ import com.google.inject.Provider
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
+import java.util.HashMap
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -24,13 +25,14 @@ import org.parisoft.noop.^extension.Datas
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
-import org.parisoft.noop.^extension.Variables
-import org.parisoft.noop.generator.mapper.MapperFactory
-import org.parisoft.noop.noop.NoopClass
-import java.util.HashMap
-import org.parisoft.noop.generator.process.AST
-import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.^extension.Methods
+import org.parisoft.noop.^extension.Variables
+import org.parisoft.noop.generator.compile.MetaClass
+import org.parisoft.noop.generator.mapper.MapperFactory
+import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.noop.NoopClass
+
+import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 
 /**
  * Generates code from your model files on save.
@@ -50,36 +52,45 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject MapperFactory mapperFactory
 
 	static val astByProject = new HashMap<String, AST>
+	static val classesByProject = new HashMap<String, MetaClass>
 	static val assembler = new File( // TODO open from jar
 	FileLocator::getBundleFile(Platform::getBundle("org.parisoft.noop")), '''/asm/asm6«Platform.OS»''')
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 		if (fsa !== null) {
-			val ini = System::currentTimeMillis
-			val clazz = resource.allContents.filter(NoopClass).head
-			val project = clazz.URI.project.name
-			val ast = astByProject.computeIfAbsent(project, [new AST => [it.project = project]])
-			
-			ast.clear(clazz.fullName)
-			clazz.declaredMethods.forEach[preProcess(ast)]
-			
-			ast.tree.forEach[root, nodes|
-				println('''-> «root»''')
-				nodes.forEach[
-					println('''	«it»''')
-				]
-			]
-			
-			println(ast.vectors)
-			
-			println('''Took:«System::currentTimeMillis - ini»ms''')
-			
-			//if ast.vectors !== null ast.vectors.forEach[preCompile]
-			
+			preProcess(resource, fsa)
+			// if ast.vectors !== null ast.vectors.forEach[preCompile]
 			return
 		}
 
-		// from here, all legacy code 
+	}
+
+	private def preProcess(Resource resource, IFileSystemAccess2 fsa) {
+		val ini = System::currentTimeMillis
+		val clazz = resource.allContents.filter(NoopClass).head
+		val project = clazz.URI.project.name
+		val ast = astByProject.computeIfAbsent(project, [new AST => [it.project = project]])
+
+		ast.clear(clazz.fullName)
+		clazz.declaredMethods.forEach [
+			println('''processing «nameOf»''')
+			preProcess(ast)
+		]
+
+		println('''Took:«System::currentTimeMillis - ini»ms''')
+
+		ast.tree.forEach [ root, nodes |
+			println('''-> «root»''')
+			nodes.forEach [
+				println('''	«it»''')
+			]
+		]
+
+		println(ast.vectors)
+
+	}
+
+	private def assembly(Resource resource, IFileSystemAccess2 fsa) {
 		val asm = resource.compile
 
 		if (asm !== null) {
