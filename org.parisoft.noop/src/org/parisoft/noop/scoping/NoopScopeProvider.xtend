@@ -8,12 +8,14 @@ import java.util.List
 import org.eclipse.emf.common.util.EList
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.emf.ecore.EReference
-import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.eclipse.xtext.scoping.IScope
 import org.eclipse.xtext.scoping.Scopes
+import org.eclipse.xtext.scoping.impl.SimpleScope
 import org.parisoft.noop.^extension.Classes
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.^extension.Methods
+import org.parisoft.noop.^extension.Variables
 import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.Block
 import org.parisoft.noop.noop.Constructor
@@ -27,9 +29,6 @@ import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopPackage
 import org.parisoft.noop.noop.Variable
-import org.eclipse.xtext.scoping.impl.SimpleScope
-import org.parisoft.noop.^extension.Methods
-import org.parisoft.noop.^extension.Variables
 
 /**
  * This class contains custom scoping description.
@@ -44,7 +43,6 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	@Inject extension Members
 	@Inject extension Methods
 	@Inject extension Variables
-	@Inject extension IQualifiedNameProvider
 
 	override getScope(EObject context, EReference eRef) {
 		try {
@@ -205,8 +203,8 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 					val argType = arg.typeOf
 					val paramType = param.typeOf
 
-					argType.fullyQualifiedName.toString == paramType.fullyQualifiedName.toString &&
-						argType.sizeOf == paramType.sizeOf && arg.dimensionOf.size == param.dimensionOf.size
+					argType.fullName == paramType.fullName && argType.sizeOf == paramType.sizeOf &&
+						arg.dimensionOf.size == param.dimensionOf.size
 				} catch (Exception exception) {
 					false
 				}
