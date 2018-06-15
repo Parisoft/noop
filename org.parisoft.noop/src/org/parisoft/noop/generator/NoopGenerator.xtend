@@ -5,8 +5,14 @@ package org.parisoft.noop.generator
 
 import com.google.inject.Inject
 import com.google.inject.Provider
-import java.io.PrintStream
+import java.io.BufferedReader
+import java.io.File
+import java.io.InputStreamReader
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import org.eclipse.core.runtime.FileLocator
+import org.eclipse.core.runtime.Platform
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
@@ -20,9 +26,6 @@ import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.noop.NoopClass
-
-import static org.parisoft.noop.generator.Asm8.*
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Generates code from your model files on save.
@@ -39,33 +42,53 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject Provider<Console> console
 	@Inject MapperFactory mapperFactory
 
-	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		val asm = resource.compile
+	static val assembler = new File( // TODO open from jar
+	FileLocator::getBundleFile(
+		Platform::getBundle("org.parisoft.noop")), '''/asm/asm6_«Platform.OS»_«Platform::OSArch»''')
 
+	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
+		resource.compile.assembly(fsa)
+	}
+
+	private def assembly(ASM asm, IFileSystemAccess2 fsa) {
 		if (asm !== null) {
 			fsa.generateFile(asm.asmFileName, asm.content)
 			fsa.deleteFile(asm.binFileName)
 
-			new Asm8 => [
-				Asm8.outStream = new PrintStream(console.get.newOutStream, true)
-				Asm8.errStream = new PrintStream(console.get.newErrStream, true)
-
-				inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
-				outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
-				listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
+			if (assembler?.exists) {
+				assembler.executable = true
 
 				val ini = System::currentTimeMillis
+				val inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
+				val outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
+				val listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
+				val command = '''«assembler.absolutePath» -l «inputFileName» «outputFileName» «listFileName»'''
 
 				try {
-					compile
-				} catch (Exception exception) {
-					Asm8.errStream.println(exception.message)
-					throw exception
+					val proc = Runtime::runtime.exec(command)
+
+					CompletableFuture::runAsync [
+						val out = console.get.newOutStream
+						new BufferedReader(new InputStreamReader(proc.inputStream)).lines.forEach [
+							out.write(it.bytes)
+							out.write('\n'.bytes)
+						]
+					]
+
+					CompletableFuture::runAsync [
+						val err = console.get.newErrStream
+						new BufferedReader(new InputStreamReader(proc.errorStream)).lines.forEach [
+							err.write(it.bytes)
+							err.write('\n'.bytes)
+						]
+					]
+
+					proc.waitFor
 				} finally {
 					println('''Assembly = «System::currentTimeMillis - ini»ms''')
 					Cache::clear
 				}
-			]
+			}
 		}
 	}
 
