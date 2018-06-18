@@ -9,9 +9,11 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 import java.util.HashMap
+import java.util.Map
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import org.eclipse.core.resources.IProject
 import org.eclipse.core.runtime.FileLocator
 import org.eclipse.core.runtime.Platform
 import org.eclipse.emf.ecore.resource.Resource
@@ -48,32 +50,28 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject MapperFactory mapperFactory
 
 	static val astByProject = new HashMap<String, AST>
-	static val classesByProject = new HashMap<String, MetaClass>
+	static val classesByProject = new HashMap<String, Map<String, MetaClass>>
 	static val assembler = new File( // TODO open from jar
-	FileLocator::getBundleFile(Platform::getBundle("org.parisoft.noop")), '''/asm/asm6_«Platform.OS»_«Platform.OSArch»''')
+	FileLocator::getBundleFile(
+		Platform::getBundle("org.parisoft.noop")), '''/asm/asm6_«Platform::OS»_«Platform::OSArch»''')
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		if (fsa !== null) {
-			preProcess(resource, fsa)
-			// if ast.vectors !== null ast.vectors.forEach[preCompile]
-			return
-		}
-
-	}
-
-	private def preProcess(Resource resource, IFileSystemAccess2 fsa) {
 		val ini = System::currentTimeMillis
 		val clazz = resource.allContents.filter(NoopClass).head
-		val project = clazz.URI.project.name
-		val ast = astByProject.computeIfAbsent(project, [new AST => [it.project = project]])
+		val project = clazz.URI.project
+		
+		project.preProcess(clazz)
+		project.preCompile(clazz)
+		
+		println('''Took:«System::currentTimeMillis - ini»ms''')
+	}
 
-		ast.clear(clazz.fullName)
-		clazz.declaredMethods.forEach [
-			println('''processing «nameOf»''')
-			preProcess(ast)
+	private def preProcess(IProject project, NoopClass clazz) {
+		val ast = astByProject.computeIfAbsent(project.name, [new AST => [it.project = project.name]]) => [
+			clear(clazz.fullName)
 		]
 
-		println('''Took:«System::currentTimeMillis - ini»ms''')
+		clazz.declaredMethods.forEach[preProcess(ast)]
 
 //		ast.tree.forEach [ root, nodes |
 //			println('''-> «root»''')
@@ -81,9 +79,10 @@ class NoopGenerator extends AbstractGenerator {
 //				println('''	«it»''')
 //			]
 //		]
+	}
 
-		println(ast.vectors)
-
+	private def preCompile(IProject project, NoopClass clazz) {
+		classesByProject.computeIfAbsent(project.name, [new HashMap]).put(clazz.fullName, clazz.preCompile)
 	}
 
 	private def assembly(Resource resource, IFileSystemAccess2 fsa) {

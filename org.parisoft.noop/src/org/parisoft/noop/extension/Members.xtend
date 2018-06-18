@@ -177,6 +177,14 @@ class Members {
 			default: false
 		}
 	}
+	
+	def isPrgROM(Member m) {
+		m.storage?.type == StorageType::PRGROM
+	}
+	
+	def isChrROM(Member m) {
+		m.storage?.type == StorageType::CHRROM
+	}
 
 	def isNonROM(Member member) {
 		!member.isROM
@@ -1418,16 +1426,16 @@ class Members {
 		method.allocInvocation(null, args, indices, ctx)
 	}
 	
-	def compile(Method method, CompileContext ctx) '''
+	def String compile(Method method, CompileContext ctx) '''
 		«IF method.isNonNative && method.isNonInline»
 			«method.nameOf»:
 			«IF method.isReset»
 				;;;;;;;;;; Initial setup begin
-				«IF ctx.allocation.constants.values.findFirst[INesMapper]?.valueOf ?: 0 as Integer == 4»
-					CLI          ; enable IRQs
-				«ELSE»
-					SEI          ; disable IRQs
-				«ENDIF»
+				.if inesmap = 4
+				CLI          ; enable IRQs
+				.else
+				SEI          ; disable IRQs
+				.endif
 				CLD          ; disable decimal mode
 				LDX #$40
 				STX $4017    ; disable APU frame IRQ
@@ -1456,11 +1464,7 @@ class Members {
 				INX
 				BNE -clrMem:
 
-				; Instantiate all static variables
-			«val resetMethod = method.nameOf»
-			«FOR staticVar : ctx.allocation.statics.values»
-				«staticVar.compile(new CompileContext => [container = resetMethod])»
-			«ENDFOR»
+				stantiate_statics
 			
 			-waitVBlank2:
 				BIT $2002

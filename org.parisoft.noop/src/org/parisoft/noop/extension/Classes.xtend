@@ -16,6 +16,11 @@ import org.parisoft.noop.noop.Variable
 import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.compile.MetaClass
+import java.util.HashMap
+import org.parisoft.noop.generator.CompileContext
+import org.parisoft.noop.generator.compile.MetaClass.Size
+import org.parisoft.noop.noop.NoopFactory
 
 class Classes {
 
@@ -245,6 +250,49 @@ class Classes {
 		SIZE_OF_CLASS_TYPE + (c.allFieldsTopDown.filter[nonStatic].map[sizeOf as Integer].reduce [ s1, s2 |
 			s1 + s2
 		] ?: 0)
+	}
+
+	def preCompile(NoopClass c) {
+		new MetaClass => [
+			superClass = c.superClass?.fullName
+
+			constructor = (NoopFactory::eINSTANCE.createNewInstance => [type = c]).compile(null)
+
+			c.declaredFields.filter[prgROM].forEach [ rom |
+				prgRoms.computeIfAbsent(rom.storageOf, [new HashMap]).put(rom.nameOf, rom.compile(new CompileContext))
+			]
+			
+			c.declaredFields.filter[chrROM].forEach [ rom |
+				chrRoms.computeIfAbsent(rom.storageOf, [new HashMap]).put(rom.nameOf, rom.compile(new CompileContext))
+			]
+			
+			c.declaredFields.filter[constant].filter[nonROM].forEach[cons|
+				constants.put(cons.nameOf, cons.compile(new CompileContext))
+			]
+			
+			c.declaredFields.filter[static].filter[nonConstant].filter[nonROM].forEach[static|
+				statics.put(static.nameOf, static.compile(new CompileContext))
+			]
+			
+			c.declaredFields.filter[field].forEach[field|
+				fields.put(field.nameOf, new Size => [
+					qty = field.dimensionOf.reduce[a, b| a * b] ?: 1
+					type = field.typeOf.fullName
+				])
+			]
+			
+			c.declaredMethods.filter[nonVector].forEach[m|
+				methods.computeIfAbsent(m.storageOf, [new HashMap]).put(m.nameOf, m.compile(new CompileContext))
+			]
+			
+			c.declaredMethods.filter[vector].forEach[m|
+				vectors.put(m.storage.type.getName.toLowerCase, m.compile(new CompileContext))
+			]
+			
+			c.declaredFields.filter[INesHeader || mapperConfig].forEach[header|
+				headers.put(header.storage.type.getName.toString.toLowerCase, header.nameOf)
+			]
+		]
 	}
 
 	def prepare(NoopClass gameImplClass) {
