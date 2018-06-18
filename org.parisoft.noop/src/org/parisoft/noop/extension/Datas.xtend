@@ -5,8 +5,8 @@ import org.parisoft.noop.generator.AllocContext
 import org.parisoft.noop.generator.CompileContext
 import org.parisoft.noop.generator.MemChunk
 import org.parisoft.noop.noop.ByteLiteral
-import org.parisoft.noop.noop.StringLiteral
 import org.parisoft.noop.noop.Expression
+import org.parisoft.noop.noop.StringLiteral
 
 class Datas {
 
@@ -15,10 +15,11 @@ class Datas {
 	public static val int VAR_PAGE = 4
 	public static val loopThreshold = 9
 
-	@Inject extension Members
 	@Inject extension Classes
+	@Inject extension Members
 	@Inject extension Operations
 	@Inject extension Expressions
+	@Inject extension Collections
 
 	def sizeOf(CompileContext ctx) {
 		ctx.type.sizeOf
@@ -32,7 +33,7 @@ class Datas {
 		ctx.opType.sizeOf as Integer
 	}
 
-	def resolveTo(CompileContext src, CompileContext dst) {
+	def CharSequence resolveTo(CompileContext src, CompileContext dst) {
 		switch (dst.mode) {
 			case COPY: src.copyTo(dst)
 			case POINT: dst.pointTo(src)
@@ -41,7 +42,7 @@ class Datas {
 		}
 	}
 
-	def copyTo(CompileContext src, CompileContext dst) '''
+	def CharSequence copyTo(CompileContext src, CompileContext dst) '''
 		«IF src.immediate !== null»
 			«IF dst.absolute !== null»
 				«src.copyImmediateToAbsolute(dst)»
@@ -931,6 +932,7 @@ class Datas {
 		dst.absolute = src.absolute
 		dst.indirect = src.indirect
 		dst.index = src.index
+		''''''
 	}
 
 	def pushAccIfOperating(CompileContext ctx) '''
@@ -947,16 +949,28 @@ class Datas {
 		«ENDIF»
 	'''
 
-	def pushRecusiveVars(CompileContext ctx) '''
-		«FOR variable : ctx.recursiveVars»
-			«variable.push»
-		«ENDFOR»
+	def pushRecusiveVars(CompileContext ctx, String method) '''
+		«IF ctx.recursiveVars.isNotEmpty»
+			«noop»
+				.if recursive_«ctx.container»_to_«method» == 1
+			«FOR variable : ctx.recursiveVars»
+				«variable.push»
+			«ENDFOR»
+			«noop»
+				.endif
+		«ENDIF»
 	'''
 
-	def pullRecursiveVars(CompileContext ctx) '''
-		«FOR variable : ctx.recursiveVars»
-			«variable.pull»
-		«ENDFOR»
+	def pullRecursiveVars(CompileContext ctx, String method) '''
+		«IF ctx.recursiveVars.isNotEmpty»
+			«noop»
+				.if recursive_«ctx.container»_to_«method» == 1
+			«FOR variable : ctx.recursiveVars»
+				«variable.pull»
+			«ENDFOR»
+			«noop»
+				.endif
+		«ENDIF»
 		«ctx.recursiveVars.clear»
 	'''
 

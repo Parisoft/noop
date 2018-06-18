@@ -29,6 +29,10 @@ class Classes {
 
 	static val allocating = ConcurrentHashMap::<NoopClass>newKeySet
 
+	def getFullName(NoopClass c) {
+		c.fullyQualifiedName.toString
+	}
+
 	def getSuperClasses(NoopClass c) {
 		val visited = <NoopClass>newArrayList()
 		var current = c

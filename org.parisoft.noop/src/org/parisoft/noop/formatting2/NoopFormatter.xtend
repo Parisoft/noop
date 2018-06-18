@@ -410,7 +410,7 @@ class NoopFormatter extends AbstractFormatter2 {
 		select.args.forEach [ arg |
 			arg.format.immediatelyFollowing.keyword(',').prepend[noSpace].append[oneSpace]
 		]
-		select.indexes.forEach[format.prepend[noSpace]]
+		select.indices.forEach[format.prepend[noSpace]]
 	}
 	
 	def dispatch void format(MemberRef ref, extension IFormattableDocument document) {
@@ -421,7 +421,7 @@ class NoopFormatter extends AbstractFormatter2 {
 		ref.args.forEach [ arg |
 			arg.format.immediatelyFollowing.keyword(',').prepend[noSpace].append[oneSpace]
 		]
-		ref.indexes.forEach[format.prepend[noSpace]]
+		ref.indices.forEach[format.prepend[noSpace]]
 	}
 
 	def dispatch void format(Statement statement, extension IFormattableDocument document) {

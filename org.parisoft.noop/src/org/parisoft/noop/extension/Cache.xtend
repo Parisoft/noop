@@ -26,7 +26,7 @@ class Cache {
 	public static val indexExpressions = HashBasedTable::<Member, List<Index>, Expression>create
 	public static val copies = new HashMap<EObject, EObject>
 	
-	public static def clear() {
+	static def clear() {
 		prepared.clear
 		allocated.clear
 		classeSize.clear

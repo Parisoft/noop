@@ -289,7 +289,7 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="hasArgs" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="args" upperBound="-1" eType="#//Expression"
         containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="indexes" upperBound="-1"
+    <eStructuralFeatures xsi:type="ecore:EReference" name="indices" upperBound="-1"
         eType="#//Index" containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="ByteLiteral" eSuperTypes="#//Expression">
@@ -319,7 +319,7 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="hasArgs" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="args" upperBound="-1" eType="#//Expression"
         containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="indexes" upperBound="-1"
+    <eStructuralFeatures xsi:type="ecore:EReference" name="indices" upperBound="-1"
         eType="#//Index" containment="true"/>
   </eClassifiers>
 </ecore:EPackage>

@@ -29,6 +29,9 @@ import org.parisoft.noop.noop.Variable
 import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.NodeVar
+import org.parisoft.noop.generator.process.NodeBeginStmt
 
 class Statements {
 
@@ -137,6 +140,102 @@ class Statements {
 
 	def dimensionOf(ReturnStatement returnStatement) {
 		return returnStatement?.value?.dimensionOf ?: emptyList
+	}
+
+	def void preProcess(Statement statement, AST ast) {
+		switch (statement) {
+			Variable: {
+				statement.value?.preProcess(ast)
+
+				if (statement.isParameter && statement.isPointer) {
+					ast.append(new NodeVar => [
+						varName = statement.nameOf
+						type = TypeSystem::LIB_BYTE
+						ptr = true
+					])
+
+					if (statement.isUnbounded) {
+						for (i : 0 ..< statement.dimensionOf.size) {
+							ast.append(new NodeVar => [
+								varName = statement.nameOfLen(i)
+								type = TypeSystem::LIB_UINT
+							])
+						}
+					}
+				} else if (statement.isNonStatic) {
+					ast.append(new NodeVar => [
+						varName = statement.nameOf
+						type = statement.typeOf.name
+						page = if(statement.isZeroPage) Datas::PTR_PAGE else Datas::VAR_PAGE
+						qty = statement.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1
+					])
+				}
+			}
+			IfStatement: {
+				val container = ast.container
+				ast.container = statement.nameOf
+				ast.append(container, new NodeBeginStmt => [statementName = statement.nameOf])
+
+				statement.condition.preProcess(ast)
+				statement.body.statements.forEach[preProcess(ast)]
+
+				ast.container = container
+
+				statement.^else?.preProcess(ast)
+			}
+			ForeverStatement: {
+				val container = ast.container
+				ast.container = statement.nameOf
+				ast.append(container, new NodeBeginStmt => [statementName = statement.nameOf])
+				
+				statement.body.statements.forEach[preProcess(ast)]
+				
+				ast.container = container
+			}
+			ForStatement: {
+				val container = ast.container
+				ast.container = statement.nameOf
+				ast.append(container, new NodeBeginStmt => [statementName = statement.nameOf])
+				
+				statement.variables.forEach[preProcess(ast)]
+				statement.assignments.forEach[preProcess(ast)]
+				statement.condition?.preProcess(ast)
+				statement.expressions.forEach[preProcess(ast)]
+				statement.body.statements.forEach[preProcess(ast)]
+				
+				ast.container = container
+			}
+			AsmStatement: {
+				statement.vars.forEach[preProcess(ast)]
+			}
+			ReturnStatement: {
+				if (statement.isNonVoid) {
+					ast.append(new NodeVar => [
+						varName = statement.nameOf
+						ptr = true
+					])
+				}
+				
+				statement.value?.preProcess(ast)
+			}
+			Expression: {
+				statement.preProcess(ast)
+			}
+		}
+	}
+
+	def preProcess(ElseStatement elseStatement, AST ast) {
+		if (elseStatement.^if !== null) {
+			elseStatement.^if.preProcess(ast)
+		} else if (elseStatement.body !== null) {
+			val container = ast.container
+			ast.container = elseStatement.nameOf
+			ast.append(container, new NodeBeginStmt => [statementName = elseStatement.nameOf])
+
+			elseStatement.body.statements.forEach[preProcess(ast)]
+
+			ast.container = container
+		}
 	}
 
 	def void prepare(Statement statement, AllocContext ctx) {

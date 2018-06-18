@@ -2,6 +2,7 @@ grammar org.parisoft.noop.Noop hidden(WS, ML_COMMENT, SL_COMMENT) // with org.ec
 import "http://www.eclipse.org/emf/2002/Ecore" as ecore
 generate noop "http://www.parisoft.org/noop/Noop"
 
+@Exported
 NoopClass:
 	name=CID ('extends' superClass=[NoopClass|CID])? '{' LF*
 	members+=Member*
@@ -126,7 +127,7 @@ UnaryExpression returns Expression:
 
 SelectionExpression returns Expression:
 	TerminalExpression ({MemberSelect.receiver=current} LF* '.' LF*
-	member=[Member] (hasArgs?='(' LF* (args+=Expression LF* (',' LF* args+=Expression LF*)*)? ')')? indexes+=Index*)*;
+	member=[Member] (hasArgs?='(' LF* (args+=Expression LF* (',' LF* args+=Expression LF*)*)? ')')? indices+=Index*)*;
 
 TerminalExpression returns Expression:
 	{ByteLiteral} value=Byte |
@@ -137,7 +138,7 @@ TerminalExpression returns Expression:
 	{Super} 'super' |
 	{NewInstance} type=[NoopClass|CID] (constructor=Constructor | dimension+=Index+)? |
 	{MemberRef} member=[Member] (hasArgs?='(' LF* (args+=Expression LF* (',' LF* args+=Expression LF*)*)? ')')?
-	indexes+=Index* |
+	indices+=Index* |
 	'(' Expression ')';
 
 Constructor:

@@ -160,7 +160,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 	protected def scopeForMemberSelect(MemberSelect selection) {
 		val receiver = selection.receiver
 		val type = receiver.typeOf
-		val isArrayReceiver = receiver.dimensionOf.size > selection.indexes.size
+		val isArrayReceiver = receiver.dimensionOf.size > selection.indices.size
 
 		if (type === null) {
 			IScope.NULLSCOPE

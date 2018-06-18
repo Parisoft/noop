@@ -578,7 +578,7 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def methodStorageType(Method m) {
-		if (m.storage !== null && m.isNonROM && m.isNonInline && m.isNonIrqImpl) {
+		if (m.storage !== null && m.isNonROM && m.isNonInline && m.isNonVector) {
 			error('''Methods cannot be tagged as «m.storage.type.literal.substring(0)»''', MEMBER__STORAGE,
 				METHOD_STORAGE_TYPE, m.name, m.storage.type.literal)
 		}
@@ -616,7 +616,7 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def methodIrqNonStatic(Method m) {
-		if (m.isIrqImpl && m.isNonStatic) {
+		if (m.isVector && m.isNonStatic) {
 			error('''Methods tagged as «m.storage.type.literal.substring(0)» must be static''', m, null,
 				METHOD_IRQ_NON_STATIC, m.name, m.storage.type.literal)
 		}
@@ -624,7 +624,7 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def methodIrqParams(Method m) {
-		if (m.isIrqImpl && m.params.isNotEmpty) {
+		if (m.isVector && m.params.isNotEmpty) {
 			error('''Methods tagged as «m.storage.type.literal.substring(0)» must be non-args''', m, null,
 				METHOD_IRQ_PARAMS, m.name, m.storage.type.literal)
 		}
@@ -1599,14 +1599,14 @@ class NoopValidator extends AbstractNoopValidator {
 
 	@Check
 	def memberSelectDimension(MemberSelect select) {
-		select.indexes.drop(select.member.dimensionOf.size).forEach [
+		select.indices.drop(select.member.dimensionOf.size).forEach [
 			error('Invalid index', it, null, MEMBER_SELECT_DIMENSION)
 		]
 	}
 
 	@Check
 	def memberRefDimension(MemberRef ref) {
-		ref.indexes.drop(ref.member.dimensionOf.size).forEach [
+		ref.indices.drop(ref.member.dimensionOf.size).forEach [
 			error('Invalid index', it, null, MEMBER_REF_DIMENSION)
 		]
 	}
