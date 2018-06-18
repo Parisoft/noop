@@ -64,7 +64,7 @@ class NoopGenerator extends AbstractGenerator {
 		project.preProcess(clazz)
 		project.preCompile(clazz)
 		
-		println('''Took:«System::currentTimeMillis - ini»ms''')
+		println('''«clazz.fullName» Took:«System::currentTimeMillis - ini»ms''')
 	}
 
 	private def preProcess(IProject project, NoopClass clazz) {
