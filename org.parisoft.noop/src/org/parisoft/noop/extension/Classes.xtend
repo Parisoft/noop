@@ -3,24 +3,24 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.ArrayList
 import java.util.Collection
+import java.util.HashMap
 import java.util.List
 import java.util.NoSuchElementException
 import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
-import org.parisoft.noop.generator.AllocContext
+import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.generator.compile.CompileContext
+import org.parisoft.noop.generator.compile.MetaClass
+import org.parisoft.noop.generator.compile.MetaClass.Size
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
+import org.parisoft.noop.noop.NoopFactory
 import org.parisoft.noop.noop.Variable
 
 import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.compile.MetaClass
-import java.util.HashMap
-import org.parisoft.noop.generator.CompileContext
-import org.parisoft.noop.generator.compile.MetaClass.Size
-import org.parisoft.noop.noop.NoopFactory
 
 class Classes {
 

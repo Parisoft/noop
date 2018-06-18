@@ -10,11 +10,15 @@ import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 import org.parisoft.noop.exception.InvalidExpressionException
 import org.parisoft.noop.exception.NonConstantExpressionException
 import org.parisoft.noop.exception.NonConstantMemberException
-import org.parisoft.noop.generator.AllocContext
-import org.parisoft.noop.generator.CompileContext
-import org.parisoft.noop.generator.CompileContext.Mode
-import org.parisoft.noop.generator.CompileContext.Operation
-import org.parisoft.noop.generator.MemChunk
+import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.generator.alloc.MemChunk
+import org.parisoft.noop.generator.compile.CompileContext
+import org.parisoft.noop.generator.compile.CompileContext.Mode
+import org.parisoft.noop.generator.compile.CompileContext.Operation
+import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.NodeNew
+import org.parisoft.noop.generator.process.NodeRefClass
+import org.parisoft.noop.generator.process.NodeVar
 import org.parisoft.noop.noop.AddExpression
 import org.parisoft.noop.noop.AndExpression
 import org.parisoft.noop.noop.ArrayLiteral
@@ -22,6 +26,7 @@ import org.parisoft.noop.noop.AssignmentExpression
 import org.parisoft.noop.noop.AssignmentType
 import org.parisoft.noop.noop.BAndExpression
 import org.parisoft.noop.noop.BOrExpression
+import org.parisoft.noop.noop.BXorExpression
 import org.parisoft.noop.noop.BoolLiteral
 import org.parisoft.noop.noop.ByteLiteral
 import org.parisoft.noop.noop.CastExpression
@@ -66,11 +71,6 @@ import static org.parisoft.noop.^extension.Cache.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.noop.BXorExpression
-import org.parisoft.noop.generator.process.AST
-import org.parisoft.noop.generator.process.NodeRefClass
-import org.parisoft.noop.generator.process.NodeVar
-import org.parisoft.noop.generator.process.NodeNew
 
 class Expressions {
 

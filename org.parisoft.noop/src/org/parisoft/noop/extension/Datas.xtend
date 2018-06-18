@@ -1,9 +1,9 @@
 package org.parisoft.noop.^extension
 
 import com.google.inject.Inject
-import org.parisoft.noop.generator.AllocContext
-import org.parisoft.noop.generator.CompileContext
-import org.parisoft.noop.generator.MemChunk
+import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.generator.alloc.MemChunk
+import org.parisoft.noop.generator.compile.CompileContext
 import org.parisoft.noop.noop.ByteLiteral
 import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.StringLiteral

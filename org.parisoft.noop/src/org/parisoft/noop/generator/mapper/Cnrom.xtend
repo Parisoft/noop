@@ -7,8 +7,8 @@ import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.Statements
-import org.parisoft.noop.generator.AllocContext
-import org.parisoft.noop.generator.CompileContext
+import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.generator.compile.CompileContext
 
 class Cnrom extends Mapper {
 

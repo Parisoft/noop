@@ -7,12 +7,13 @@ import java.util.concurrent.ConcurrentHashMap
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.exception.NonConstantMemberException
-import org.parisoft.noop.generator.AllocContext
-import org.parisoft.noop.generator.CompileContext
-import org.parisoft.noop.generator.CompileContext.Mode
+import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.generator.compile.CompileContext
+import org.parisoft.noop.generator.compile.CompileContext.Mode
 import org.parisoft.noop.generator.process.AST
 import org.parisoft.noop.generator.process.NodeCall
 import org.parisoft.noop.generator.process.NodeRefConst
+import org.parisoft.noop.generator.process.NodeRefStatic
 import org.parisoft.noop.generator.process.NodeVar
 import org.parisoft.noop.noop.AssignmentExpression
 import org.parisoft.noop.noop.Expression
@@ -844,6 +845,7 @@ class Members {
 	}
 
 	def preProcessStaticReference(Variable variable, List<Index> indices, AST ast) {
+		ast.append(new NodeRefStatic => [staticName = variable.nameOf])
 		val ref = new CompileContext => [absolute = variable.nameOf]
 		variable.preProcess(ast)
 		variable.preProcessIndices(indices, ref, ast)

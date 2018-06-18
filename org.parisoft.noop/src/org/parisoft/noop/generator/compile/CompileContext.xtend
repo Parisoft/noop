@@ -1,10 +1,11 @@
-package org.parisoft.noop.generator
+package org.parisoft.noop.generator.compile
 
+import java.util.Set
 import org.eclipse.xtend.lib.annotations.Accessors
+import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
-import java.util.Set
-import org.parisoft.noop.noop.Expression
 
 class CompileContext {
 

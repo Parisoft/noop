@@ -1,17 +1,17 @@
 package org.parisoft.noop.^extension
 
+import com.google.common.collect.HashBasedTable
 import java.util.HashMap
 import java.util.HashSet
 import java.util.List
 import org.eclipse.emf.ecore.EObject
-import org.parisoft.noop.generator.MemChunk
-import org.parisoft.noop.noop.NoopClass
-import org.parisoft.noop.generator.AllocContext
-import com.google.common.collect.HashBasedTable
-import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.^extension.Expressions.MethodReference
-import org.parisoft.noop.noop.Member
+import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.generator.alloc.MemChunk
+import org.parisoft.noop.noop.Expression
 import org.parisoft.noop.noop.Index
+import org.parisoft.noop.noop.Member
+import org.parisoft.noop.noop.NoopClass
 
 class Cache {
 	

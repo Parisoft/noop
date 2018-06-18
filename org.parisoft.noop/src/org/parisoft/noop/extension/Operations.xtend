@@ -3,8 +3,8 @@ package org.parisoft.noop.^extension
 import com.google.inject.Inject
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
-import org.parisoft.noop.generator.CompileContext
-import org.parisoft.noop.generator.CompileContext.Operation
+import org.parisoft.noop.generator.compile.CompileContext
+import org.parisoft.noop.generator.compile.CompileContext.Operation
 
 import static extension java.lang.Math.*
 

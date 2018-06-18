@@ -1,14 +1,14 @@
 package org.parisoft.noop.generator.mapper
 
-import org.parisoft.noop.generator.AllocContext
 import com.google.inject.Inject
+import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.parisoft.noop.^extension.Classes
-import org.parisoft.noop.^extension.Members
-import org.parisoft.noop.^extension.Statements
 import org.parisoft.noop.^extension.Collections
 import org.parisoft.noop.^extension.Expressions
-import org.eclipse.xtext.naming.IQualifiedNameProvider
-import org.parisoft.noop.generator.CompileContext
+import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.^extension.Statements
+import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.generator.compile.CompileContext
 import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
 

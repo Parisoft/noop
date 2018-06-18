@@ -27,6 +27,7 @@ import org.parisoft.noop.^extension.Datas
 import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
+import org.parisoft.noop.generator.alloc.AllocContext
 import org.parisoft.noop.generator.compile.MetaClass
 import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.generator.process.AST

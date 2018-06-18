@@ -1,4 +1,4 @@
-package org.parisoft.noop.generator
+package org.parisoft.noop.generator.alloc
 
 import org.eclipse.xtend.lib.annotations.Accessors
 

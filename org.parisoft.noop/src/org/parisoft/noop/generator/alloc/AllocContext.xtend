@@ -1,4 +1,4 @@
-package org.parisoft.noop.generator
+package org.parisoft.noop.generator.alloc
 
 import java.util.List
 import java.util.concurrent.atomic.AtomicInteger

@@ -4,10 +4,13 @@ import com.google.inject.Inject
 import java.util.List
 import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.xtext.naming.IQualifiedNameProvider
-import org.parisoft.noop.generator.AllocContext
-import org.parisoft.noop.generator.CompileContext
-import org.parisoft.noop.generator.CompileContext.Mode
-import org.parisoft.noop.generator.MemChunk
+import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.generator.alloc.MemChunk
+import org.parisoft.noop.generator.compile.CompileContext
+import org.parisoft.noop.generator.compile.CompileContext.Mode
+import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.NodeBeginStmt
+import org.parisoft.noop.generator.process.NodeVar
 import org.parisoft.noop.noop.AsmStatement
 import org.parisoft.noop.noop.BreakStatement
 import org.parisoft.noop.noop.ContinueStatement
@@ -29,9 +32,6 @@ import org.parisoft.noop.noop.Variable
 import static org.parisoft.noop.^extension.Cache.*
 
 import static extension org.eclipse.xtext.EcoreUtil2.*
-import org.parisoft.noop.generator.process.AST
-import org.parisoft.noop.generator.process.NodeVar
-import org.parisoft.noop.generator.process.NodeBeginStmt
 
 class Statements {
 

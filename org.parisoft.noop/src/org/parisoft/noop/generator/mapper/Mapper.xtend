@@ -1,6 +1,6 @@
 package org.parisoft.noop.generator.mapper
 
-import org.parisoft.noop.generator.AllocContext
+import org.parisoft.noop.generator.alloc.AllocContext
 
 abstract class Mapper {
 	
