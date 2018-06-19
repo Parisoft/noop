@@ -1602,9 +1602,13 @@ class Members {
 			«ELSEIF method.isStatic»
 				«noop»
 					JSR «method.nameOf»
+«««			«ELSEIF ctx.relative !== null»
+«««				«noop»
+«««					«method.nameOfCall» «ctx.relative»
+«««				«ctx.relative = '''«ctx.relative».bypass'''»
 			«ELSE»
 				«noop»
-					«method.nameOfCall» «IF ctx.relative !== null»«ctx.relative»«ELSE»0«ENDIF»
+					«method.nameOfCall»
 			«ENDIF»
 			«noop»
 			«ctx.pullRecursiveVars(method.nameOf)»

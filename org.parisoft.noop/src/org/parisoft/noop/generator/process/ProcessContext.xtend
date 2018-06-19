@@ -74,7 +74,7 @@ class ProcessContext {
 					val call = containerClass.getPolymorphicCall(methodName, overriders, params, ret)
 					callDirectives.put('''call_«method»''', call)
 				} else {
-					callDirectives.put('''call_«method»''', '''JSR «method»''')
+					callDirectives.put('''call_«method»''', '''	JSR «method»''')
 				}
 			}
 		}
@@ -141,21 +141,21 @@ class ProcessContext {
 		node.methodName == method || node.methodName.calls.exists[method.isCalledBy(it)]
 	}
 
-	private def getPolymorphicCall(String superClass, String method, List<String> overriders, List<NodeVar> params,
+	private def getPolymorphicCall(String clazz, String method, List<String> overriders, List<NodeVar> params,
 		NodeVar ret) '''
 		«noop»
 			LDY #0
-			LDA («superClass».«method».rcv), Y
+			LDA («clazz».«method».rcv), Y
 		«FOR overrider : overriders»
 			+	CMP #«overrider».CLASS
 				BEQ ++
 				JMP +
-			++	LDA «superClass».«method».rcv + 0
+			++	LDA «clazz».«method».rcv + 0
 				STA «overrider».«method».rcv + 0
-				LDA «superClass».«method».rcv + 1
+				LDA «clazz».«method».rcv + 1
 				STA «overrider».«method».rcv + 1
 			«FOR param : params»
-				«val overrideParam = param.varName.replaceFirst(superClass, overrider)»
+				«val overrideParam = param.varName.replaceFirst(clazz, overrider)»
 				«IF param.ptr»
 					«noop»
 					LDA «param.varName» + 0
@@ -174,18 +174,18 @@ class ProcessContext {
 			«noop»
 				JSR «overrider».«method»
 			«IF ret !== null»
-				«val overrideRet = ret.varName.replaceFirst(superClass, overrider)»
+				«val overrideRet = ret.varName.replaceFirst(clazz, overrider)»
 				«IF ret.ptr»
 					«noop»
-					LDA «ret.varName» + 0
-					STA «overrideRet» + 0
-					LDA «ret.varName» + 1
-					STA «overrideRet» + 1
+					LDA «overrideRet» + 0
+					STA «ret.varName» + 0
+					LDA «overrideRet» + 1
+					STA «ret.varName» + 1
 				«ELSE»
 					i = 0
 						.rept «ret.type».SIZE
-						LDA «ret.varName» + i
-						STA «overrideRet» + i
+						LDA «overrideRet» + i
+						STA «ret.varName» + i
 					i = i + 1
 						.endr
 				«ENDIF»
@@ -193,7 +193,7 @@ class ProcessContext {
 			«noop»
 				JMP +invocation.end
 		«ENDFOR»
-		+	JSR «superClass».«method»
+		+	JSR «clazz».«method»
 		+invocation.end:
 	'''
 
