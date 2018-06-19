@@ -13,4 +13,9 @@ class NodeCall implements Node {
 		}
 	'''
 	
+	override process(ProcessContext ctx) {
+		ctx.methods.add(methodName)
+		ctx.ast.get(methodName).forEach[process(ctx)]
+	}
+	
 }

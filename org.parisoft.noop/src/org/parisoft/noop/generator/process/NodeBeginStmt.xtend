@@ -12,4 +12,8 @@ class NodeBeginStmt implements Node {
 		}
 	'''
 	
+	override process(ProcessContext ctx) {
+		ctx.ast.get(statementName)?.forEach[process(ctx)]
+	}
+	
 }

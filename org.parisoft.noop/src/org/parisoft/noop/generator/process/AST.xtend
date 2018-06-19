@@ -34,7 +34,7 @@ class AST {
 	}
 	
 	def get(String container) {
-		tree.get(container)
+		tree.get(container) ?: emptyList
 	}
 	
 	def contains(String container) {

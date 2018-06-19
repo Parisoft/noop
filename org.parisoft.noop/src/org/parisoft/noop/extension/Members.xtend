@@ -300,7 +300,7 @@ class Members {
 		}
 	}
 
-	def preProcessIndices(Member member, List<Index> indices, CompileContext ref, AST ast) {
+	def void preProcessIndices(Member member, List<Index> indices, CompileContext ref, AST ast) {
 		if (indices.isNotEmpty) {
 			val isIndexImmediate = member.isIndexImmediate(indices)
 			val isIndexNonImmediate = !isIndexImmediate
@@ -589,11 +589,8 @@ class Members {
 		}
 	}
 
-	private def isIndexImmediate(Member member, List<Index> indices) {
+	private def boolean isIndexImmediate(Member member, List<Index> indices) {
 		(member.isBounded || member.dimensionOf.size == 1) && indices.forall[value?.isConstant]
-	}
-
-	private def void noop() {
 	}
 	//-- Members --
 	
@@ -1607,7 +1604,7 @@ class Members {
 					JSR «method.nameOf»
 			«ELSE»
 				«noop»
-					«method.nameOfCall»
+					«method.nameOfCall» «IF ctx.relative !== null»«ctx.relative»«ELSE»0«ENDIF»
 			«ENDIF»
 			«noop»
 			«ctx.pullRecursiveVars(method.nameOf)»
@@ -1669,5 +1666,9 @@ class Members {
 			«ENDIF»
 		«ENDIF»
 	'''
-	//-- Methods --	
+	//-- Methods --
+	
+	
+	private def void noop() {
+	}	
 }

@@ -1,9 +1,9 @@
 package org.parisoft.noop.generator.compile
 
-import org.eclipse.xtend.lib.annotations.Accessors
 import java.util.HashMap
-import java.util.Map
 import java.util.LinkedHashMap
+import java.util.Map
+import org.eclipse.xtend.lib.annotations.Accessors
 
 class MetaClass {
 	

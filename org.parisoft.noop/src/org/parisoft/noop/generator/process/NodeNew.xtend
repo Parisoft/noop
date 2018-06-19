@@ -12,4 +12,8 @@ class NodeNew implements Node {
 		}
 	'''
 	
+	override process(ProcessContext ctx) {
+		ctx.constructors.add(type)
+	}
+	
 }

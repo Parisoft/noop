@@ -11,5 +11,9 @@ class NodeRefConst implements Node {
 			const : «constName»
 		}
 	'''
+	
+	override process(ProcessContext ctx) {
+		ctx.constants.add(constName)
+	}
 
 }

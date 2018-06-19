@@ -31,6 +31,7 @@ import org.parisoft.noop.generator.alloc.AllocContext
 import org.parisoft.noop.generator.compile.MetaClass
 import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.ProcessContext
 import org.parisoft.noop.noop.NoopClass
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
@@ -63,6 +64,7 @@ class NoopGenerator extends AbstractGenerator {
 		
 		project.preProcess(clazz)
 		project.preCompile(clazz)
+		project.process
 		
 		println('''«clazz.fullName» Took:«System::currentTimeMillis - ini»ms''')
 	}
@@ -85,7 +87,21 @@ class NoopGenerator extends AbstractGenerator {
 	private def preCompile(IProject project, NoopClass clazz) {
 		classesByProject.computeIfAbsent(project.name, [new HashMap]).put(clazz.fullName, clazz.preCompile)
 	}
-
+	
+	private def process(IProject project) {
+		val ast = astByProject.get(project.name)
+		val classes = classesByProject.get(project.name)
+		val ctx = new ProcessContext => [
+			it.ast = ast
+			it.metaClasses = classes
+		]
+		
+		ctx.start("reset")
+		ctx.start("nmi")
+		ctx.start("irq")
+		ctx.finish
+	}
+	
 	private def assembly(Resource resource, IFileSystemAccess2 fsa) {
 		val asm = resource.compile
 

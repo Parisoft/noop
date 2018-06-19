@@ -11,6 +11,7 @@ class NodeVar implements Node {
 	@Accessors var Integer qty = 1
 	@Accessors var boolean ptr = false
 	@Accessors var boolean tmp = false
+	@Accessors var boolean param = false
 	
 	override toString() '''
 		NodeVar{
@@ -22,5 +23,8 @@ class NodeVar implements Node {
 			tmp : «tmp»
 		}
 	'''
+	
+	override process(ProcessContext ctx) {
+	}
 	
 }

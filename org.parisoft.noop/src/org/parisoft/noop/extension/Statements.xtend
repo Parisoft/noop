@@ -151,6 +151,7 @@ class Statements {
 					ast.append(new NodeVar => [
 						varName = statement.nameOf
 						type = TypeSystem::LIB_BYTE
+						param = true
 						ptr = true
 					])
 
@@ -159,6 +160,7 @@ class Statements {
 							ast.append(new NodeVar => [
 								varName = statement.nameOfLen(i)
 								type = TypeSystem::LIB_UINT
+								param = true
 							])
 						}
 					}
@@ -168,6 +170,7 @@ class Statements {
 						type = statement.typeOf.name
 						page = if(statement.isZeroPage) Datas::PTR_PAGE else Datas::VAR_PAGE
 						qty = statement.dimensionOf.reduce[d1, d2|d1 * d2] ?: 1
+						param = statement.isParameter
 					])
 				}
 			}
@@ -212,7 +215,8 @@ class Statements {
 				if (statement.isNonVoid) {
 					ast.append(new NodeVar => [
 						varName = statement.nameOf
-						ptr = true
+						type = statement.method.typeOf.fullName
+						ptr = statement.method.typeOf.isNonPrimitive || statement.method.dimensionOf.isNotEmpty
 					])
 				}
 				

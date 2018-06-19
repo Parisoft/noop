@@ -452,11 +452,11 @@ class Expressions {
 	}
 
 	def checkRecursion(MemberRef ref, CompileContext ctx) {
-		ctx.recursiveVars = ref.getContainerOfType(Method).getOverriddenVariablesOnRecursion(ref)
+		ctx.recursiveVars = ref.getContainerOfType(Method)?.getOverriddenVariablesOnRecursion(ref) ?: emptySet
 	}
 
 	def checkRecursion(MemberSelect select, CompileContext ctx) {
-		ctx.recursiveVars = select.getContainerOfType(Method).getOverriddenVariablesOnRecursion(select)
+		ctx.recursiveVars = select.getContainerOfType(Method)?.getOverriddenVariablesOnRecursion(select) ?: emptySet
 	}
 
 	def boolean invokes(Statement statement, Method method) {

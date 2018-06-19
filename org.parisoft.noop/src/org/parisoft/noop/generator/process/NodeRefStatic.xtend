@@ -11,4 +11,9 @@ class NodeRefStatic implements Node {
 			const : «staticName»
 		}
 	'''
+	
+	override process(ProcessContext ctx) {
+		ctx.statics.add(staticName)
+	}
+	
 }
