@@ -21,7 +21,7 @@ class NodeBeginStmt implements Node {
 	
 	override alloc(AllocContext ctx) {
 		val snapshot = ctx.snapshot
-		val chunks = ctx.process.ast.get(statementName)?.map[alloc(ctx)].flatten ?: emptyList
+		val chunks = ctx.process.ast.get(statementName)?.map[alloc(ctx)].filterNull.flatten ?: emptyList
 		chunks.disoverlap(statementName)
 		ctx.restoreTo(snapshot)
 		chunks.toList

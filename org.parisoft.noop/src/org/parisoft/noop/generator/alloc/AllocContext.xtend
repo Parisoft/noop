@@ -8,23 +8,26 @@ import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
+import java.util.HashSet
 
 class AllocContext {
 
-	@Accessors val classes = <String, NoopClass>newLinkedHashMap
-	@Accessors val statics = <String, Variable>newLinkedHashMap
-	@Accessors val constants = <String, Variable>newLinkedHashMap
-	@Accessors val prgRoms = <String, Variable>newLinkedHashMap
-	@Accessors val chrRoms = <String, Variable>newLinkedHashMap
+	@Accessors val allocating = new HashSet<String>
+	@Accessors @Deprecated val classes = <String, NoopClass>newLinkedHashMap
+	@Accessors @Deprecated val statics = <String, Variable>newLinkedHashMap
+	@Accessors @Deprecated val constants = <String, Variable>newLinkedHashMap
+	@Accessors @Deprecated val prgRoms = <String, Variable>newLinkedHashMap
+	@Accessors @Deprecated val chrRoms = <String, Variable>newLinkedHashMap
 	@Accessors val variables = <String, List<MemChunk>>newHashMap
 	@Accessors val pointers = <String, List<MemChunk>>newHashMap
-	@Accessors val methods = <String, Method>newLinkedHashMap
-	@Accessors val constructors = <String, NewInstance>newLinkedHashMap
+	@Accessors @Deprecated val methods = <String, Method>newLinkedHashMap
+	@Accessors @Deprecated val constructors = <String, NewInstance>newLinkedHashMap
+	@Accessors val methodChunks = <String, List<MemChunk>>newHashMap
 
 	@Accessors val counters = newArrayList(new AtomicInteger(0x0000), new AtomicInteger(0x0100),
 		new AtomicInteger(0x0200), new AtomicInteger(0x0300), new AtomicInteger(0x0400), new AtomicInteger(0x0500),
 		new AtomicInteger(0x0600), new AtomicInteger(0x0700))
-	@Accessors var String container
+	@Accessors @Deprecated var String container
 	@Accessors val types = <NoopClass>newArrayList
 	
 	@Accessors var ProcessContext process

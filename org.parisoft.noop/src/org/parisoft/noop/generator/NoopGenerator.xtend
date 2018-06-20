@@ -33,8 +33,13 @@ import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.generator.process.AST
 import org.parisoft.noop.generator.process.ProcessContext
 import org.parisoft.noop.noop.NoopClass
-
+import static extension org.parisoft.noop.^extension.Datas.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import java.util.ArrayList
+import org.parisoft.noop.generator.alloc.MemChunk
+import java.util.NoSuchElementException
+import org.parisoft.noop.noop.StorageType
+import org.parisoft.noop.generator.process.NodeRefClass
 
 /**
  * Generates code from your model files on save.
@@ -61,11 +66,13 @@ class NoopGenerator extends AbstractGenerator {
 		val ini = System::currentTimeMillis
 		val clazz = resource.allContents.filter(NoopClass).head
 		val project = clazz.URI.project
-		
+
 		project.preProcess(clazz)
 		project.preCompile(clazz)
-		project.process
-		
+		val code = project.process.alloc.compile
+
+		fsa.generateFile('''«clazz.fullName».asm''', code)
+
 		println('''«clazz.fullName» Took:«System::currentTimeMillis - ini»ms''')
 	}
 
@@ -87,7 +94,7 @@ class NoopGenerator extends AbstractGenerator {
 	private def preCompile(IProject project, NoopClass clazz) {
 		classesByProject.computeIfAbsent(project.name, [new HashMap]).put(clazz.fullName, clazz.preCompile)
 	}
-	
+
 	private def process(IProject project) {
 		val ast = astByProject.get(project.name)
 		val classes = classesByProject.get(project.name)
@@ -95,13 +102,108 @@ class NoopGenerator extends AbstractGenerator {
 			it.ast = ast
 			it.metaClasses = classes
 		]
-		
+
 		ctx.start("reset")
 		ctx.start("nmi")
 		ctx.start("irq")
 		ctx.finish
+		ctx
 	}
-	
+
+	private def alloc(ProcessContext ctx) {
+		val chunks = new ArrayList<MemChunk>
+		chunks += ctx.allocation.computePtr(Members::TEMP_VAR_NAME1)
+		chunks += ctx.allocation.computePtr(Members::TEMP_VAR_NAME2)
+		chunks += ctx.allocation.computePtr(Members::TEMP_VAR_NAME3)
+		chunks += ctx.sizeOfStatics.entrySet.map[ctx.allocation.computeVar(key, value)].flatten
+
+		ctx.allocation.counters.forEach [ counter, page |
+			try {
+				counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
+			} catch (NoSuchElementException e) {
+			}
+		]
+
+		val nmi = ctx.ast.vectors.get("nmi")
+
+		if (nmi !== null) {
+			chunks += ctx.ast.get(nmi)?.map[alloc(ctx.allocation)]?.filterNull.flatten ?: emptyList
+		}
+
+		ctx.allocation.counters.forEach [ counter, page |
+			try {
+				counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
+			} catch (NoSuchElementException e) {
+			}
+		]
+
+		val irq = ctx.ast.vectors.get("irq")
+
+		if (irq !== null) {
+			chunks += ctx.ast.get(irq)?.map[alloc(ctx.allocation)].filterNull.flatten ?: emptyList
+		}
+
+		ctx.allocation.counters.forEach [ counter, page |
+			try {
+				counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
+			} catch (NoSuchElementException e) {
+			}
+		]
+
+		val reset = ctx.ast.vectors.get("reset")
+
+		if (reset !== null) {
+			chunks += ctx.ast.get(reset)?.map[alloc(ctx.allocation)].filterNull.flatten ?: emptyList
+		}
+
+		ctx
+	}
+
+	private def compile(ProcessContext ctx) '''
+		;----------------------------------------------------------------
+		; Class Metadata
+		;----------------------------------------------------------------
+		«FOR struct : ctx.structOfClasses.values»
+			«struct»
+			
+		«ENDFOR»
+		;----------------------------------------------------------------
+		; Constant variables
+		;----------------------------------------------------------------
+			«Members::TRUE» = 1
+			«Members::FALSE» = 0
+			«Members::FT_DPCM_OFF» = $C000
+			«Members::FT_DPCM_PTR» = («Members::FT_DPCM_OFF»&$3fff)>>6
+			«FOR cons : ctx.constants»
+				«cons» = «ctx.metaClasses.get(cons.substring(0, cons.lastIndexOf('.')))?.constants?.get(cons) ?: 0»
+			«ENDFOR»
+			min EQU (b + ((a - b) & ((a - b) >> «Integer.BYTES» * 8 - 1)))
+		
+		;----------------------------------------------------------------
+		; Static variables
+		;---------------------------------------------------------------
+			«FOR stc : ctx.sizeOfStatics.entrySet»
+				«stc.key» = «ctx.allocation.counters.get(Datas::VAR_PAGE).getAndAdd(stc.value).toHexString(4)»
+			«ENDFOR»
+		
+		;----------------------------------------------------------------
+		; Local variables
+		;----------------------------------------------------------------
+			«FOR chunk : ctx.allocation.pointers.values.flatten.sort + ctx.allocation.variables.values.flatten.sort»
+				«chunk.variable» = «chunk.lo.toHexString(4)»
+			«ENDFOR»
+		
+		;----------------------------------------------------------------
+		; iNES Header
+		;----------------------------------------------------------------
+			.db 'NES', $1A ;identification of the iNES header
+			.db «ctx.headers.get(StorageType::PRGROM)?: 2» ;number of 16KB PRG-ROM pages
+			.db «ctx.headers.get(StorageType::CHRROM)?: 1» ;number of 8KB CHR-ROM pages
+			.db «ctx.headers.get(StorageType::INESMAPPER)?: 0» | «ctx.headers.get(StorageType::INESMIR)?: 1»
+			.dsb 9, $00 ;clear the remaining bytes to 16
+		
+	'''
+
 	private def assembly(Resource resource, IFileSystemAccess2 fsa) {
 		val asm = resource.compile
 

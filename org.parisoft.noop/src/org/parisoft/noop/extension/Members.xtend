@@ -36,6 +36,7 @@ import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.process.NodeRefClass
 
 class Members {
 
@@ -1255,6 +1256,10 @@ class Members {
 				
 				method.params.forEach[preProcess(ast)]
 				method.body.statements.forEach[preProcess(ast)]
+				
+				if (method.isVector) {
+					ast.append(new NodeRefClass => [className = method.containerClass.fullName])
+				}
 				
 				ast.container = container
 			} finally {

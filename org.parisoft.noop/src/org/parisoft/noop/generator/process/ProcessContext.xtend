@@ -2,26 +2,28 @@ package org.parisoft.noop.generator.process
 
 import java.util.ArrayList
 import java.util.HashMap
+import java.util.HashSet
 import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 import java.util.List
 import java.util.Map
+import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.generator.alloc.AllocContext
 import org.parisoft.noop.generator.compile.MetaClass
-import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.generator.compile.MetaClass.Size
-import java.util.concurrent.atomic.AtomicInteger
+import org.parisoft.noop.noop.StorageType
 
 class ProcessContext {
 
+	@Accessors val processing = new HashSet<String>
 	@Accessors val classes = new LinkedHashSet<String> => [TypeSystem::LIB_PRIMITIVES.forEach[t|add(t)]]
 	@Accessors val statics = new LinkedHashSet<String>
 	@Accessors val constants = new LinkedHashSet<String>
 	@Accessors val methods = new LinkedHashSet<String>
 	@Accessors val constructors = new LinkedHashSet<String>
-	@Accessors val alloc = new AllocContext
+	@Accessors val allocation = new AllocContext => [process = this]
 	@Accessors val sizeOfStatics = new HashMap<String, Integer>
 	@Accessors val sizeOfClasses = new HashMap<String, Integer>
 	@Accessors val structOfClasses = new LinkedHashMap<String, String>
@@ -71,22 +73,27 @@ class ProcessContext {
 			val classHeaders = clazz.metadata?.headers
 
 			if (classHeaders !== null) {
-				headers.putAll(classHeaders)
+				classHeaders.forEach [ h, name |
+					val value = clazz.metadata.constants.get(name)
 
-				val mapper = classHeaders.get(StorageType::INESMAPPER)
+					headers.put(h, value)
 
-				if (mapper !== null) {
-					directives.add('''inesmap = «mapper»''')
-				}
+					if (h === StorageType::INESMAPPER) {
+						directives.add('''inesmap = «value»''')
+					}
+				]
 			}
 		}
-		
+
 		for (static : statics) {
 			val clazz = static.substring(0, static.lastIndexOf('.'))
-			val meta = clazz.metadata?.statics.get(static)
-			
+			val meta = clazz.metadata?.statics?.get(static)
+
 			if (meta !== null) {
 				sizeOfStatics.put(static, meta.size.size)
+				macros.compute('instantiate_statics', [ k, v |
+					v + meta.asm + System::lineSeparator
+				])
 			}
 		}
 
@@ -147,7 +154,7 @@ class ProcessContext {
 			}
 		}
 	}
-	
+
 	private def sum(Iterable<Integer> ints) {
 		ints.reduce[a, b|a + b] ?: 0
 	}
