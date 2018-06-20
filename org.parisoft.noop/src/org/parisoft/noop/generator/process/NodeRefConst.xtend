@@ -18,6 +18,7 @@ class NodeRefConst implements Node {
 	}
 	
 	override alloc(AllocContext ctx) {
+		emptyList
 	}
 
 }

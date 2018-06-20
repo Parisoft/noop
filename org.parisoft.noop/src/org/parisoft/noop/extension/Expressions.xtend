@@ -416,8 +416,13 @@ class Expressions {
 
 	def isOnMemberSelectionOrReference(Expression expression) {
 		val container = expression.eContainer
-		container !== null && (container instanceof MemberSelect || container instanceof MemberRef ||
-			container instanceof ReturnStatement)
+
+		switch (container) {
+			MemberSelect: container.member.isNonStatic
+			MemberRef: true
+			ReturnStatement: true
+			default: false
+		}
 	}
 
 	def isFileInclude(StringLiteral string) {
@@ -992,6 +997,10 @@ class Expressions {
 
 				if (expression.type.isNonPrimitive) {
 					ast.append(new NodeRefClass => [className = expression.type.fullName])
+
+					if (expression.type.isExternal(ast.project)) {
+						ast.externalClasses.add(expression.type)
+					}
 				}
 			}
 			AddExpression: {
@@ -1070,6 +1079,10 @@ class Expressions {
 			CastExpression: {
 				if (expression.type.isNonPrimitive) {
 					ast.append(new NodeRefClass => [className = expression.type.fullName])
+
+					if (expression.type.isExternal(ast.project)) {
+						ast.externalClasses.add(expression.type)
+					}
 				}
 
 				if (expression.left.containsMulDivMod) {
@@ -1085,6 +1098,10 @@ class Expressions {
 			ArrayLiteral: {
 				if (expression.typeOf.isNonPrimitive) {
 					ast.append(new NodeRefClass => [className = expression.typeOf.fullName])
+
+					if (expression.typeOf.isExternal(ast.project)) {
+						ast.externalClasses.add(expression.typeOf)
+					}
 				}
 
 				expression.eAllContentsAsList.filter [
@@ -1129,6 +1146,10 @@ class Expressions {
 					ast.append(new NodeRefClass => [className = expression.type.fullName])
 					ast.append(new NodeNew => [type = expression.type.fullName])
 
+					if (expression.type.isExternal(ast.project)) {
+						ast.externalClasses.add(expression.type)
+					}
+
 					val constructorName = expression.nameOfConstructor
 					val container = ast.container
 					ast.container = constructorName
@@ -1152,7 +1173,13 @@ class Expressions {
 				val receiver = expression.receiver
 
 				if (member.isStatic && member.typeOf.isNonPrimitive && receiver instanceof NewInstance) {
-					ast.append(new NodeRefClass => [className = (receiver as NewInstance).type.fullName])
+					val type = (receiver as NewInstance).type
+
+					ast.append(new NodeRefClass => [className = type.fullName])
+
+					if (type.isExternal(ast.project)) {
+						ast.externalClasses.add(type)
+					}
 				}
 
 				if (member instanceof Variable) {

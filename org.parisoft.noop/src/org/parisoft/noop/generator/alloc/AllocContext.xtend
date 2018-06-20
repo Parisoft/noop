@@ -1,14 +1,15 @@
 package org.parisoft.noop.generator.alloc
 
+import java.util.HashSet
 import java.util.List
 import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.xtend.lib.annotations.Accessors
-import org.parisoft.noop.generator.process.ProcessContext
+import org.parisoft.noop.generator.process.AST
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.Variable
-import java.util.HashSet
+import java.util.Map
 
 class AllocContext {
 
@@ -30,7 +31,8 @@ class AllocContext {
 	@Accessors @Deprecated var String container
 	@Accessors val types = <NoopClass>newArrayList
 	
-	@Accessors var ProcessContext process
+	@Accessors var AST ast
+	@Accessors var Map<String, Integer> sizeOfClasses
 	
 	def resetCounter(int page) {
 		counters.get(page).set(page * 0x0100)
@@ -46,6 +48,8 @@ class AllocContext {
 
 		new AllocContext => [
 			counters.forEach[counter, page|counter.set(src.counters.get(page).get)]
+			sizeOfClasses = src.sizeOfClasses
+			ast = src.ast
 			container = src.container
 		]
 	}

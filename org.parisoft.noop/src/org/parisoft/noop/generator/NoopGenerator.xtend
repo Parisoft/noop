@@ -8,8 +8,10 @@ import com.google.inject.Provider
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
+import java.util.ArrayList
 import java.util.HashMap
 import java.util.Map
+import java.util.NoSuchElementException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -28,18 +30,16 @@ import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.generator.alloc.MemChunk
 import org.parisoft.noop.generator.compile.MetaClass
 import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.generator.process.AST
 import org.parisoft.noop.generator.process.ProcessContext
 import org.parisoft.noop.noop.NoopClass
-import static extension org.parisoft.noop.^extension.Datas.*
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
-import java.util.ArrayList
-import org.parisoft.noop.generator.alloc.MemChunk
-import java.util.NoSuchElementException
 import org.parisoft.noop.noop.StorageType
-import org.parisoft.noop.generator.process.NodeRefClass
+
+import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension org.parisoft.noop.^extension.Datas.*
 
 /**
  * Generates code from your model files on save.
@@ -71,7 +71,9 @@ class NoopGenerator extends AbstractGenerator {
 		project.preCompile(clazz)
 		val code = project.process.alloc.compile
 
-		fsa.generateFile('''«clazz.fullName».asm''', code)
+		if (astByProject.get(project.name).mainClass !== null) {
+			fsa.generateFile('''«astByProject.get(project.name).mainClass».asm''', code)
+		}
 
 		println('''«clazz.fullName» Took:«System::currentTimeMillis - ini»ms''')
 	}
@@ -92,7 +94,13 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def preCompile(IProject project, NoopClass clazz) {
-		classesByProject.computeIfAbsent(project.name, [new HashMap]).put(clazz.fullName, clazz.preCompile)
+		val classes = classesByProject.computeIfAbsent(project.name, [new HashMap])
+		val ast = astByProject.get(project.name)
+		
+		classes.put(clazz.fullName, clazz.preCompile)
+		ast.externalClasses.forEach[ext|
+			classes.put(ext.fullName, ext.preCompile)
+		]
 	}
 
 	private def process(IProject project) {
@@ -111,23 +119,21 @@ class NoopGenerator extends AbstractGenerator {
 	}
 
 	private def alloc(ProcessContext ctx) {
+		ctx.allocation => [
+			it.ast = ctx.ast
+			it.sizeOfClasses = ctx.sizeOfClasses
+		]
+		
 		val chunks = new ArrayList<MemChunk>
 		chunks += ctx.allocation.computePtr(Members::TEMP_VAR_NAME1)
 		chunks += ctx.allocation.computePtr(Members::TEMP_VAR_NAME2)
 		chunks += ctx.allocation.computePtr(Members::TEMP_VAR_NAME3)
 		chunks += ctx.sizeOfStatics.entrySet.map[ctx.allocation.computeVar(key, value)].flatten
 
-		ctx.allocation.counters.forEach [ counter, page |
-			try {
-				counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
-			} catch (NoSuchElementException e) {
-			}
-		]
-
 		val nmi = ctx.ast.vectors.get("nmi")
 
 		if (nmi !== null) {
-			chunks += ctx.ast.get(nmi)?.map[alloc(ctx.allocation)]?.filterNull.flatten ?: emptyList
+			chunks += ctx.ast.get(nmi)?.map[alloc(ctx.allocation)]?.flatten ?: emptyList
 		}
 
 		ctx.allocation.counters.forEach [ counter, page |
@@ -140,7 +146,7 @@ class NoopGenerator extends AbstractGenerator {
 		val irq = ctx.ast.vectors.get("irq")
 
 		if (irq !== null) {
-			chunks += ctx.ast.get(irq)?.map[alloc(ctx.allocation)].filterNull.flatten ?: emptyList
+			chunks += ctx.ast.get(irq)?.map[alloc(ctx.allocation)].flatten ?: emptyList
 		}
 
 		ctx.allocation.counters.forEach [ counter, page |
@@ -153,7 +159,7 @@ class NoopGenerator extends AbstractGenerator {
 		val reset = ctx.ast.vectors.get("reset")
 
 		if (reset !== null) {
-			chunks += ctx.ast.get(reset)?.map[alloc(ctx.allocation)].filterNull.flatten ?: emptyList
+			chunks += ctx.ast.get(reset)?.map[alloc(ctx.allocation)].flatten ?: emptyList
 		}
 
 		ctx
@@ -182,14 +188,14 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		; Static variables
 		;---------------------------------------------------------------
-			«FOR stc : ctx.sizeOfStatics.entrySet»
-				«stc.key» = «ctx.allocation.counters.get(Datas::VAR_PAGE).getAndAdd(stc.value).toHexString(4)»
+			«FOR chunk : (ctx.allocation.pointers.values + ctx.allocation.variables.values).flatten.sort.filter[ctx.statics.contains(variable)]»
+				«chunk.variable» = «chunk.lo.toHexString(4)»
 			«ENDFOR»
 		
 		;----------------------------------------------------------------
 		; Local variables
 		;----------------------------------------------------------------
-			«FOR chunk : ctx.allocation.pointers.values.flatten.sort + ctx.allocation.variables.values.flatten.sort»
+			«FOR chunk : (ctx.allocation.pointers.values + ctx.allocation.variables.values).flatten.sort.filter[!ctx.statics.contains(variable)]»
 				«chunk.variable» = «chunk.lo.toHexString(4)»
 			«ENDFOR»
 		

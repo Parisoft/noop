@@ -41,7 +41,7 @@ class NodeVar implements Node {
 	}
 	
 	private def int size(AllocContext ctx) {
-		qty * (ctx.process.sizeOfClasses.get(type) ?: 1)
+		qty * (ctx.sizeOfClasses.get(type) ?: 1)
 	}
 	
 }

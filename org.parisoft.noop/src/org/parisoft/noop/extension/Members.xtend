@@ -37,6 +37,7 @@ import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.generator.process.NodeRefClass
+import org.parisoft.noop.generator.process.Node
 
 class Members {
 
@@ -1239,7 +1240,7 @@ class Members {
 			try {
 				val container = ast.container
 				ast.container = method.nameOf
-				ast.append(null)
+				ast.append(null as Node)
 				
 				if (method.isNonStatic) {
 					ast.append(new NodeVar => [
@@ -1248,6 +1249,7 @@ class Members {
 					])
 				} else if (method.isReset) {
 					ast.reset = method.nameOf
+					ast.mainClass = method.containerClass.fullName
 				} else if (method.isNmi) {
 					ast.nmi = method.nameOf
 				} else if (method.isIrq) {
@@ -1258,7 +1260,13 @@ class Members {
 				method.body.statements.forEach[preProcess(ast)]
 				
 				if (method.isVector) {
-					ast.append(new NodeRefClass => [className = method.containerClass.fullName])
+					val containerClass = method.containerClass
+					
+					ast.append(new NodeRefClass => [className = containerClass.fullName])
+					
+					if (containerClass.isExternal(ast.project)) {
+						ast.externalClasses.add(containerClass)
+					}
 				}
 				
 				ast.container = container

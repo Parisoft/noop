@@ -27,6 +27,7 @@ class Classes {
 
 	static val int SIZE_OF_CLASS_TYPE = 1;
 
+	@Inject extension Files
 	@Inject extension Members
 	@Inject extension Statements
 	@Inject extension TypeSystem
@@ -74,6 +75,10 @@ class Classes {
 
 	def isNonSubclassOf(NoopClass c1, NoopClass c2) {
 		!c1.isSubclassOf(c2)
+	}
+	
+	def isExternal(NoopClass c, String project) {
+		c.URI.project.name != project
 	}
 
 	def getSuperClassOrObject(NoopClass c) {

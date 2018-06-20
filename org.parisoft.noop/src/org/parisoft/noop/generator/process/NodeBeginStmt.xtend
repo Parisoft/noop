@@ -4,6 +4,7 @@ import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.generator.alloc.AllocContext
 
 import static extension org.parisoft.noop.^extension.Datas.*
+import java.util.ArrayList
 
 class NodeBeginStmt implements Node {
 	
@@ -21,7 +22,12 @@ class NodeBeginStmt implements Node {
 	
 	override alloc(AllocContext ctx) {
 		val snapshot = ctx.snapshot
-		val chunks = ctx.process.ast.get(statementName)?.map[alloc(ctx)].filterNull.flatten ?: emptyList
+		val chunks = new ArrayList
+		
+		for (node : ctx.ast.get(statementName) ?: emptyList) {
+			chunks += node.alloc(ctx)
+		}
+		
 		chunks.disoverlap(statementName)
 		ctx.restoreTo(snapshot)
 		chunks.toList

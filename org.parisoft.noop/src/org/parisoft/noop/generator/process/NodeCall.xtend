@@ -3,6 +3,7 @@ package org.parisoft.noop.generator.process
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.generator.alloc.AllocContext
 import static extension org.parisoft.noop.^extension.Datas.*
+import java.util.ArrayList
 
 class NodeCall implements Node {
 
@@ -30,7 +31,12 @@ class NodeCall implements Node {
 			try {
 				ctx.methodChunks.computeIfAbsent(methodName, [
 					val snapshot = ctx.snapshot
-					val chunks = ctx.process.ast.get(methodName)?.map[alloc(ctx)].filterNull.flatten ?: emptyList
+					val chunks = new ArrayList
+					
+					for (node : ctx.ast.get(methodName) ?: emptyList) {
+						chunks += node.alloc(ctx)
+					} 
+
 					chunks.disoverlap(methodName)
 					ctx.restoreTo(snapshot)
 					chunks.toList

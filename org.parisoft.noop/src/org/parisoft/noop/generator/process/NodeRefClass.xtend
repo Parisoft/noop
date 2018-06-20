@@ -34,6 +34,7 @@ class NodeRefClass implements Node {
 	}
 	
 	override alloc(AllocContext ctx) {
+		emptyList
 	}
 
 }

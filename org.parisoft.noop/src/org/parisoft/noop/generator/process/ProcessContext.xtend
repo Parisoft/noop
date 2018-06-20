@@ -23,8 +23,8 @@ class ProcessContext {
 	@Accessors val constants = new LinkedHashSet<String>
 	@Accessors val methods = new LinkedHashSet<String>
 	@Accessors val constructors = new LinkedHashSet<String>
-	@Accessors val allocation = new AllocContext => [process = this]
-	@Accessors val sizeOfStatics = new HashMap<String, Integer>
+	@Accessors val allocation = new AllocContext
+	@Accessors val sizeOfStatics = new LinkedHashMap<String, Integer>
 	@Accessors val sizeOfClasses = new HashMap<String, Integer>
 	@Accessors val structOfClasses = new LinkedHashMap<String, String>
 	@Accessors val superClasses = new HashMap<String, List<String>>

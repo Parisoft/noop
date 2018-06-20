@@ -18,6 +18,7 @@ class NodeRefStatic implements Node {
 	}
 
 	override alloc(AllocContext ctx) {
+		emptyList
 	}
 
 }

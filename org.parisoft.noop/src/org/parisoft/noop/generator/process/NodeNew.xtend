@@ -18,6 +18,7 @@ class NodeNew implements Node {
 	}
 	
 	override alloc(AllocContext ctx) {
+		emptyList
 	}
 	
 }
