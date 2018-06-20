@@ -1275,10 +1275,7 @@ class Members {
 			return
 		}
 		
-		ast.append(new NodeCall => [
-			containerClass = method.containerClass.fullName
-			methodName = method.nameOf
-		])
+		ast.append(new NodeCall => [methodName = method.nameOf])
 		
 		if (method.URI.project.name !== ast.project && !ast.contains(method.nameOf)) {
 			method.preProcess(ast)
@@ -1595,17 +1592,9 @@ class Members {
 					«ENDIF»
 				«ENDIF»
 			«ENDFOR»
-			«IF method.isInline»
-				«FOR statement : method.body.statements»
-					«statement.compile(new CompileContext => [container = method.nameOf])»
-				«ENDFOR»
-			«ELSEIF method.isStatic»
+			«IF method.isStatic && method.isNonInline»
 				«noop»
 					JSR «method.nameOf»
-«««			«ELSEIF ctx.relative !== null»
-«««				«noop»
-«««					«method.nameOfCall» «ctx.relative»
-«««				«ctx.relative = '''«ctx.relative».bypass'''»
 			«ELSE»
 				«noop»
 					«method.nameOfCall»

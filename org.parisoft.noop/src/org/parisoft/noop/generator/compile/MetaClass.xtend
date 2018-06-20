@@ -4,6 +4,7 @@ import java.util.HashMap
 import java.util.LinkedHashMap
 import java.util.Map
 import org.eclipse.xtend.lib.annotations.Accessors
+import org.parisoft.noop.noop.StorageType
 
 class MetaClass {
 	
@@ -15,8 +16,9 @@ class MetaClass {
 	@Accessors var Map<String, String> statics = new LinkedHashMap
 	@Accessors var Map<String, Size> fields = new LinkedHashMap
 	@Accessors var Map<Integer, Map<String, String>> methods = new LinkedHashMap
+	@Accessors var Map<String, String> macros = new LinkedHashMap
 	@Accessors var Map<String, String> vectors = new HashMap
-	@Accessors var Map<String, String> headers = new HashMap
+	@Accessors var Map<StorageType, String> headers = new HashMap
 	
 	static class Size {
 		@Accessors var int qty

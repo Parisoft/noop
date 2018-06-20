@@ -1,16 +1,18 @@
 package org.parisoft.noop.generator.process
 
-import org.eclipse.xtend.lib.annotations.Accessors
-import java.util.LinkedHashSet
-import org.parisoft.noop.generator.alloc.AllocContext
-import org.parisoft.noop.^extension.TypeSystem
-import org.parisoft.noop.generator.compile.MetaClass
-import java.util.Map
-import java.util.HashMap
-import java.util.List
-import java.util.LinkedHashMap
 import java.util.ArrayList
-import java.util.HashSet
+import java.util.HashMap
+import java.util.LinkedHashMap
+import java.util.LinkedHashSet
+import java.util.List
+import java.util.Map
+import org.eclipse.xtend.lib.annotations.Accessors
+import org.parisoft.noop.^extension.TypeSystem
+import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.generator.compile.MetaClass
+import org.parisoft.noop.noop.StorageType
+import org.parisoft.noop.generator.compile.MetaClass.Size
+import java.util.concurrent.atomic.AtomicInteger
 
 class ProcessContext {
 
@@ -21,10 +23,12 @@ class ProcessContext {
 	@Accessors val constructors = new LinkedHashSet<String>
 	@Accessors val alloc = new AllocContext
 	@Accessors val sizeOfClasses = new HashMap<String, Integer>
+	@Accessors val structOfClasses = new LinkedHashMap<String, String>
 	@Accessors val superClasses = new HashMap<String, List<String>>
 	@Accessors val subClasses = new HashMap<String, List<String>>
-	@Accessors val recursionDirectives = new HashSet<String>
-	@Accessors val callDirectives = new HashMap<String, CharSequence>
+	@Accessors val directives = new LinkedHashSet<String>
+	@Accessors val macros = new HashMap<String, CharSequence>
+	@Accessors val headers = new HashMap<StorageType, String>
 
 	@Accessors var AST ast
 	@Accessors var Map<String, MetaClass> metaClasses
@@ -36,7 +40,9 @@ class ProcessContext {
 
 	def finish() {
 		for (clazz : classes) {
-			sizeOfClasses.put(clazz, clazz.size)
+			val s = clazz.calcSize
+			sizeOfClasses.put(clazz, s)
+			clazz.superClasses.forEach[sizeOfClasses.compute(it, [k, v|if(v === null || v < s) s else v])]
 		}
 
 		for (clazz : classes) {
@@ -47,12 +53,39 @@ class ProcessContext {
 			}
 		}
 
+		classes.forEach [ clazz, i |
+			structOfClasses.computeIfAbsent(clazz, [
+				'''
+					«val offset = new AtomicInteger(1)»
+						«clazz».CLASS = «i»
+						«clazz».SIZE = «clazz.size»
+						«FOR field : clazz.allFields.entrySet»
+							«field.key» = «offset.getAndAdd(field.value.size)»
+						«ENDFOR»
+				'''
+			])
+		]
+
+		for (clazz : classes) {
+			val classHeaders = clazz.metadata?.headers
+
+			if (classHeaders !== null) {
+				headers.putAll(classHeaders)
+
+				val mapper = classHeaders.get(StorageType::INESMAPPER)
+
+				if (mapper !== null) {
+					directives.add('''inesmap = «mapper»''')
+				}
+			}
+		}
+
 		for (method : methods) {
 			for (call : method.calls) {
 				if (method.isCalledBy(call)) {
-					recursionDirectives.add('''recursive_«method»_to_«call.methodName» = 1''')
+					directives.add('''recursive_«method»_to_«call.methodName» = 1''')
 				} else {
-					recursionDirectives.add('''recursive_«method»_to_«call.methodName» = 0''')
+					directives.add('''recursive_«method»_to_«call.methodName» = 0''')
 				}
 			}
 		}
@@ -62,7 +95,7 @@ class ProcessContext {
 			val containerClass = method.substring(0, dot)
 			val methodName = method.substring(dot + 1)
 
-			if (!methodName.startsWith('_$') && !methodName.startsWith('$')) {
+			if (methodName.isNonStatic) {
 				val overriders = containerClass.subClasses.filter [ sub |
 					val overrideName = '''«sub».«methodName»'''
 					sub.metadata?.methods.values.exists[containsKey(overrideName)]
@@ -72,15 +105,18 @@ class ProcessContext {
 					val params = ast.get(method)?.filter(NodeVar).filter[param].toList ?: emptyList
 					val ret = ast.get(method)?.filter(NodeVar).findFirst[varName.endsWith('.ret')]
 					val call = containerClass.getPolymorphicCall(methodName, overriders, params, ret)
-					callDirectives.put('''call_«method»''', call)
+					macros.put('''call_«method»''', call)
 				} else {
-					callDirectives.put('''call_«method»''', '''	JSR «method»''')
+					macros.put('''call_«method»''', '''	JSR «method»''')
 				}
+			} else if (containerClass.isInline(methodName)) {
+				methods.remove(method)
+				macros.put('''call_«method»''', containerClass.metadata.macros.get(method))
 			}
 		}
 	}
 
-	private def int getSize(String clazz) {
+	private def int calcSize(String clazz) {
 		switch (clazz) {
 			case TypeSystem::LIB_VOID:
 				0
@@ -97,22 +133,37 @@ class ProcessContext {
 			case TypeSystem::LIB_PRIMITIVE:
 				2
 			default: {
-				val fields = new LinkedHashMap(clazz.metadata?.fields ?: emptyMap)
-				clazz.superClasses.map[metadata?.fields ?: emptyMap].forEach[fields.putAll(it)]
-				val size = 1 + (fields.values.map[qty * type.size].reduce[a, b|a + b] ?: 0)
-				clazz.superClasses.forEach [
-					sizeOfClasses.compute(it, [ k, v |
-						if (v === null || v < size) {
-							size
-						} else {
-							v
-						}
-					])
-				]
-
-				size
+				return 1 + clazz.allFields.values.map[size].sum
 			}
 		}
+	}
+	
+	private def sum(Iterable<Integer> ints) {
+		ints.reduce[a, b|a + b] ?: 0
+	}
+
+	private def getSize(String clazz) {
+		sizeOfClasses.get(clazz) ?: 1
+	}
+
+	private def getSize(Size size) {
+		size.qty * (sizeOfClasses.get(size.type) ?: size.type.calcSize)
+	}
+
+	private def getAllFields(String clazz) {
+		val fields = new LinkedHashMap<String, Size>
+
+		for (supr : clazz.superClasses.reverse) {
+			for (field : (supr.metadata?.fields ?: emptyMap).entrySet) {
+				val fieldName = field.key.substring(field.key.lastIndexOf('.') + 1)
+
+				if (fields.keySet.forall[fieldName != it.substring(it.lastIndexOf('.') + 1)]) {
+					fields.put(field.key, field.value)
+				}
+			}
+		}
+
+		fields
 	}
 
 	private def getSubClasses(String clazz) {
@@ -141,6 +192,14 @@ class ProcessContext {
 		node.methodName == method || node.methodName.calls.exists[method.isCalledBy(it)]
 	}
 
+	private def isNonStatic(String method) {
+		!method.startsWith('_$') && !method.startsWith('$')
+	}
+
+	private def isInline(String clazz, String method) {
+		clazz.metadata?.macros.containsKey('''«clazz».«method»''')
+	}
+
 	private def getPolymorphicCall(String clazz, String method, List<String> overriders, List<NodeVar> params,
 		NodeVar ret) '''
 		«noop»
@@ -158,10 +217,10 @@ class ProcessContext {
 				«val overrideParam = param.varName.replaceFirst(clazz, overrider)»
 				«IF param.ptr»
 					«noop»
-					LDA «param.varName» + 0
-					STA «overrideParam» + 0
-					LDA «param.varName» + 1
-					STA «overrideParam» + 1
+						LDA «param.varName» + 0
+						STA «overrideParam» + 0
+						LDA «param.varName» + 1
+						STA «overrideParam» + 1
 				«ELSE»
 					i = 0
 						.rept «param.type».SIZE
@@ -177,10 +236,10 @@ class ProcessContext {
 				«val overrideRet = ret.varName.replaceFirst(clazz, overrider)»
 				«IF ret.ptr»
 					«noop»
-					LDA «overrideRet» + 0
-					STA «ret.varName» + 0
-					LDA «overrideRet» + 1
-					STA «ret.varName» + 1
+						LDA «overrideRet» + 0
+						STA «ret.varName» + 0
+						LDA «overrideRet» + 1
+						STA «ret.varName» + 1
 				«ELSE»
 					i = 0
 						.rept «ret.type».SIZE

@@ -283,7 +283,11 @@ class Classes {
 				])
 			]
 
-			c.declaredMethods.filter[nonVector].forEach [ m |
+			c.declaredMethods.filter[inline].forEach [ m |
+				macros.put(m.nameOf, m.compile(new CompileContext))
+			]
+
+			c.declaredMethods.filter[nonInline].filter[nonVector].forEach [ m |
 				methods.computeIfAbsent(m.storageOf, [new HashMap]).put(m.nameOf, m.compile(new CompileContext))
 			]
 
@@ -292,7 +296,7 @@ class Classes {
 			]
 
 			c.declaredFields.filter[INesHeader || mapperConfig].forEach [ header |
-				headers.put(header.storage.type.getName.toString.toLowerCase, header.nameOf)
+				headers.put(header.storage.type, header.nameOf)
 			]
 		]
 	}
