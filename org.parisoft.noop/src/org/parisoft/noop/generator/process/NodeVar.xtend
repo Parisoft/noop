@@ -2,6 +2,9 @@ package org.parisoft.noop.generator.process
 
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.^extension.Datas
+import org.parisoft.noop.generator.alloc.AllocContext
+
+import static extension org.parisoft.noop.^extension.Datas.*
 
 class NodeVar implements Node {
 
@@ -25,6 +28,20 @@ class NodeVar implements Node {
 	'''
 	
 	override process(ProcessContext ctx) {
+	}
+	
+	override alloc(AllocContext ctx) {
+		if (ptr) {
+			ctx.computePtr(varName)
+		} else if (tmp) {
+			ctx.computeTmp(varName, size(ctx))
+		} else {
+			ctx.computeVar(varName, page, size(ctx))
+		}
+	}
+	
+	private def int size(AllocContext ctx) {
+		qty * (ctx.process.sizeOfClasses.get(type) ?: 1)
 	}
 	
 }

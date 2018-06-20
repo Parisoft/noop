@@ -31,6 +31,7 @@ import org.parisoft.noop.noop.Variable
 
 import static org.parisoft.noop.^extension.Cache.*
 
+import static extension org.parisoft.noop.^extension.Datas.*
 import static extension java.lang.Character.*
 import static extension java.lang.Integer.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*

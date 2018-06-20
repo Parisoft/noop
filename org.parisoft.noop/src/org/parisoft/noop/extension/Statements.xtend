@@ -31,11 +31,11 @@ import org.parisoft.noop.noop.Variable
 
 import static org.parisoft.noop.^extension.Cache.*
 
+import static extension org.parisoft.noop.^extension.Datas.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 
 class Statements {
 
-	@Inject extension Datas
 	@Inject extension Members
 	@Inject extension Classes
 	@Inject extension Collections

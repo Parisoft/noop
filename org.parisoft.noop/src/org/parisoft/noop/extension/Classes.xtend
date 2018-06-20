@@ -13,6 +13,7 @@ import org.parisoft.noop.generator.alloc.AllocContext
 import org.parisoft.noop.generator.compile.CompileContext
 import org.parisoft.noop.generator.compile.MetaClass
 import org.parisoft.noop.generator.compile.MetaClass.Size
+import org.parisoft.noop.generator.compile.MetaClass.Static
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopFactory
@@ -29,6 +30,7 @@ class Classes {
 	@Inject extension Members
 	@Inject extension Statements
 	@Inject extension TypeSystem
+	@Inject extension Expressions
 	@Inject extension Collections
 	@Inject extension IQualifiedNameProvider
 
@@ -269,11 +271,17 @@ class Classes {
 			]
 
 			c.declaredFields.filter[constant].filter[nonROM].forEach [ cons |
-				constants.put(cons.nameOf, cons.compile(new CompileContext))
+				constants.put(cons.nameOf, cons.value.compileConstant)
 			]
 
 			c.declaredFields.filter[static].filter[nonConstant].filter[nonROM].forEach [ static |
-				statics.put(static.nameOf, static.compile(new CompileContext))
+				statics.put(static.nameOf, new Static => [
+					asm = static.compile(new CompileContext)
+					size = new Size => [
+						type = static.typeOf.fullName
+						qty = static.dimensionOf.reduce[a, b|a * b] ?: 1
+					]
+				])
 			]
 
 			c.declaredFields.filter[field].forEach [ field |

@@ -2,6 +2,7 @@ package org.parisoft.noop.generator.process
 
 import java.util.List
 import org.eclipse.xtend.lib.annotations.Accessors
+import org.parisoft.noop.generator.alloc.AllocContext
 
 class NodeRefClass implements Node {
 
@@ -30,6 +31,9 @@ class NodeRefClass implements Node {
 		ctx.classes.add(className)
 
 		supers.toList
+	}
+	
+	override alloc(AllocContext ctx) {
 	}
 
 }

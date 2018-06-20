@@ -1,6 +1,7 @@
 package org.parisoft.noop.generator.process
 
 import org.eclipse.xtend.lib.annotations.Accessors
+import org.parisoft.noop.generator.alloc.AllocContext
 
 class NodeRefConst implements Node {
 
@@ -14,6 +15,9 @@ class NodeRefConst implements Node {
 	
 	override process(ProcessContext ctx) {
 		ctx.constants.add(constName)
+	}
+	
+	override alloc(AllocContext ctx) {
 	}
 
 }

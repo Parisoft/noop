@@ -979,15 +979,15 @@ class Datas {
 	private def void noop() {
 	}
 
-	def computePtr(AllocContext ctx, String varName) {
+	static def computePtr(AllocContext ctx, String varName) {
 		computeVar(ctx, varName, PTR_PAGE, 2)
 	}
 
-	def computeVar(AllocContext ctx, String varName, int size) {
+	static def computeVar(AllocContext ctx, String varName, int size) {
 		computeVar(ctx, varName, VAR_PAGE, size)
 	}
 
-	def computeVar(AllocContext ctx, String varName, int page, int size) {
+	static def computeVar(AllocContext ctx, String varName, int page, int size) {
 		val chunksByVarName = if(page === PTR_PAGE) ctx.pointers else ctx.variables
 
 		chunksByVarName.compute(varName, [ name, value |
@@ -1003,11 +1003,11 @@ class Datas {
 		])
 	}
 
-	def computeTmp(AllocContext ctx, String varName, int size) {
+	static def computeTmp(AllocContext ctx, String varName, int size) {
 		ctx.computeVar(varName, VAR_PAGE, size).map[it => [tmp = true]]
 	}
 
-	def void disoverlap(Iterable<MemChunk> chunks, String methodName) {
+	static def void disoverlap(Iterable<MemChunk> chunks, String methodName) {
 		methodName.debug('--------------------------------')
 		methodName.debug('''disoverlaping «methodName»''')
 		methodName.debug('''«chunks»:''')
@@ -1044,11 +1044,11 @@ class Datas {
 		chunks.dispose(methodName)
 	}
 
-	def void dispose(Iterable<MemChunk> chunks, String methodName) {
+	static def void dispose(Iterable<MemChunk> chunks, String methodName) {
 		chunks.filter[tmp].filter[variable.startsWith(methodName)].forEach[disposed = true]
 	}
 
-	private def debug(String methodName, CharSequence message) {
+	private static def debug(String methodName, CharSequence message) {
 		val enabled = message === null
 
 		if (enabled && methodName?.contains('$reset')) {

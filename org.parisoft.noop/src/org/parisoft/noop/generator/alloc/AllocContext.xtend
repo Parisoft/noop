@@ -3,6 +3,7 @@ package org.parisoft.noop.generator.alloc
 import java.util.List
 import java.util.concurrent.atomic.AtomicInteger
 import org.eclipse.xtend.lib.annotations.Accessors
+import org.parisoft.noop.generator.process.ProcessContext
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NewInstance
 import org.parisoft.noop.noop.NoopClass
@@ -24,8 +25,9 @@ class AllocContext {
 		new AtomicInteger(0x0200), new AtomicInteger(0x0300), new AtomicInteger(0x0400), new AtomicInteger(0x0500),
 		new AtomicInteger(0x0600), new AtomicInteger(0x0700))
 	@Accessors var String container
-	@Accessors var boolean allocStatic = false
 	@Accessors val types = <NoopClass>newArrayList
+	
+	@Accessors var ProcessContext process
 	
 	def resetCounter(int page) {
 		counters.get(page).set(page * 0x0100)
@@ -42,14 +44,12 @@ class AllocContext {
 		new AllocContext => [
 			counters.forEach[counter, page|counter.set(src.counters.get(page).get)]
 			container = src.container
-			allocStatic = src.allocStatic
 		]
 	}
 
 	def restoreTo(AllocContext snapshot) {
 		counters.forEach[counter, page|counter.set(snapshot.counters.get(page).get)]
 		container = snapshot.container
-		allocStatic = snapshot.allocStatic
 	}
 
 	override toString() '''

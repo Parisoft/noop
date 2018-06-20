@@ -22,6 +22,7 @@ class ProcessContext {
 	@Accessors val methods = new LinkedHashSet<String>
 	@Accessors val constructors = new LinkedHashSet<String>
 	@Accessors val alloc = new AllocContext
+	@Accessors val sizeOfStatics = new HashMap<String, Integer>
 	@Accessors val sizeOfClasses = new HashMap<String, Integer>
 	@Accessors val structOfClasses = new LinkedHashMap<String, String>
 	@Accessors val superClasses = new HashMap<String, List<String>>
@@ -77,6 +78,15 @@ class ProcessContext {
 				if (mapper !== null) {
 					directives.add('''inesmap = «mapper»''')
 				}
+			}
+		}
+		
+		for (static : statics) {
+			val clazz = static.substring(0, static.lastIndexOf('.'))
+			val meta = clazz.metadata?.statics.get(static)
+			
+			if (meta !== null) {
+				sizeOfStatics.put(static, meta.size.size)
 			}
 		}
 
@@ -197,7 +207,7 @@ class ProcessContext {
 	}
 
 	private def isInline(String clazz, String method) {
-		clazz.metadata?.macros.containsKey('''«clazz».«method»''')
+		clazz.metadata?.macros?.containsKey('''«clazz».«method»''')
 	}
 
 	private def getPolymorphicCall(String clazz, String method, List<String> overriders, List<NodeVar> params,
