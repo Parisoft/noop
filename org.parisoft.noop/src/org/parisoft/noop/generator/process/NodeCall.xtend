@@ -4,6 +4,8 @@ import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.generator.alloc.AllocContext
 import static extension org.parisoft.noop.^extension.Datas.*
 import java.util.ArrayList
+import org.parisoft.noop.generator.alloc.MemChunk
+import java.util.List
 
 class NodeCall implements Node {
 
@@ -32,13 +34,15 @@ class NodeCall implements Node {
 				ctx.methodChunks.computeIfAbsent(methodName, [
 					val snapshot = ctx.snapshot
 					val chunks = new ArrayList
-					
+
 					for (node : ctx.ast.get(methodName) ?: emptyList) {
 						chunks += node.alloc(ctx)
-					} 
+					}
 
 					chunks.disoverlap(methodName)
 					ctx.restoreTo(snapshot)
+					
+					chunks.allocOverriders(ctx)
 					chunks.toList
 				])
 			} finally {
@@ -46,6 +50,18 @@ class NodeCall implements Node {
 			}
 		} else {
 			emptyList
+		}
+	}
+
+	private def allocOverriders(List<MemChunk> chunks, AllocContext ctx) {
+		val containerClass = methodName.substring(0, methodName.lastIndexOf('.'))
+
+		for (subClass : ctx.subClasses.get(containerClass) ?: emptyList) {
+			val override = new NodeCall => [
+				it.methodName = this.methodName.replaceFirst(containerClass, subClass)
+			]
+
+			chunks += override.alloc(ctx)
 		}
 	}
 

@@ -1,6 +1,6 @@
 package org.parisoft.noop.generator.process
 
-import java.util.List
+import java.util.ArrayList
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.generator.alloc.AllocContext
 
@@ -15,24 +15,18 @@ class NodeRefClass implements Node {
 	'''
 
 	override process(ProcessContext ctx) {
-		className.process(ctx)
-	}
+		if (ctx.classes.add(className)) {
+			val supers = new ArrayList
+			var supr = className
 
-	private def List<String> process(String clazz, ProcessContext ctx) {
-		if (ctx.classes.contains(clazz)) {
-			return ctx.superClasses.get(clazz)
+			do {
+				supr = ctx.metaClasses.get(supr)?.superClass
+			} while (supr !== null && !supers.contains(supr) && supers.add(supr))
+
+			ctx.superClasses.put(className, supers)
 		}
-		
-		val supers = newArrayList(clazz) => [
-				it += ctx.metaClasses.get(clazz)?.superClass?.process(ctx) ?: emptyList
-		]
-
-		ctx.superClasses.put(className, supers.drop(1).toList)
-		ctx.classes.add(className)
-
-		supers.toList
 	}
-	
+
 	override alloc(AllocContext ctx) {
 		emptyList
 	}

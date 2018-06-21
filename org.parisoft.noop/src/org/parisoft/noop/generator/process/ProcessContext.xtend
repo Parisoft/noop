@@ -14,6 +14,7 @@ import org.parisoft.noop.generator.alloc.AllocContext
 import org.parisoft.noop.generator.compile.MetaClass
 import org.parisoft.noop.generator.compile.MetaClass.Size
 import org.parisoft.noop.noop.StorageType
+import org.parisoft.noop.noop.NoopClass
 
 class ProcessContext {
 
@@ -34,6 +35,7 @@ class ProcessContext {
 	@Accessors val headers = new HashMap<StorageType, String>
 
 	@Accessors var AST ast
+	@Accessors var NoopClass clazz
 	@Accessors var Map<String, MetaClass> metaClasses
 
 	def start(String vector) {
@@ -55,7 +57,7 @@ class ProcessContext {
 				}
 			}
 		}
-
+		
 		classes.forEach [ clazz, i |
 			structOfClasses.computeIfAbsent(clazz, [
 				'''
@@ -168,9 +170,9 @@ class ProcessContext {
 	}
 
 	private def getAllFields(String clazz) {
-		val fields = new LinkedHashMap<String, Size>
+		val fields = new LinkedHashMap(clazz.metadata?.fields ?: emptyMap)
 
-		for (supr : clazz.superClasses.reverse) {
+		for (supr : clazz.superClasses.clone.reverse) {
 			for (field : (supr.metadata?.fields ?: emptyMap).entrySet) {
 				val fieldName = field.key.substring(field.key.lastIndexOf('.') + 1)
 

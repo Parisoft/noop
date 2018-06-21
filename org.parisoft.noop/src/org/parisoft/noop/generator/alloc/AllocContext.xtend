@@ -33,6 +33,7 @@ class AllocContext {
 	
 	@Accessors var AST ast
 	@Accessors var Map<String, Integer> sizeOfClasses
+	@Accessors var Map<String, List<String>> subClasses
 	
 	def resetCounter(int page) {
 		counters.get(page).set(page * 0x0100)

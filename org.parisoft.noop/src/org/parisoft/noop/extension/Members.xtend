@@ -152,8 +152,7 @@ class Members {
 		if (member === null || member.name === null) {
 			false
 		} else {
-			member.name.startsWith(STATIC_PREFIX) || (member.name.startsWith(PRIVATE_PREFIX) &&
-				member.name.charAt(1) === STATIC_PREFIX.charAt(0))
+			member.name.startsWith(STATIC_PREFIX) || member.name.startsWith(PRIVATE_PREFIX + STATIC_PREFIX)
 		}
 	}
 

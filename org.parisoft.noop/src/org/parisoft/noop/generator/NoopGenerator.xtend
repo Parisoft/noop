@@ -69,7 +69,7 @@ class NoopGenerator extends AbstractGenerator {
 
 		project.preProcess(clazz)
 		project.preCompile(clazz)
-		val code = project.process.alloc.compile
+		val code = project.process(clazz).alloc.compile
 
 		if (astByProject.get(project.name).mainClass !== null) {
 			fsa.generateFile('''«astByProject.get(project.name).mainClass».asm''', code)
@@ -96,18 +96,19 @@ class NoopGenerator extends AbstractGenerator {
 	private def preCompile(IProject project, NoopClass clazz) {
 		val classes = classesByProject.computeIfAbsent(project.name, [new HashMap])
 		val ast = astByProject.get(project.name)
-		
+
 		classes.put(clazz.fullName, clazz.preCompile)
-		ast.externalClasses.forEach[ext|
+		ast.externalClasses.map[superClasses].flatten.filter[!classes.containsKey(fullName)].forEach [ ext |
 			classes.put(ext.fullName, ext.preCompile)
 		]
 	}
 
-	private def process(IProject project) {
+	private def process(IProject project, NoopClass clazz) {
 		val ast = astByProject.get(project.name)
 		val classes = classesByProject.get(project.name)
 		val ctx = new ProcessContext => [
 			it.ast = ast
+			it.clazz = clazz
 			it.metaClasses = classes
 		]
 
@@ -121,9 +122,10 @@ class NoopGenerator extends AbstractGenerator {
 	private def alloc(ProcessContext ctx) {
 		ctx.allocation => [
 			it.ast = ctx.ast
+			it.subClasses = ctx.subClasses
 			it.sizeOfClasses = ctx.sizeOfClasses
 		]
-		
+
 		val chunks = new ArrayList<MemChunk>
 		chunks += ctx.allocation.computePtr(Members::TEMP_VAR_NAME1)
 		chunks += ctx.allocation.computePtr(Members::TEMP_VAR_NAME2)
@@ -203,8 +205,8 @@ class NoopGenerator extends AbstractGenerator {
 		; iNES Header
 		;----------------------------------------------------------------
 			.db 'NES', $1A ;identification of the iNES header
-			.db «ctx.headers.get(StorageType::PRGROM)?: 2» ;number of 16KB PRG-ROM pages
-			.db «ctx.headers.get(StorageType::CHRROM)?: 1» ;number of 8KB CHR-ROM pages
+			.db «ctx.headers.get(StorageType::INESPRG)?: 2» ;number of 16KB PRG-ROM pages
+			.db «ctx.headers.get(StorageType::INESCHR)?: 1» ;number of 8KB CHR-ROM pages
 			.db «ctx.headers.get(StorageType::INESMAPPER)?: 0» | «ctx.headers.get(StorageType::INESMIR)?: 1»
 			.dsb 9, $00 ;clear the remaining bytes to 16
 		

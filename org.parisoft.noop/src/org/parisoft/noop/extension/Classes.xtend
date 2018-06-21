@@ -267,19 +267,19 @@ class Classes {
 
 			constructor = (NoopFactory::eINSTANCE.createNewInstance => [type = c]).compile(null)
 
-			c.declaredFields.filter[prgROM].forEach [ rom |
+			c.members.filter(Variable).filter[prgROM].forEach [ rom |
 				prgRoms.computeIfAbsent(rom.storageOf, [new HashMap]).put(rom.nameOf, rom.compile(new CompileContext))
 			]
 
-			c.declaredFields.filter[chrROM].forEach [ rom |
+			c.members.filter(Variable).filter[chrROM].forEach [ rom |
 				chrRoms.computeIfAbsent(rom.storageOf, [new HashMap]).put(rom.nameOf, rom.compile(new CompileContext))
 			]
 
-			c.declaredFields.filter[constant].filter[nonROM].forEach [ cons |
+			c.members.filter(Variable).filter[constant].filter[nonROM].forEach [ cons |
 				constants.put(cons.nameOf, cons.value.compileConstant)
 			]
 
-			c.declaredFields.filter[static].filter[nonConstant].filter[nonROM].forEach [ static |
+			c.members.filter(Variable).filter[static].filter[nonConstant].filter[nonROM].forEach [ static |
 				statics.put(static.nameOf, new Static => [
 					asm = static.compile(new CompileContext)
 					size = new Size => [
@@ -289,11 +289,15 @@ class Classes {
 				])
 			]
 
-			c.declaredFields.filter[field].forEach [ field |
+			c.members.filter(Variable).filter[nonStatic].forEach [ field |
 				fields.put(field.nameOf, new Size => [
 					qty = field.dimensionOf.reduce[a, b|a * b] ?: 1
 					type = field.typeOf.fullName
 				])
+			]
+			
+			c.members.filter(Variable).filter[INesHeader || mapperConfig].forEach [ header |
+				headers.put(header.storage.type, header.nameOf)
 			]
 
 			c.declaredMethods.filter[inline].forEach [ m |
@@ -306,10 +310,6 @@ class Classes {
 
 			c.declaredMethods.filter[vector].forEach [ m |
 				vectors.put(m.storage.type.getName.toLowerCase, m.compile(new CompileContext))
-			]
-
-			c.declaredFields.filter[INesHeader || mapperConfig].forEach [ header |
-				headers.put(header.storage.type, header.nameOf)
 			]
 		]
 	}
