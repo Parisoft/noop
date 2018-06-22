@@ -41,6 +41,10 @@ class ProcessContext {
 	}
 
 	def finish() {
+		for (static : statics) {
+			ast.get(static)?.forEach[process(this)]
+		}
+		
 		for (clazz : classes) {
 			val s = clazz.calcSize
 			sizeOfClasses.put(clazz, s)

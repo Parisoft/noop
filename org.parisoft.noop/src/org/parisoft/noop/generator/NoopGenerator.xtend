@@ -84,20 +84,20 @@ class NoopGenerator extends AbstractGenerator {
 		]
 
 		clazz.prePrcess(ast)
-		
+
 		val classes = classesByProject.getOrDefault(project.name, emptyMap)
-		
-		ast.externalClasses.map[superClasses].flatten.filter[!classes.containsKey(fullName)].forEach[ext|
+
+		ast.externalClasses.map[superClasses].flatten.filter[!classes.containsKey(fullName)].forEach [ ext |
 			ext.prePrcess(ast)
 		]
 	}
-	
+
 	private def preCompile(IProject project, NoopClass clazz) {
 		val classes = classesByProject.computeIfAbsent(project.name, [new HashMap])
 		val ast = astByProject.get(project.name)
 
 		classes.put(clazz.fullName, clazz.preCompile)
-		
+
 		ast.externalClasses.map[superClasses].flatten.filter[!classes.containsKey(fullName)].forEach [ ext |
 			classes.put(ext.fullName, ext.preCompile)
 		]
@@ -111,10 +111,14 @@ class NoopGenerator extends AbstractGenerator {
 			it.metaClasses = classes
 		]
 
-		ctx.start("reset")
-		ctx.start("nmi")
-		ctx.start("irq")
-		ctx.finish
+		for (pass : 0 ..< 2) {
+			ctx.constructors.clear
+			ctx.start("reset")
+			ctx.start("nmi")
+			ctx.start("irq")
+			ctx.finish
+		}
+		
 		ctx
 	}
 
@@ -136,39 +140,30 @@ class NoopGenerator extends AbstractGenerator {
 			}
 		}
 
-		val nmi = ctx.ast.vectors.get("nmi")
-
-		if (nmi !== null) {
-			chunks += ctx.ast.get(nmi)?.map[alloc(ctx.allocation)]?.flatten ?: emptyList
-		}
-
-		ctx.allocation.counters.forEach [ counter, page |
-			try {
-				counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
-			} catch (NoSuchElementException e) {
-			}
-		]
-
-		val irq = ctx.ast.vectors.get("irq")
-
-		if (irq !== null) {
-			chunks += ctx.ast.get(irq)?.map[alloc(ctx.allocation)].flatten ?: emptyList
-		}
-
-		ctx.allocation.counters.forEach [ counter, page |
-			try {
-				counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
-			} catch (NoSuchElementException e) {
-			}
-		]
-
-		val reset = ctx.ast.vectors.get("reset")
-
-		if (reset !== null) {
-			chunks += ctx.ast.get(reset)?.map[alloc(ctx.allocation)].flatten ?: emptyList
-		}
+		chunks += 'nmi'.alloc(ctx)
+		chunks += 'irq'.alloc(ctx)
+		chunks += 'reset'.alloc(ctx)
 
 		ctx
+	}
+
+	private def alloc(String vector, ProcessContext ctx) {
+		val method = ctx.ast.vectors.get(vector)
+
+		val chunks = if (method !== null) {
+				ctx.ast.get(method)?.map[alloc(ctx.allocation)].flatten ?: emptyList
+			} else {
+				emptyList
+			}
+
+		ctx.allocation.counters.forEach [ counter, page |
+			try {
+				counter.set(chunks.filter[lo >= page * 0x100 && hi < (page + 1) * 0x100].maxBy[hi].hi + 1)
+			} catch (NoSuchElementException e) {
+			}
+		]
+
+		chunks.toList
 	}
 
 	private def compile(ProcessContext ctx) '''

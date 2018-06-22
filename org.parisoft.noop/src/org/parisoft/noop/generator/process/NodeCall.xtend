@@ -20,12 +20,17 @@ class NodeCall implements Node {
 	override process(ProcessContext ctx) {
 		if (ctx.processing.add(methodName)) {
 			try {
-				ctx.methods.add(methodName)
-				ctx.ast.get(methodName)?.forEach[process(ctx)]
+				if (ctx.methods.add(methodName)) {
+					println('''processing «methodName»''')
+					ctx.ast.get(methodName)?.forEach[process(ctx)]
+				}
+
 			} finally {
 				ctx.processing.remove(methodName)
 			}
 		}
+		
+		ctx.processOverriders
 	}
 
 	override alloc(AllocContext ctx) {
@@ -41,7 +46,7 @@ class NodeCall implements Node {
 
 					chunks.disoverlap(methodName)
 					ctx.restoreTo(snapshot)
-					
+
 					chunks.allocOverriders(ctx)
 					chunks
 				])
@@ -50,6 +55,18 @@ class NodeCall implements Node {
 			}
 		} else {
 			emptyList
+		}
+	}
+
+	private def processOverriders(ProcessContext ctx) {
+		val containerClass = methodName.substring(0, methodName.lastIndexOf('.'))
+
+		for (subClass : ctx.subClasses.get(containerClass) ?: emptyList) {
+			val override = new NodeCall => [
+				it.methodName = this.methodName.replaceFirst(containerClass, subClass)
+			]
+
+			override.process(ctx)
 		}
 	}
 
