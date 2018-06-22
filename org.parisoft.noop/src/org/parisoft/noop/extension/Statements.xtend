@@ -31,8 +31,8 @@ import org.parisoft.noop.noop.Variable
 
 import static org.parisoft.noop.^extension.Cache.*
 
-import static extension org.parisoft.noop.^extension.Datas.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import static extension org.parisoft.noop.^extension.Datas.*
 
 class Statements {
 
@@ -164,7 +164,7 @@ class Statements {
 							])
 						}
 					}
-				} else if (statement.isNonStatic) {
+				} else if (statement.isNonConstant) {
 					ast.append(new NodeVar => [
 						varName = statement.nameOf
 						type = statement.typeOf.name
@@ -215,8 +215,8 @@ class Statements {
 				if (statement.isNonVoid) {
 					ast.append(new NodeVar => [
 						varName = statement.nameOf
-						type = statement.method.typeOf.fullName
-						ptr = statement.method.typeOf.isNonPrimitive || statement.method.dimensionOf.isNotEmpty
+//						type = statement.method.typeOf.fullName
+						ptr = true//statement.method.typeOf.isNonPrimitive || statement.method.dimensionOf.isNotEmpty
 					])
 				}
 				

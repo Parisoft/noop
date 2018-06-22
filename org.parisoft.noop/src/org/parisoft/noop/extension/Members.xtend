@@ -598,12 +598,12 @@ class Members {
 	
 	//-- Variables --
 	def getOverriders(Variable variable) {
-		variable.containerClass.subClasses.map[declaredFields.filter[it.isOverrideOf(variable)]].filterNull.flatten
+		variable.containerClass.subClasses.map[declaredVariables.filter[it.isOverrideOf(variable)]].filterNull.flatten
 	}
 
 	def getOverriderClasses(Variable variable) {
 		newArrayList(variable.containerClass) + variable.containerClass.subClasses.filter [
-			declaredFields.forall[!it.isOverrideOf(variable)]
+			declaredVariables.forall[!it.isOverrideOf(variable)]
 		]
 	}
 
@@ -846,7 +846,6 @@ class Members {
 	def preProcessStaticReference(Variable variable, List<Index> indices, AST ast) {
 		ast.append(new NodeRefStatic => [staticName = variable.nameOf])
 		val ref = new CompileContext => [absolute = variable.nameOf]
-		variable.preProcess(ast)
 		variable.preProcessIndices(indices, ref, ast)
 	}
 

@@ -103,7 +103,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 
 		return switch (container) {
 			NoopClass: {
-				val thisMembers = container.declaredFields.takeWhile[it != context] +
+				val thisMembers = container.declaredVariables.takeWhile[it != context] +
 					container.declaredMethods.filterOverload(emptyList)
 				val superMembers = container.allFieldsTopDown.takeWhile[it != context].toList.reverse +
 					container.allMethodsBottomUp.filterOverload(emptyList)
@@ -168,7 +168,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 			Scopes.scopeFor(type.allMethodsBottomUp.filter[nativeArray])
 		} else if (receiver instanceof NewInstance && (receiver as NewInstance).constructor === null) {
 			val args = selection.args
-			val declaredMembers = type.declaredMethods.filter[static].filterOverload(args) + type.declaredFields.filter [
+			val declaredMembers = type.declaredMethods.filter[static].filterOverload(args) + type.declaredVariables.filter [
 				static
 			]
 			val allMembers = type.allMethodsBottomUp.filter[static].filterOverload(args) + type.allFieldsBottomUp.filter [
@@ -178,7 +178,7 @@ class NoopScopeProvider extends AbstractNoopScopeProvider {
 		} else {
 			val args = selection.args
 			val declaredMembers = type.declaredMethods.filter[nonStatic].filterOverload(args) +
-				type.declaredFields.filter[nonStatic]
+				type.declaredVariables.filter[nonStatic]
 			val allMembers = type.allMethodsBottomUp.filter[nonStatic].filterOverload(args).filter[nonNativeArray] +
 				type.allFieldsBottomUp.filter[nonStatic]
 			Scopes.scopeFor(declaredMembers, Scopes.scopeFor(allMembers))

@@ -83,21 +83,21 @@ class NoopGenerator extends AbstractGenerator {
 			clear(clazz.fullName)
 		]
 
-		clazz.declaredMethods.forEach[preProcess(ast)]
-
-//		ast.tree.forEach [ root, nodes |
-//			println('''-> «root»''')
-//			nodes.forEach [
-//				println('''	«it»''')
-//			]
-//		]
+		clazz.prePrcess(ast)
+		
+		val classes = classesByProject.getOrDefault(project.name, emptyMap)
+		
+		ast.externalClasses.map[superClasses].flatten.filter[!classes.containsKey(fullName)].forEach[ext|
+			ext.prePrcess(ast)
+		]
 	}
-
+	
 	private def preCompile(IProject project, NoopClass clazz) {
 		val classes = classesByProject.computeIfAbsent(project.name, [new HashMap])
 		val ast = astByProject.get(project.name)
 
 		classes.put(clazz.fullName, clazz.preCompile)
+		
 		ast.externalClasses.map[superClasses].flatten.filter[!classes.containsKey(fullName)].forEach [ ext |
 			classes.put(ext.fullName, ext.preCompile)
 		]
@@ -108,7 +108,6 @@ class NoopGenerator extends AbstractGenerator {
 		val classes = classesByProject.get(project.name)
 		val ctx = new ProcessContext => [
 			it.ast = ast
-			it.clazz = clazz
 			it.metaClasses = classes
 		]
 
@@ -130,7 +129,12 @@ class NoopGenerator extends AbstractGenerator {
 		chunks += ctx.allocation.computePtr(Members::TEMP_VAR_NAME1)
 		chunks += ctx.allocation.computePtr(Members::TEMP_VAR_NAME2)
 		chunks += ctx.allocation.computePtr(Members::TEMP_VAR_NAME3)
-		chunks += ctx.sizeOfStatics.entrySet.map[ctx.allocation.computeVar(key, value)].flatten
+
+		for (static : ctx.statics) {
+			for (node : ctx.ast.get(static) ?: emptyList) {
+				chunks += node.alloc(ctx.allocation)
+			}
+		}
 
 		val nmi = ctx.ast.vectors.get("nmi")
 
@@ -178,28 +182,28 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		; Constant variables
 		;----------------------------------------------------------------
-			«Members::TRUE» = 1
-			«Members::FALSE» = 0
-			«Members::FT_DPCM_OFF» = $C000
-			«Members::FT_DPCM_PTR» = («Members::FT_DPCM_OFF»&$3fff)>>6
-			«FOR cons : ctx.constants»
-				«cons» = «ctx.metaClasses.get(cons.substring(0, cons.lastIndexOf('.')))?.constants?.get(cons) ?: 0»
-			«ENDFOR»
-			min EQU (b + ((a - b) & ((a - b) >> «Integer.BYTES» * 8 - 1)))
+		«Members::TRUE» = 1
+		«Members::FALSE» = 0
+		«Members::FT_DPCM_OFF» = $C000
+		«Members::FT_DPCM_PTR» = («Members::FT_DPCM_OFF»&$3fff)>>6
+		«FOR cons : ctx.constants»
+			«cons» = «ctx.metaClasses.get(cons.substring(0, cons.lastIndexOf('.')))?.constants?.get(cons) ?: 0»
+		«ENDFOR»
+		min EQU (b + ((a - b) & ((a - b) >> «Integer.BYTES» * 8 - 1)))
 		
 		;----------------------------------------------------------------
 		; Static variables
 		;---------------------------------------------------------------
-			«FOR chunk : (ctx.allocation.pointers.values + ctx.allocation.variables.values).flatten.sort.filter[ctx.statics.contains(variable)]»
-				«chunk.variable» = «chunk.lo.toHexString(4)»
-			«ENDFOR»
+		«FOR chunk : (ctx.allocation.pointers.values + ctx.allocation.variables.values).flatten.sort.filter[ctx.statics.contains(variable)]»
+			«chunk.variable» = «chunk.lo.toHexString(4)»
+		«ENDFOR»
 		
 		;----------------------------------------------------------------
 		; Local variables
 		;----------------------------------------------------------------
-			«FOR chunk : (ctx.allocation.pointers.values + ctx.allocation.variables.values).flatten.sort.filter[!ctx.statics.contains(variable)]»
-				«chunk.variable» = «chunk.lo.toHexString(4)»
-			«ENDFOR»
+		«FOR chunk : (ctx.allocation.pointers.values + ctx.allocation.variables.values).flatten.sort.filter[!ctx.statics.contains(variable)]»
+			«chunk.variable» = «chunk.lo.toHexString(4)»
+		«ENDFOR»
 		
 		;----------------------------------------------------------------
 		; iNES Header
@@ -366,7 +370,7 @@ class NoopGenerator extends AbstractGenerator {
 			«noopClass.nameOf» = «classCount++»
 			«val offset = new AtomicInteger(1)»
 			«val offsets = noopClass.allFieldsTopDown.filter[nonStatic].toMap([it], [offset.getAndAdd(sizeOf as Integer)])»
-			«FOR field : noopClass.declaredFields.filter[nonStatic]»
+			«FOR field : noopClass.declaredVariables.filter[nonStatic]»
 				«field.nameOfOffset» = «offsets.get(field)»
 			«ENDFOR»
 			

@@ -289,7 +289,7 @@ class NoopValidator extends AbstractNoopValidator {
 	@Check
 	def fieldDuplicity(Variable v) {
 		if (v.isField) {
-			val duplicates = v.containerClass.declaredFields.takeWhile[it != v].filter[it.name == v.name].toList
+			val duplicates = v.containerClass.declaredVariables.takeWhile[it != v].filter[it.name == v.name].toList
 
 			if (duplicates.isNotEmpty) {
 				duplicates += v

@@ -14,7 +14,6 @@ import org.parisoft.noop.generator.alloc.AllocContext
 import org.parisoft.noop.generator.compile.MetaClass
 import org.parisoft.noop.generator.compile.MetaClass.Size
 import org.parisoft.noop.noop.StorageType
-import org.parisoft.noop.noop.NoopClass
 
 class ProcessContext {
 
@@ -25,7 +24,6 @@ class ProcessContext {
 	@Accessors val methods = new LinkedHashSet<String>
 	@Accessors val constructors = new LinkedHashSet<String>
 	@Accessors val allocation = new AllocContext
-	@Accessors val sizeOfStatics = new LinkedHashMap<String, Integer>
 	@Accessors val sizeOfClasses = new HashMap<String, Integer>
 	@Accessors val structOfClasses = new LinkedHashMap<String, String>
 	@Accessors val superClasses = new HashMap<String, List<String>>
@@ -35,7 +33,6 @@ class ProcessContext {
 	@Accessors val headers = new HashMap<StorageType, String>
 
 	@Accessors var AST ast
-	@Accessors var NoopClass clazz
 	@Accessors var Map<String, MetaClass> metaClasses
 
 	def start(String vector) {
@@ -57,44 +54,38 @@ class ProcessContext {
 				}
 			}
 		}
-		
+
 		classes.forEach [ clazz, i |
 			structOfClasses.computeIfAbsent(clazz, [
 				'''
 					«val offset = new AtomicInteger(1)»
-						«clazz».CLASS = «i»
-						«clazz».SIZE = «clazz.size»
-						«FOR field : clazz.allFields.entrySet»
-							«field.key» = «offset.getAndAdd(field.value.size)»
-						«ENDFOR»
+					«clazz».CLASS = «i»
+					«clazz».SIZE = «clazz.size»
+					«FOR field : clazz.allFields.entrySet»
+						«field.key» = «offset.getAndAdd(field.value.size)»
+					«ENDFOR»
 				'''
 			])
 		]
 
 		for (clazz : classes) {
-			val classHeaders = clazz.metadata?.headers
+			clazz.metadata?.headers?.forEach [ header, name |
+				headers.put(header, name)
 
-			if (classHeaders !== null) {
-				classHeaders.forEach [ h, name |
-					val value = clazz.metadata.constants.get(name)
-
-					headers.put(h, value)
-
-					if (h === StorageType::INESMAPPER) {
-						directives.add('''inesmap = «value»''')
-					}
-				]
-			}
+				if (header === StorageType::INESMAPPER) {
+					directives.removeIf[startsWith('inesmap =')]
+					directives.add('''inesmap = «name»''')
+				}
+			]
 		}
 
 		for (static : statics) {
 			val clazz = static.substring(0, static.lastIndexOf('.'))
-			val meta = clazz.metadata?.statics?.get(static)
+			val asm = clazz.metadata?.statics?.get(static)
 
-			if (meta !== null) {
-				sizeOfStatics.put(static, meta.size.size)
+			if (asm !== null) {
 				macros.compute('instantiate_statics', [ k, v |
-					v + meta.asm + System::lineSeparator
+					v + asm + System::lineSeparator
 				])
 			}
 		}

@@ -278,7 +278,7 @@ class Expressions {
 	}
 
 	def getModuloVariable(Expression expression) {
-		expression.toMathClass.declaredFields.findFirst[name == '''«Members::STATIC_PREFIX»mod'''.toString]
+		expression.toMathClass.declaredStatics.findFirst[name == '''«Members::STATIC_PREFIX»mod'''.toString]
 	}
 
 	def getLengthExpression(Expression expression) {
@@ -940,7 +940,7 @@ class Expressions {
 					method.preProcess(ast)
 				} else if (expression.assignment === AssignmentType::DIV_ASSIGN ||
 					expression.assignment === AssignmentType::MOD_ASSIGN) {
-					expression.moduloVariable.preProcess(ast)
+					expression.moduloVariable.preProcessStaticReference(emptyList, ast)
 				}
 
 				if (expression.assignment === AssignmentType::ASSIGN && left.dimensionOf.isNotEmpty) {

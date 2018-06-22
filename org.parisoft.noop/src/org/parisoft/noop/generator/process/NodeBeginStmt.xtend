@@ -1,10 +1,10 @@
 package org.parisoft.noop.generator.process
 
+import java.util.ArrayList
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.generator.alloc.AllocContext
 
 import static extension org.parisoft.noop.^extension.Datas.*
-import java.util.ArrayList
 
 class NodeBeginStmt implements Node {
 	
@@ -30,7 +30,7 @@ class NodeBeginStmt implements Node {
 		
 		chunks.disoverlap(statementName)
 		ctx.restoreTo(snapshot)
-		chunks.toList
+		chunks
 	}
 	
 }

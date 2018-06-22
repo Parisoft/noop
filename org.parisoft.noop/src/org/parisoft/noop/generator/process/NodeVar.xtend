@@ -31,6 +31,10 @@ class NodeVar implements Node {
 	}
 	
 	override alloc(AllocContext ctx) {
+		if (ctx.variables.containsKey(varName)) {
+			return ctx.variables.get(varName) 
+		}
+		
 		if (ptr) {
 			ctx.computePtr(varName)
 		} else if (tmp) {

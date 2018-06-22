@@ -43,7 +43,7 @@ class NodeCall implements Node {
 					ctx.restoreTo(snapshot)
 					
 					chunks.allocOverriders(ctx)
-					chunks.toList
+					chunks
 				])
 			} finally {
 				ctx.allocating.remove(methodName)

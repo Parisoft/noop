@@ -13,7 +13,6 @@ import org.parisoft.noop.generator.alloc.AllocContext
 import org.parisoft.noop.generator.compile.CompileContext
 import org.parisoft.noop.generator.compile.MetaClass
 import org.parisoft.noop.generator.compile.MetaClass.Size
-import org.parisoft.noop.generator.compile.MetaClass.Static
 import org.parisoft.noop.noop.Method
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.NoopFactory
@@ -21,7 +20,9 @@ import org.parisoft.noop.noop.Variable
 
 import static org.parisoft.noop.^extension.Cache.*
 
+import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
+import org.parisoft.noop.generator.process.AST
 
 class Classes {
 
@@ -117,9 +118,17 @@ class Classes {
 		}
 	}
 
-	def List<Variable> getDeclaredFields(NoopClass c) {
+	def List<Variable> getDeclaredVariables(NoopClass c) {
 		val fields = c.members.filter(Variable)
 		(fields.filter[static] + fields.filter[nonStatic]).toList
+	}
+	
+	def List<Variable> getDeclaredStatics(NoopClass c) {
+		c.members.filter(Variable).filter[static].filter[nonConstant].toList
+	}
+	
+	def List<Variable> getDeclaredFields(NoopClass c) {
+		c.members.filter(Variable).filter[nonStatic].toList
 	}
 
 	def getDeclaredMethods(NoopClass c) {
@@ -258,6 +267,21 @@ class Classes {
 			s1 + s2
 		] ?: 0)
 	}
+	
+	def prePrcess(NoopClass c, AST ast) {
+		c.declaredStatics.forEach [
+			val container = ast.container
+			ast.container = nameOf
+			
+			preProcess(ast)
+			
+			ast.container = container
+		]
+		
+		c.declaredMethods.forEach[
+			preProcess(ast)
+		]
+	}
 
 	def preCompile(NoopClass c) {
 		new MetaClass => [
@@ -280,13 +304,7 @@ class Classes {
 			]
 
 			c.members.filter(Variable).filter[static].filter[nonConstant].filter[nonROM].forEach [ static |
-				statics.put(static.nameOf, new Static => [
-					asm = static.compile(new CompileContext)
-					size = new Size => [
-						type = static.typeOf.fullName
-						qty = static.dimensionOf.reduce[a, b|a * b] ?: 1
-					]
-				])
+				statics.put(static.nameOf, static.compile(new CompileContext))
 			]
 
 			c.members.filter(Variable).filter[nonStatic].forEach [ field |
