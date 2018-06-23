@@ -40,6 +40,7 @@ import org.parisoft.noop.noop.StorageType
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.parisoft.noop.^extension.Datas.*
+import org.parisoft.noop.generator.process.NoopClassNotFoundException
 
 /**
  * Generates code from your model files on save.
@@ -69,7 +70,11 @@ class NoopGenerator extends AbstractGenerator {
 
 		project.preProcess(clazz)
 		project.preCompile(clazz)
-		val code = project.process(clazz).alloc.compile
+		val code = try {
+				project.process(clazz).alloc.compile
+			} catch (NoopClassNotFoundException e) {
+				println('''interrupted''')
+			}
 
 		if (astByProject.get(project.name).mainClass !== null) {
 			fsa.generateFile('''«astByProject.get(project.name).mainClass».asm''', code)
@@ -111,14 +116,11 @@ class NoopGenerator extends AbstractGenerator {
 			it.metaClasses = classes
 		]
 
-		for (pass : 0 ..< 2) {
-			ctx.constructors.clear
-			ctx.start("reset")
-			ctx.start("nmi")
-			ctx.start("irq")
-			ctx.finish
-		}
-		
+		ctx.begin
+		ctx.process("reset")
+		ctx.process("nmi")
+		ctx.process("irq")
+		ctx.finish
 		ctx
 	}
 

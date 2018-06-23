@@ -35,28 +35,53 @@ class ProcessContext {
 	@Accessors var AST ast
 	@Accessors var Map<String, MetaClass> metaClasses
 
-	def start(String vector) {
-		val entry = ast.vectors.get(vector)
-		ast.get(entry)?.forEach[process(this)]
-	}
+	def begin() {
+		for (meta : metaClasses.entrySet) {
+			superClasses.computeIfAbsent(meta.key, [
+				val supers = new ArrayList
+				var supr = meta.value
 
-	def finish() {
-		for (static : statics) {
-			ast.get(static)?.forEach[process(this)]
-		}
-		
-		for (clazz : classes) {
-			val s = clazz.calcSize
-			sizeOfClasses.put(clazz, s)
-			clazz.superClasses.forEach[sizeOfClasses.compute(it, [k, v|if(v === null || v < s) s else v])]
+				do {
+					supr = metaClasses.get(supr.superClass)
+				} while (supr !== null && supers.add(supr.name))
+
+				supers
+			])
 		}
 
-		for (clazz : classes) {
-			for (other : classes.filter[it != clazz]) {
+		for (clazz : metaClasses.keySet) {
+			for (other : metaClasses.keySet.filter[it != clazz]) {
 				if (other.superClasses.contains(clazz)) {
 					subClasses.computeIfAbsent(clazz, [new ArrayList]).add(other)
 				}
 			}
+		}
+	}
+
+	def process(String vector) {
+		val entry = ast.vectors.get(vector)
+		ast.get(entry)?.forEach[node|node.process(this)]
+	}
+
+	def finish() {
+		val missingClasses = new HashSet(classes) => [
+			removeAll(metaClasses.keySet)
+			removeAll(TypeSystem::LIB_PRIMITIVES)
+		]
+		
+		if (missingClasses.size > 0) {
+			println('''missing «missingClasses»''')
+			throw new NoopClassNotFoundException
+		}
+
+		for (static : statics) {
+			ast.get(static)?.forEach[process(this)]
+		}
+
+		for (clazz : classes) {
+			val s = clazz.calcSize
+			sizeOfClasses.put(clazz, s)
+			clazz.superClasses.forEach[sizeOfClasses.compute(it, [k, v|if(v === null || v < s) s else v])]
 		}
 
 		classes.forEach [ clazz, i |
@@ -94,16 +119,15 @@ class ProcessContext {
 			}
 		}
 
-		for (method : methods) {
-			for (call : method.calls) {
-				if (method.isCalledBy(call)) {
-					directives.add('''recursive_«method»_to_«call.methodName» = 1''')
-				} else {
-					directives.add('''recursive_«method»_to_«call.methodName» = 0''')
-				}
-			}
-		}
-
+//		for (method : methods) {
+//			for (call : method.calls) {
+//				if (method.isCalledBy(call)) {
+//					directives.add('''recursive_«method»_to_«call.methodName» = 1''')
+//				} else {
+//					directives.add('''recursive_«method»_to_«call.methodName» = 0''')
+//				}
+//			}
+//		}
 		for (method : methods) {
 			val dot = method.lastIndexOf('.')
 			val containerClass = method.substring(0, dot)

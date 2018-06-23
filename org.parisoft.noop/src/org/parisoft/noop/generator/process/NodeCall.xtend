@@ -21,16 +21,14 @@ class NodeCall implements Node {
 		if (ctx.processing.add(methodName)) {
 			try {
 				if (ctx.methods.add(methodName)) {
-					println('''processing «methodName»''')
 					ctx.ast.get(methodName)?.forEach[process(ctx)]
+					ctx.processOverriders
 				}
-
 			} finally {
 				ctx.processing.remove(methodName)
 			}
 		}
 		
-		ctx.processOverriders
 	}
 
 	override alloc(AllocContext ctx) {

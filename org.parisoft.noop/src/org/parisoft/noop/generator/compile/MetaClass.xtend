@@ -8,6 +8,7 @@ import org.parisoft.noop.noop.StorageType
 
 class MetaClass {
 	
+	@Accessors var String name
 	@Accessors var String superClass
 	@Accessors var String constructor
 	@Accessors var Map<Integer, Map<String, String>> prgRoms = new LinkedHashMap

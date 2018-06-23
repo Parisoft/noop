@@ -77,7 +77,7 @@ class Classes {
 	def isNonSubclassOf(NoopClass c1, NoopClass c2) {
 		!c1.isSubclassOf(c2)
 	}
-	
+
 	def isExternal(NoopClass c, String project) {
 		c.URI.project.name != project
 	}
@@ -122,11 +122,11 @@ class Classes {
 		val fields = c.members.filter(Variable)
 		(fields.filter[static] + fields.filter[nonStatic]).toList
 	}
-	
+
 	def List<Variable> getDeclaredStatics(NoopClass c) {
 		c.members.filter(Variable).filter[static].filter[nonConstant].toList
 	}
-	
+
 	def List<Variable> getDeclaredFields(NoopClass c) {
 		c.members.filter(Variable).filter[nonStatic].toList
 	}
@@ -267,27 +267,29 @@ class Classes {
 			s1 + s2
 		] ?: 0)
 	}
-	
+
 	def prePrcess(NoopClass c, AST ast) {
 		c.declaredStatics.forEach [
 			val container = ast.container
 			ast.container = nameOf
-			
+
 			preProcess(ast)
-			
+
 			ast.container = container
 		]
-		
-		c.declaredMethods.forEach[
+
+		c.declaredMethods.forEach [
 			preProcess(ast)
 		]
 	}
 
 	def preCompile(NoopClass c) {
 		new MetaClass => [
+			name = c.fullName
+
 			superClass = c.superClass?.fullName ?:
-				if(c.fullName != TypeSystem::LIB_OBJECT && c.fullName != TypeSystem::LIB_PRIMITIVE &&
-					c.fullName != TypeSystem::LIB_VOID) TypeSystem::LIB_OBJECT else null
+				if(name != TypeSystem::LIB_OBJECT && name != TypeSystem::LIB_PRIMITIVE &&
+					name != TypeSystem::LIB_VOID) TypeSystem::LIB_OBJECT else null
 
 			constructor = (NoopFactory::eINSTANCE.createNewInstance => [type = c]).compile(null)
 
@@ -313,7 +315,7 @@ class Classes {
 					type = field.typeOf.fullName
 				])
 			]
-			
+
 			c.members.filter(Variable).filter[INesHeader || mapperConfig].forEach [ header |
 				headers.put(header.storage.type, header.nameOf)
 			]
