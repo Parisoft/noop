@@ -18,7 +18,7 @@ import org.parisoft.noop.noop.StorageType
 class ProcessContext {
 
 	@Accessors val processing = new HashSet<String>
-	@Accessors val classes = new LinkedHashSet<String> => [TypeSystem::LIB_PRIMITIVES.forEach[t|add(t)]]
+	@Accessors val classes = new LinkedHashSet<String> => [addAll(TypeSystem::LIB_PRIMITIVES)]
 	@Accessors val statics = new LinkedHashSet<String>
 	@Accessors val constants = new LinkedHashSet<String>
 	@Accessors val methods = new LinkedHashSet<String>
