@@ -34,13 +34,13 @@ import org.parisoft.noop.generator.alloc.MemChunk
 import org.parisoft.noop.generator.compile.MetaClass
 import org.parisoft.noop.generator.mapper.MapperFactory
 import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.NoopClassNotFoundException
 import org.parisoft.noop.generator.process.ProcessContext
 import org.parisoft.noop.noop.NoopClass
 import org.parisoft.noop.noop.StorageType
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.parisoft.noop.^extension.Datas.*
-import org.parisoft.noop.generator.process.NoopClassNotFoundException
 
 /**
  * Generates code from your model files on save.
@@ -88,12 +88,12 @@ class NoopGenerator extends AbstractGenerator {
 			clear(clazz.fullName)
 		]
 
-		clazz.prePrcess(ast)
+		clazz.preProcess(ast)
 
 		val classes = classesByProject.getOrDefault(project.name, emptyMap)
 
 		ast.externalClasses.map[superClasses].flatten.filter[!classes.containsKey(fullName)].forEach [ ext |
-			ext.prePrcess(ast)
+			ext.preProcess(ast)
 		]
 	}
 
@@ -153,7 +153,7 @@ class NoopGenerator extends AbstractGenerator {
 		val method = ctx.ast.vectors.get(vector)
 
 		val chunks = if (method !== null) {
-				ctx.ast.get(method)?.map[alloc(ctx.allocation)].flatten ?: emptyList
+				ctx.ast.get(method)?.map[alloc(ctx.allocation)].flatten.toList ?: emptyList
 			} else {
 				emptyList
 			}
@@ -165,7 +165,7 @@ class NoopGenerator extends AbstractGenerator {
 			}
 		]
 
-		chunks.toList
+		chunks
 	}
 
 	private def compile(ProcessContext ctx) '''

@@ -97,10 +97,6 @@ class Expressions {
 		}
 	}
 
-	def getFieldsInitializedOnContructor(NewInstance instance) {
-		instance.type.members.filter(Variable).filter[nonStatic]
-	}
-
 	def getMultiplyMethod(Expression left, Expression right) {
 		mulMethods.get(left, right, [
 			try {
@@ -1150,19 +1146,6 @@ class Expressions {
 						ast.externalClasses.add(expression.type)
 					}
 
-					val constructorName = expression.nameOfConstructor
-					val container = ast.container
-					ast.container = constructorName
-
-					ast.append(new NodeVar => [
-						varName = expression.nameOfReceiver
-						ptr = true
-					])
-
-					expression.fieldsInitializedOnContructor.forEach[value.preProcess(ast)]
-
-					ast.container = container
-
 					if (expression.constructor !== null) {
 						expression.constructor.fields.forEach[value.preProcess(ast)]
 					}
@@ -1393,7 +1376,7 @@ class Expressions {
 					expression.type.prepare(ctx)
 
 					if (expression.type.isNonPrimitive) {
-						expression.fieldsInitializedOnContructor.forEach[prepare(ctx)]
+						expression.type.declaredFields.forEach[prepare(ctx)]
 
 						if (expression.constructor !== null) {
 							expression.constructor.fields.forEach[value.prepare(ctx)]
@@ -1582,7 +1565,7 @@ class Expressions {
 						ctx.container = constructorName
 
 						chunks += ctx.computePtr(expression.nameOfReceiver)
-						chunks += expression.fieldsInitializedOnContructor.map[value.alloc(ctx)].flatten.toList
+						chunks += expression.type.declaredFields.map[value.alloc(ctx)].flatten.toList
 						chunks.disoverlap(constructorName)
 
 						ctx.restoreTo(snapshot)
@@ -1937,7 +1920,7 @@ class Expressions {
 							LDY #$00
 							LDA #«expression.type.nameOf»
 							STA («receiver»), Y
-						«FOR field : expression.fieldsInitializedOnContructor»
+						«FOR field : expression.type.declaredFields»
 							«field.compile(new CompileContext => [
 								container = constructor
 								indirect = receiver

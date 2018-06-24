@@ -23,6 +23,7 @@ import static org.parisoft.noop.^extension.Cache.*
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.NodeVar
 
 class Classes {
 
@@ -234,7 +235,11 @@ class Classes {
 	}
 
 	def nameOf(NoopClass c) {
-		'''«c.name»#class'''.toString
+		'''«c.name».CLASS'''.toString
+	}
+	
+	def nameOfConstructor(NoopClass c) {
+		'''«c.fullName».new'''
 	}
 
 	def Object sizeOf(NoopClass c) {
@@ -268,7 +273,7 @@ class Classes {
 		] ?: 0)
 	}
 
-	def prePrcess(NoopClass c, AST ast) {
+	def void preProcess(NoopClass c, AST ast) {
 		c.declaredStatics.forEach [
 			val container = ast.container
 			ast.container = nameOf
@@ -281,6 +286,19 @@ class Classes {
 		c.declaredMethods.forEach [
 			preProcess(ast)
 		]
+		
+		val constructorName = c.nameOfConstructor.toString
+		val container = ast.container
+		ast.container = constructorName
+
+		ast.append(new NodeVar => [
+			varName = '''«constructorName».rcv'''
+			ptr = true
+		])
+
+		c.declaredFields.forEach[value.preProcess(ast)]
+
+		ast.container = container
 	}
 
 	def preCompile(NoopClass c) {

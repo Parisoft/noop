@@ -70,7 +70,6 @@ class ProcessContext {
 		]
 		
 		if (missingClasses.size > 0) {
-			println('''missing «missingClasses»''')
 			throw new NoopClassNotFoundException
 		}
 
