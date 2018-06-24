@@ -41,6 +41,7 @@ import org.parisoft.noop.noop.StorageType
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.parisoft.noop.^extension.Datas.*
+import org.parisoft.noop.generator.process.NodeCall
 
 /**
  * Generates code from your model files on save.
@@ -153,7 +154,7 @@ class NoopGenerator extends AbstractGenerator {
 		val method = ctx.ast.vectors.get(vector)
 
 		val chunks = if (method !== null) {
-				ctx.ast.get(method)?.map[alloc(ctx.allocation)].flatten.toList ?: emptyList
+				(new NodeCall => [methodName = method]).alloc(ctx.allocation)
 			} else {
 				emptyList
 			}

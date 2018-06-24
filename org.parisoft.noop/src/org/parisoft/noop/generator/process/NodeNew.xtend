@@ -18,7 +18,9 @@ class NodeNew implements Node {
 
 	override process(ProcessContext ctx) {
 		if (ctx.constructors.add(type)) {
-			ctx.ast.get(constructor)?.forEach[process(ctx)]
+			ctx.ast.get(constructor)?.forEach[
+				process(ctx)
+			]
 		}
 	}
 

@@ -28,7 +28,7 @@ class NodeCall implements Node {
 				ctx.processing.remove(methodName)
 			}
 		}
-		
+
 	}
 
 	override alloc(AllocContext ctx) {
@@ -39,7 +39,11 @@ class NodeCall implements Node {
 					val chunks = new ArrayList
 
 					for (node : ctx.ast.get(methodName) ?: emptyList) {
-						chunks += node.alloc(ctx)
+						if (node instanceof NodeVar && (node as NodeVar).tmp) {
+							chunks.addAll(0, node.alloc(ctx))
+						} else {
+							chunks += node.alloc(ctx)
+						}
 					}
 
 					chunks.disoverlap(methodName)
