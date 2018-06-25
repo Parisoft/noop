@@ -678,7 +678,7 @@ class Members {
 	}
 
 	def isINesMapper(Variable variable) {
-		variable.storage?.type == StorageType::INESMAPPER
+		variable.storage?.type == StorageType::INESMAP
 	}
 
 	def isINesMir(Variable variable) {

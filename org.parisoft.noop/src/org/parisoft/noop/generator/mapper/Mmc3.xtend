@@ -11,6 +11,7 @@ import org.parisoft.noop.generator.alloc.AllocContext
 import org.parisoft.noop.generator.compile.CompileContext
 import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
+import org.parisoft.noop.generator.process.ProcessContext
 
 class Mmc3 extends Mapper {
 
@@ -20,6 +21,159 @@ class Mmc3 extends Mapper {
 	@Inject extension Collections
 	@Inject extension Expressions
 	@Inject extension IQualifiedNameProvider
+
+	def compile(ProcessContext ctx)'''
+		«val inesPrg = ctx.headers.get(StorageType::PRGROM) as Integer ?: 32»
+		«val inesChr = ctx.headers.get(StorageType::CHRROM) as Integer ?: 32»
+		«val prgBanks = inesPrg / 8»
+		«val chrBanks = inesChr / 8»
+		«val mode = (ctx.headers.get(StorageType::MMC3CFG) as Integer ?: 0).bitwiseAnd(64)»
+		«val fixedBank0 = prgBanks - 2»
+		«val fixedBank1 = prgBanks - 1»
+		«val evenAddr = if (mode == 0) '$8000' else '$C000'»
+		«val oddAddr = '$A000'»
+		«val fixedAddr0 = if (mode == 0) '$C000' else '$8000'»
+		«val fixedAddr1 = '$E000'»
+		;----------------------------------------------------------------
+		; Macros
+		;----------------------------------------------------------------
+		«FOR directive : ctx.directives»
+			«directive»
+		«ENDFOR»
+		«FOR macro : ctx.macros.entrySet»
+			«noop»
+				.macro «macro.key»
+				«macro.value»
+				.endm
+		«ENDFOR»
+		«FOR bank : 0 ..< prgBanks»
+			«val base = if (bank == fixedBank1) {
+				fixedAddr1
+			}else if (bank == fixedBank0){
+				fixedAddr0
+			}else if( bank % 2 == 0){
+				evenAddr
+			}else{
+				oddAddr
+			}»
+			;----------------------------------------------------------------
+			; PRG-ROM Bank #«bank»«IF bank == fixedBank0 || bank == fixedBank1» FIXED«ENDIF»
+			;----------------------------------------------------------------
+				.base «base» 
+			
+			«val dmcList = ctx.prgRoms.entrySet.filter[(key ?: fixedBank1) == bank].map[value.entrySet].flatten.filter[key.isDmcFile].toList»
+			«IF dmcList.isNotEmpty»
+				;-- DMC sound data-----------------------------------------------
+				«FOR dmcRom : dmcList»
+					«dmcRom.value»
+				«ENDFOR»
+			«ENDIF»
+			«FOR rom : ctx.prgRoms.entrySet.filter[(key ?: fixedBank1) == bank].map[value.entrySet].flatten.filter[key.isNonDmcFile].toList»
+				«rom.value»
+			«ENDFOR»
+			«val methods = ctx.methodsByBank.entrySet.filter[(key ?: fixedBank1) == bank].map[value.entrySet].flatten.sortBy[key]»
+			«IF methods.isNotEmpty»
+				«noop»
+				;-- Methods -----------------------------------------------------
+				«FOR method : methods»
+					«method.value»
+					
+				«ENDFOR»
+			«ENDIF»
+			«IF bank == fixedBank1»
+				«val classes = ctx.metaClasses.values.filter[ctx.constructors.contains('''«name».new''')].sortBy[name]»
+				«IF classes.isNotEmpty»
+					;-- Constructors ------------------------------------------------
+					«FOR clazz : classes»
+						«clazz.constructor»
+						
+					«ENDFOR»
+				«ENDIF»
+			«ELSEIF base == '$8000'»
+				«noop»
+					.org $A000
+			«ELSEIF base == '$A000'»
+				«noop»
+					.org $C000
+			«ELSEIF base == '$C000'»
+				«noop»
+					.org $E000
+			«ENDIF»
+		«ENDFOR»
+		
+		;----------------------------------------------------------------
+		; Interrupt vectors
+		;----------------------------------------------------------------
+			.org $FFFA     
+		
+		 	.dw «ctx.methods.values.findFirst[nmi]?.nameOf ?: 0»
+		 	.dw «ctx.methods.values.findFirst[reset]?.nameOf ?: 0»
+		 	.dw «ctx.methods.values.findFirst[irq]?.nameOf ?: 0»
+		
+		«FOR bank : 0 ..< chrBanks»
+			«val bank0 = bank * 8»
+			«var roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank0]»
+			«IF roms.isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank0»
+				;----------------------------------------------------------------
+					.base $0000
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+			«val bank2 = bank0 + 2»
+			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank2]).isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank2»
+				;----------------------------------------------------------------
+					.base $0800
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+			«val bank4 = bank2 + 2»
+			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank4]).isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank4»
+				;----------------------------------------------------------------
+					.base $1000
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+			«val bank5 = bank4 + 1»
+			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank5]).isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank5»
+				;----------------------------------------------------------------
+					.base $1400
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+			«val bank6 = bank5 + 1»
+			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank6]).isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank6»
+				;----------------------------------------------------------------
+					.base $1800
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+			«val bank7 = bank6 + 1»
+			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank7]).isNotEmpty»
+				;----------------------------------------------------------------
+				; CHR-ROM bank #«bank7»
+				;----------------------------------------------------------------
+					.base $1C00
+				«FOR rom : roms»
+					«rom.compile(new CompileContext)»
+				«ENDFOR»
+			«ENDIF»
+		«ENDFOR»
+	'''
 
 	override compile(AllocContext ctx) '''
 		«val inesPrg = ctx.constants.values.findFirst[INesPrg]?.valueOf as Integer ?: 32»

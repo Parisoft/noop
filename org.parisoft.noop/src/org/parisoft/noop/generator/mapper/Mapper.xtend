@@ -3,9 +3,9 @@ package org.parisoft.noop.generator.mapper
 import org.parisoft.noop.generator.alloc.AllocContext
 
 abstract class Mapper {
-	
+
 	def CharSequence compile(AllocContext ctx)
-	
+
 	protected def toHexString(int value) {
 		value.toHexString(2)
 	}
@@ -22,5 +22,5 @@ abstract class Mapper {
 
 	protected def void noop() {
 	}
-	
+
 }

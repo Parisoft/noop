@@ -122,7 +122,7 @@
     <eLiterals name="CHRROM" value="1" literal="@CHR-ROM"/>
     <eLiterals name="INESPRG" value="2" literal="@iNES-PRG"/>
     <eLiterals name="INESCHR" value="3" literal="@iNES-CHR"/>
-    <eLiterals name="INESMAPPER" value="4" literal="@iNES-Mapper"/>
+    <eLiterals name="INESMAP" value="4" literal="@iNES-Mapper"/>
     <eLiterals name="INESMIR" value="5" literal="@iNES-Mirror"/>
     <eLiterals name="ZP" value="6" literal="@ZP-RAM"/>
     <eLiterals name="INLINE" value="7" literal="@Inline"/>

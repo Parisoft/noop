@@ -22,15 +22,18 @@ class ProcessContext {
 	@Accessors val statics = new LinkedHashSet<String>
 	@Accessors val constants = new LinkedHashSet<String>
 	@Accessors val methods = new LinkedHashSet<String>
+	@Accessors val methodsByBank = new LinkedHashMap<Integer, Map<String, String>>
 	@Accessors val constructors = new LinkedHashSet<String>
+	@Accessors val prgRoms = new LinkedHashMap<Integer, Map<String, String>>
+	@Accessors val chrRoms = new LinkedHashMap<Integer, Map<String, String>>
 	@Accessors val allocation = new AllocContext
 	@Accessors val sizeOfClasses = new HashMap<String, Integer>
 	@Accessors val structOfClasses = new LinkedHashMap<String, String>
 	@Accessors val superClasses = new HashMap<String, List<String>>
 	@Accessors val subClasses = new HashMap<String, List<String>>
-	@Accessors val directives = new LinkedHashSet<String>
+	@Accessors val directives = newLinkedHashSet('''min EQU (b + ((a - b) & ((a - b) >> «Integer.BYTES» * 8 - 1)))''')
 	@Accessors val macros = new HashMap<String, CharSequence>
-	@Accessors val headers = new HashMap<StorageType, String>
+	@Accessors val headers = new HashMap<StorageType, Object>
 
 	@Accessors var AST ast
 	@Accessors var Map<String, MetaClass> metaClasses
@@ -68,7 +71,7 @@ class ProcessContext {
 			removeAll(metaClasses.keySet)
 			removeAll(TypeSystem::LIB_PRIMITIVES)
 		]
-		
+
 		if (missingClasses.size > 0) {
 			throw new NoopClassNotFoundException
 		}
@@ -97,12 +100,17 @@ class ProcessContext {
 		]
 
 		for (clazz : classes) {
-			clazz.metadata?.headers?.forEach [ header, name |
-				headers.put(header, name)
+			val meta = clazz.metadata
 
-				if (header === StorageType::INESMAPPER) {
+			macros.putAll(meta?.macros ?: emptyMap)
+			prgRoms.putAll(meta?.prgRoms ?: emptyMap)
+			chrRoms.putAll(meta?.chrRoms ?: emptyMap)
+			headers.putAll(meta?.headers ?: emptyMap)
+
+			headers.entrySet.findFirst[key === StorageType::INESMAP] => [ map |
+				if (map !== null) {
 					directives.removeIf[startsWith('inesmap =')]
-					directives.add('''inesmap = «name»''')
+					directives.add('''inesmap = «map»''')
 				}
 			]
 		}
@@ -149,6 +157,14 @@ class ProcessContext {
 			} else if (containerClass.isInline(methodName)) {
 				methods.remove(method)
 				macros.put('''call_«method»''', containerClass.metadata.macros.get(method))
+			}
+		}
+
+		for (clazz : classes) {
+			for (methodByBank : clazz.metadata?.methods.entrySet) {
+				for (entry : methodByBank.value.entrySet.filter[methods.contains(key)]) {
+					methodsByBank.computeIfAbsent(methodByBank.key, [new HashMap]).put(entry.key, entry.value)
+				}
 			}
 		}
 	}

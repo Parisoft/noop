@@ -127,6 +127,10 @@ class Classes {
 	def List<Variable> getDeclaredStatics(NoopClass c) {
 		c.members.filter(Variable).filter[static].filter[nonConstant].toList
 	}
+	
+	def List<Variable> getDeclaredConstants(NoopClass c) {
+		c.members.filter(Variable).filter[constant].filter[nonROM].toList
+	}
 
 	def List<Variable> getDeclaredFields(NoopClass c) {
 		c.members.filter(Variable).filter[nonStatic].toList

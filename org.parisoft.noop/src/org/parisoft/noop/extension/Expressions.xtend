@@ -422,7 +422,11 @@ class Expressions {
 	}
 
 	def isFileInclude(StringLiteral string) {
-		string.value.toLowerCase.startsWith(Members::FILE_SCHEMA)
+		string.value.isFileInclude
+	}
+	
+	def isFileInclude(String string) {
+		string.toLowerCase.startsWith(Members::FILE_SCHEMA)
 	}
 
 	def isAsmFile(StringLiteral string) {
@@ -434,7 +438,15 @@ class Expressions {
 	}
 
 	def isDmcFile(StringLiteral string) {
-		string.isFileInclude && string.value.toLowerCase.endsWith(Members::FILE_DMC_EXTENSION)
+		string.value.isDmcFile
+	}
+	
+	def isDmcFile(String string) {
+		string.isFileInclude && string.toLowerCase.endsWith(Members::FILE_DMC_EXTENSION)
+	}
+	
+	def isNonDmcFile(String string) {
+		!string.isDmcFile
 	}
 
 	def isRecursive(MemberRef ref) {

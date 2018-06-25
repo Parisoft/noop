@@ -24,7 +24,7 @@
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/CHRROM"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INESPRG"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INESCHR"/>
-      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INESMAPPER"/>
+      <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INESMAP"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INESMIR"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/ZP"/>
       <genEnumLiterals ecoreEnumLiteral="Noop.ecore#//StorageType/INLINE"/>

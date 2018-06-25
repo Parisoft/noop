@@ -25,15 +25,15 @@ import org.eclipse.xtext.generator.IGeneratorContext
 import org.parisoft.noop.consoles.Console
 import org.parisoft.noop.^extension.Cache
 import org.parisoft.noop.^extension.Classes
-import org.parisoft.noop.^extension.Datas
-import org.parisoft.noop.^extension.Expressions
 import org.parisoft.noop.^extension.Files
 import org.parisoft.noop.^extension.Members
-import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.generator.alloc.MemChunk
 import org.parisoft.noop.generator.compile.MetaClass
 import org.parisoft.noop.generator.mapper.MapperFactory
+import org.parisoft.noop.generator.mapper.Mmc3
 import org.parisoft.noop.generator.process.AST
+import org.parisoft.noop.generator.process.NodeCall
 import org.parisoft.noop.generator.process.NoopClassNotFoundException
 import org.parisoft.noop.generator.process.ProcessContext
 import org.parisoft.noop.noop.NoopClass
@@ -41,7 +41,6 @@ import org.parisoft.noop.noop.StorageType
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.parisoft.noop.^extension.Datas.*
-import org.parisoft.noop.generator.process.NodeCall
 
 /**
  * Generates code from your model files on save.
@@ -53,7 +52,7 @@ class NoopGenerator extends AbstractGenerator {
 	@Inject extension Files
 	@Inject extension Classes
 	@Inject extension Members
-	@Inject extension Expressions
+	@Inject extension TypeSystem
 
 	@Inject Provider<Console> console
 	@Inject MapperFactory mapperFactory
@@ -71,14 +70,10 @@ class NoopGenerator extends AbstractGenerator {
 
 		project.preProcess(clazz)
 		project.preCompile(clazz)
-		val code = try {
-				project.process(clazz).alloc.compile
-			} catch (NoopClassNotFoundException e) {
-				println('''interrupted''')
-			}
 
-		if (astByProject.get(project.name).mainClass !== null) {
-			fsa.generateFile('''«astByProject.get(project.name).mainClass».asm''', code)
+		try {
+			project.process(clazz).alloc.compile(clazz).optimize.assembly(project, fsa)
+		} catch (NoopClassNotFoundException e) {
 		}
 
 		println('''«clazz.fullName» Took:«System::currentTimeMillis - ini»ms''')
@@ -169,7 +164,7 @@ class NoopGenerator extends AbstractGenerator {
 		chunks
 	}
 
-	private def compile(ProcessContext ctx) '''
+	private def compile(ProcessContext ctx, NoopClass clazz) '''
 		;----------------------------------------------------------------
 		; Class Metadata
 		;----------------------------------------------------------------
@@ -207,27 +202,32 @@ class NoopGenerator extends AbstractGenerator {
 		; iNES Header
 		;----------------------------------------------------------------
 			.db 'NES', $1A ;identification of the iNES header
-			.db «ctx.headers.get(StorageType::INESPRG)?: 2» ;number of 16KB PRG-ROM pages
-			.db «ctx.headers.get(StorageType::INESCHR)?: 1» ;number of 8KB CHR-ROM pages
-			.db «ctx.headers.get(StorageType::INESMAPPER)?: 0» | «ctx.headers.get(StorageType::INESMIR)?: 1»
+			.db «(ctx.headers.get(StorageType::INESPRG)?: 32)» / 16 ;number of 16KB PRG-ROM pages
+			.db «(ctx.headers.get(StorageType::INESCHR)?: 08)» / 08 ;number of 8KB CHR-ROM pages
+			.db «(ctx.headers.get(StorageType::INESMAP)?: 0)» | «ctx.headers.get(StorageType::INESMIR)?: 1»
 			.dsb 9, $00 ;clear the remaining bytes to 16
-		
+		«clazz.convert(ctx.headers)»
+		«(mapperFactory.get(ctx.headers.get(StorageType::INESMAP) as Integer ?: 0) as Mmc3).compile(ctx)»
 	'''
 
-	private def assembly(Resource resource, IFileSystemAccess2 fsa) {
-		val asm = resource.compile
+	private def assembly(String code, IProject project, IFileSystemAccess2 fsa) {
+		val mainClass = astByProject.get(project.name).mainClass
 
-		if (asm !== null) {
-			fsa.generateFile(asm.asmFileName, asm.content)
-			fsa.deleteFile(asm.binFileName)
+		if (mainClass !== null) {
+			val asmFileName = '''«mainClass».asm'''
+			val binFileName = '''«mainClass».bin'''
+			val lstFileName = '''«mainClass».lst'''
+
+			fsa.generateFile(asmFileName, code)
+			fsa.deleteFile(binFileName)
 
 			if (assembler?.exists) {
 				assembler.executable = true
 
 				val ini = System::currentTimeMillis
-				val inputFileName = fsa.getURI(asm.asmFileName).toFile.absolutePath
-				val outputFileName = fsa.getURI(asm.binFileName).toFile.absolutePath
-				val listFileName = fsa.getURI(asm.lstFileName).toFile.absolutePath
+				val inputFileName = fsa.getURI(asmFileName).toFile.absolutePath
+				val outputFileName = fsa.getURI(binFileName).toFile.absolutePath
+				val listFileName = fsa.getURI(lstFileName).toFile.absolutePath
 				val command = '''«assembler.absolutePath» -l «inputFileName» «outputFileName» «listFileName»'''
 
 				try {
@@ -256,35 +256,6 @@ class NoopGenerator extends AbstractGenerator {
 				}
 			}
 		}
-	}
-
-	private def compile(Resource resource) {
-		val mainClass = resource.contents.filter(NoopClass).findFirst[main]
-
-		if (mainClass === null) {
-			return null
-		}
-
-		var ini = System::currentTimeMillis
-		val ctx = mainClass.prepare
-		println('''RePrepare = «System::currentTimeMillis - ini»ms''')
-
-		ini = System::currentTimeMillis
-		mainClass.alloc(ctx)
-		println('''Alloc = «System::currentTimeMillis - ini»ms''')
-
-		ctx.prgRoms.entrySet.removeIf[ctx.prgRoms.values.exists[rom|rom.isOverrideOf(value)]]
-		ctx.chrRoms.entrySet.removeIf[ctx.chrRoms.values.exists[rom|rom.isOverrideOf(value)]]
-
-		ini = System::currentTimeMillis
-		val code = ctx.compile
-		println('''Compile = «System::currentTimeMillis - ini»ms''')
-
-		ini = System::currentTimeMillis
-		val content = code.optimize
-		println('''Optimize = «System::currentTimeMillis - ini»ms''')
-
-		new ASM(mainClass.name, content)
 	}
 
 	private def String optimize(CharSequence code) {
@@ -345,95 +316,13 @@ class NoopGenerator extends AbstractGenerator {
 		}
 	}
 
-	private def compile(AllocContext ctx) '''
-		;----------------------------------------------------------------
-		; Class Metadata
-		;----------------------------------------------------------------
-		«var classCount = 0»
-		«val classes = ctx.classes.values.filter[nonPrimitive].sortWith[a, b|
-			val aHasConstructor = ctx.constructors.containsKey(a.nameOf)
-			val bHasConstructor = ctx.constructors.containsKey(b.nameOf)
-			
-			if (aHasConstructor && !bHasConstructor) {
-				return -1 //don't know why this works inverted ... should be 1 instead
-			}
-			
-			if (!aHasConstructor && bHasConstructor) {
-				return 1 //don't know why this works inverted ... should be -1 instead
-			}
-			
-			return a.name.compareTo(b.name)
-		]»
-		«FOR noopClass : classes»
-			«noopClass.nameOf» = «classCount++»
-			«val offset = new AtomicInteger(1)»
-			«val offsets = noopClass.allFieldsTopDown.filter[nonStatic].toMap([it], [offset.getAndAdd(sizeOf as Integer)])»
-			«FOR field : noopClass.declaredVariables.filter[nonStatic]»
-				«field.nameOfOffset» = «offsets.get(field)»
-			«ENDFOR»
-			
-		«ENDFOR»
-		;----------------------------------------------------------------
-		; Constant variables
-		;----------------------------------------------------------------
-		«Members::TRUE» = 1
-		«Members::FALSE» = 0
-		«Members::FT_DPCM_OFF» = $C000
-		«Members::FT_DPCM_PTR» = («Members::FT_DPCM_OFF»&$3fff)>>6
-		«FOR cons : ctx.constants.values»
-			«cons.nameOf» = «cons.value.compileConstant»
-		«ENDFOR»
-		min EQU (b + ((a - b) & ((a - b) >> «Integer.BYTES» * 8 - 1)))
-		
-		;----------------------------------------------------------------
-		; Static variables
-		;----------------------------------------------------------------
-		«FOR page : 0..< ctx.counters.size»
-			«IF ctx.resetCounter(page) == 0»«noop»«ENDIF»
-		«ENDFOR»
-		«FOR page : 0..< ctx.counters.size»
-			«val staticVars = ctx.statics.values.filter[(storageOf ?: 0) == page]»
-			«FOR staticVar : staticVars»
-				«staticVar.nameOf» = «ctx.counters.get(page).getAndAdd(staticVar.sizeOf as Integer).toHexString(4)»
-			«ENDFOR»
-		«ENDFOR»
-		
-		;----------------------------------------------------------------
-		; Local variables
-		;----------------------------------------------------------------
-		«Members::TEMP_VAR_NAME1» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
-		«Members::TEMP_VAR_NAME2» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
-		«Members::TEMP_VAR_NAME3» = «ctx.counters.get(Datas::PTR_PAGE).getAndAdd(2).toHexString(4)»
-		«val zpDelta = ctx.counters.get(Datas::PTR_PAGE).get»
-		«FOR zpChunk : ctx.pointers.values.flatten.sort»
-			«zpChunk.shiftTo(zpDelta)»
-		«ENDFOR»
-		«val varDelta = ctx.counters.drop(Datas::VAR_PAGE).map[get].reduce[c1, c2| c1 + c2] - 0x1600»
-		«FOR varChunk : ctx.variables.values.flatten.sort»
-			«varChunk.shiftTo(varDelta)»
-		«ENDFOR»
-		«FOR chunk : ctx.pointers.values.flatten.sort + ctx.variables.values.flatten.sort»
-			«chunk.variable» = «chunk.lo.toHexString(4)»
-		«ENDFOR»
-		
-		«val inesPrg = ctx.constants.values.findFirst[INesPrg]?.valueOf as Integer ?: 32»
-		«val inesChr = ctx.constants.values.findFirst[INesChr]?.valueOf as Integer ?: 8»
-		«val inesMap = ctx.constants.values.findFirst[INesMapper]?.valueOf as Integer ?: 0»
-		«val inesMir = ctx.constants.values.findFirst[INesMir]?.valueOf as Integer ?: 1»
-		;----------------------------------------------------------------
-		; iNES Header
-		;----------------------------------------------------------------
-			.db 'NES', $1A ;identification of the iNES header
-			.db «(inesPrg / 16).toHexString» ;number of 16KB PRG-ROM pages
-			.db «(inesChr / 8).toHexString» ;number of 8KB CHR-ROM pages
-			.db «inesMap.toHexString(1)»0 | «inesMir.toHexString»
-			.dsb 9, $00 ;clear the remaining bytes to 16
-			
-		«mapperFactory.get(inesMap)?.compile(ctx)»
-	'''
-
-	private def toHexString(int value) {
-		value.toHexString(2)
+	private def void convert(NoopClass c, Map<StorageType, Object> headers) {
+		for (header : headers.entrySet) {
+			val const = header.value.toString
+			val clazz = const.substring(0, const.lastIndexOf('.'))
+			val value = c.toClassOrDefault(clazz, null).declaredConstants.findFirst[nameOf == const].valueOf
+			header.value = value
+		}
 	}
 
 	private def toHexString(int value, int len) {
@@ -446,6 +335,4 @@ class NoopGenerator extends AbstractGenerator {
 		return '$' + string
 	}
 
-	private def void noop() {
-	}
 }

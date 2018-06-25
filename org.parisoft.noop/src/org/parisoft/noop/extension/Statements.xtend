@@ -215,8 +215,8 @@ class Statements {
 				if (statement.isNonVoid) {
 					ast.append(new NodeVar => [
 						varName = statement.nameOf
-//						type = statement.method.typeOf.fullName
-						ptr = true//statement.method.typeOf.isNonPrimitive || statement.method.dimensionOf.isNotEmpty
+						type = statement.method.typeOf.fullName
+						ptr = statement.method.typeOf.isNonPrimitive || statement.method.dimensionOf.isNotEmpty
 					])
 				}
 				
