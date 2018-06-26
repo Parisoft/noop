@@ -22,9 +22,9 @@ class Mmc3 extends Mapper {
 	@Inject extension Expressions
 	@Inject extension IQualifiedNameProvider
 
-	def compile(ProcessContext ctx)'''
-		«val inesPrg = ctx.headers.get(StorageType::PRGROM) as Integer ?: 32»
-		«val inesChr = ctx.headers.get(StorageType::CHRROM) as Integer ?: 32»
+	override compile(ProcessContext ctx)'''
+		«val inesPrg = ctx.headers.get(StorageType::INESPRG) as Integer ?: 32»
+		«val inesChr = ctx.headers.get(StorageType::INESCHR) as Integer ?: 32»
 		«val prgBanks = inesPrg / 8»
 		«val chrBanks = inesChr / 8»
 		«val mode = (ctx.headers.get(StorageType::MMC3CFG) as Integer ?: 0).bitwiseAnd(64)»

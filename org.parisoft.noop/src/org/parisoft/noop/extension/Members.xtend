@@ -1476,7 +1476,7 @@ class Members {
 				INX
 				BNE -clrMem:
 
-				stantiate_statics
+				instantiate_statics
 			
 			-waitVBlank2:
 				BIT $2002

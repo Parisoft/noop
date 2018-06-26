@@ -278,6 +278,15 @@ class Classes {
 	}
 
 	def void preProcess(NoopClass c, AST ast) {
+		c.declaredConstants.forEach[
+			val container = ast.container
+			ast.container = nameOf
+
+			preProcess(ast)
+
+			ast.container = container
+		]
+
 		c.declaredStatics.forEach [
 			val container = ast.container
 			ast.container = nameOf

@@ -102,7 +102,6 @@ class ProcessContext {
 		for (clazz : classes) {
 			val meta = clazz.metadata
 
-			macros.putAll(meta?.macros ?: emptyMap)
 			prgRoms.putAll(meta?.prgRoms ?: emptyMap)
 			chrRoms.putAll(meta?.chrRoms ?: emptyMap)
 			headers.putAll(meta?.headers ?: emptyMap)
@@ -110,6 +109,10 @@ class ProcessContext {
 		
 		for (header : headers.values) {
 			constants.add(header.toString)
+		}
+		
+		for (const : constants.toList) {
+			ast.get(const)?.forEach[process(this)]
 		}
 		
 		for (static : statics) {

@@ -9,6 +9,8 @@ import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.Statements
 import org.parisoft.noop.generator.alloc.AllocContext
 import org.parisoft.noop.generator.compile.CompileContext
+import org.parisoft.noop.generator.process.ProcessContext
+import org.parisoft.noop.noop.StorageType
 
 class Nrom extends Mapper {
 
@@ -19,6 +21,71 @@ class Nrom extends Mapper {
 	@Inject extension Expressions
 	@Inject extension IQualifiedNameProvider
 
+	override compile(ProcessContext ctx) '''
+		;----------------------------------------------------------------
+		; Macros
+		;----------------------------------------------------------------
+		«FOR directive : ctx.directives»
+			«directive»
+		«ENDFOR»
+		«FOR macro : ctx.macros.entrySet»
+			«noop»
+				.macro «macro.key»
+				«macro.value»
+				.endm
+		«ENDFOR»
+		
+		«val inesPrg = ctx.headers.get(StorageType::PRGROM) as Integer ?: 32»
+		;----------------------------------------------------------------
+		; PRG-ROM Bank(s)
+		;----------------------------------------------------------------
+			.base $10000 - («(inesPrg / 16).toHexString» * $4000) 
+		
+		«FOR rom : ctx.prgRoms.values.map[entrySet].flatten.filter[key.isNonDmcFile].map[value].toList»
+			«rom»
+		«ENDFOR»
+		
+		;-- Methods -----------------------------------------------------
+		«FOR method : ctx.methodsByBank.values.map[entrySet].flatten.sortBy[key]»
+			«method.value»
+			
+		«ENDFOR»
+		«val classes = ctx.metaClasses.values.filter[ctx.constructors.contains('''«name».new''')].sortBy[name]»
+		«IF classes.isNotEmpty»
+			;-- Constructors ------------------------------------------------
+			«FOR clazz : classes»
+				«clazz.constructor»
+				
+			«ENDFOR»
+		«ENDIF»
+		«val dmcList = ctx.prgRoms.values.map[entrySet].flatten.filter[key.isDmcFile].map[value].toList»
+		«IF dmcList.isNotEmpty»
+			;-- DMC sound data-----------------------------------------------
+				.org «Members::FT_DPCM_OFF»
+			«FOR dmcRom : dmcList»
+				«dmcRom»
+			«ENDFOR»
+		«ENDIF»
+		
+		;----------------------------------------------------------------
+		; Interrupt vectors
+		;----------------------------------------------------------------
+			.org $FFFA     
+		
+			.dw «ctx.ast.vectors.get('nmi') ?: 0»
+		 	.dw «ctx.ast.vectors.get('reset') ?: 0»
+		 	.dw «ctx.ast.vectors.get('irq') ?: 0»
+		
+		;----------------------------------------------------------------
+		; CHR-ROM bank(s)
+		;----------------------------------------------------------------
+			.base $0000
+		
+		«FOR rom : ctx.chrRoms.values.map[entrySet].flatten.map[value].toList»
+			«rom»
+		«ENDFOR»
+	'''
+	
 	override compile(AllocContext ctx) '''
 		«val inesPrg = ctx.constants.values.findFirst[INesPrg]?.valueOf as Integer ?: 32»
 		;----------------------------------------------------------------

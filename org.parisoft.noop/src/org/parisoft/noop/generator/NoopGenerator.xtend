@@ -31,7 +31,6 @@ import org.parisoft.noop.^extension.TypeSystem
 import org.parisoft.noop.generator.alloc.MemChunk
 import org.parisoft.noop.generator.compile.MetaClass
 import org.parisoft.noop.generator.mapper.MapperFactory
-import org.parisoft.noop.generator.mapper.Mmc3
 import org.parisoft.noop.generator.process.AST
 import org.parisoft.noop.generator.process.NodeCall
 import org.parisoft.noop.generator.process.NoopClassNotFoundException
@@ -207,7 +206,7 @@ class NoopGenerator extends AbstractGenerator {
 			.dsb 9, $00 ;clear the remaining bytes to 16
 		
 		«clazz.convert(ctx.headers)»
-		«(mapperFactory.get(ctx.headers.get(StorageType::INESMAP) as Integer ?: 0) as Mmc3).compile(ctx)»
+		«mapperFactory.get(ctx.headers.get(StorageType::INESMAP) as Integer ?: 0).compile(ctx)»
 	'''
 
 	private def assembly(String code, IProject project, IFileSystemAccess2 fsa) {
@@ -215,7 +214,7 @@ class NoopGenerator extends AbstractGenerator {
 
 		if (mainClass !== null) {
 			val asmFileName = '''«mainClass».asm'''
-			val binFileName = '''«mainClass».bin'''
+			val binFileName = '''«mainClass».nes'''
 			val lstFileName = '''«mainClass».lst'''
 
 			fsa.generateFile(asmFileName, code)

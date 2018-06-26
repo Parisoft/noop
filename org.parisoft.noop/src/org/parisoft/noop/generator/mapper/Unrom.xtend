@@ -9,6 +9,7 @@ import org.parisoft.noop.^extension.Members
 import org.parisoft.noop.^extension.Statements
 import org.parisoft.noop.generator.alloc.AllocContext
 import org.parisoft.noop.generator.compile.CompileContext
+import org.parisoft.noop.generator.process.ProcessContext
 
 class Unrom extends Mapper {
 
@@ -19,6 +20,10 @@ class Unrom extends Mapper {
 	@Inject extension Expressions
 	@Inject extension IQualifiedNameProvider
 
+	override compile(ProcessContext ctx) {
+		throw new UnsupportedOperationException("TODO: auto-generated method stub")
+	}
+	
 	override compile(AllocContext ctx) '''
 		«val inesPrg = ctx.constants.values.findFirst[INesPrg]?.valueOf as Integer ?: 32»
 		«val banks = inesPrg / 16»

@@ -1,9 +1,12 @@
 package org.parisoft.noop.generator.mapper
 
 import org.parisoft.noop.generator.alloc.AllocContext
+import org.parisoft.noop.generator.process.ProcessContext
 
 abstract class Mapper {
 
+	def CharSequence compile(ProcessContext ctx)
+	
 	def CharSequence compile(AllocContext ctx)
 
 	protected def toHexString(int value) {
