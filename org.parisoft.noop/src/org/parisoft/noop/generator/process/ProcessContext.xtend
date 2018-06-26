@@ -31,7 +31,7 @@ class ProcessContext {
 	@Accessors val structOfClasses = new LinkedHashMap<String, String>
 	@Accessors val superClasses = new HashMap<String, List<String>>
 	@Accessors val subClasses = new HashMap<String, List<String>>
-	@Accessors val directives = newLinkedHashSet('''min EQU (b + ((a - b) & ((a - b) >> «Integer.BYTES» * 8 - 1)))''')
+	@Accessors val directives = newLinkedHashSet('''	min EQU (b + ((a - b) & ((a - b) >> «Integer.BYTES» * 8 - 1)))''')
 	@Accessors val macros = new HashMap<String, CharSequence>
 	@Accessors val headers = new HashMap<StorageType, Object>
 
@@ -106,22 +106,19 @@ class ProcessContext {
 			prgRoms.putAll(meta?.prgRoms ?: emptyMap)
 			chrRoms.putAll(meta?.chrRoms ?: emptyMap)
 			headers.putAll(meta?.headers ?: emptyMap)
-
-			headers.entrySet.findFirst[key === StorageType::INESMAP] => [ map |
-				if (map !== null) {
-					directives.removeIf[startsWith('inesmap =')]
-					directives.add('''inesmap = «map»''')
-				}
-			]
 		}
-
+		
+		for (header : headers.values) {
+			constants.add(header.toString)
+		}
+		
 		for (static : statics) {
 			val clazz = static.substring(0, static.lastIndexOf('.'))
 			val asm = clazz.metadata?.statics?.get(static)
 
 			if (asm !== null) {
 				macros.compute('instantiate_statics', [ k, v |
-					v + asm + System::lineSeparator
+					(v ?: '') + asm + System::lineSeparator
 				])
 			}
 		}
@@ -140,7 +137,11 @@ class ProcessContext {
 			val containerClass = method.substring(0, dot)
 			val methodName = method.substring(dot + 1)
 
-			if (methodName.isNonStatic) {
+			if (containerClass.isInline(method)) {
+				macros.put('''call_«method»''', containerClass.metadata.macros.get(method))
+			} else if (methodName.isStatic){
+				macros.put('''call_«method»''', '''	JSR «method»''')
+			} else {
 				val overriders = containerClass.subClasses.filter [ sub |
 					val overrideName = '''«sub».«methodName»'''
 					sub.metadata?.methods.values.exists[containsKey(overrideName)]
@@ -154,18 +155,23 @@ class ProcessContext {
 				} else {
 					macros.put('''call_«method»''', '''	JSR «method»''')
 				}
-			} else if (containerClass.isInline(methodName)) {
-				methods.remove(method)
-				macros.put('''call_«method»''', containerClass.metadata.macros.get(method))
-			}
+			}  
 		}
 
 		for (clazz : classes) {
-			for (methodByBank : clazz.metadata?.methods.entrySet) {
+			for (methodByBank : clazz.metadata?.methods?.entrySet ?: emptySet) {
 				for (entry : methodByBank.value.entrySet.filter[methods.contains(key)]) {
 					methodsByBank.computeIfAbsent(methodByBank.key, [new HashMap]).put(entry.key, entry.value)
 				}
 			}
+		}
+		
+		for (vector : ast.vectors.values) {
+			val containerClass = vector.substring(0, vector.lastIndexOf('.'))
+			
+			containerClass.metadata?.vectors?.forEach[name, asm|
+				methodsByBank.computeIfAbsent(null, [new HashMap]).put(name, asm)
+			]
 		}
 	}
 
@@ -245,12 +251,12 @@ class ProcessContext {
 		node.methodName == method || node.methodName.calls.exists[method.isCalledBy(it)]
 	}
 
-	private def isNonStatic(String method) {
-		!method.startsWith('_$') && !method.startsWith('$')
+	private def isStatic(String method) {
+		method.startsWith('_$') || method.startsWith('$')
 	}
 
 	private def isInline(String clazz, String method) {
-		clazz.metadata?.macros?.containsKey('''«clazz».«method»''')
+		clazz.metadata?.macros?.containsKey(method)
 	}
 
 	private def getPolymorphicCall(String clazz, String method, List<String> overriders, List<NodeVar> params,

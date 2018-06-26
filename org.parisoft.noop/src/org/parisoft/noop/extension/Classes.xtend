@@ -247,11 +247,11 @@ class Classes {
 	}
 
 	def Object sizeOf(NoopClass c) {
-		classeSize.get(c.fullyQualifiedName.toString, [c.fullSizeOf])
+		classeSize.get(c.fullName, [c.fullSizeOf])
 	}
 
 	private def int fullSizeOf(NoopClass c) {
-		switch (c.fullyQualifiedName.toString) {
+		switch (c.fullName) {
 			case TypeSystem::LIB_VOID:
 				0
 			case TypeSystem::LIB_BYTE:

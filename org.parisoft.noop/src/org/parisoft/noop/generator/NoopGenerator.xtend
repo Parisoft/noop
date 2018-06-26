@@ -113,9 +113,9 @@ class NoopGenerator extends AbstractGenerator {
 		]
 
 		ctx.begin
-		ctx.process("reset")
-		ctx.process("nmi")
-		ctx.process("irq")
+		ctx.process('reset')
+		ctx.process('nmi')
+		ctx.process('irq')
 		ctx.finish
 		ctx
 	}
@@ -182,7 +182,6 @@ class NoopGenerator extends AbstractGenerator {
 		«FOR cons : ctx.constants»
 			«cons» = «ctx.metaClasses.get(cons.substring(0, cons.lastIndexOf('.')))?.constants?.get(cons) ?: 0»
 		«ENDFOR»
-		min EQU (b + ((a - b) & ((a - b) >> «Integer.BYTES» * 8 - 1)))
 		
 		;----------------------------------------------------------------
 		; Static variables
@@ -206,6 +205,7 @@ class NoopGenerator extends AbstractGenerator {
 			.db «(ctx.headers.get(StorageType::INESCHR)?: 08)» / 08 ;number of 8KB CHR-ROM pages
 			.db «(ctx.headers.get(StorageType::INESMAP)?: 0)» | «ctx.headers.get(StorageType::INESMIR)?: 1»
 			.dsb 9, $00 ;clear the remaining bytes to 16
+		
 		«clazz.convert(ctx.headers)»
 		«(mapperFactory.get(ctx.headers.get(StorageType::INESMAP) as Integer ?: 0) as Mmc3).compile(ctx)»
 	'''

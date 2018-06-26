@@ -1435,11 +1435,15 @@ class Members {
 	}
 	
 	def String compile(Method method, CompileContext ctx) '''
-		«IF method.isNonNative && method.isNonInline»
+		«IF method.isInline»
+			«FOR statement : method.body.statements»
+				«statement.compile(new CompileContext => [container = method.nameOf])»
+			«ENDFOR»
+		«ELSEIF method.isNonNative»
 			«method.nameOf»:
 			«IF method.isReset»
 				;;;;;;;;;; Initial setup begin
-				.if inesmap = 4
+				.ifdef enable_irq
 				CLI          ; enable IRQs
 				.else
 				SEI          ; disable IRQs
@@ -1604,14 +1608,8 @@ class Members {
 					«ENDIF»
 				«ENDIF»
 			«ENDFOR»
-			«IF method.isStatic && method.isNonInline»
-				«noop»
-					JSR «method.nameOf»
-			«ELSE»
-				«noop»
-					«method.nameOfCall»
-			«ENDIF»
 			«noop»
+				«method.nameOfCall»
 			«ctx.pullRecursiveVars(method.nameOf)»
 			«ctx.pullAccIfOperating»
 			«IF method.typeOf.isNonVoid»

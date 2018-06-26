@@ -2442,8 +2442,8 @@ PPU {
      * <p>The <i>$ctrl</i> byte remains intact</p>
      */    
     $clearCtrl() @Inline {
-    	!	LDA #0     !
-    	!	?$PPUCTRL? !
+    	!	LDA #0         !
+    	!	STA ?$PPUCTRL? !
     }
     
     /*

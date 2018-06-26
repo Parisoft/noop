@@ -37,6 +37,7 @@ class Mmc3 extends Mapper {
 		;----------------------------------------------------------------
 		; Macros
 		;----------------------------------------------------------------
+		enable_irq = 1
 		«FOR directive : ctx.directives»
 			«directive»
 		«ENDFOR»
@@ -106,70 +107,70 @@ class Mmc3 extends Mapper {
 		;----------------------------------------------------------------
 			.org $FFFA     
 		
-		 	.dw «ctx.methods.values.findFirst[nmi]?.nameOf ?: 0»
-		 	.dw «ctx.methods.values.findFirst[reset]?.nameOf ?: 0»
-		 	.dw «ctx.methods.values.findFirst[irq]?.nameOf ?: 0»
+		 	.dw «ctx.ast.vectors.get('nmi') ?: 0»
+		 	.dw «ctx.ast.vectors.get('reset') ?: 0»
+		 	.dw «ctx.ast.vectors.get('irq') ?: 0»
 		
 		«FOR bank : 0 ..< chrBanks»
 			«val bank0 = bank * 8»
-			«var roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank0]»
+			«var roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank0].map[value.values].flatten.toList»
 			«IF roms.isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank0»
 				;----------------------------------------------------------------
 					.base $0000
 				«FOR rom : roms»
-					«rom.compile(new CompileContext)»
+					«rom»
 				«ENDFOR»
 			«ENDIF»
 			«val bank2 = bank0 + 2»
-			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank2]).isNotEmpty»
+			«IF (roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank2].map[value.values].flatten.toList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank2»
 				;----------------------------------------------------------------
 					.base $0800
 				«FOR rom : roms»
-					«rom.compile(new CompileContext)»
+					«rom»
 				«ENDFOR»
 			«ENDIF»
 			«val bank4 = bank2 + 2»
-			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank4]).isNotEmpty»
+			«IF (roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank4].map[value.values].flatten.toList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank4»
 				;----------------------------------------------------------------
 					.base $1000
 				«FOR rom : roms»
-					«rom.compile(new CompileContext)»
+					«rom»
 				«ENDFOR»
 			«ENDIF»
 			«val bank5 = bank4 + 1»
-			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank5]).isNotEmpty»
+			«IF (roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank5].map[value.values].flatten.toList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank5»
 				;----------------------------------------------------------------
 					.base $1400
 				«FOR rom : roms»
-					«rom.compile(new CompileContext)»
+					«rom»
 				«ENDFOR»
 			«ENDIF»
 			«val bank6 = bank5 + 1»
-			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank6]).isNotEmpty»
+			«IF (roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank6].map[value.values].flatten.toList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank6»
 				;----------------------------------------------------------------
 					.base $1800
 				«FOR rom : roms»
-					«rom.compile(new CompileContext)»
+					«rom»
 				«ENDFOR»
 			«ENDIF»
 			«val bank7 = bank6 + 1»
-			«IF (roms = ctx.chrRoms.values.filter[(storageOf ?: 0) == bank7]).isNotEmpty»
+			«IF (roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank7].map[value.values].flatten.toList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank7»
 				;----------------------------------------------------------------
 					.base $1C00
 				«FOR rom : roms»
-					«rom.compile(new CompileContext)»
+					«rom»
 				«ENDFOR»
 			«ENDIF»
 		«ENDFOR»

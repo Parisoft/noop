@@ -952,7 +952,7 @@ class Datas {
 	def pushRecusiveVars(CompileContext ctx, String method) '''
 		«IF ctx.recursiveVars.isNotEmpty»
 			«noop»
-				.if recursive_«ctx.container»_to_«method» == 1
+				.ifdef recursive_«ctx.container»_to_«method»
 			«FOR variable : ctx.recursiveVars»
 				«variable.push»
 			«ENDFOR»
@@ -964,7 +964,7 @@ class Datas {
 	def pullRecursiveVars(CompileContext ctx, String method) '''
 		«IF ctx.recursiveVars.isNotEmpty»
 			«noop»
-				.if recursive_«ctx.container»_to_«method» == 1
+				.ifdef recursive_«ctx.container»_to_«method»
 			«FOR variable : ctx.recursiveVars»
 				«variable.pull»
 			«ENDFOR»
