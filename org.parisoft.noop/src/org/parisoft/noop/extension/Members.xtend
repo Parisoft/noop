@@ -305,7 +305,6 @@ class Members {
 	def void preProcessIndices(Member member, List<Index> indices, CompileContext ref, AST ast) {
 		if (indices.isNotEmpty) {
 			val isIndexImmediate = member.isIndexImmediate(indices)
-			val isIndexNonImmediate = !isIndexImmediate
 
 			if (isIndexImmediate) {
 				indices.forEach[value.preProcess(ast)]
@@ -322,12 +321,12 @@ class Members {
 				}
 			}
 
-			if (isIndexNonImmediate || ref.indirect !== null) {
-				ast.append(new NodeVar => [
-					varName = indices.nameOfElement(ast.container)
-					ptr = true
-				])
-			}
+//			if (isIndexNonImmediate || ref.indirect !== null) {
+//				ast.append(new NodeVar => [
+//					varName = indices.nameOfElement(ast.container)
+//					ptr = true
+//				])
+//			}
 		}
 	}
 
@@ -446,7 +445,7 @@ class Members {
 				«IF ref.absolute !== null»
 					«ref.absolute = '''«ref.absolute» + #(«index»)'''»
 				«ELSEIF ref.indirect !== null»
-					«val ptr = indices.nameOfElement(ref.container)»
+					«val ptr = Members::TEMP_VAR_NAME2»
 					«ref.pushAccIfOperating»
 						CLC
 						LDA «ref.indirect»
@@ -460,7 +459,7 @@ class Members {
 				«ENDIF»
 			«ELSE»
 				«IF ref.absolute !== null»
-					«val ptr = indices.nameOfElement(ref.container)»
+					«val ptr = Members::TEMP_VAR_NAME2»
 						CLC
 						ADC #<«ref.absolute»
 						STA «ptr»
@@ -478,7 +477,7 @@ class Members {
 					«ref.absolute = null»
 					«ref.indirect = ptr»
 				«ELSEIF ref.indirect !== null»
-					«val ptr = indices.nameOfElement(ref.container)»
+					«val ptr = Members::TEMP_VAR_NAME2»
 						CLC
 						ADC «ref.indirect»
 						STA «ptr»
@@ -1289,7 +1288,7 @@ class Members {
 		
 		ast.append(new NodeCall => [methodName = method.nameOf])
 		
-		if (method.URI.project.name !== ast.project && !ast.contains(method.nameOf)) {
+		if (method.URI.project.name != ast.project && !ast.contains(method.nameOf)) {
 			method.preProcess(ast)
 		}
 		

@@ -12,6 +12,8 @@ import org.parisoft.noop.generator.compile.CompileContext
 import org.parisoft.noop.noop.StorageType
 import org.parisoft.noop.noop.Variable
 import org.parisoft.noop.generator.process.ProcessContext
+import java.util.LinkedHashMap
+import java.util.HashMap
 
 class Mmc3 extends Mapper {
 
@@ -22,7 +24,7 @@ class Mmc3 extends Mapper {
 	@Inject extension Expressions
 	@Inject extension IQualifiedNameProvider
 
-	override compile(ProcessContext ctx)'''
+	override compile(ProcessContext ctx) '''
 		«val inesPrg = ctx.headers.get(StorageType::INESPRG) as Integer ?: 32»
 		«val inesChr = ctx.headers.get(StorageType::INESCHR) as Integer ?: 32»
 		«val prgBanks = inesPrg / 8»
@@ -34,6 +36,7 @@ class Mmc3 extends Mapper {
 		«val oddAddr = '$A000'»
 		«val fixedAddr0 = if (mode == 0) '$C000' else '$8000'»
 		«val fixedAddr1 = '$E000'»
+		«ctx.prepareRoms(fixedBank1)»
 		;----------------------------------------------------------------
 		; Macros
 		;----------------------------------------------------------------
@@ -47,6 +50,7 @@ class Mmc3 extends Mapper {
 				«macro.value»
 				.endm
 		«ENDFOR»
+		
 		«FOR bank : 0 ..< prgBanks»
 			«val base = if (bank == fixedBank1) {
 				fixedAddr1
@@ -62,19 +66,20 @@ class Mmc3 extends Mapper {
 			;----------------------------------------------------------------
 				.base «base» 
 			
-			«val dmcList = ctx.prgRoms.entrySet.filter[(key ?: fixedBank1) == bank].map[value.entrySet].flatten.filter[key.isDmcFile].toList»
+			«val dmcList = ctx.dmcRoms.get(bank)?.values ?: emptyList»
 			«IF dmcList.isNotEmpty»
 				;-- DMC sound data-----------------------------------------------
 				«FOR dmcRom : dmcList»
-					«dmcRom.value»
+					«dmcRom»
 				«ENDFOR»
+				
 			«ENDIF»
-			«FOR rom : ctx.prgRoms.entrySet.filter[(key ?: fixedBank1) == bank].map[value.entrySet].flatten.filter[key.isNonDmcFile].toList»
-				«rom.value»
+			«FOR rom : ctx.prgRoms.get(bank)?.values ?: emptyList»
+				«rom»
 			«ENDFOR»
-			«val methods = ctx.methodsByBank.entrySet.filter[(key ?: fixedBank1) == bank].map[value.entrySet].flatten.sortBy[key]»
+			
+			«val methods = ctx.methodsByBank.get(bank)?.entrySet?.sortBy[key] ?: emptySet»
 			«IF methods.isNotEmpty»
-				«noop»
 				;-- Methods -----------------------------------------------------
 				«FOR method : methods»
 					«method.value»
@@ -82,7 +87,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«IF bank == fixedBank1»
-				«val classes = ctx.metaClasses.values.filter[ctx.constructors.contains('''«name».new''')].sortBy[name]»
+				«val classes = ctx.metaClasses.values.filter[ctx.constructors.contains(name)].sortBy[name]»
 				«IF classes.isNotEmpty»
 					;-- Constructors ------------------------------------------------
 					«FOR clazz : classes»
@@ -113,7 +118,7 @@ class Mmc3 extends Mapper {
 		
 		«FOR bank : 0 ..< chrBanks»
 			«val bank0 = bank * 8»
-			«var roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank0].map[value.values].flatten.toList»
+			«var roms = ctx.chrRoms.get(bank)?.values ?: emptyList»
 			«IF roms.isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank0»
@@ -124,7 +129,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«val bank2 = bank0 + 2»
-			«IF (roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank2].map[value.values].flatten.toList).isNotEmpty»
+			«IF (roms = ctx.chrRoms.get(bank)?.values ?: emptyList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank2»
 				;----------------------------------------------------------------
@@ -134,7 +139,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«val bank4 = bank2 + 2»
-			«IF (roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank4].map[value.values].flatten.toList).isNotEmpty»
+			«IF (roms = ctx.chrRoms.get(bank)?.values ?: emptyList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank4»
 				;----------------------------------------------------------------
@@ -144,7 +149,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«val bank5 = bank4 + 1»
-			«IF (roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank5].map[value.values].flatten.toList).isNotEmpty»
+			«IF (roms = ctx.chrRoms.get(bank)?.values ?: emptyList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank5»
 				;----------------------------------------------------------------
@@ -154,7 +159,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«val bank6 = bank5 + 1»
-			«IF (roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank6].map[value.values].flatten.toList).isNotEmpty»
+			«IF (roms = ctx.chrRoms.get(bank)?.values ?: emptyList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank6»
 				;----------------------------------------------------------------
@@ -164,7 +169,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«val bank7 = bank6 + 1»
-			«IF (roms = ctx.chrRoms.entrySet.filter[(key ?: 0) == bank7].map[value.values].flatten.toList).isNotEmpty»
+			«IF (roms = ctx.chrRoms.get(bank)?.values ?: emptyList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank7»
 				;----------------------------------------------------------------
@@ -175,6 +180,13 @@ class Mmc3 extends Mapper {
 			«ENDIF»
 		«ENDFOR»
 	'''
+
+	private def void prepareRoms(ProcessContext ctx, int fixedBank) {
+		ctx.prgRoms.computeIfAbsent(fixedBank, [new LinkedHashMap]).putAll(ctx.prgRoms.remove(null) ?: emptyMap)
+		ctx.dmcRoms.computeIfAbsent(fixedBank, [new LinkedHashMap]).putAll(ctx.dmcRoms.remove(null) ?: emptyMap)
+		ctx.chrRoms.computeIfAbsent(0, [new LinkedHashMap]).putAll(ctx.chrRoms.remove(null) ?: emptyMap)
+		ctx.methodsByBank.computeIfAbsent(fixedBank, [new HashMap]).putAll(ctx.methodsByBank.remove(null) ?: emptyMap)
+	}
 
 	override compile(AllocContext ctx) '''
 		«val inesPrg = ctx.constants.values.findFirst[INesPrg]?.valueOf as Integer ?: 32»

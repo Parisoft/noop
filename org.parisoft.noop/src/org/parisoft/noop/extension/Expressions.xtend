@@ -573,16 +573,16 @@ class Expressions {
 		'''«containerName».tmp«instance.typeOf.name»@«instance.hashCode.toHexString»'''.toString
 	}
 
-	def nameOfElement(List<Index> indexes, String containerName) {
-		'''«containerName».ref@«indexes.hashCode.toHexString»'''.toString
+	def nameOfElement(List<Index> indices, String containerName) {
+		tmpNames.computeIfAbsent(indices.head, ['''«containerName».ref@«indices.hashCode.toHexString»'''.toString])
 	}
 
 	def nameOfTmp(ArrayLiteral array, String containerName) {
-		'''«containerName».tmp«array.typeOf.name»Array@«array.hashCode.toHexString»'''.toString
+		tmpNames.computeIfAbsent(array, ['''«containerName».tmp«array.typeOf.name»Array@«array.hashCode.toHexString»'''.toString])
 	}
 
 	def nameOfTmpArray(NewInstance instance, String containerName) {
-		'''«containerName».tmp«instance.typeOf.name»Array@«instance.hashCode.toHexString»'''.toString
+		tmpNames.computeIfAbsent(instance, ['''«containerName».tmp«instance.typeOf.name»Array@«instance.hashCode.toHexString»'''.toString])
 	}
 
 	def nameOfConstructor(NewInstance instance) {
@@ -945,7 +945,14 @@ class Expressions {
 					}
 
 				if (method !== null) {
-					method.preProcess(ast)
+					val container = method.containerClass
+					ast.append(new NodeRefClass => [className = container.fullName])
+					
+					if (container.isExternal(ast.project)) {
+						ast.externalClasses.add(container)
+					}
+					
+					method.preProcessInvocation(newArrayList(left, right), emptyList, ast)
 				} else if (expression.assignment === AssignmentType::DIV_ASSIGN ||
 					expression.assignment === AssignmentType::MOD_ASSIGN) {
 					expression.moduloVariable.preProcessStaticReference(emptyList, ast)
@@ -1024,6 +1031,13 @@ class Expressions {
 					method
 
 				if (method !== null) {
+					val container = method.containerClass
+					ast.append(new NodeRefClass => [className = container.fullName])
+					
+					if (container.isExternal(ast.project)) {
+						ast.externalClasses.add(container)
+					}
+					
 					method.preProcessInvocation(newArrayList(expression.left, expression.right), emptyList, ast)
 				} else {
 					expression.left.preProcess(ast)
@@ -1035,6 +1049,13 @@ class Expressions {
 					method
 
 				if (method !== null) {
+					val container = method.containerClass
+					ast.append(new NodeRefClass => [className = container.fullName])
+					
+					if (container.isExternal(ast.project)) {
+						ast.externalClasses.add(container)
+					}
+					
 					method.preProcessInvocation(newArrayList(expression.left, expression.right), emptyList, ast)
 				} else {
 					expression.left.preProcess(ast)
@@ -1046,6 +1067,13 @@ class Expressions {
 					method
 
 				if (method !== null) {
+					val container = method.containerClass
+					ast.append(new NodeRefClass => [className = container.fullName])
+					
+					if (container.isExternal(ast.project)) {
+						ast.externalClasses.add(container)
+					}
+					
 					method.preProcessInvocation(newArrayList(expression.left, expression.right), emptyList, ast)
 				} else {
 					expression.left.preProcess(ast)

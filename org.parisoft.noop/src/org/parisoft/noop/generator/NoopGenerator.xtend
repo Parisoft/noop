@@ -82,6 +82,8 @@ class NoopGenerator extends AbstractGenerator {
 		val ast = astByProject.computeIfAbsent(project.name, [new AST => [it.project = project.name]]) => [
 			clear(clazz.fullName)
 		]
+		
+		Cache::clear
 
 		clazz.preProcess(ast)
 

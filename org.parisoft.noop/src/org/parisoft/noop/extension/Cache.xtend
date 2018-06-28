@@ -25,6 +25,7 @@ class Cache {
 	public static val modMethods = HashBasedTable::<Expression, Expression, MethodReference>create
 	public static val indexExpressions = HashBasedTable::<Member, List<Index>, Expression>create
 	public static val copies = new HashMap<EObject, EObject>
+	public static val tmpNames = new HashMap<EObject, String>
 	
 	static def clear() {
 		prepared.clear
@@ -37,5 +38,6 @@ class Cache {
 		modMethods.clear
 		indexExpressions.clear
 		copies.clear
+		tmpNames.clear
 	}
 }

@@ -11,12 +11,13 @@ class MetaClass {
 	@Accessors var String name
 	@Accessors var String superClass
 	@Accessors var String constructor
-	@Accessors var Map<Integer, Map<String, String>> prgRoms = new LinkedHashMap
-	@Accessors var Map<Integer, Map<String, String>> chrRoms = new LinkedHashMap
+	@Accessors var Map<Integer, Map<String, String>> prgRoms = new HashMap
+	@Accessors var Map<Integer, Map<String, String>> chrRoms = new HashMap
+	@Accessors var Map<Integer, Map<String, String>> dmcRoms = new HashMap
 	@Accessors var Map<String, String> constants = new LinkedHashMap
 	@Accessors var Map<String, String> statics = new LinkedHashMap
 	@Accessors var Map<String, Size> fields = new LinkedHashMap
-	@Accessors var Map<Integer, Map<String, String>> methods = new LinkedHashMap
+	@Accessors var Map<Integer, Map<String, String>> methods = new HashMap
 	@Accessors var Map<String, String> macros = new LinkedHashMap
 	@Accessors var Map<String, String> vectors = new HashMap
 	@Accessors var Map<StorageType, String> headers = new HashMap

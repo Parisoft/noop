@@ -24,6 +24,7 @@ import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 import static extension org.eclipse.xtext.EcoreUtil2.*
 import org.parisoft.noop.generator.process.AST
 import org.parisoft.noop.generator.process.NodeVar
+import java.util.LinkedHashMap
 
 class Classes {
 
@@ -247,10 +248,6 @@ class Classes {
 	}
 
 	def Object sizeOf(NoopClass c) {
-		classeSize.get(c.fullName, [c.fullSizeOf])
-	}
-
-	private def int fullSizeOf(NoopClass c) {
 		switch (c.fullName) {
 			case TypeSystem::LIB_VOID:
 				0
@@ -267,7 +264,7 @@ class Classes {
 			case TypeSystem::LIB_PRIMITIVE:
 				2
 			default:
-				(newArrayList(c.rawSizeOf) + c.subClasses.map[rawSizeOf]).max
+				'''«c.fullName».SIZE'''
 		}
 	}
 
@@ -324,12 +321,16 @@ class Classes {
 
 			constructor = (NoopFactory::eINSTANCE.createNewInstance => [type = c]).compile(null)
 
-			c.members.filter(Variable).filter[prgROM].forEach [ rom |
-				prgRoms.computeIfAbsent(rom.storageOf, [new HashMap]).put(rom.nameOf, rom.compile(new CompileContext))
+			c.members.filter(Variable).filter[prgROM].filter[nonDMC].forEach [ rom |
+				prgRoms.computeIfAbsent(rom.storageOf, [new LinkedHashMap]).put(rom.nameOf, rom.compile(new CompileContext))
+			]
+			
+			c.members.filter(Variable).filter[prgROM].filter[DMC].forEach [ rom |
+				dmcRoms.computeIfAbsent(rom.storageOf, [new LinkedHashMap]).put(rom.nameOf, rom.compile(new CompileContext))
 			]
 
 			c.members.filter(Variable).filter[chrROM].forEach [ rom |
-				chrRoms.computeIfAbsent(rom.storageOf, [new HashMap]).put(rom.nameOf, rom.compile(new CompileContext))
+				chrRoms.computeIfAbsent(rom.storageOf, [new LinkedHashMap]).put(rom.nameOf, rom.compile(new CompileContext))
 			]
 
 			c.members.filter(Variable).filter[constant].filter[nonROM].forEach [ cons |

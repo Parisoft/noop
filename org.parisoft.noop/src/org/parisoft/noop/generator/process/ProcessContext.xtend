@@ -22,10 +22,11 @@ class ProcessContext {
 	@Accessors val statics = new LinkedHashSet<String>
 	@Accessors val constants = new LinkedHashSet<String>
 	@Accessors val methods = new LinkedHashSet<String>
-	@Accessors val methodsByBank = new LinkedHashMap<Integer, Map<String, String>>
+	@Accessors val methodsByBank = new HashMap<Integer, Map<String, String>>
 	@Accessors val constructors = new LinkedHashSet<String>
-	@Accessors val prgRoms = new LinkedHashMap<Integer, Map<String, String>>
-	@Accessors val chrRoms = new LinkedHashMap<Integer, Map<String, String>>
+	@Accessors val prgRoms = new HashMap<Integer, Map<String, String>>
+	@Accessors val chrRoms = new HashMap<Integer, Map<String, String>>
+	@Accessors val dmcRoms = new HashMap<Integer, Map<String, String>>
 	@Accessors val allocation = new AllocContext
 	@Accessors val sizeOfClasses = new HashMap<String, Integer>
 	@Accessors val structOfClasses = new LinkedHashMap<String, String>
@@ -75,9 +76,32 @@ class ProcessContext {
 		if (missingClasses.size > 0) {
 			throw new NoopClassNotFoundException
 		}
+		
+		for (headers : metaClasses.values.map[it.headers]) {
+			this.headers.putAll(headers)
+		}
+		
+		for (header : headers.values) {
+			constants.add(header.toString)
+		}
 
 		for (static : statics) {
 			ast.get(static)?.forEach[process(this)]
+		}
+		
+		for (static : statics) {
+			val clazz = static.substring(0, static.lastIndexOf('.'))
+			val asm = clazz.metadata?.statics?.get(static)
+
+			if (asm !== null) {
+				macros.compute('instantiate_statics', [ k, v |
+					(v ?: '') + asm + System::lineSeparator
+				])
+			}
+		}
+
+		for (const : constants.toList) {
+			ast.get(const)?.forEach[process(this)]
 		}
 
 		for (clazz : classes) {
@@ -99,33 +123,20 @@ class ProcessContext {
 			])
 		]
 
-		for (clazz : classes) {
-			val meta = clazz.metadata
-
-			prgRoms.putAll(meta?.prgRoms ?: emptyMap)
-			chrRoms.putAll(meta?.chrRoms ?: emptyMap)
-			headers.putAll(meta?.headers ?: emptyMap)
+		for (meta : classes.map[metadata].filterNull) {
+			meta.prgRoms.forEach[bank, roms|
+				prgRoms.computeIfAbsent(bank, [new LinkedHashMap]).putAll(roms)
+			]
+			
+			meta.chrRoms.forEach[bank, roms|
+				chrRoms.computeIfAbsent(bank, [new LinkedHashMap]).putAll(roms)
+			]
+			
+			meta.dmcRoms.forEach[bank, roms|
+				dmcRoms.computeIfAbsent(bank, [new LinkedHashMap]).putAll(roms)
+			]
 		}
 		
-		for (header : headers.values) {
-			constants.add(header.toString)
-		}
-		
-		for (const : constants.toList) {
-			ast.get(const)?.forEach[process(this)]
-		}
-		
-		for (static : statics) {
-			val clazz = static.substring(0, static.lastIndexOf('.'))
-			val asm = clazz.metadata?.statics?.get(static)
-
-			if (asm !== null) {
-				macros.compute('instantiate_statics', [ k, v |
-					(v ?: '') + asm + System::lineSeparator
-				])
-			}
-		}
-
 //		for (method : methods) {
 //			for (call : method.calls) {
 //				if (method.isCalledBy(call)) {
@@ -142,7 +153,7 @@ class ProcessContext {
 
 			if (containerClass.isInline(method)) {
 				macros.put('''call_«method»''', containerClass.metadata.macros.get(method))
-			} else if (methodName.isStatic){
+			} else if (methodName.isStatic) {
 				macros.put('''call_«method»''', '''	JSR «method»''')
 			} else {
 				val overriders = containerClass.subClasses.filter [ sub |
@@ -158,7 +169,7 @@ class ProcessContext {
 				} else {
 					macros.put('''call_«method»''', '''	JSR «method»''')
 				}
-			}  
+			}
 		}
 
 		for (clazz : classes) {
@@ -168,11 +179,11 @@ class ProcessContext {
 				}
 			}
 		}
-		
+
 		for (vector : ast.vectors.values) {
 			val containerClass = vector.substring(0, vector.lastIndexOf('.'))
-			
-			containerClass.metadata?.vectors?.forEach[name, asm|
+
+			containerClass.metadata?.vectors?.forEach [ name, asm |
 				methodsByBank.computeIfAbsent(null, [new HashMap]).put(name, asm)
 			]
 		}
