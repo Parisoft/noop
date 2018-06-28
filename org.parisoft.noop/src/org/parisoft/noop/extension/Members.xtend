@@ -1239,6 +1239,8 @@ class Members {
 				ast.container = method.nameOf
 				ast.append(null as Node)
 				
+				method.storage?.location?.preProcess(ast)
+				
 				if (method.isNonStatic) {
 					ast.append(new NodeVar => [
 						varName = method.nameOfReceiver

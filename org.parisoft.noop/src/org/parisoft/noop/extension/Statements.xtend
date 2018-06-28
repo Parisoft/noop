@@ -145,6 +145,7 @@ class Statements {
 	def void preProcess(Statement statement, AST ast) {
 		switch (statement) {
 			Variable: {
+				statement.storage?.location?.preProcess(ast)
 				statement.value?.preProcess(ast)
 
 				if (statement.isParameter && statement.isPointer) {

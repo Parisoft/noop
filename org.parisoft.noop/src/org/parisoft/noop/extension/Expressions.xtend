@@ -424,7 +424,7 @@ class Expressions {
 	def isFileInclude(StringLiteral string) {
 		string.value.isFileInclude
 	}
-	
+
 	def isFileInclude(String string) {
 		string.toLowerCase.startsWith(Members::FILE_SCHEMA)
 	}
@@ -440,11 +440,11 @@ class Expressions {
 	def isDmcFile(StringLiteral string) {
 		string.value.isDmcFile
 	}
-	
+
 	def isDmcFile(String string) {
 		string.isFileInclude && string.toLowerCase.endsWith(Members::FILE_DMC_EXTENSION)
 	}
-	
+
 	def isNonDmcFile(String string) {
 		!string.isDmcFile
 	}
@@ -578,11 +578,15 @@ class Expressions {
 	}
 
 	def nameOfTmp(ArrayLiteral array, String containerName) {
-		tmpNames.computeIfAbsent(array, ['''«containerName».tmp«array.typeOf.name»Array@«array.hashCode.toHexString»'''.toString])
+		tmpNames.computeIfAbsent(array, [
+			'''«containerName».tmp«array.typeOf.name»Array@«array.hashCode.toHexString»'''.toString
+		])
 	}
 
 	def nameOfTmpArray(NewInstance instance, String containerName) {
-		tmpNames.computeIfAbsent(instance, ['''«containerName».tmp«instance.typeOf.name»Array@«instance.hashCode.toHexString»'''.toString])
+		tmpNames.computeIfAbsent(instance, [
+			'''«containerName».tmp«instance.typeOf.name»Array@«instance.hashCode.toHexString»'''.toString
+		])
 	}
 
 	def nameOfConstructor(NewInstance instance) {
@@ -947,11 +951,11 @@ class Expressions {
 				if (method !== null) {
 					val container = method.containerClass
 					ast.append(new NodeRefClass => [className = container.fullName])
-					
+
 					if (container.isExternal(ast.project)) {
 						ast.externalClasses.add(container)
 					}
-					
+
 					method.preProcessInvocation(newArrayList(left, right), emptyList, ast)
 				} else if (expression.assignment === AssignmentType::DIV_ASSIGN ||
 					expression.assignment === AssignmentType::MOD_ASSIGN) {
@@ -1033,11 +1037,11 @@ class Expressions {
 				if (method !== null) {
 					val container = method.containerClass
 					ast.append(new NodeRefClass => [className = container.fullName])
-					
+
 					if (container.isExternal(ast.project)) {
 						ast.externalClasses.add(container)
 					}
-					
+
 					method.preProcessInvocation(newArrayList(expression.left, expression.right), emptyList, ast)
 				} else {
 					expression.left.preProcess(ast)
@@ -1051,11 +1055,11 @@ class Expressions {
 				if (method !== null) {
 					val container = method.containerClass
 					ast.append(new NodeRefClass => [className = container.fullName])
-					
+
 					if (container.isExternal(ast.project)) {
 						ast.externalClasses.add(container)
 					}
-					
+
 					method.preProcessInvocation(newArrayList(expression.left, expression.right), emptyList, ast)
 				} else {
 					expression.left.preProcess(ast)
@@ -1069,11 +1073,11 @@ class Expressions {
 				if (method !== null) {
 					val container = method.containerClass
 					ast.append(new NodeRefClass => [className = container.fullName])
-					
+
 					if (container.isExternal(ast.project)) {
 						ast.externalClasses.add(container)
 					}
-					
+
 					method.preProcessInvocation(newArrayList(expression.left, expression.right), emptyList, ast)
 				} else {
 					expression.left.preProcess(ast)
@@ -1195,13 +1199,15 @@ class Expressions {
 				val member = expression.member
 				val receiver = expression.receiver
 
-				if (member.isStatic && member.typeOf.isNonPrimitive && receiver instanceof NewInstance) {
+				if (member.isStatic && receiver instanceof NewInstance) {
 					val type = (receiver as NewInstance).type
 
-					ast.append(new NodeRefClass => [className = type.fullName])
+					if (type.isNonPrimitive) {
+						ast.append(new NodeRefClass => [className = type.fullName])
 
-					if (type.isExternal(ast.project)) {
-						ast.externalClasses.add(type)
+						if (type.isExternal(ast.project)) {
+							ast.externalClasses.add(type)
+						}
 					}
 				}
 

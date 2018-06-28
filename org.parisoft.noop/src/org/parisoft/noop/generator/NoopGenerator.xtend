@@ -180,7 +180,7 @@ class NoopGenerator extends AbstractGenerator {
 		«Members::FALSE» = 0
 		«Members::FT_DPCM_OFF» = $C000
 		«Members::FT_DPCM_PTR» = («Members::FT_DPCM_OFF»&$3fff)>>6
-		«FOR cons : ctx.constants»
+		«FOR cons : ctx.constants.toList.reverse»
 			«cons» = «ctx.metaClasses.get(cons.substring(0, cons.lastIndexOf('.')))?.constants?.get(cons) ?: 0»
 		«ENDFOR»
 		
@@ -201,11 +201,10 @@ class NoopGenerator extends AbstractGenerator {
 		;----------------------------------------------------------------
 		; iNES Header
 		;----------------------------------------------------------------
-			.db 'NES', $1A ;identification of the iNES header
-			.db «(ctx.headers.get(StorageType::INESPRG)?: 32)» / 16 ;number of 16KB PRG-ROM pages
-			.db «(ctx.headers.get(StorageType::INESCHR)?: 08)» / 08 ;number of 8KB CHR-ROM pages
-			.db «(ctx.headers.get(StorageType::INESMAP)?: 0)» | «ctx.headers.get(StorageType::INESMIR)?: 1»
-			.dsb 9, $00 ;clear the remaining bytes to 16
+			.inesmap «ctx.headers.get(StorageType::INESMAP) ?: 0» ; mapper
+			.inesprg «(ctx.headers.get(StorageType::INESPRG)?: 32)» / 16 ;number of 16KB PRG-ROM pages
+			.ineschr «(ctx.headers.get(StorageType::INESCHR)?: 08)» / 08 ;number of 8KB CHR-ROM pages
+			.inesmir «ctx.headers.get(StorageType::INESMIR)?: 1» ; mirror mode
 		
 		«clazz.convert(ctx.headers)»
 		«mapperFactory.get(ctx.headers.get(StorageType::INESMAP) as Integer ?: 0).compile(ctx)»

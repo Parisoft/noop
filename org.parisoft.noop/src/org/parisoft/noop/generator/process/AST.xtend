@@ -8,6 +8,7 @@ import java.util.List
 import java.util.Set
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.parisoft.noop.noop.NoopClass
+import java.util.Objects
 
 class AST {
 	
@@ -31,7 +32,7 @@ class AST {
 	}
 	
 	def append(String container, Node node) {
-		tree.computeIfAbsent(container, [new ArrayList]) => [
+		tree.computeIfAbsent(Objects::requireNonNull(container), [new ArrayList]) => [
 			if (node !== null) {
 				add(node)
 			}

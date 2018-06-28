@@ -118,7 +118,7 @@ class Mmc3 extends Mapper {
 		
 		«FOR bank : 0 ..< chrBanks»
 			«val bank0 = bank * 8»
-			«var roms = ctx.chrRoms.get(bank)?.values ?: emptyList»
+			«var roms = ctx.chrRoms.get(bank0)?.values ?: emptyList»
 			«IF roms.isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank0»
@@ -129,7 +129,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«val bank2 = bank0 + 2»
-			«IF (roms = ctx.chrRoms.get(bank)?.values ?: emptyList).isNotEmpty»
+			«IF (roms = ctx.chrRoms.get(bank2)?.values ?: emptyList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank2»
 				;----------------------------------------------------------------
@@ -139,7 +139,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«val bank4 = bank2 + 2»
-			«IF (roms = ctx.chrRoms.get(bank)?.values ?: emptyList).isNotEmpty»
+			«IF (roms = ctx.chrRoms.get(bank4)?.values ?: emptyList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank4»
 				;----------------------------------------------------------------
@@ -149,7 +149,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«val bank5 = bank4 + 1»
-			«IF (roms = ctx.chrRoms.get(bank)?.values ?: emptyList).isNotEmpty»
+			«IF (roms = ctx.chrRoms.get(bank5)?.values ?: emptyList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank5»
 				;----------------------------------------------------------------
@@ -159,7 +159,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«val bank6 = bank5 + 1»
-			«IF (roms = ctx.chrRoms.get(bank)?.values ?: emptyList).isNotEmpty»
+			«IF (roms = ctx.chrRoms.get(bank6)?.values ?: emptyList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank6»
 				;----------------------------------------------------------------
@@ -169,7 +169,7 @@ class Mmc3 extends Mapper {
 				«ENDFOR»
 			«ENDIF»
 			«val bank7 = bank6 + 1»
-			«IF (roms = ctx.chrRoms.get(bank)?.values ?: emptyList).isNotEmpty»
+			«IF (roms = ctx.chrRoms.get(bank7)?.values ?: emptyList).isNotEmpty»
 				;----------------------------------------------------------------
 				; CHR-ROM bank #«bank7»
 				;----------------------------------------------------------------
